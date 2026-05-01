@@ -604,6 +604,53 @@ app.patch('/api/couple/session/:code/cancel', async (c) => {
   return c.json({ success: true, message: '세션이 취소되었습니다.' })
 })
 
+// ── GET /api/couple/partner-info/:code (공개 — 인증 불필요) ──
+app.get('/api/couple/partner-info/:code', async (c) => {
+  const { DB } = c.env
+  const code = c.req.param('code').toUpperCase()
+  const session = await DB.prepare(
+    `SELECT session_code, test_type, host_user_id, status, expires_at
+     FROM couple_sessions WHERE session_code=? AND expires_at > datetime('now')`
+  ).bind(code).first<{ session_code: string; test_type: string; host_user_id: number; status: string }>()
+
+  if (!session) return c.json({ success: false, error: '유효하지 않은 링크입니다.' }, 404)
+  if (session.status !== 'waiting') return c.json({ success: false, error: '이미 파트너가 참여한 세션입니다.' }, 400)
+
+  const host = await DB.prepare('SELECT nickname, email FROM users WHERE id=?')
+    .bind(session.host_user_id).first<{ nickname: string | null; email: string }>()
+  const hostName = host?.nickname || host?.email?.split('@')[0] || '파트너'
+
+  return c.json({ success: true, data: { session_code: code, test_type: session.test_type, host_name: hostName } })
+})
+
+// ── POST /api/couple/partner-submit (공개 — 인증 불필요) ────
+app.post('/api/couple/partner-submit', async (c) => {
+  const { DB } = c.env
+  const { session_code, results } = await c.req.json().catch(() => ({})) as {
+    session_code?: string; results?: Record<string, unknown>
+  }
+  if (!session_code || !results) return c.json({ success: false, error: '파라미터 부족' }, 400)
+
+  const session = await DB.prepare(
+    `SELECT * FROM couple_sessions WHERE session_code=? AND expires_at > datetime('now')`
+  ).bind(session_code.toUpperCase()).first<CoupleSession>()
+
+  if (!session) return c.json({ success: false, error: '유효하지 않은 링크입니다.' }, 404)
+  if (session.status !== 'waiting') return c.json({ success: false, error: '이미 파트너가 참여한 세션입니다.' }, 400)
+  if (session.guest_result_json) return c.json({ success: false, error: '이미 제출된 결과가 있습니다.' }, 409)
+
+  const hostHasData = (() => {
+    try { return Object.keys(JSON.parse(session.host_result_json || '{}')).length > 0 } catch { return false }
+  })()
+  const newStatus = hostHasData ? 'both_done' : 'waiting'
+
+  await DB.prepare(
+    `UPDATE couple_sessions SET guest_result_json=?, status=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`
+  ).bind(JSON.stringify(results), newStatus, session.id).run()
+
+  return c.json({ success: true, data: { status: newStatus } })
+})
+
 // ── GET /api/couple/admin/stats ────────────────────────────
 // 관리자 통계 (마스터 계정 전용)
 app.get('/api/couple/admin/stats', async (c) => {
