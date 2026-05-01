@@ -1220,6 +1220,7 @@ function PsychologicalTestSystem() {
       // 저장된 토큰으로 자동 로그인 복원
       const savedUser = tokenStore.getUser();
       const accessToken = tokenStore.getAccess();
+      let isAuthenticated = false;
       if (savedUser && accessToken) {
         try {
           const result = await api.getMe();
@@ -1227,7 +1228,7 @@ function PsychologicalTestSystem() {
             setCurrentUser(result.data);
             setCredits(result.data.credits);
             setIsLoggedIn(true);
-            setView('memberDashboard');
+            isAuthenticated = true;
             loadTestHistory();
             checkAndCleanExpiredSessions();
           } else {
@@ -1239,22 +1240,41 @@ function PsychologicalTestSystem() {
       // 로컬 제출 목록 복원
       loadAllSubmitted();
 
-      // 결제 완료 후 URL 파라미터 처리 (?payment=success|fail|cancel)
+      // URL 파라미터 일괄 처리
       const urlParams = new URLSearchParams(window.location.search);
       const paymentStatus = urlParams.get('payment');
       const resetToken    = urlParams.get('reset_token');
+      const startTest     = urlParams.get('start');
+      const urlHash       = window.location.hash;
 
-      if (paymentStatus === 'success') {
-        // URL 파라미터 제거 (히스토리 교체)
+      // 마음커플 → 특정 검사 direct link (?start=BIG5|LOST|DSI) — 최우선 처리
+      if (startTest) {
         window.history.replaceState({}, '', '/');
-        // 크레딧 갱신 (Stripe Webhook 처리 딜레이 감안, 1.5초 후 조회)
+        const testViewMap = { BIG5: 'big5Test', LOST: 'lostTest', DSI: 'dsiTest' };
+        const targetView = testViewMap[startTest.toUpperCase()];
+        if (targetView) {
+          if (isAuthenticated) {
+            setView(targetView);
+          } else {
+            sessionStorage.setItem('post_login_view', targetView);
+            setView('memberLogin');
+          }
+        }
+        return;
+      }
+
+      // 로그인 복원 후 기본 화면
+      if (isAuthenticated) setView('memberDashboard');
+
+      // 결제 완료 후 URL 파라미터 처리 (?payment=success|fail|cancel)
+      if (paymentStatus === 'success') {
+        window.history.replaceState({}, '', '/');
         setTimeout(async () => {
           try {
             const r = await fetch('/api/payment/stripe/verify', { headers: api._authHeader() });
             const d = await r.json();
             if (d.success) setCredits(d.data.credits);
           } catch { /* 무시 */ }
-          // 충전 성공 알림
           setLoginMsg({ type: 'success', text: '✦ 크레딧 충전이 완료되었습니다!' });
           setTimeout(() => setLoginMsg({ type: '', text: '' }), 4000);
         }, 1500);
@@ -1271,29 +1291,12 @@ function PsychologicalTestSystem() {
         window.__resetToken = resetToken;
       }
 
-      // 마음커플 → 특정 검사 direct link (?start=BIG5|LOST|DSI)
-      const startTest = urlParams.get('start');
-      if (startTest) {
-        window.history.replaceState({}, '', '/');
-        const testViewMap = { BIG5: 'big5Test', LOST: 'lostTest', DSI: 'dsiTest' };
-        const targetView = testViewMap[startTest.toUpperCase()];
-        if (targetView) {
-          if (isLoggedIn) {
-            setView(targetView);
-          } else {
-            sessionStorage.setItem('post_login_view', targetView);
-            setView('memberLogin');
-          }
-        }
-      }
-
       // 마음커플 → 상담 예약 deep link (#counseling?type=couple|bowen)
-      const urlHash = window.location.hash;
       if (urlHash.startsWith('#counseling')) {
         const hashParams = new URLSearchParams(urlHash.slice('#counseling'.length + 1));
         const ctype = hashParams.get('type');
         window.history.replaceState({}, '', '/');
-        if (isLoggedIn) {
+        if (isAuthenticated) {
           setView('counseling');
           if (ctype) {
             try { localStorage.setItem('couple_counseling_type', ctype); } catch {}
