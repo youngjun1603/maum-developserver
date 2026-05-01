@@ -1,0 +1,99 @@
+{
+  "app": {
+    "name": "Psy App",
+    "tagline": "Your first step to self-understanding"
+  },
+  "auth": {
+    "login": "Log In",
+    "logout": "Log Out",
+    "signup": "Sign Up",
+    "email": "Email",
+    "password": "Password",
+    "password_min": "Password (8+ characters)",
+    "password_confirm": "Confirm Password",
+    "nickname": "Nickname (optional)",
+    "forgot_password": "Forgot your password?",
+    "reset_password": "Reset Password",
+    "send_reset_link": "Send Reset Link",
+    "back": "← Back",
+    "signup_bonus": "Get 45 credits instantly on sign up",
+    "bonus_detail_1": "✦ 20 base credits (2 tests)",
+    "bonus_detail_2": "✦ 25 AI chat bonus credits (5 chats)"
+  },
+  "dashboard": {
+    "greeting": "Hello, {{name}} 👋",
+    "credit_note": "Each test costs 10 credits",
+    "select_test": "Select a Test",
+    "recent_tests": "Recent Tests",
+    "view_all": "View all →",
+    "charge": "Top up →",
+    "can_do": "{{tests}} tests · {{chats}} AI chats available"
+  },
+  "credits": {
+    "current": "Current Credits",
+    "balance": "Current Balance",
+    "charge": "Buy Credits",
+    "history": "Credit History",
+    "insufficient": "Insufficient Credits",
+    "test_cost": "1 test = 10 credits",
+    "chat_cost": "1 AI chat = 5 credits",
+    "charge_cta": "Buy Credits",
+    "later": "Later",
+    "reasons": {
+      "signup_bonus": "Sign-up bonus",
+      "chat_bonus":   "AI chat bonus",
+      "test":         "Psychology test",
+      "chat":         "AI chat",
+      "charge":       "Credit purchase",
+      "refund_api_error": "Error refund"
+    },
+    "packages": {
+      "starter":  "Starter",
+      "standard": "Standard",
+      "premium":  "Premium",
+      "pro":      "Pro"
+    },
+    "pg_note_global":  "Powered by Stripe | Visa · Mastercard · Apple Pay",
+    "refund_policy":   "Unused credits refundable within 30 days"
+  },
+  "tests": {
+    "PHQ9":    { "label": "PHQ-9",   "desc": "Depression screening"     },
+    "GAD7":    { "label": "GAD-7",   "desc": "Anxiety screening"        },
+    "DASS21":  { "label": "DASS-21", "desc": "Depression/Anxiety/Stress" },
+    "BIG5":    { "label": "Big Five", "desc": "Personality traits"      },
+    "LOST":    { "label": "LOST",    "desc": "Behavioral system"        },
+    "SCT":     { "label": "SCT",     "desc": "Sentence completion (KR)" },
+    "DSI":     { "label": "DSI",     "desc": "Self-differentiation (KR)" },
+    "BURNOUT": { "label": "K-MBI+",  "desc": "Burnout syndrome (KR)"   },
+    "cost":    "10 credits →"
+  },
+  "mypage": {
+    "title":    "My Page",
+    "profile":  "Profile",
+    "tabs": {
+      "credits":  "Credits",
+      "history":  "Test History",
+      "settings": "Settings"
+    },
+    "language":       "Language",
+    "delete_account": "Delete Account",
+    "delete_confirm": "Are you sure you want to delete your account?",
+    "no_history":     "No test history yet",
+    "no_credits":     "No transactions yet"
+  },
+  "errors": {
+    "required_email_pw":  "Email and password are required.",
+    "invalid_email":      "Invalid email format.",
+    "password_min_8":     "Password must be at least 8 characters.",
+    "password_mismatch":  "Passwords do not match.",
+    "login_fail":         "Incorrect email or password.",
+    "rate_limit":         "Too many requests. Please try again later.",
+    "payment_fail":       "Payment was cancelled or failed.",
+    "payment_success":    "✦ Credits added successfully!"
+  },
+  "crisis": {
+    "label":  "Crisis Lifeline",
+    "number": "988",
+    "note":   "If you're in crisis, please talk to a professional"
+  }
+}

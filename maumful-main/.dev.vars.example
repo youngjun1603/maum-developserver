@@ -1,0 +1,8 @@
+# 로컬 개발용 환경변수 (복사해서 .dev.vars로 사용)
+# .dev.vars는 .gitignore에 포함됨 — 절대 커밋하지 말 것
+
+ANTHROPIC_API_KEY=sk-ant-xxxx
+TOSS_SECRET_KEY=test_sk_xxxx
+TOSS_CLIENT_KEY=test_ck_xxxx
+ADMIN_SECRET=local-admin-secret
+RESEND_API_KEY=re_xxxx

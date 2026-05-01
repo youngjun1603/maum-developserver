@@ -1,0 +1,21 @@
+{
+  "name": "마음풀",
+  "short_name": "마음풀",
+  "description": "심리검사부터 AI 상담, 치유 게임까지 — 마음 건강 올인원 플랫폼",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FDFCF7",
+  "theme_color": "#4A7C59",
+  "orientation": "portrait-primary",
+  "lang": "ko",
+  "icons": [
+    { "src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "categories": ["health", "lifestyle", "medical"],
+  "shortcuts": [
+    { "name": "심리검사", "url": "/?v=tests", "description": "PHQ-9 등 심리검사 시작" },
+    { "name": "마음 게임", "url": "/?v=game",  "description": "치유 게임 바로 가기" }
+  ],
+  "screenshots": []
+}

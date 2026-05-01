@@ -1,0 +1,1346 @@
+// ============================================================
+// landing.jsx  —  홈 랜딩페이지 + 글로벌 네비게이션
+// phyweb B2C 플랫폼 / Cloudflare Pages + React 18
+// ============================================================
+
+// ── 검사 메타데이터 (app.jsx 와 공유) ──────────────────────
+const TEST_META = [
+  {
+    id: 'PHQ9',
+    label: 'PHQ-9',
+    name: '우울 자가점검',
+    desc: '지난 2주간 정서적 상태를 9개 문항으로 가볍게 체크합니다. 전문가들이 활용하는 표준 자가점검 도구입니다.',
+    icon: '🌱',
+    color: 'green',
+    time: '5분',
+    count: '9문항',
+    free: true,
+  },
+  {
+    id: 'GAD7',
+    label: 'GAD-7',
+    name: '불안 자가점검',
+    desc: '7개 문항으로 불안과 긴장 수준을 빠르게 점검합니다. WHO가 권장하는 표준 자가점검 도구입니다.',
+    icon: '💙',
+    color: 'blue',
+    time: '5분',
+    count: '7문항',
+    free: true,
+  },
+  {
+    id: 'DASS21',
+    label: 'DASS-21',
+    name: '우울·불안·스트레스',
+    desc: '우울, 불안, 스트레스 세 가지 정서 상태를 동시에 측정하는 종합 정서 검사입니다.',
+    icon: '🌊',
+    color: 'teal',
+    time: '10분',
+    count: '21문항',
+    free: false,
+  },
+  {
+    id: 'BIG5',
+    label: 'Big5',
+    name: '성격 5요인 검사',
+    desc: '개방성·성실성·외향성·친화성·신경증 5가지 성격 차원을 과학적으로 분석합니다.',
+    icon: '🧠',
+    color: 'purple',
+    time: '15분',
+    count: '60문항',
+    free: false,
+  },
+  {
+    id: 'LOST',
+    label: 'LOST',
+    name: '행동 운영체계 검사',
+    desc: '나의 행동 패턴과 동기 시스템(BIS/BAS)을 파악하여 일상 행동을 이해합니다.',
+    icon: '🧭',
+    color: 'amber',
+    time: '10분',
+    count: '24문항',
+    free: false,
+  },
+  {
+    id: 'SCT',
+    label: 'SRCI',
+    name: '자기반응 완성 검사',
+    desc: '갈등·압박 상황에서 나타나는 자기입장, 정서반응, 관계 패턴을 문장완성 방식으로 탐색합니다.',
+    icon: '✍️',
+    color: 'coral',
+    time: '20분',
+    count: '25문항',
+    free: false,
+  },
+  {
+    id: 'DSI',
+    label: 'SDRI',
+    name: '자기분화 반응성 검사',
+    desc: '자기입장 유지·정서반응성·정서적 단절·융합 등 4개 소척도로 자기분화 수준을 평정합니다.',
+    icon: '🪞',
+    color: 'pink',
+    time: '15분',
+    count: '25문항',
+    free: false,
+  },
+  {
+    id: 'BURNOUT',
+    label: 'K-MBI+',
+    name: '번아웃 자가점검',
+    desc: '정서적 고갈·냉소·효능감 3가지 소진 신호를 체크합니다. 직장인·의료진·교육자에게 특화된 자가점검입니다.',
+    icon: '🔥',
+    color: 'red',
+    time: '10분',
+    count: '22문항',
+    free: false,
+  },
+];
+
+const COLOR_MAP = {
+  green:  { bar: '#2D6A4F', bg: '#D8F3DC', text: '#1A6B3C' },
+  blue:   { bar: '#3B82F6', bg: '#EFF6FF', text: '#1D4ED8' },
+  teal:   { bar: '#14B8A6', bg: '#F0FDFA', text: '#0D7A6E' },
+  purple: { bar: '#7C3AED', bg: '#F5F3FF', text: '#5B21B6' },
+  amber:  { bar: '#F59E0B', bg: '#FFFBEB', text: '#B45309' },
+  coral:  { bar: '#F97316', bg: '#FFF7ED', text: '#C2410C' },
+  pink:   { bar: '#EC4899', bg: '#FDF2F8', text: '#9D174D' },
+  red:    { bar: '#EF4444', bg: '#FEF2F2', text: '#991B1B' },
+};
+
+// ============================================================
+// GlobalNav — 모든 페이지 상단 공통 네비게이션
+// props: { setView, isLoggedIn, currentUser, credits }
+// ============================================================
+function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView }) {
+  const { useState: useS, useEffect: useE } = React;
+  const [scrolled, setScrolled]   = useS(false);
+  const [mobileOpen, setMobileOpen] = useS(false);
+
+  useE(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const navItems = [
+    { label: '검사 소개',  view: 'testsIntro' },
+    { label: '심리검사',   view: 'memberDashboard', requireLogin: true },
+    { label: 'AI 상담',   view: 'aiCounsel',       requireLogin: true },
+    { label: '상담 예약',  view: 'counseling' },
+    { label: '마음 게임',  view: 'gameIntro', isGame: true },
+  ];
+
+  const handleNavClick = (item) => {
+    setMobileOpen(false);
+    // 마음 게임: 로그인 상태면 JWT SSO 자동 연동, 미로그인이면 로그인 화면
+    if (item.isGame) {
+      if (!isLoggedIn) { setView('memberLogin'); return; }
+      const token = localStorage.getItem('access_token') || '';
+      const gameUrl = `https://game.maumful.com${token ? '?t=' + encodeURIComponent(token) : ''}`;
+      window.open(gameUrl, '_blank', 'noopener noreferrer');
+      return;
+    }
+    if (item.requireLogin && !isLoggedIn) {
+      setView('memberLogin');
+      return;
+    }
+    setView(item.view);
+  };
+
+  return (
+    <nav style={{
+      position: 'sticky', top: 0, zIndex: 1000,
+      background: scrolled ? 'rgba(255,255,255,0.97)' : 'rgba(255,255,255,0.95)',
+      backdropFilter: 'blur(16px)',
+      borderBottom: scrolled ? '1px solid rgba(0,0,0,0.08)' : '1px solid transparent',
+      boxShadow: scrolled ? '0 1px 20px rgba(0,0,0,0.06)' : 'none',
+      transition: 'all 0.3s ease',
+    }}>
+      <div style={{
+        maxWidth: 1200, margin: '0 auto',
+        padding: '0 24px', height: 64,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        {/* 로고 */}
+        <button
+          onClick={() => setView('landing')}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+          }}
+        >
+          <div style={{
+            width: 32, height: 32, borderRadius: 10,
+            background: 'linear-gradient(135deg, #2D6A4F, #52B788)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 16,
+          }}>🌿</div>
+          <span style={{
+            fontFamily: "'Noto Sans KR', sans-serif",
+            fontSize: 18, fontWeight: 700, color: '#1A1A1A',
+            letterSpacing: '-0.3px',
+          }}>마음풀</span>
+          <span style={{
+            fontSize: 11, fontWeight: 600, color: '#2D6A4F',
+            background: '#D8F3DC', padding: '2px 7px', borderRadius: 100,
+            letterSpacing: '0.3px',
+          }}>BETA</span>
+        </button>
+
+        {/* 데스크톱 메뉴 */}
+        <div className="nav-desktop-links" style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          {navItems.map(item => (
+            <button
+              key={item.view + item.label}
+              onClick={() => handleNavClick(item)}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                padding: '8px 14px', borderRadius: 8,
+                fontSize: 14, fontWeight: 400,
+                color: activeView === item.view ? '#2D6A4F' : '#5A5A5A',
+                fontFamily: "'Noto Sans KR', sans-serif",
+                transition: 'all 0.15s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#F0FAF4'; e.currentTarget.style.color = '#2D6A4F'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = activeView === item.view ? '#2D6A4F' : '#5A5A5A'; }}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+
+        {/* 우측 액션 버튼 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {isLoggedIn ? (
+            <>
+              <button
+                onClick={() => setView('memberDashboard')}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  background: '#F0FAF4', border: '1px solid #B7E4C7',
+                  borderRadius: 8, padding: '7px 14px',
+                  fontSize: 13, fontWeight: 600, color: '#2D6A4F',
+                  cursor: 'pointer', fontFamily: "'Noto Sans KR', sans-serif",
+                }}
+              >
+                <span>🌿</span>
+                <span>{credits} 크레딧</span>
+              </button>
+              <button
+                onClick={() => setView('myPage')}
+                style={{
+                  width: 36, height: 36, borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #2D6A4F, #52B788)',
+                  border: 'none', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 14, color: 'white', fontWeight: 700,
+                  fontFamily: "'Noto Sans KR', sans-serif",
+                }}
+                title="마이페이지"
+              >
+                {(currentUser?.nickname || currentUser?.email || '?')[0].toUpperCase()}
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => setView('memberLogin')}
+                style={{
+                  background: 'none', border: '1px solid rgba(0,0,0,0.12)',
+                  borderRadius: 8, padding: '8px 16px',
+                  fontSize: 14, fontWeight: 500, color: '#5A5A5A',
+                  cursor: 'pointer', fontFamily: "'Noto Sans KR', sans-serif",
+                  transition: 'all 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#F5F5F5'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
+              >
+                로그인
+              </button>
+              <button
+                onClick={() => setView(isLoggedIn ? 'memberDashboard' : 'testsIntro')}
+                style={{
+                  background: '#2D6A4F', border: 'none',
+                  borderRadius: 8, padding: '8px 18px',
+                  fontSize: 14, fontWeight: 600, color: 'white',
+                  cursor: 'pointer', fontFamily: "'Noto Sans KR', sans-serif",
+                  transition: 'all 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#1B5138'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = '#2D6A4F'; }}
+              >
+                무료 시작 →
+              </button>
+            </>
+          )}
+
+          {/* 모바일 햄버거 */}
+          <button
+            className="nav-mobile-btn"
+            onClick={() => setMobileOpen(o => !o)}
+            style={{
+              display: 'none', background: 'none', border: 'none',
+              cursor: 'pointer', padding: 6, fontSize: 20,
+            }}
+          >
+            {mobileOpen ? '✕' : '☰'}
+          </button>
+        </div>
+      </div>
+
+      {/* 모바일 드로어 */}
+      {mobileOpen && (
+        <div style={{
+          borderTop: '1px solid rgba(0,0,0,0.07)',
+          background: 'white', padding: '12px 24px 20px',
+        }}>
+          {navItems.map(item => (
+            <button
+              key={item.view + item.label}
+              onClick={() => handleNavClick(item)}
+              style={{
+                display: 'block', width: '100%', textAlign: 'left',
+                background: 'none', border: 'none', cursor: 'pointer',
+                padding: '12px 0', borderBottom: '1px solid rgba(0,0,0,0.05)',
+                fontSize: 15, color: '#1A1A1A',
+                fontFamily: "'Noto Sans KR', sans-serif",
+              }}
+            >
+              {item.label}
+            </button>
+          ))}
+          {!isLoggedIn && (
+            <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+              <button
+                onClick={() => { setMobileOpen(false); setView('memberLogin'); }}
+                style={{
+                  flex: 1, padding: '11px 0', borderRadius: 8,
+                  border: '1px solid rgba(0,0,0,0.12)', background: 'none',
+                  fontSize: 14, fontWeight: 500, cursor: 'pointer',
+                  fontFamily: "'Noto Sans KR', sans-serif",
+                }}
+              >로그인</button>
+              <button
+                onClick={() => { setMobileOpen(false); setView(isLoggedIn ? 'memberDashboard' : 'testsIntro'); }}
+                style={{
+                  flex: 1, padding: '11px 0', borderRadius: 8,
+                  border: 'none', background: '#2D6A4F',
+                  color: 'white', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                  fontFamily: "'Noto Sans KR', sans-serif",
+                }}
+              >무료 시작</button>
+            </div>
+          )}
+        </div>
+      )}
+    </nav>
+  );
+}
+
+// ============================================================
+// LandingPage — 홈 메인 페이지
+// ============================================================
+function LandingPage({ setView, isLoggedIn }) {
+  const { useState: useS, useEffect: useE, useRef } = React;
+  const [activeTestIdx, setActiveTestIdx] = useS(0);
+  const [visibleSections, setVisibleSections] = useS({});
+
+  // 스크롤 애니메이션
+  useE(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            setVisibleSections(prev => ({ ...prev, [entry.target.id]: true }));
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+    document.querySelectorAll('[data-animate]').forEach(el => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
+
+  const fadeIn = (id) => ({
+    opacity: visibleSections[id] ? 1 : 0,
+    transform: visibleSections[id] ? 'translateY(0)' : 'translateY(28px)',
+    transition: 'opacity 0.6s ease, transform 0.6s ease',
+  });
+
+  return (
+    <div style={{ fontFamily: "'Noto Sans KR', sans-serif", color: '#1A1A1A', background: '#FAFAF8' }}>
+
+      {/* ── ① HERO ─────────────────────────────────────── */}
+      <section style={{
+        minHeight: '88vh', display: 'flex', alignItems: 'center',
+        background: 'linear-gradient(150deg, #F0FAF4 0%, #FAFAF8 45%, #FFF8F3 100%)',
+        padding: '80px 24px', position: 'relative', overflow: 'hidden',
+      }}>
+        {/* 배경 장식 */}
+        <div style={{
+          position: 'absolute', top: -100, right: -100,
+          width: 480, height: 480, borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(82,183,136,0.10) 0%, transparent 70%)',
+          pointerEvents: 'none',
+        }} />
+        <div style={{
+          position: 'absolute', bottom: -60, left: -60,
+          width: 320, height: 320, borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(244,162,97,0.09) 0%, transparent 70%)',
+          pointerEvents: 'none',
+        }} />
+
+        <div style={{ maxWidth: 1200, margin: '0 auto', width: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}
+          className="hero-grid">
+
+          {/* 왼쪽: 텍스트 */}
+          <div>
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              background: '#D8F3DC', color: '#2D6A4F',
+              padding: '6px 14px', borderRadius: 100,
+              fontSize: 13, fontWeight: 600, marginBottom: 24,
+            }}>
+              <span style={{ fontSize: 8, animation: 'pulse 2s infinite' }}>●</span>
+              전문 심리검사 8종 제공
+            </div>
+
+            <h1 style={{
+              fontSize: 52, lineHeight: 1.2, fontWeight: 700,
+              marginBottom: 20, letterSpacing: '-1px',
+            }}>
+              나를 이해하는<br />
+              <span style={{ color: '#2D6A4F' }}>첫걸음</span>,<br />
+              심리검사
+            </h1>
+
+            <p style={{ fontSize: 17, color: '#5A5A5A', lineHeight: 1.8, marginBottom: 36 }}>
+              임상에서 검증된 표준 심리검사를 온라인에서 간편하게.<br />
+              검사 후 AI 상담으로 나의 결과를 깊이 이해하세요.
+            </p>
+
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <button
+                onClick={() => setView(isLoggedIn ? 'memberDashboard' : 'testsIntro')}
+                style={{
+                  background: '#2D6A4F', color: 'white', border: 'none',
+                  padding: '14px 32px', borderRadius: 12,
+                  fontSize: 16, fontWeight: 700, cursor: 'pointer',
+                  transition: 'all 0.2s', fontFamily: "'Noto Sans KR', sans-serif",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#1B5138'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = '#2D6A4F'; e.currentTarget.style.transform = 'none'; }}
+              >
+                무료 검사 시작하기
+              </button>
+              <button
+                onClick={() => setView('testsIntro')}
+                style={{
+                  background: 'transparent', color: '#2D6A4F',
+                  border: '1.5px solid #2D6A4F',
+                  padding: '14px 28px', borderRadius: 12,
+                  fontSize: 16, fontWeight: 600, cursor: 'pointer',
+                  transition: 'all 0.2s', fontFamily: "'Noto Sans KR', sans-serif",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#D8F3DC'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+              >
+                검사 소개 보기
+              </button>
+            </div>
+
+            {/* 히어로 통계 */}
+            <div style={{
+              display: 'flex', gap: 36, marginTop: 48,
+              paddingTop: 36, borderTop: '1px solid rgba(0,0,0,0.08)',
+            }}>
+              {[
+                { num: '8종', label: '전문 심리검사' },
+                { num: '10', label: '가입 즉시 크레딧' },
+                { num: 'AI', label: '결과 분석 상담' },
+              ].map(s => (
+                <div key={s.label}>
+                  <div style={{ fontSize: 26, fontWeight: 700, color: '#2D6A4F', lineHeight: 1 }}>{s.num}</div>
+                  <div style={{ fontSize: 12, color: '#9A9A9A', marginTop: 4 }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 오른쪽: 검사 카드 미리보기 */}
+          <div style={{ position: 'relative' }} className="hero-visual">
+            {/* 플로팅 배지 */}
+            <div style={{
+              position: 'absolute', top: -16, right: -10, zIndex: 10,
+              background: 'white', borderRadius: 12, padding: '10px 14px',
+              boxShadow: '0 8px 30px rgba(0,0,0,0.10)',
+              display: 'flex', alignItems: 'center', gap: 8,
+            }}>
+              <span style={{ fontSize: 18 }}>✅</span>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 600 }}>PHQ-9 완료</div>
+                <div style={{ fontSize: 11, color: '#9A9A9A' }}>방금 전</div>
+              </div>
+            </div>
+
+            <div style={{
+              background: 'white', borderRadius: 20,
+              boxShadow: '0 12px 48px rgba(0,0,0,0.10)',
+              padding: '28px 28px 24px', overflow: 'hidden',
+            }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: '#9A9A9A', marginBottom: 16, letterSpacing: '0.5px' }}>
+                🔍 심리검사 선택
+              </div>
+
+              {TEST_META.slice(0, 4).map((t, i) => {
+                const c = COLOR_MAP[t.color];
+                return (
+                  <div
+                    key={t.id}
+                    onClick={() => setView(isLoggedIn ? 'memberDashboard' : 'testsIntro')}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      padding: '11px 12px', borderRadius: 10,
+                      background: activeTestIdx === i ? c.bg : '#F9F9F7',
+                      cursor: 'pointer', marginBottom: 8,
+                      transition: 'all 0.2s', border: activeTestIdx === i ? `1px solid ${c.bar}33` : '1px solid transparent',
+                    }}
+                    onMouseEnter={() => setActiveTestIdx(i)}
+                  >
+                    <div style={{
+                      width: 36, height: 36, borderRadius: 10,
+                      background: c.bg, display: 'flex', alignItems: 'center',
+                      justifyContent: 'center', fontSize: 18, flexShrink: 0,
+                    }}>{t.icon}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: '#1A1A1A' }}>{t.name}</div>
+                      <div style={{ fontSize: 12, color: '#9A9A9A' }}>{t.time} · {t.count}</div>
+                    </div>
+                    <div style={{
+                      fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 100,
+                      background: t.free ? '#D8F3DC' : '#FFF0E6',
+                      color: t.free ? '#1A6B3C' : '#C05621', whiteSpace: 'nowrap',
+                    }}>
+                      {t.free ? '무료' : '10 크레딧'}
+                    </div>
+                  </div>
+                );
+              })}
+
+              <button
+                onClick={() => setView('testsIntro')}
+                style={{
+                  width: '100%', marginTop: 12, padding: '10px 0',
+                  background: '#F0FAF4', border: '1px solid #B7E4C7',
+                  borderRadius: 10, fontSize: 13, fontWeight: 600,
+                  color: '#2D6A4F', cursor: 'pointer',
+                  fontFamily: "'Noto Sans KR', sans-serif",
+                }}
+              >
+                전체 검사 8종 보기 →
+              </button>
+            </div>
+
+            {/* 플로팅 배지 하단 */}
+            <div style={{
+              position: 'absolute', bottom: -14, left: -10, zIndex: 10,
+              background: 'white', borderRadius: 12, padding: '10px 14px',
+              boxShadow: '0 8px 30px rgba(0,0,0,0.10)',
+              display: 'flex', alignItems: 'center', gap: 8,
+            }}>
+              <span style={{ fontSize: 18 }}>🤖</span>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 600 }}>AI 결과 분석 준비됨</div>
+                <div style={{ fontSize: 11, color: '#9A9A9A' }}>검사 후 바로 상담 시작</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── ② 검사 8종 ──────────────────────────────────── */}
+      <section style={{ padding: '80px 24px', background: 'white' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div id="sec-tests" data-animate style={{ textAlign: 'center', marginBottom: 56, ...fadeIn('sec-tests') }}>
+            <div style={{
+              display: 'inline-block', background: '#D8F3DC', color: '#2D6A4F',
+              fontSize: 12, fontWeight: 700, letterSpacing: '1.5px',
+              textTransform: 'uppercase', padding: '5px 14px', borderRadius: 100, marginBottom: 14,
+            }}>Psychological Tests</div>
+            <h2 style={{ fontSize: 36, fontWeight: 700, lineHeight: 1.3, marginBottom: 12 }}>
+              8가지 전문 <span style={{ color: '#2D6A4F' }}>심리검사</span>
+            </h2>
+            <p style={{ fontSize: 16, color: '#5A5A5A', maxWidth: 480, margin: '0 auto' }}>
+              정신건강 전문가들이 실제 임상에서 사용하는 표준화된 검사 도구를 제공합니다
+            </p>
+          </div>
+
+          <div style={{
+            display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 18,
+          }} className="tests-grid">
+            {TEST_META.map((t, i) => {
+              const c = COLOR_MAP[t.color];
+              return (
+                <div
+                  key={t.id}
+                  onClick={() => setView(isLoggedIn ? 'memberDashboard' : 'testsIntro')}
+                  style={{
+                    background: 'white', border: '1px solid rgba(0,0,0,0.08)',
+                    borderRadius: 14, padding: '24px 22px',
+                    cursor: 'pointer', transition: 'all 0.25s',
+                    display: 'flex', flexDirection: 'column', gap: 10,
+                    borderTop: `3px solid ${c.bar}`,
+                    position: 'relative', overflow: 'hidden',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.boxShadow = '0 12px 40px rgba(0,0,0,0.10)';
+                    e.currentTarget.style.transform = 'translateY(-4px)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.boxShadow = 'none';
+                    e.currentTarget.style.transform = 'none';
+                  }}
+                >
+                  <div style={{ fontSize: 30 }}>{t.icon}</div>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#9A9A9A', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 4 }}>{t.label}</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: '#1A1A1A', marginBottom: 6 }}>{t.name}</div>
+                    <div style={{ fontSize: 13, color: '#6A6A6A', lineHeight: 1.6 }}>{t.desc.substring(0, 50)}...</div>
+                  </div>
+                  <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 12, color: '#9A9A9A' }}>⏱ {t.time} · {t.count}</span>
+                    <span style={{
+                      fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 100,
+                      background: t.free ? '#D8F3DC' : '#FFF0E6',
+                      color: t.free ? '#1A6B3C' : '#C05621',
+                    }}>
+                      {t.free ? '무료' : '10 크레딧'}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={{ textAlign: 'center', marginTop: 40 }}>
+            <button
+              onClick={() => setView('testsIntro')}
+              style={{
+                background: 'transparent', color: '#2D6A4F',
+                border: '1.5px solid #2D6A4F', borderRadius: 10,
+                padding: '12px 32px', fontSize: 15, fontWeight: 600,
+                cursor: 'pointer', fontFamily: "'Noto Sans KR', sans-serif",
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#D8F3DC'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+            >
+              각 검사 상세 소개 보기 →
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* ── ③ 서비스 특징 ────────────────────────────────── */}
+      <section style={{ padding: '80px 24px', background: '#F5F5F0' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div id="sec-feat" data-animate style={{ textAlign: 'center', marginBottom: 52, ...fadeIn('sec-feat') }}>
+            <div style={{
+              display: 'inline-block', background: '#EEF0FF', color: '#5B21B6',
+              fontSize: 12, fontWeight: 700, letterSpacing: '1.5px',
+              textTransform: 'uppercase', padding: '5px 14px', borderRadius: 100, marginBottom: 14,
+            }}>Why 마음풀</div>
+            <h2 style={{ fontSize: 34, fontWeight: 700, lineHeight: 1.3, marginBottom: 12 }}>
+              신뢰할 수 있는<br /><span style={{ color: '#2D6A4F' }}>심리검사</span>가 필요한 이유
+            </h2>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }} className="features-grid">
+            {[
+              {
+                icon: '🏥', bg: '#D8F3DC',
+                title: '임상 표준화 검사',
+                desc: 'PHQ-9, GAD-7 등 실제 병원·상담센터에서 사용하는 국제 표준 도구를 동일하게 제공합니다. 전문가가 신뢰하는 기준입니다.',
+              },
+              {
+                icon: '🤖', bg: '#EEF0FF',
+                title: 'AI 결과 해석 상담',
+                desc: '검사 완료 후 Anthropic Claude AI와 1:1 대화로 나의 결과를 더 깊이 이해할 수 있습니다. 단순 점수를 넘어선 인사이트를 제공합니다.',
+              },
+              {
+                icon: '🔒', bg: '#FEF3C7',
+                title: '완전한 프라이버시 보호',
+                desc: '검사 결과는 본인 계정에만 저장됩니다. 개인 식별 정보와 분리 보관하여 익명성을 보장합니다.',
+              },
+            ].map(f => (
+              <div key={f.title} style={{
+                background: 'white', borderRadius: 14, padding: '32px 28px',
+                border: '1px solid rgba(0,0,0,0.07)',
+              }}>
+                <div style={{
+                  width: 52, height: 52, borderRadius: 14,
+                  background: f.bg, display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', fontSize: 26, marginBottom: 18,
+                }}>{f.icon}</div>
+                <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 10 }}>{f.title}</h3>
+                <p style={{ fontSize: 14, color: '#5A5A5A', lineHeight: 1.75 }}>{f.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── ④ AI 상담 섹션 ──────────────────────────────── */}
+      <section style={{
+        padding: '80px 24px',
+        background: 'linear-gradient(135deg, #1A3D2B 0%, #2D6A4F 100%)',
+      }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }} className="ai-grid">
+            <div>
+              <div style={{
+                display: 'inline-block',
+                background: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.9)',
+                fontSize: 12, fontWeight: 700, letterSpacing: '1.5px',
+                textTransform: 'uppercase', padding: '5px 14px', borderRadius: 100, marginBottom: 20,
+              }}>AI Counseling</div>
+              <h2 style={{ fontSize: 36, fontWeight: 700, lineHeight: 1.3, color: 'white', marginBottom: 16 }}>
+                검사 결과,<br />AI와 함께<br />이해하세요
+              </h2>
+              <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, marginBottom: 28 }}>
+                단순한 점수 확인을 넘어,<br />내 결과의 의미와 앞으로의 방향을 대화로 탐색합니다.
+              </p>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 32 }}>
+                {['📊 결과 해석', '💭 감정 탐색', '🗺 대처 방법', '🔄 추가 검사 추천'].map(chip => (
+                  <span key={chip} style={{
+                    background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.9)',
+                    padding: '6px 14px', borderRadius: 100, fontSize: 13,
+                    border: '1px solid rgba(255,255,255,0.2)',
+                  }}>{chip}</span>
+                ))}
+              </div>
+
+              <button
+                onClick={() => {
+                  if (isLoggedIn) {
+                    setView('aiCounsel');
+                  } else {
+                    // 비로그인: 검사 소개 페이지로 이동 (PHQ9·GAD7 중 선택)
+                    setView('testsIntro');
+                  }
+                }}
+                style={{
+                  background: '#F4A261', border: 'none', borderRadius: 12,
+                  padding: '14px 32px', fontSize: 16, fontWeight: 700,
+                  color: 'white', cursor: 'pointer',
+                  fontFamily: "'Noto Sans KR', sans-serif", transition: 'all 0.2s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#E76F51'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = '#F4A261'; }}
+              >
+                AI 상담 체험하기 →
+              </button>
+              <div style={{ marginTop: 12, fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
+                PHQ-9 우울 검사(무료) → 결과 확인 → AI 상담
+              </div>
+            </div>
+
+            {/* 채팅 미리보기 */}
+            <div style={{
+              background: 'rgba(255,255,255,0.07)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              borderRadius: 20, padding: '24px',
+            }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                paddingBottom: 16, marginBottom: 20,
+                borderBottom: '1px solid rgba(255,255,255,0.1)',
+              }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: '50%',
+                  background: '#D8F3DC', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center', fontSize: 18,
+                }}>🤖</div>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: 'white' }}>마음이 (AI 상담)</div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>● 온라인</div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {[
+                  { type: 'ai', text: 'PHQ-9 결과를 확인했어요. 중등도 수준의 우울 증상이 나타났는데, 특히 수면과 집중력 부분이 눈에 띄네요. 좀 더 이야기해볼까요?' },
+                  { type: 'user', text: '네, 요즘 잠을 잘 못 자고 있어요' },
+                  { type: 'ai', text: '수면 어려움이 얼마나 됐는지 알 수 있을까요? 최근에 특별히 스트레스받는 일이 있었나요?' },
+                ].map((msg, i) => (
+                  <div key={i} style={{
+                    maxWidth: '82%', padding: '11px 15px', borderRadius: 14, fontSize: 13, lineHeight: 1.65,
+                    alignSelf: msg.type === 'user' ? 'flex-end' : 'flex-start',
+                    background: msg.type === 'ai' ? 'rgba(255,255,255,0.12)' : '#52B788',
+                    color: msg.type === 'ai' ? 'rgba(255,255,255,0.88)' : 'white',
+                    borderBottomLeftRadius: msg.type === 'ai' ? 4 : 14,
+                    borderBottomRightRadius: msg.type === 'user' ? 4 : 14,
+                  }}>{msg.text}</div>
+                ))}
+              </div>
+
+              <div style={{
+                marginTop: 14, background: 'rgba(255,255,255,0.07)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                borderRadius: 10, padding: '11px 14px',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                color: 'rgba(255,255,255,0.35)', fontSize: 13,
+              }}>
+                <span>메시지를 입력하세요...</span>
+                <span>↑</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── ⑤ 이용 방법 (3단계) ─────────────────────────── */}
+      <section style={{ padding: '80px 24px', background: 'white' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 52 }}>
+            <div style={{
+              display: 'inline-block', background: '#FEF3C7', color: '#B45309',
+              fontSize: 12, fontWeight: 700, letterSpacing: '1.5px',
+              textTransform: 'uppercase', padding: '5px 14px', borderRadius: 100, marginBottom: 14,
+            }}>How It Works</div>
+            <h2 style={{ fontSize: 34, fontWeight: 700 }}>
+              3단계로 <span style={{ color: '#2D6A4F' }}>간단하게</span> 시작
+            </h2>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0, position: 'relative' }} className="steps-grid">
+            {/* 연결선 */}
+            <div style={{
+              position: 'absolute', top: 32, left: '16.67%', right: '16.67%',
+              height: 1, background: 'linear-gradient(90deg, #B7E4C7, #52B788, #B7E4C7)',
+              zIndex: 0,
+            }} />
+
+            {[
+              { step: '01', icon: '📋', title: '회원가입', desc: '이메일로 30초 만에 가입. 즉시 10 크레딧 지급됩니다.', note: '검사 2회 + AI채팅 5회 무료' },
+              { step: '02', icon: '🔍', title: '검사 선택 & 수행', desc: '8가지 검사 중 원하는 것을 선택. 질문에 솔직하게 답하세요.', note: '최소 5분이면 완료' },
+              { step: '03', icon: '💬', title: 'AI와 결과 상담', desc: '검사 완료 즉시 AI 상담사와 대화로 결과를 분석합니다.', note: '내 언어로 쉽게 이해' },
+            ].map((s, i) => (
+              <div key={s.step} style={{ padding: '0 32px', textAlign: 'center', position: 'relative', zIndex: 1 }}>
+                <div style={{
+                  width: 64, height: 64, borderRadius: '50%',
+                  background: 'white', border: '2px solid #B7E4C7',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 28, margin: '0 auto 20px',
+                  boxShadow: '0 4px 16px rgba(45,106,79,0.12)',
+                }}>{s.icon}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#52B788', letterSpacing: '1px', marginBottom: 8 }}>STEP {s.step}</div>
+                <h3 style={{ fontSize: 20, fontWeight: 700, marginBottom: 10 }}>{s.title}</h3>
+                <p style={{ fontSize: 14, color: '#5A5A5A', lineHeight: 1.7, marginBottom: 10 }}>{s.desc}</p>
+                <span style={{
+                  display: 'inline-block', fontSize: 12, fontWeight: 600,
+                  background: '#D8F3DC', color: '#2D6A4F',
+                  padding: '4px 12px', borderRadius: 100,
+                }}>{s.note}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── ⑥ 통계 (신뢰 지표) ─────────────────────────── */}
+      <section style={{ background: '#2D6A4F', padding: 0 }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)' }}
+          className="stats-grid">
+          {[
+            { num: '8종', label: '전문 심리검사' },
+            { num: '10', label: '가입 즉시 무료 크레딧' },
+            { num: '5분~', label: '최소 검사 소요시간' },
+            { num: '100%', label: '데이터 프라이버시' },
+          ].map((s, i) => (
+            <div key={s.label} style={{
+              padding: '52px 20px', textAlign: 'center',
+              borderRight: i < 3 ? '1px solid rgba(255,255,255,0.15)' : 'none',
+            }}>
+              <div style={{ fontSize: 42, fontWeight: 700, color: 'white', lineHeight: 1, marginBottom: 10 }}>{s.num}</div>
+              <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.65)' }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── ⑦ CTA 섹션 ──────────────────────────────────── */}
+      <section style={{
+        padding: '100px 24px', textAlign: 'center',
+        background: 'linear-gradient(135deg, #D8F3DC, #B7E4C7)',
+      }}>
+        <h2 style={{ fontSize: 40, fontWeight: 700, marginBottom: 16 }}>
+          지금 바로 시작하세요
+        </h2>
+        <p style={{ fontSize: 17, color: '#5A5A5A', marginBottom: 36 }}>
+          가입 즉시 10 크레딧 지급 — 심리검사 4회 + AI 상담 5회 무료
+        </p>
+        <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setView(isLoggedIn ? 'memberDashboard' : 'testsIntro')}
+            style={{
+              background: '#2D6A4F', color: 'white', border: 'none',
+              padding: '16px 40px', borderRadius: 12,
+              fontSize: 17, fontWeight: 700, cursor: 'pointer',
+              fontFamily: "'Noto Sans KR', sans-serif", transition: 'all 0.2s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#1B5138'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#2D6A4F'; e.currentTarget.style.transform = 'none'; }}
+          >
+            무료 회원가입 →
+          </button>
+          <button
+            onClick={() => setView('testsIntro')}
+            style={{
+              background: 'white', color: '#2D6A4F',
+              border: '1.5px solid #2D6A4F', borderRadius: 12,
+              padding: '16px 36px', fontSize: 17, fontWeight: 600,
+              cursor: 'pointer', fontFamily: "'Noto Sans KR', sans-serif",
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#F0FAF4'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'white'; }}
+          >
+            검사 목록 둘러보기
+          </button>
+        </div>
+      </section>
+
+
+      {/* ── ⑦-2 상담센터 섹션 ─────────────────────────── */}
+      <section style={{ padding: '80px 24px', background: 'white' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }} className="ai-grid">
+            <div>
+              <div style={{
+                display: 'inline-block', background: '#EEF0FF', color: '#5B21B6',
+                fontSize: 12, fontWeight: 700, letterSpacing: '1.5px',
+                textTransform: 'uppercase', padding: '5px 14px', borderRadius: 100, marginBottom: 20,
+              }}>Counseling Centers</div>
+              <h2 style={{ fontSize: 36, fontWeight: 700, lineHeight: 1.3, marginBottom: 16 }}>
+                전문 상담사와<br /><span style={{ color: '#2D6A4F' }}>직접 연결</span>하세요
+              </h2>
+              <p style={{ fontSize: 16, color: '#5A5A5A', lineHeight: 1.8, marginBottom: 28 }}>
+                검사 결과를 바탕으로 나에게 맞는 전문 상담사를 찾고,<br />
+                화상·전화·방문 상담을 간편하게 예약하세요.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
+                {[
+                  { icon: '📋', text: '심리검사 결과 기반 상담사 매칭' },
+                  { icon: '📹', text: '화상·전화·방문 상담 선택' },
+                  { icon: '💳', text: '안전한 결제 · 24시간 전 전액 환불' },
+                ].map(item => (
+                  <div key={item.text} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 18 }}>{item.icon}</span>
+                    <span style={{ fontSize: 14, color: '#5A5A5A' }}>{item.text}</span>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => setView('counseling')}
+                style={{
+                  background: '#7C3AED', color: 'white', border: 'none',
+                  borderRadius: 12, padding: '14px 32px', fontSize: 16, fontWeight: 700,
+                  cursor: 'pointer', fontFamily: "'Noto Sans KR', sans-serif", transition: 'all 0.2s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#5B21B6'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = '#7C3AED'; e.currentTarget.style.transform = 'none'; }}
+              >
+                상담센터 보기 →
+              </button>
+            </div>
+
+            {/* 센터 미리보기 카드들 */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {[
+                { emoji: '🌲', name: '마음숲 심리상담센터', tags: ['우울', '불안', '대인관계'], color: '#2D6A4F', bg: '#D8F3DC', counselors: 2 },
+                { emoji: '🌻', name: '행복한마음 심리치유센터', tags: ['가족', '부부', '트라우마'], color: '#F59E0B', bg: '#FFFBEB', counselors: 2 },
+                { emoji: '🧩', name: '서울 인지행동 상담클리닉', tags: ['번아웃', '강박', 'CBT'], color: '#7C3AED', bg: '#F5F3FF', counselors: 1 },
+              ].map(center => (
+                <div key={center.name}
+                  onClick={() => setView('counseling')}
+                  style={{
+                    background: 'white', border: '1px solid rgba(0,0,0,0.08)',
+                    borderRadius: 14, padding: '16px 18px', cursor: 'pointer',
+                    transition: 'all 0.2s', borderLeft: `4px solid ${center.color}`,
+                    display: 'flex', alignItems: 'center', gap: 14,
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)'; e.currentTarget.style.transform = 'translateX(4px)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'none'; }}
+                >
+                  <span style={{ fontSize: 30 }}>{center.emoji}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+                      <span style={{ fontSize: 14, fontWeight: 700 }}>{center.name}</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 100, background: '#FEF3C7', color: '#B45309', whiteSpace: 'nowrap' }}>⏳ 제휴 진행중</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                      {center.tags.map(t => <span key={t} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 100, background: center.bg, color: center.color, fontWeight: 600 }}>{t}</span>)}
+                      <span style={{ fontSize: 11, color: '#9A9A9A' }}>상담사 {center.counselors}명</span>
+                    </div>
+                  </div>
+                  <span style={{ color: '#CACACA', fontSize: 18 }}>›</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── ⑦-3 마음 게임 소개 ──────────────────────────────── */}
+      <section style={{ padding: '80px 24px', background: '#F5F5F0' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}
+            className="ai-grid">
+            <div>
+              <div style={{
+                display: 'inline-block', background: '#D8F3DC', color: '#2D6A4F',
+                fontSize: 12, fontWeight: 700, letterSpacing: '1.5px',
+                textTransform: 'uppercase', padding: '5px 14px', borderRadius: 100, marginBottom: 20,
+              }}>Healing Games</div>
+              <h2 style={{ fontSize: 36, fontWeight: 700, lineHeight: 1.3, marginBottom: 16 }}>
+                마음을 가꾸는<br /><span style={{ color: '#2D6A4F' }}>치유 게임</span>
+              </h2>
+              <p style={{ fontSize: 16, color: '#5A5A5A', lineHeight: 1.8, marginBottom: 28 }}>
+                심리검사 결과와 연동된 치유 게임으로<br />
+                일상 속에서 마음 건강을 회복하세요.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
+                {[
+                  { icon: '🌿', text: '마음의 정원 — 호흡 훈련 + 인지 교정 (무료)' },
+                  { icon: '🌸', text: '감정꽃 찾기 — 감정 인식 훈련' },
+                  { icon: '⭐', text: '별빛 감사 일기 — 긍정심리학 루틴' },
+                  { icon: '🌳', text: '내면의 나무 — ACT 기반 자아 성장' },
+                ].map(item => (
+                  <div key={item.text} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 18 }}>{item.icon}</span>
+                    <span style={{ fontSize: 14, color: '#5A5A5A' }}>{item.text}</span>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => {
+                  if (!isLoggedIn) { setView('memberLogin'); return; }
+                  const token = localStorage.getItem('access_token') || '';
+                  window.open(`https://game.maumful.com${token ? '?t=' + encodeURIComponent(token) : ''}`, '_blank', 'noopener noreferrer');
+                }}
+                style={{
+                  background: '#2D6A4F', color: 'white', border: 'none',
+                  borderRadius: 12, padding: '14px 32px', fontSize: 16, fontWeight: 700,
+                  cursor: 'pointer', fontFamily: "'Noto Sans KR', sans-serif", transition: 'all 0.2s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#1B5138'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = '#2D6A4F'; e.currentTarget.style.transform = 'none'; }}
+              >
+                마음 게임 시작하기 →
+              </button>
+              <div style={{ marginTop: 12, fontSize: 12, color: '#9A9A9A' }}>
+                로그인 후 별도 로그인 없이 바로 이동합니다
+              </div>
+            </div>
+
+            {/* 게임 카드 */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              {[
+                { emoji: '🌿', name: '마음의 정원', tag: '레벨 1 · 무료', color: '#2D6A4F', bg: '#D8F3DC' },
+                { emoji: '🌸', name: '감정꽃 찾기', tag: 'PHQ-9 연동', color: '#EC4899', bg: '#FDF2F8' },
+                { emoji: '⭐', name: '별빛 감사 일기', tag: '레벨 2', color: '#F59E0B', bg: '#FFFBEB' },
+                { emoji: '🌳', name: '내면의 나무', tag: 'SDRI 연동', color: '#059669', bg: '#ECFDF5' },
+              ].map(g => (
+                <div key={g.name}
+                  onClick={() => {
+                    if (!isLoggedIn) { setView('memberLogin'); return; }
+                    const token = localStorage.getItem('access_token') || '';
+                    window.open(`https://game.maumful.com${token ? '?t=' + encodeURIComponent(token) : ''}`, '_blank', 'noopener noreferrer');
+                  }}
+                  style={{
+                    background: g.bg, borderRadius: 16, padding: '22px 18px',
+                    cursor: 'pointer', transition: 'all 0.2s',
+                    border: `1.5px solid ${g.color}22`,
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 8px 28px rgba(0,0,0,0.10)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
+                >
+                  <div style={{ fontSize: 36, marginBottom: 10 }}>{g.emoji}</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: '#1A1A1A', marginBottom: 6 }}>{g.name}</div>
+                  <span style={{
+                    fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 100,
+                    background: 'white', color: g.color, border: `1px solid ${g.color}44`,
+                  }}>{g.tag}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+
+      {/* ── 서비스 성격 고지 바 ──────────────────────────── */}
+      <div style={{
+        background: '#F0FDF4', borderTop: '1px solid #86EFAC', borderBottom: '1px solid #86EFAC',
+        padding: '10px 24px', textAlign: 'center',
+        fontSize: 12, color: '#166534',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, flexWrap: 'wrap',
+      }}>
+        <span>ℹ️</span>
+        <span>
+          <strong>본 서비스는 자기이해 및 정보 제공 목적의 콘텐츠 서비스입니다.</strong>
+          {' '}심리검사 결과와 AI 상담은 의료적 진단·치료를 대체하지 않습니다.
+          {' '}증상이 지속되면 전문의 상담을 권장합니다.
+        </span>
+      </div>
+
+      {/* ── 위기상담 안내 바 ─────────────────────────────── */}
+      <div style={{
+        background: '#FFF8E1', borderTop: '1px solid #F4A261',
+        padding: '10px 24px', textAlign: 'center',
+        fontSize: 13, color: '#854D0E',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap',
+      }}>
+        <span>🆘</span>
+        <strong>자살예방상담전화 1393</strong>
+        <span>—</span>
+        <span>위기 상황이라면 전문가와 상담하세요 · 24시간 무료</span>
+      </div>
+
+      {/* ── FOOTER ──────────────────────────────────────── */}
+      <footer style={{ background: '#141414', color: 'rgba(255,255,255,0.55)', padding: '56px 40px 32px' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 48, marginBottom: 40 }}
+            className="footer-grid">
+            <div>
+              <div style={{
+                fontSize: 20, fontWeight: 700, color: 'white',
+                marginBottom: 12, fontFamily: "'Noto Sans KR', sans-serif",
+              }}>🌿 마음풀</div>
+              <p style={{ fontSize: 13, lineHeight: 1.8 }}>나를 이해하는 첫걸음.<br />전문 심리검사와 AI 상담을 한 곳에서.</p>
+            </div>
+            {[
+              {
+                title: '심리검사',
+                links: ['PHQ-9 우울 자가점검', 'GAD-7 불안', 'DASS-21', 'Big5 성격', '전체 검사 보기'],
+              },
+              {
+                title: '서비스',
+                links: ['AI 상담', '마음 게임', '크레딧 충전'],
+              },
+              {
+                title: '고객지원',
+                links: ['이용약관', '개인정보처리방침', 'FAQ', '문의하기', '어드민'],
+              },
+            ].map(col => (
+              <div key={col.title}>
+                <h4 style={{ color: 'white', fontSize: 14, fontWeight: 600, marginBottom: 14 }}>{col.title}</h4>
+                {col.links.map(l => (
+                  <div key={l} style={{ marginBottom: 9 }}>
+                    <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', cursor: 'pointer' }}
+                      onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.8)'}
+                      onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.45)'}
+                      onClick={() => {
+                        if (l === '이용약관') setView('terms');
+                        if (l === '개인정보처리방침') setView('privacy');
+                        if (l === '어드민') setView('counselingAdmin');
+                      }}
+                    >{l}</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+          <div style={{
+            borderTop: '1px solid rgba(255,255,255,0.08)',
+            paddingTop: 24, fontSize: 11,
+            color: 'rgba(255,255,255,0.35)', lineHeight: 1.9,
+          }}>
+            <p style={{ marginBottom: 6 }}>
+              본 서비스는 자기이해 및 정보 제공 목적의 콘텐츠 서비스입니다. 심리검사 결과 및 AI 상담은 의료적 진단·치료를 대체하지 않습니다. 증상이 지속되면 정신건강의학과 전문의 상담을 권장합니다.
+            </p>
+            <p style={{ marginBottom: 6 }}>
+              개인정보 처리 문의: support@maumful.com · 개인정보 침해신고: 개인정보보호위원회 182
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+              <span>© 2026 마음풀. All rights reserved. · Powered by Cloudflare</span>
+              <span>사업자등록 준비 중</span>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+// ============================================================
+// TestsIntroPage — 검사 소개 상세 페이지
+// ============================================================
+function TestsIntroPage({ setView, isLoggedIn }) {
+  const { useState: useS } = React;
+  const [selected, setSelected] = useS(null);
+
+  const t = selected !== null ? TEST_META[selected] : null;
+  const c = t ? COLOR_MAP[t.color] : null;
+
+  return (
+    <div style={{ fontFamily: "'Noto Sans KR', sans-serif", background: '#FAFAF8', minHeight: '100vh' }}>
+      {/* 페이지 헤더 */}
+      <div style={{
+        background: 'linear-gradient(135deg, #F0FAF4, #FAFAF8)',
+        borderBottom: '1px solid rgba(0,0,0,0.07)',
+        padding: '60px 24px 48px', textAlign: 'center',
+      }}>
+        <div style={{
+          display: 'inline-block', background: '#D8F3DC', color: '#2D6A4F',
+          fontSize: 12, fontWeight: 700, letterSpacing: '1.5px',
+          textTransform: 'uppercase', padding: '5px 14px', borderRadius: 100, marginBottom: 16,
+        }}>Psychological Tests</div>
+        <h1 style={{ fontSize: 40, fontWeight: 700, marginBottom: 14 }}>
+          심리검사 <span style={{ color: '#2D6A4F' }}>소개</span>
+        </h1>
+        <p style={{ fontSize: 16, color: '#5A5A5A', maxWidth: 480, margin: '0 auto' }}>
+          각 검사를 선택하면 상세 정보를 확인할 수 있습니다
+        </p>
+      </div>
+
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '48px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32 }}
+        className="intro-grid">
+        {/* 검사 목록 */}
+        <div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {TEST_META.map((test, i) => {
+              const cc = COLOR_MAP[test.color];
+              const isActive = selected === i;
+              return (
+                <div
+                  key={test.id}
+                  onClick={() => setSelected(i)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 16,
+                    padding: '18px 20px', borderRadius: 14, cursor: 'pointer',
+                    background: isActive ? cc.bg : 'white',
+                    border: isActive ? `2px solid ${cc.bar}` : '1px solid rgba(0,0,0,0.08)',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={e => { if (!isActive) e.currentTarget.style.borderColor = cc.bar + '66'; }}
+                  onMouseLeave={e => { if (!isActive) e.currentTarget.style.borderColor = 'rgba(0,0,0,0.08)'; }}
+                >
+                  <div style={{
+                    width: 48, height: 48, borderRadius: 13, flexShrink: 0,
+                    background: cc.bg, display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', fontSize: 24,
+                    border: `2px solid ${cc.bar}33`,
+                  }}>{test.icon}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                      <span style={{ fontSize: 16, fontWeight: 700, color: '#1A1A1A' }}>{test.name}</span>
+                      <span style={{
+                        fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 100,
+                        background: test.free ? '#D8F3DC' : '#FFF0E6',
+                        color: test.free ? '#1A6B3C' : '#C05621',
+                      }}>{test.free ? '무료' : '10 크레딧'}</span>
+                    </div>
+                    <div style={{ fontSize: 13, color: '#9A9A9A' }}>
+                      {test.label} · {test.time} · {test.count}
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 18, color: isActive ? cc.bar : '#CACACA' }}>›</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 검사 상세 패널 */}
+        <div style={{ position: 'sticky', top: 80, alignSelf: 'start' }}>
+          {!t ? (
+            <div style={{
+              background: 'white', borderRadius: 20, padding: '60px 40px',
+              border: '1px solid rgba(0,0,0,0.08)', textAlign: 'center',
+              color: '#9A9A9A',
+            }}>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>👆</div>
+              <p style={{ fontSize: 15 }}>왼쪽에서 검사를 선택하면<br />상세 정보를 확인할 수 있습니다</p>
+            </div>
+          ) : (
+            <div style={{
+              background: 'white', borderRadius: 20,
+              border: `1px solid ${c.bar}33`,
+              overflow: 'hidden',
+            }}>
+              <div style={{
+                background: c.bg, padding: '32px 32px 28px',
+                borderBottom: `1px solid ${c.bar}22`,
+              }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>{t.icon}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: c.bar, letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 6 }}>{t.label}</div>
+                <h2 style={{ fontSize: 26, fontWeight: 700, color: '#1A1A1A', marginBottom: 8 }}>{t.name}</h2>
+                <p style={{ fontSize: 14, color: '#5A5A5A', lineHeight: 1.7 }}>{t.desc}</p>
+              </div>
+
+              <div style={{ padding: '24px 32px' }}>
+                {/* 기본 정보 */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
+                  {[
+                    { label: '소요 시간', value: t.time },
+                    { label: '문항 수', value: t.count },
+                    { label: '비용', value: t.free ? '무료' : '10 크레딧' },
+                  ].map(info => (
+                    <div key={info.label} style={{
+                      background: '#F9F9F7', borderRadius: 10, padding: '14px',
+                      textAlign: 'center',
+                    }}>
+                      <div style={{ fontSize: 12, color: '#9A9A9A', marginBottom: 4 }}>{info.label}</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: '#1A1A1A' }}>{info.value}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* 측정 영역 */}
+                <div style={{ marginBottom: 24 }}>
+                  <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 10, color: '#1A1A1A' }}>📌 측정 영역</h4>
+                  <div style={{ fontSize: 14, color: '#5A5A5A', lineHeight: 1.75, background: '#F9F9F7', borderRadius: 10, padding: '14px 16px' }}>
+                    {t.id === 'PHQ9' && '우울한 기분 · 흥미/즐거움 감소 · 수면 변화 · 피로감 · 식욕 변화 · 자기비난 · 집중력 · 정신운동 변화 · 자살사고'}
+                    {t.id === 'GAD7' && '불안감 · 걱정 조절 어려움 · 여러 걱정 · 긴장감 · 안절부절 · 과민함 · 나쁜 일에 대한 두려움'}
+                    {t.id === 'DASS21' && '우울(D) — 무기력·절망·자기비하 / 불안(A) — 자율신경 각성·상황불안 / 스트레스(S) — 만성적 각성·긴장'}
+                    {t.id === 'BIG5' && '개방성(O) · 성실성(C) · 외향성(E) · 친화성(A) · 신경증(N) — 5가지 성격 핵심 차원'}
+                    {t.id === 'LOST' && '행동억제체계(BIS) · 행동활성화체계(BAS) — 추동·재미추구·보상반응성 4하위척도'}
+                    {t.id === 'SCT' && '자기입장 유지 · 정서반응성 · 정서적 단절 · 융합·관계의존 등 4개 영역의 자기반응 패턴을 문장완성으로 탐색합니다'}
+                    {t.id === 'DSI' && '자기입장 유지 · 정서반응성 · 정서적 단절 · 융합·관계의존 — 4개 소척도 평정형 25문항으로 자기분화 수준을 측정합니다'}
+                    {t.id === 'BURNOUT' && '정서적 고갈 · 냉소 · 효능감 저하 3가지 소진 신호 자가점검 — 직장인·교육·서비스직 특화'}
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    // 무료 검사(PHQ9·GAD7): 비로그인도 바로 시작
+                    // 유료 검사: 비로그인이면 회원가입 유도
+                    const FREE = ['PHQ9', 'GAD7'];
+                    if (!isLoggedIn && !FREE.includes(t.id)) {
+                      setView('memberSignup'); return;
+                    }
+                    setView('startTest:' + t.id);
+                  }}
+                  style={{
+                    width: '100%', padding: '14px 0',
+                    background: c.bar, color: 'white', border: 'none',
+                    borderRadius: 12, fontSize: 16, fontWeight: 700,
+                    cursor: 'pointer', fontFamily: "'Noto Sans KR', sans-serif",
+                    transition: 'opacity 0.2s',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.opacity = '0.88'}
+                  onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                >
+                  {t.name} 시작하기 {t.free ? '(무료)' : '→'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

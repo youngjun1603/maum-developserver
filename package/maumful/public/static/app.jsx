@@ -1,0 +1,7752 @@
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ============================================================
+// 토큰 저장소 (localStorage)
+// ============================================================
+const tokenStore = {
+  getAccess:   ()  => localStorage.getItem('access_token'),
+  getRefresh:  ()  => localStorage.getItem('refresh_token'),
+  setTokens:   (a, r) => { localStorage.setItem('access_token', a); if (r) localStorage.setItem('refresh_token', r); },
+  clear:       ()  => { localStorage.removeItem('access_token'); localStorage.removeItem('refresh_token'); localStorage.removeItem('current_user'); },
+  getUser:     ()  => { try { return JSON.parse(localStorage.getItem('current_user') || 'null'); } catch { return null; } },
+  setUser:     (u) => localStorage.setItem('current_user', JSON.stringify(u)),
+};
+
+// ============================================================
+// 검사·AI 정책 상수
+// ============================================================
+const FREE_TESTS      = ['PHQ9', 'GAD7'];            // 무료 검사 2종 (PHQ-9·GAD-7)
+const AI_LIMIT_FREE   = 5;   // 비로그인/크레딧 없음: 하루 5회
+const AI_LIMIT_PAID   = 10;   // 크레딧 보유: 하루 10회 (회당 5크레딧)
+const AI_LIMIT_KEY    = 'ai_chat_used_v2';           // localStorage 키
+const AI_DISCLAIMER   = '⚠️ 이 분석은 AI가 생성한 참고 정보입니다. 의학적 진단이나 치료를 대체하지 않습니다. 심리적 어려움이 지속된다면 반드시 전문가와 상담하세요.';
+
+// ============================================================
+// B2C API 헬퍼 — 모든 인증 요청에 Bearer 토큰 자동 주입
+// ============================================================
+const api = {
+  // 인증 헤더 반환
+  _authHeader() {
+    const t = tokenStore.getAccess();
+    return t ? { 'Authorization': 'Bearer ' + t } : {};
+  },
+
+  // 공통 fetch — 401 시 refresh 자동 시도
+  async _fetch(url, opts = {}, retry = true) {
+    const res = await fetch(url, {
+      ...opts,
+      headers: { 'Content-Type': 'application/json', ...this._authHeader(), ...(opts.headers || {}) },
+    });
+    if (res.status === 401 && retry) {
+      const ok = await this.refreshToken();
+      if (ok) return this._fetch(url, opts, false);
+    }
+    return res;
+  },
+
+  // 토큰 갱신
+  async refreshToken() {
+    const refresh = tokenStore.getRefresh();
+    if (!refresh) return false;
+    try {
+      const res = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+        body: JSON.stringify({ refreshToken: refresh }),
+      });
+      if (!res.ok) { tokenStore.clear(); return false; }
+      const { data } = await res.json();
+      tokenStore.setTokens(data.accessToken, null);
+      return true;
+    } catch { tokenStore.clear(); return false; }
+  },
+
+  // ── 인증 ──────────────────────────────────────────────────
+  async register(email, password, nickname, locale = 'ko') {
+    const r = await fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+      body: JSON.stringify({ email, password, nickname, locale }) });
+    return r.json();
+  },
+  async login(email, password) {
+    const r = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+      body: JSON.stringify({ email, password }) });
+    return r.json();
+  },
+  async loginGoogle(idToken) {
+    const r = await fetch('/api/auth/google', { method: 'POST', headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+      body: JSON.stringify({ idToken }) });
+    return r.json();
+  },
+  async logout() {
+    await this._fetch('/api/auth/logout', { method: 'POST' });
+    tokenStore.clear();
+  },
+  async forgotPassword(email) {
+    const r = await fetch('/api/auth/forgot-password', { method: 'POST', headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+      body: JSON.stringify({ email }) });
+    return r.json();
+  },
+
+  // ── 사용자 ────────────────────────────────────────────────
+  async getMe() {
+    const r = await this._fetch('/api/user/me');
+    return r.json();
+  },
+  async getCredits() {
+    const r = await this._fetch('/api/user/credits');
+    return r.json();
+  },
+  async updateMe(data) {
+    const r = await this._fetch('/api/user/me', { method: 'PATCH', body: JSON.stringify(data) });
+    return r.json();
+  },
+  async deleteMe() {
+    const r = await this._fetch('/api/user/me', { method: 'DELETE' });
+    return r.json();
+  },
+
+  // ── 검사 ──────────────────────────────────────────────────
+  async startTest(testType, lang = 'ko') {
+    const r = await this._fetch('/api/test/start', { method: 'POST', body: JSON.stringify({ testType, lang }) });
+    return r.json();
+  },
+  async getTestHistory() {
+    const r = await this._fetch('/api/test/history');
+    return r.json();
+  },
+
+  // ── 지역 설정 ─────────────────────────────────────────────
+  async getRegionConfig() {
+    const r = await fetch('/api/config/region');
+    return r.json();
+  },
+
+  // ── 크레딧 충전 ───────────────────────────────────────────
+  async prepareCharge(packageKey, pg) {
+    const r = await this._fetch('/api/credits/prepare-charge', { method: 'POST', body: JSON.stringify({ packageKey, pg }) });
+    return r.json();
+  },
+};
+
+// ============================================================
+// LocalStorage 결과 저장소 (검사 결과는 서버 미저장 원칙 유지)
+// ============================================================
+const storage = {
+  get: (key) => { try { const v = localStorage.getItem(key); return v ? { value: v } : null; } catch { return null; } },
+  set: (key, value) => { try { localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value)); return true; } catch { return false; } },
+  remove: (key) => { try { localStorage.removeItem(key); return true; } catch { return false; } },
+};
+
+// ============================================================
+// 메인 컴포넌트
+// ============================================================
+function PsychologicalTestSystem() {
+
+  // ── 인증 & 사용자 상태 ──────────────────────────────────
+  const [currentUser, setCurrentUser]   = useState(null);   // { id, email, nickname, credits, locale }
+  const [isLoggedIn, setIsLoggedIn]      = useState(false);
+  const [regionConfig, setRegionConfig]  = useState(null);  // 지역별 설정
+
+  // ── 뷰 라우터 ─────────────────────────────────────────────
+  const [view, setView] = useState('landing');
+
+  // ── 크레딧 ────────────────────────────────────────────────
+  const [credits, setCredits]             = useState(0);
+  const [creditTxns, setCreditTxns]       = useState([]);
+  const [showCreditModal, setShowCreditModal] = useState(false);   // 크레딧 부족 모달
+  const [showChargeView, setShowChargeView]   = useState(false);   // 충전 화면
+
+  // ── 메시지 & 폼 ─────────────────────────────────────────
+  const [loginMsg, setLoginMsg]     = useState({ type: '', text: '' });
+  const [formMsg, setFormMsg]       = useState({ type: '', text: '' });
+  const [saveStatus, setSaveStatus] = useState('');
+
+  // ── 검사 진행 상태 (기존 로직 유지) ─────────────────────
+  const [sessionId, setSessionId]         = useState(() => genId('session'));
+  const [pendingTests, setPendingTests]   = useState([]);
+  const [currentTestIndex, setCurrentTestIndex] = useState(0);
+  const [multiSessionIds, setMultiSessionIds]   = useState([]);
+  const [submitted, setSubmitted]         = useState([]);
+
+  // ── 검사 응답 상태 (기존 유지) ───────────────────────────
+  const [srciResponses, setSrciResponses]       = useState({});  // SRCI 자기반응 완성검사 응답
+  const [sctSummaries, setSctSummaries]         = useState({});
+  const [loadingSummary, setLoadingSummary]     = useState({});
+  const [sdriResponses, setSdriResponses]               = useState({});     // SDRI 자기분화 반응성 검사 응답
+  const [dsiRec, setDsiRec]                     = useState('');
+  const [loadingRec, setLoadingRec]             = useState(false);
+  const [phq9Responses, setPhq9Responses]       = useState({});
+  const [gad7Responses, setGad7Responses]       = useState({});
+  const [dass21Responses, setDass21Responses]   = useState({});
+  const [big5Responses, setBig5Responses]       = useState({});
+  const [burnoutResponses, setBurnoutResponses] = useState({});
+  const [lostResponses, setLostResponses]       = useState({});
+  const [aiAnalysis, setAiAnalysis]             = useState({});
+  const [aiLoading, setAiLoading]               = useState({});
+  const [aiError, setAiError]                   = useState({});
+
+
+  // ── AI 채팅 상태 (기존 유지) ─────────────────────────────
+  const [chatOpen, setChatOpen]         = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput]       = useState('');
+  const [chatStreaming, setChatStreaming] = useState(false);
+  const [chatError, setChatError]       = useState('');
+
+  // ── 관리자 API 설정 (기존 유지) ─────────────────────────
+  const [apiSettings, setApiSettings]       = useState([]);
+  const [apiSettingForm, setApiSettingForm] = useState({ key_name: 'ANTHROPIC_API_KEY', key_value: '', description: 'Claude AI 심리분석용 API 키' });
+  const [apiSettingMsg, setApiSettingMsg]   = useState({ type: '', text: '' });
+  const [apiSettingLoading, setApiSettingLoading] = useState(false);
+  const [showApiKeyInput, setShowApiKeyInput]     = useState(false);
+
+  // ── B2C 전용 상태 ────────────────────────────────────────
+  const [signupForm, setSignupForm] = useState({ email: '', password: '', pwConfirm: '', nickname: '' });
+  const [pendingVerifyEmail, setPendingVerifyEmail] = useState(''); // 이메일 인증 대기 중인 계정
+
+  // ── AI 상담 횟수 제한 상태 ────────────────────────────────
+  const [aiChatUsed, setAiChatUsed] = useState(() => {
+    try { return parseInt(localStorage.getItem(AI_LIMIT_KEY) || '0', 10); } catch { return 0; }
+  });
+  const [showAiLimitModal, setShowAiLimitModal] = useState(false);
+
+  // ── 상담 모드 (심리상담 / 기독교 상담) ───────────────────
+  // localStorage에 저장 → 로그인 유지 시 기억
+  const [counselingMode, setCounselingMode] = useState(() => {
+    try { return localStorage.getItem('counseling_mode') || 'psychological'; } catch { return 'psychological'; }
+  });
+  function updateCounselingMode(mode) {
+    setCounselingMode(mode);
+    try { localStorage.setItem('counseling_mode', mode); } catch {}
+  }
+
+  // ── GDPR 쿠키 동의 ────────────────────────────────────────
+  const [showCookieBanner, setShowCookieBanner] = useState(() => {
+    // EU 국가 코드 목록
+    const EU_COUNTRIES = ['AT','BE','BG','CY','CZ','DE','DK','EE','ES','FI','FR','GR','HR','HU','IE','IT','LT','LU','LV','MT','NL','PL','PT','RO','SE','SI','SK'];
+    const accepted = localStorage.getItem('cookie_consent');
+    if (accepted) return false;
+    // 브라우저 언어로 EU 여부 추정 (cf-ipcountry는 초기에는 알 수 없음)
+    const lang = navigator.language?.slice(0,2);
+    const euLangs = ['de','fr','it','es','pl','nl','pt','sv','fi','da','cs','ro','hu','sk','bg','hr','et','lv','lt','sl','mt'];
+    return euLangs.includes(lang);
+  });
+  const [testHistory, setTestHistory] = useState([]);
+  const [myPageTab, setMyPageTab]     = useState('credits'); // 'credits' | 'history' | 'settings' | 'appointments'
+  const [creditSubTab, setCreditSubTab] = useState('usage');   // 'usage' | 'charge'
+  const [selectedTests, setSelectedTests] = useState(['PHQ9']); // 대시보드에서 선택한 검사
+
+  // ── 친구 초대 상태 ────────────────────────────────────────
+  const [referralData, setReferralData]   = useState(null);   // { code, inviteUrl, stats, rewards }
+  const [referralList, setReferralList]   = useState([]);
+  const [referralLoading, setReferralLoading] = useState(false);
+  const [referralMsg, setReferralMsg]     = useState({ type: '', text: '' });
+  const [referralInput, setReferralInput] = useState('');     // 초대 코드 입력
+
+  // ── 관리자 대시보드 상태 ─────────────────────────────────
+  const [adminStats, setAdminStats]       = useState(null);
+  const [adminDaily, setAdminDaily]       = useState(null);
+  const [adminTestStats, setAdminTestStats] = useState([]);
+  const [adminUsers, setAdminUsers]       = useState({ users: [], pagination: {} });
+  const [adminPayments, setAdminPayments] = useState({ payments: [], pagination: {} });
+  const [adminTab, setAdminTab]           = useState('overview');  // overview|users|payments|tests
+  const [adminSearch, setAdminSearch]     = useState('');
+  const [adminSecretInput, setAdminSecretInput] = useState('');
+  const [adminAuthenticated, setAdminAuthenticated] = useState(false);
+  const [adminLoading, setAdminLoading]   = useState(false);
+  const [adminMsg, setAdminMsg]           = useState({ type: '', text: '' });
+  const [creditGrantForm, setCreditGrantForm] = useState({ userId: '', amount: '', type: 'gain', reason: 'admin_grant' });
+
+  // 🔒 레거시 화면 호환 useState (다른 AI 분석에서 발견)
+  const [userInfo, setUserInfo] = useState({ phone: '', password: '' });
+  const [linkInput, setLinkInput] = useState('');
+  const [counselorForm, setCounselorForm] = useState({ name: '', phone: '', password: '', certification: '', education: '', experience: '' });
+  const [biblicalRefs, setBiblicalRefs] = useState([]);
+  const [biblicalForm, setBiblicalForm] = useState({ id: null, title: '', category: 'general', content: '', sort_order: 0 });
+  const [showBiblicalForm, setShowBiblicalForm] = useState(false);
+  const [biblicalMsg, setBiblicalMsg] = useState({ type: '', text: '' });
+  const [biblicalLoading, setBiblicalLoading] = useState(false);
+  const [subscription, setSubscriptionState] = useState(null);
+
+
+  // ============================================================
+  // 🔒 누락된 state 안전망 (B2B/Master/Org 잔재)
+  // ============================================================
+  const [isMaster, setIsMaster] = useState(false);
+  const [masterInfo, setMasterInfo] = useState(null);
+  const [isOrgAdmin, setIsOrgAdmin] = useState(false);
+  const [orgAdminInfo, setOrgAdminInfo] = useState(null);
+  // 🔒 B2B 잔재 setter stubs (logout 등 호환용)
+  const setActiveLinkId = (...args) => {};
+  const setSubscription = setSubscriptionState;  // 🔗 useState setter 위임
+
+  // ============================================================
+  // ✅ main.jsx 에서 복구한 헬퍼 함수 및 검사 데이터
+  // ============================================================
+  function getToken() {
+      try {
+        const token = localStorage.getItem('psy_token');
+        return token || '';
+      } catch (e) {
+        console.error('[getToken] localStorage 접근 실패:', e);
+        return '';
+      }
+    }
+
+  function saveToken(tok) {
+      try {
+        if (!tok) {
+          console.warn('[saveToken] 빈 토큰 저장 시도 무시');
+          return false;
+        }
+        localStorage.setItem('psy_token', tok);
+        console.log('[saveToken] 토큰 저장 성공, 길이:', tok.length);
+        return true;
+      } catch (e) {
+        console.error('[saveToken] localStorage 저장 실패:', e);
+        return false;
+      }
+    }
+
+  async function restoreLoginState() {
+      const loginData = storage.get("current_login");
+      if (!loginData) return false;
+    
+      try {
+        const data = JSON.parse(loginData.value);
+      
+        // 토큰 복원 (저장된 토큰이 있으면 복원)
+        if (data._token && !getToken()) {
+          console.log('[restoreLoginState] 저장된 토큰 복원');
+          saveToken(data._token);
+        }
+      
+        // 토큰 존재 여부 확인
+        const currentToken = getToken();
+        if (!currentToken) {
+          console.warn('[restoreLoginState] 토큰 없음, 로그인 상태 무효화');
+          storage.remove("current_login");
+          return false;
+        }
+      
+        console.log('[restoreLoginState] 로그인 상태 복원 시도:', data.type);
+      
+        if (data.type === "admin" || data.type === "master") {
+          setIsAdmin(true);
+          if (data.type === "master") {
+            setIsMaster(true);
+            setMasterInfo({ phone: data.phone, name: data.name });
+            try { await loadMasterData(); } catch(e) { /* API 오류여도 화면 진입 */ }
+            setView("masterDashboard");
+          } else {
+            setView("admin");
+            loadAllSubmitted();
+            try {
+              const pendingResult = await api.getPendingCounselors();
+              if (pendingResult.success) setPendingCounselors(pendingResult.data);
+            } catch (err) {}
+            try {
+              const approvedResult = await api.getApprovedCounselors();
+              if (approvedResult.success) setApprovedCounselors(approvedResult.data);
+            } catch (err) {}
+            await loadApiSettings();
+          }
+          return true;
+        } else if (data.type === "orgAdmin" || data.type === "org_admin") {
+          setIsOrgAdmin(true);
+          setOrgAdminInfo({
+            phone: data.phone,
+            name: data.name,
+            org_id: data.org_id,
+            org_name: data.org_name
+          });
+          setView("orgAdminDashboard");
+        
+          // 조직 상담사 목록 로드
+          try { await loadOrgCounselors(data.org_id); } catch(e) {}
+        
+          return true;
+        } else if (data.type === "counselor") {
+          setIsCounselor(true);
+          setCounselorPhone(data.phone);
+        
+          // D1에서 구독 정보 가져오기
+          try {
+            const result = await api.getSubscription(data.phone);
+            if (result.success) {
+              setSubscription(result.data);
+            } else {
+            }
+          } catch (err) {
+          }
+        
+          // AI 분석 사용 횟수 복원 (무료 플랜 제한용)
+          const savedAiCount = parseInt(localStorage.getItem("ai_usage_" + data.phone) || "0", 10);
+          setAiChatUsed(savedAiCount);
+        
+          const lr = storage.get("counselor_links_" + data.phone);
+          const links = lr ? JSON.parse(lr.value) : [];
+          loadAllSubmitted();
+          setView("memberDashboard");
+          return true;
+        }
+      } catch (error) {
+        console.error('[restoreLoginState] 오류:', error);
+        // JSON 파싱 오류만 current_login 제거 (API 일시 오류는 보존)
+        if (error instanceof SyntaxError) {
+          storage.remove("current_login");
+        }
+      }
+      return false;
+    }
+
+  function saveLoginState(loginData) {
+      // 토큰도 함께 저장하여 복원 시 사용
+      const token = getToken();
+      storage.set("current_login", JSON.stringify({ ...loginData, _token: token }));
+    }
+
+  function clearLoginState() {
+      storage.remove("current_login");
+    }
+
+  async function loadMasterData() {
+      const token = getToken();
+      if (!token) {
+        console.warn('[loadMasterData] 토큰 없음, 로드 스킵');
+        return;
+      }
+    
+      console.log('[loadMasterData] 데이터 로드 시작');
+    
+      // 순차적으로 로드하여 안정성 확보
+      try {
+        await loadOrganizations();
+        await loadMasterSessions();
+        await loadNotifications('all');
+        await loadNotices('all');
+      
+        const [pendingResult, approvedResult] = await Promise.all([
+          api.getPendingCounselors(),
+          api.getApprovedCounselors()
+        ]);
+        if (pendingResult && pendingResult.success) setPendingCounselors(pendingResult.data || []);
+        if (approvedResult && approvedResult.success) setApprovedCounselors(approvedResult.data || []);
+      
+        console.log('[loadMasterData] 데이터 로드 완료');
+      } catch (error) {
+        console.error('[loadMasterData] 오류:', error);
+      }
+    }
+
+  function loadAllSubmitted() {
+      const r = storage.get("submitted_list");
+      const list = r ? JSON.parse(r.value) : [];
+      setSubmitted(list);
+    }
+
+  async function loadApiSettings() {
+      try {
+        const res = await authFetch('/api/admin/api-settings');
+        const data = await res.json();
+        if (data.success) setApiSettings(data.data || []);
+      } catch (e) {
+      }
+    }
+
+  async function loadOrgCounselors(orgId) {
+      try {
+        const response = await authFetch(`/api/organizations/${orgId}/counselors`);
+        const data = await response.json();
+        if (data.success) setOrgCounselors(data.data || []);
+        else setOrgCounselors([]);
+      } catch (error) {
+      }
+    }
+
+  function checkAndCleanExpiredSessions() {
+      const listRaw = storage.get("submitted_list");
+      if (!listRaw) return;
+    
+      const list = JSON.parse(listRaw.value);
+      const now = Date.now();
+      const TWENTY_FOUR_HOURS = 7 * 24 * 60 * 60 * 1000; // 7일 (밀리초)
+    
+      const validSessions = [];
+      let deletedCount = 0;
+    
+      list.forEach(session => {
+        const createdTime = new Date(session.createdAt).getTime();
+        const age = now - createdTime;
+      
+        if (age >= TWENTY_FOUR_HOURS) {
+          // 24시간 경과 - 삭제
+          storage.remove("session_" + session.sessionId);
+          deletedCount++;
+        } else {
+          validSessions.push(session);
+        }
+      });
+    
+      if (deletedCount > 0) {
+        storage.set("submitted_list", JSON.stringify(validSessions));
+        setSubmitted(validSessions);
+      } else {
+      }
+    }
+
+  function loadLink(id) {
+      const r = storage.get("link_" + id);
+      return r ? JSON.parse(r.value) : null;
+    }
+
+  function storeLink(d) {
+      storage.set("link_" + d.linkId, JSON.stringify(d));
+    }
+
+  function checkEdu(edu) {
+      if (!edu) return { ok: false, kws: [] };
+      const kws = counselingKw.filter(k => edu.toLowerCase().includes(k));
+      return { ok: kws.length > 0, kws };
+    }
+
+  const getBurnoutDomains = () => [
+      { 
+        id: "EE", 
+        name: "정서적 소진", 
+        icon: "😰",
+        color: "#f97316", 
+        max: 72,
+        questions: burnoutQ.filter(q => q.domain === "EE")
+      },
+      { 
+        id: "DP", 
+        name: "비인격화", 
+        icon: "😶",
+        color: "#ef4444", 
+        max: 48,
+        questions: burnoutQ.filter(q => q.domain === "DP")
+      },
+      { 
+        id: "PA", 
+        name: "성취감 저하", 
+        icon: "📉",
+        color: "#c084fc", 
+        max: 60,
+        questions: burnoutQ.filter(q => q.domain === "PA")
+      },
+      { 
+        id: "WO", 
+        name: "업무 과부하", 
+        icon: "⚡",
+        color: "#f59e0b", 
+        max: 60,
+        questions: burnoutQ.filter(q => q.domain === "WO")
+      },
+      { 
+        id: "PC", 
+        name: "신체·인지", 
+        icon: "🤕",
+        color: "#4ade80", 
+        max: 60,
+        questions: burnoutQ.filter(q => q.domain === "PC")
+      }
+    ];
+
+  const phq9Q = [
+      { num: 1, content: "기분이 가라앉거나, 우울하거나, 희망이 없다고 느꼈다" },
+      { num: 2, content: "평소 하던 일에 대한 흥미가 없어지거나 즐거움을 느끼지 못했다" },
+      { num: 3, content: "잠들기가 어렵거나 자주 깼다 / 혹은 너무 많이 잤다" },
+      { num: 4, content: "피곤하다고 느끼거나 기력이 거의 없었다" },
+      { num: 5, content: "식욕이 줄었다 / 혹은 평소보다 많이 먹었다" },
+      { num: 6, content: "내 자신이 실패자라고 느꼈다 / 혹은 자신과 가족을 실망시켰다고 느꼈다" },
+      { num: 7, content: "신문을 읽거나 TV를 보는 것과 같은 일에 집중하기가 어려웠다" },
+      { num: 8, content: "다른 사람들이 알아챌 정도로 평소보다 말과 행동이 느려졌다 / 혹은 너무 안절부절 못해서 가만히 앉아 있을 수 없었다" },
+      { num: 9, content: "차라리 죽는 것이 낫겠다고 생각했다 / 혹은 자해할 생각을 했다" },
+    ];
+
+  const gad7Q = [
+      { num: 1, content: "초조하거나 불안하거나 조마조마하게 느낀다" },
+      { num: 2, content: "걱정하는 것을 멈추거나 조절할 수가 없다" },
+      { num: 3, content: "여러 가지 것들에 대해 걱정을 너무 많이 한다" },
+      { num: 4, content: "편하게 있기가 어렵다" },
+      { num: 5, content: "너무 안절부절 못해서 가만히 있기 힘들다" },
+      { num: 6, content: "쉽게 짜증이 나거나 쉽게 성을 낸다" },
+      { num: 7, content: "마치 끔찍한 일이 생길 것처럼 두렵게 느낀다" },
+    ];
+
+  const dass21Q = [
+      { num: 1, content: "나는 안정을 취하기 힘들었다", scale: "스트레스" },
+      { num: 2, content: "입이 바싹 마르는 느낌이 들었다", scale: "불안" },
+      { num: 3, content: "어떤 것에도 긍정적인 감정을 느낄 수가 없었다", scale: "우울" },
+      { num: 4, content: "호흡 곤란을 경험했다 (예: 과도하게 빠른 호흡, 힘든 일을 하지 않았는데도 숨이 참)", scale: "불안" },
+      { num: 5, content: "무언가를 해야겠다는 의욕이 들지 않았다", scale: "우울" },
+      { num: 6, content: "사소한 일에도 과민반응을 보이는 경향이 있었다", scale: "스트레스" },
+      { num: 7, content: "손이 떨렸다 (예: 글을 쓸 때)", scale: "불안" },
+      { num: 8, content: "신경을 많이 쓰고 있다는 느낌이 들었다", scale: "스트레스" },
+      { num: 9, content: "나쁜 일이 일어날까봐 걱정스러웠다", scale: "불안" },
+      { num: 10, content: "삶에 대해 열정을 느낄 수 없었다", scale: "우울" },
+      { num: 11, content: "쉽게 동요하게 되었다", scale: "스트레스" },
+      { num: 12, content: "긴장을 풀기 어려웠다", scale: "스트레스" },
+      { num: 13, content: "우울하고 슬펐다", scale: "우울" },
+      { num: 14, content: "내가 좋아하는 것을 방해받는 것에 대해 참을 수 없었다", scale: "스트레스" },
+      { num: 15, content: "공황상태에 빠질 것만 같았다", scale: "불안" },
+      { num: 16, content: "어떤 것에도 기대할 것이 없었다", scale: "우울" },
+      { num: 17, content: "나 자신이 가치가 없는 사람으로 느껴졌다", scale: "우울" },
+      { num: 18, content: "사소한 일에도 쉽게 언짢아졌다", scale: "스트레스" },
+      { num: 19, content: "심장이 이유 없이 두근거렸다 (예: 심장 박동수가 증가하거나 빠르게 뛰는 느낌)", scale: "불안" },
+      { num: 20, content: "이유 없이 무서웠다", scale: "불안" },
+      { num: 21, content: "삶이 무의미하게 느껴졌다", scale: "우울" },
+    ];
+
+  const big5Q = [
+      // 외향성 (Extraversion) - 10문항
+      { num: 1, content: "나는 파티의 주인공이다", factor: "외향성", rev: false },
+      { num: 2, content: "나는 다른 사람들과 대화하는 것을 좋아하지 않는다", factor: "외향성", rev: true },
+      { num: 3, content: "나는 편안하게 사람들과 어울린다", factor: "외향성", rev: false },
+      { num: 4, content: "나는 배경에 머물러 있다", factor: "외향성", rev: true },
+      { num: 5, content: "나는 대화를 시작한다", factor: "외향성", rev: false },
+      { num: 6, content: "나는 많은 사람들에게 말을 거의 하지 않는다", factor: "외향성", rev: true },
+      { num: 7, content: "나는 많은 사람들과 대화하는 것이 좋다", factor: "외향성", rev: false },
+      { num: 8, content: "나는 대화를 시작하는 것을 어려워한다", factor: "외향성", rev: true },
+      { num: 9, content: "나는 관심의 중심이 되는 것을 좋아한다", factor: "외향성", rev: false },
+      { num: 10, content: "나는 낯선 사람과 말하고 싶지 않다", factor: "외향성", rev: true },
+    
+      // 친화성 (Agreeableness) - 10문항
+      { num: 11, content: "나는 다른 사람들의 감정에 관심이 있다", factor: "친화성", rev: false },
+      { num: 12, content: "나는 다른 사람들의 감정에 관심이 없다", factor: "친화성", rev: true },
+      { num: 13, content: "나는 다른 사람들을 편안하게 해준다", factor: "친화성", rev: false },
+      { num: 14, content: "나는 다른 사람들을 모욕한다", factor: "친화성", rev: true },
+      { num: 15, content: "나는 사람들의 마음을 부드럽게 한다", factor: "친화성", rev: false },
+      { num: 16, content: "나는 다른 사람들에게 별 관심이 없다", factor: "친화성", rev: true },
+      { num: 17, content: "나는 다른 사람들에게 시간을 내준다", factor: "친화성", rev: false },
+      { num: 18, content: "나는 다른 사람들의 문제에 신경 쓰지 않는다", factor: "친화성", rev: true },
+      { num: 19, content: "나는 다른 사람들을 느끼고 이해한다", factor: "친화성", rev: false },
+      { num: 20, content: "나는 다른 사람들에게 차갑고 무관심하다", factor: "친화성", rev: true },
+    
+      // 성실성 (Conscientiousness) - 10문항
+      { num: 21, content: "나는 항상 준비되어 있다", factor: "성실성", rev: false },
+      { num: 22, content: "나는 내 물건을 어질러 놓는다", factor: "성실성", rev: true },
+      { num: 23, content: "나는 세부사항에 주의를 기울인다", factor: "성실성", rev: false },
+      { num: 24, content: "나는 종종 물건을 어디에 두었는지 잊어버린다", factor: "성실성", rev: true },
+      { num: 25, content: "나는 일을 제때 끝낸다", factor: "성실성", rev: false },
+      { num: 26, content: "나는 일을 망치곤 한다", factor: "성실성", rev: true },
+      { num: 27, content: "나는 일에 진지하게 임한다", factor: "성실성", rev: false },
+      { num: 28, content: "나는 내 의무를 회피한다", factor: "성실성", rev: true },
+      { num: 29, content: "나는 계획을 따른다", factor: "성실성", rev: false },
+      { num: 30, content: "나는 즉시 일을 시작하지 않는다", factor: "성실성", rev: true },
+    
+      // 신경성 (Neuroticism) - 10문항
+      { num: 31, content: "나는 쉽게 스트레스를 받는다", factor: "신경성", rev: false },
+      { num: 32, content: "나는 쉽게 진정한다", factor: "신경성", rev: true },
+      { num: 33, content: "나는 변화에 쉽게 동요한다", factor: "신경성", rev: false },
+      { num: 34, content: "나는 거의 걱정하지 않는다", factor: "신경성", rev: true },
+      { num: 35, content: "나는 쉽게 짜증이 난다", factor: "신경성", rev: false },
+      { num: 36, content: "나는 대부분의 경우 편안하다", factor: "신경성", rev: true },
+      { num: 37, content: "나는 긴장감을 자주 느낀다", factor: "신경성", rev: false },
+      { num: 38, content: "나는 두려움을 거의 느끼지 않는다", factor: "신경성", rev: true },
+      { num: 39, content: "나는 작은 일에도 걱정한다", factor: "신경성", rev: false },
+      { num: 40, content: "나는 항상 여유롭다", factor: "신경성", rev: true },
+    
+      // 개방성 (Openness) - 10문항
+      { num: 41, content: "나는 풍부한 어휘력을 가지고 있다", factor: "개방성", rev: false },
+      { num: 42, content: "나는 추상적인 아이디어를 이해하기 어렵다", factor: "개방성", rev: true },
+      { num: 43, content: "나는 생생한 상상력을 가지고 있다", factor: "개방성", rev: false },
+      { num: 44, content: "나는 새로운 것에 관심이 없다", factor: "개방성", rev: true },
+      { num: 45, content: "나는 많은 것에 대해 생각한다", factor: "개방성", rev: false },
+      { num: 46, content: "나는 예술에 관심이 없다", factor: "개방성", rev: true },
+      { num: 47, content: "나는 철학적 논의를 즐긴다", factor: "개방성", rev: false },
+      { num: 48, content: "나는 복잡한 것을 좋아하지 않는다", factor: "개방성", rev: true },
+      { num: 49, content: "나는 빠른 이해력을 가지고 있다", factor: "개방성", rev: false },
+      { num: 50, content: "나는 창의적인 해결책을 찾기 어렵다", factor: "개방성", rev: true },
+    ];
+
+  // SDRI 소척도 정의 (문장완성형 문항번호 매핑)
+  const sdriCompletionCategories = {
+    "자기입장 유지": [1,2,3,8,9,11,12,15,16,18,19,20,21,23,24,25],
+    "정서반응성":    [4,5,6,7,10],
+    "정서적 단절":   [13,17,22],
+    "융합·관계의존": [14],
+  };
+
+  const sdriCompletionQ = [
+    // ── 자기입장 유지 (16문항) ──────────────────────────────
+    { num:1,  prompt:"갈등 상황에서 나는",                       scale:"자기입장 유지" },
+    { num:2,  prompt:"가족이 내 계획에 반대하면, 나는",           scale:"자기입장 유지" },
+    { num:3,  prompt:"중요한 결정을 할 때 나는",                  scale:"자기입장 유지" },
+    { num:8,  prompt:"요구가 지나치게 무리하다고 느낄 때 나는",   scale:"자기입장 유지" },
+    { num:9,  prompt:"상대가 먼저 사과하지 않으면, 나는",         scale:"자기입장 유지" },
+    { num:11, prompt:"내 생각과 다른 의견이 강하게 제시되면, 나는", scale:"자기입장 유지" },
+    { num:12, prompt:"설득해야 할 목표가 있을 때, 나는",          scale:"자기입장 유지" },
+    { num:15, prompt:"누군가 나를 기다리게 하면, 나는",           scale:"자기입장 유지" },
+    { num:16, prompt:"약속한 일을 완수하지 못할 것 같으면, 나는", scale:"자기입장 유지" },
+    { num:18, prompt:"어려운 일을 맡으면, 나는",                  scale:"자기입장 유지" },
+    { num:19, prompt:"중요한 일에서 실망을 느낄 때, 나는",        scale:"자기입장 유지" },
+    { num:20, prompt:"사람이 많은 모임에서 의견이 엇갈리면, 나는", scale:"자기입장 유지" },
+    { num:21, prompt:"친한 사람과 의견이 갈라지면, 나는",         scale:"자기입장 유지" },
+    { num:23, prompt:"책임을 떠넘기고 싶을 때, 나는",             scale:"자기입장 유지" },
+    { num:24, prompt:"문제가 복잡해지면, 나는",                   scale:"자기입장 유지" },
+    { num:25, prompt:"힘든 상황에서, 나는",                       scale:"자기입장 유지" },
+    // ── 정서반응성 (5문항) ──────────────────────────────────
+    { num:4,  prompt:"내가 실수를 하면, 나는",                    scale:"정서반응성" },
+    { num:5,  prompt:"친구가 나를 비난하면, 나는",                scale:"정서반응성" },
+    { num:6,  prompt:"압박감을 느낄 때, 나는",                    scale:"정서반응성" },
+    { num:7,  prompt:"감정이 북받칠 때 나는",                     scale:"정서반응성" },
+    { num:10, prompt:"일이 잘 풀리지 않으면, 나는",               scale:"정서반응성" },
+    // ── 정서적 단절 (3문항) ─────────────────────────────────
+    { num:13, prompt:"타인이 나를 무시하면, 나는",                scale:"정서적 단절" },
+    { num:17, prompt:"타인이 화를 내면, 나는",                    scale:"정서적 단절" },
+    { num:22, prompt:"스트레스를 받을 때, 나는",                  scale:"정서적 단절" },
+    // ── 융합·관계의존 (1문항) ───────────────────────────────
+    { num:14, prompt:"친구가 나에게 지나치게 의존하면, 나는",     scale:"융합·관계의존" },
+  ];
+
+  const sdriLikertQ = [
+  // ── 자기입장 유지 ───────────────────────────────────────
+  { num:1,  content:"가족·친구와 의견이 달라도 나는 의연하게 내 생각을 표현한다.",     scale:"자기입장 유지", rev:false },
+  { num:2,  content:"상대의 요구에 쉽게 휘둘리지 않는다.",                           scale:"자기입장 유지", rev:false },
+  { num:5,  content:"중요한 목표를 위해서는 사람들이 뭐라 하든 내 기준을 고수한다.",  scale:"자기입장 유지", rev:false },
+  { num:6,  content:"나는 보통 상대의 기대에 먼저 내 생각을 맞추는 편이다.",         scale:"자기입장 유지", rev:true  },
+  { num:8,  content:"어려운 상황에서도 나는 대화를 통해 문제를 해결하려 한다.",       scale:"자기입장 유지", rev:false },
+  { num:12, content:"내 기분이 나빠도 중요한 약속은 미루지 않고 지키려 한다.",        scale:"자기입장 유지", rev:false },
+  { num:15, content:"가족이나 친구가 내 생각과 달라도 나는 내 입장을 유지한다.",      scale:"자기입장 유지", rev:false },
+  { num:18, content:"내 의견이 틀릴 수도 있지만, 우선 내 기준을 지키려고 한다.",     scale:"자기입장 유지", rev:false },
+  { num:21, content:"타인을 먼저 만족시키기보다 우선 내 기준을 지킨다.",             scale:"자기입장 유지", rev:false },
+  { num:24, content:"중요한 결정을 내리기 전에는 혼자 충분히 고민한다.",             scale:"자기입장 유지", rev:false },
+  // ── 정서반응성 ─────────────────────────────────────────
+  { num:3,  content:"갈등 상황에서도 나는 감정적 폭발을 억누르고 상황을 정리하려 한다.", scale:"정서반응성", rev:false },
+  { num:7,  content:"다른 사람의 말 한마디에 나는 쉽게 기분이 달라진다.",            scale:"정서반응성", rev:false },
+  { num:9,  content:"화가 나도 나는 곧바로 감정을 터뜨리지 않는다.",                scale:"정서반응성", rev:false },
+  { num:14, content:"갈등 시 나는 감정을 억제하고 대화를 이어가려 한다.",            scale:"정서반응성", rev:false },
+  { num:16, content:"내 기분에 따라 주변 사람들의 행동이 쉽게 달라진다.",            scale:"정서반응성", rev:false },
+  { num:23, content:"친구가 화를 내면 나는 바로 우울해진다.",                       scale:"정서반응성", rev:false },
+  { num:25, content:"긴장되는 상황에서는 혼자만의 시간을 가지며 마음을 가라앉힌다.", scale:"정서반응성", rev:false },
+  // ── 정서적 단절 ────────────────────────────────────────
+  { num:4,  content:"스트레스 상황이 되면 나는 대인관계에서 거리를 두려는 편이다.",   scale:"정서적 단절", rev:false },
+  { num:10, content:"갈등이 생기면 나는 먼저 뒤로 물러서는 편이다.",                scale:"정서적 단절", rev:true  },
+  { num:17, content:"갈등이 생기면 나는 혼자 생각에 잠기며 자리를 피하려 든다.",     scale:"정서적 단절", rev:false },
+  { num:22, content:"혼자 있으면 편하지만, 가족 모임 등에는 부담을 느낀다.",         scale:"정서적 단절", rev:true  },
+  // ── 융합·관계의존 ──────────────────────────────────────
+  { num:11, content:"사람들의 부탁을 거절하기 어려운 편이다.",                       scale:"융합·관계의존", rev:true  },
+  { num:13, content:"타인이 먼저 양보해 주지 않으면 보통 내가 먼저 양보한다.",        scale:"융합·관계의존", rev:true  },
+  { num:19, content:"타인의 감정에 너무 쉽게 동조하는 편이다.",                      scale:"융합·관계의존", rev:false },
+  { num:20, content:"사람들을 기쁘게 하기 위해 가끔 내 생각을 접어둔다.",            scale:"융합·관계의존", rev:false },
+];
+
+  const burnoutQ = [
+      // I. 정서적 소진 (12문항)
+      { num: 1, content: "업무로 인해 감정적으로 완전히 소진된 느낌이 든다", domain: "EE", rev: false },
+      { num: 2, content: "퇴근 후에도 업무 생각으로 머리가 꽉 차 있다", domain: "EE", rev: false },
+      { num: 3, content: "아침에 출근할 생각만 해도 기력이 없고 피곤하다", domain: "EE", rev: false },
+      { num: 4, content: "하루 종일 일하고 나면 극도로 지쳐 아무것도 하기 싫다", domain: "EE", rev: false },
+      { num: 5, content: "사람들을 응대하거나 돕는 것이 감정적으로 너무 힘들다", domain: "EE", rev: false },
+      { num: 6, content: "직장 생활이 나를 내부에서 태워 없애는 느낌이 든다", domain: "EE", rev: false },
+      { num: 7, content: "감정을 쏟아내다가 이제 더 이상 줄 것이 없다는 느낌이 든다", domain: "EE", rev: false },
+      { num: 8, content: "업무나 동료에 대한 정서적 여유가 전혀 없다", domain: "EE", rev: false },
+      { num: 9, content: "일과 중 작은 일에도 감정적으로 폭발할 것 같다", domain: "EE", rev: false },
+      { num: 10, content: "직장 일이 나의 개인 삶 전체를 잠식하는 것 같다", domain: "EE", rev: false },
+      { num: 11, content: "이직이나 퇴직을 진지하게 고민하고 있다", domain: "EE", rev: false },
+      { num: 12, content: "업무를 마친 후에도 회복이 되지 않고 지속적으로 지쳐 있다", domain: "EE", rev: false },
+    
+      // II. 비인격화 (8문항)
+      { num: 13, content: "고객이나 동료가 마치 무감각한 대상처럼 느껴진다", domain: "DP", rev: false },
+      { num: 14, content: "요즘 들어 나 자신이 점점 냉담하고 무감각해졌다", domain: "DP", rev: false },
+      { num: 15, content: "업무 관련 사람들의 문제에 무관심해지거나 귀찮아진다", domain: "DP", rev: false },
+      { num: 16, content: "사람을 대하는 일이 내 에너지를 심하게 소모시킨다", domain: "DP", rev: false },
+      { num: 17, content: "회사나 조직의 방향성·목표가 무의미하게 느껴진다", domain: "DP", rev: false },
+      { num: 18, content: "이 직장이 나에게 아무 의미도 없다는 생각이 든다", domain: "DP", rev: false },
+      { num: 19, content: "사람들의 감정적 문제에 실제로 관심이 없어졌다", domain: "DP", rev: false },
+      { num: 20, content: "일하면서 점점 공감 능력을 잃어가는 것 같다", domain: "DP", rev: false },
+    
+      // III. 성취감 저하 (10문항, 역채점)
+      { num: 21, content: "이 일을 통해 다른 사람의 삶에 긍정적인 영향을 준다고 느낀다", domain: "PA", rev: true },
+      { num: 22, content: "업무에서 가치 있는 일을 해내고 있다는 보람을 느낀다", domain: "PA", rev: true },
+      { num: 23, content: "어려운 문제를 스스로 해결했을 때 뿌듯함을 느낀다", domain: "PA", rev: true },
+      { num: 24, content: "내 업무가 조직에 의미 있게 기여한다고 생각한다", domain: "PA", rev: true },
+      { num: 25, content: "직장에서 나 자신이 성장하고 있다는 느낌이 든다", domain: "PA", rev: true },
+      { num: 26, content: "업무 중 즐거움이나 몰입을 경험한다", domain: "PA", rev: true },
+      { num: 27, content: "내 직업 선택이 옳았다는 확신이 있다", domain: "PA", rev: true },
+      { num: 28, content: "사람들을 효과적으로 도왔다는 만족감을 느낀다", domain: "PA", rev: true },
+      { num: 29, content: "이 일을 통해 내가 사회에 기여하고 있다는 자긍심이 있다", domain: "PA", rev: true },
+      { num: 30, content: "현재 내 역량이 잘 발휘되고 있다고 느낀다", domain: "PA", rev: true },
+    
+      // IV. 업무 과부하 (10문항)
+      { num: 31, content: "업무량이 나 혼자 감당하기에 너무 많다", domain: "WO", rev: false },
+      { num: 32, content: "업무 마감이나 요구사항이 불합리하게 느껴진다", domain: "WO", rev: false },
+      { num: 33, content: "업무 방식이나 우선순위에 대한 결정권이 없다고 느낀다", domain: "WO", rev: false },
+      { num: 34, content: "야근이나 초과 근무가 일상화되어 있다", domain: "WO", rev: false },
+      { num: 35, content: "모순되거나 충돌하는 업무 지시를 동시에 받는다", domain: "WO", rev: false },
+      { num: 36, content: "업무 성과에 비해 인정·보상이 부족하다고 느낀다", domain: "WO", rev: false },
+      { num: 37, content: "직장 내 공정성이 부족하다고 느낀다", domain: "WO", rev: false },
+      { num: 38, content: "개인 삶과 업무 간의 균형을 맞추기 어렵다", domain: "WO", rev: false },
+      { num: 39, content: "업무 중 지속적인 방해나 중단으로 집중이 불가능하다", domain: "WO", rev: false },
+      { num: 40, content: "조직의 가치관이 내 개인 가치관과 심하게 충돌한다", domain: "WO", rev: false },
+    
+      // V. 신체·인지 (10문항)
+      { num: 41, content: "충분히 잤는데도 개운하지 않고 지속적으로 피로하다", domain: "PC", rev: false },
+      { num: 42, content: "두통, 근육 긴장, 어깨·목 통증이 자주 생긴다", domain: "PC", rev: false },
+      { num: 43, content: "업무 중 기억력이나 집중력이 현저히 저하된 것 같다", domain: "PC", rev: false },
+      { num: 44, content: "소화불량, 위경련, 식욕 변화 등 소화 문제가 있다", domain: "PC", rev: false },
+      { num: 45, content: "잠들기 어렵거나 중간에 자꾸 깬다", domain: "PC", rev: false },
+      { num: 46, content: "면역력이 떨어져 자주 감기나 잔병에 걸린다", domain: "PC", rev: false },
+      { num: 47, content: "카페인·알코올·약물에 점점 더 의존하게 된다", domain: "PC", rev: false },
+      { num: 48, content: "업무 외 취미·운동 등 즐기던 활동을 완전히 포기했다", domain: "PC", rev: false },
+      { num: 49, content: "간단한 결정도 내리기 어렵고 판단력이 흐려졌다", domain: "PC", rev: false },
+      { num: 50, content: "심장 두근거림, 식은땀, 만성 긴장감 등 신체 증상이 있다", domain: "PC", rev: false }
+    ];
+
+  const lostQ = [
+      // ── 축 1. 에너지 방향 (Energy Direction) ── E=외향 / I=내향, rev=내향 문항
+      { num:1,  content:"낯선 사람들과 쉽게 어울리며 에너지를 얻는다",           axis:"E", dir:"E", rev:false },
+      { num:2,  content:"혼자 조용히 지내면 오히려 마음이 편안하다",              axis:"E", dir:"I", rev:true  },
+      { num:3,  content:"파티나 모임에 가면 활기가 생긴다",                       axis:"E", dir:"E", rev:false },
+      { num:4,  content:"큰 모임보다 친한 친구 몇 명과 시간 보내는 것을 선호한다",axis:"E", dir:"I", rev:true  },
+      { num:5,  content:"새로운 사람과 대화하면 금방 친해지는 편이다",            axis:"E", dir:"E", rev:false },
+      { num:6,  content:"사람들 앞에서 이야기할 때 긴장한다",                     axis:"E", dir:"I", rev:true  },
+      { num:7,  content:"친목 모임에서 주도적으로 행동하는 편이다",               axis:"E", dir:"E", rev:false },
+      { num:8,  content:"오랜만에 만난 친한 친구보다 혼자 쉬는 것이 더 좋다",    axis:"E", dir:"I", rev:true  },
+      { num:9,  content:"낯선 환경에서 처음 만난 사람들과 빨리 친해진다",         axis:"E", dir:"E", rev:false },
+      { num:10, content:"혼자만의 시간이 부족하면 금방 지친다",                   axis:"E", dir:"I", rev:true  },
+
+      // ── 축 2. 의사결정 방식 (Decision Style) ── T=논리 / F=감정
+      { num:11, content:"결정을 내릴 때 감정보다 사실과 논리를 우선한다",         axis:"D", dir:"T", rev:false },
+      { num:12, content:"데이터와 사실을 기반으로 결정을 내리는 편이다",           axis:"D", dir:"T", rev:false },
+      { num:13, content:"중요한 결정을 할 때 주변 사람들의 감정도 함께 고려한다", axis:"D", dir:"F", rev:true  },
+      { num:14, content:"감정이나 분위기에 따라 내 판단이 크게 달라지는 편이다",  axis:"D", dir:"F", rev:true  },
+      { num:15, content:"문제를 분석할 때 감정보다 이성이 앞선다",                axis:"D", dir:"T", rev:false },
+      { num:16, content:"의사결정에서 타인의 기분과 조화를 이루려 한다",           axis:"D", dir:"F", rev:true  },
+      { num:17, content:"논리적 설명이 없으면 중요한 결정을 믿기 어렵다",          axis:"D", dir:"T", rev:false },
+      { num:18, content:"다른 사람이 우울해 보이면 내 기분도 영향을 받는다",      axis:"D", dir:"F", rev:true  },
+      { num:19, content:"객관적인 데이터가 없으면 결정을 내리기 어렵다",           axis:"D", dir:"T", rev:false },
+      { num:20, content:"나를 화나게 한 사람을 쉽게 용서해 주지 못한다",          axis:"D", dir:"F", rev:false },
+
+      // ── 축 3. 행동 속도 (Action Speed) ── P=빠름 / J=신중
+      { num:21, content:"급한 일이 생기면 즉시 행동하는 편이다",                  axis:"S", dir:"P", rev:false },
+      { num:22, content:"충분히 계획하지 않으면 불안해서 실행하기 어렵다",         axis:"S", dir:"J", rev:true  },
+      { num:23, content:"일을 할 때 신속함보다 꼼꼼함이 더 중요하다고 생각한다",  axis:"S", dir:"J", rev:true  },
+      { num:24, content:"일을 처리할 때 즉흥적으로 진행하는 것을 좋아한다",        axis:"S", dir:"P", rev:false },
+      { num:25, content:"계획대로 움직이는 것보다 빠르게 결정을 바꾸는 편이다",   axis:"S", dir:"P", rev:false },
+      { num:26, content:"시간이 허락할 때는 깊이 고민한 뒤 행동한다",             axis:"S", dir:"J", rev:true  },
+      { num:27, content:"마감이 임박하면 효율보다 속도를 중시한다",                axis:"S", dir:"P", rev:false },
+      { num:28, content:"충동적으로 결정하면 나중에 후회할 때가 많다",             axis:"S", dir:"J", rev:true  },
+      { num:29, content:"빠른 실행은 중요하지만 실수가 생길까 걱정된다",           axis:"S", dir:"J", rev:true  },
+      { num:30, content:"상황에 따라 행동 방식을 즉시 바꾸는 편이다",             axis:"S", dir:"P", rev:false },
+
+      // ── 축 4. 안정성 (Stability) ── C=변화 / N=안정
+      { num:31, content:"변화는 나를 설레게 한다",                                axis:"N", dir:"C", rev:false },
+      { num:32, content:"익숙한 환경이 안전하다고 느낀다",                         axis:"N", dir:"N", rev:true  },
+      { num:33, content:"새로운 도전이 주는 자극을 즐긴다",                        axis:"N", dir:"C", rev:false },
+      { num:34, content:"안정적인 일과를 벗어나면 불안감이 크다",                  axis:"N", dir:"N", rev:true  },
+      { num:35, content:"새로운 프로젝트보다 익숙한 일에 집중하는 편이다",         axis:"N", dir:"N", rev:true  },
+      { num:36, content:"변화를 맞이할 때 흥미를 느낀다",                          axis:"N", dir:"C", rev:false },
+      { num:37, content:"예측 가능한 환경에서 일하는 것이 편안하다",               axis:"N", dir:"N", rev:true  },
+      { num:38, content:"일상의 틀에서 벗어나 새로운 방식을 시도한다",             axis:"N", dir:"C", rev:false },
+      { num:39, content:"새로운 아이디어가 떠오르면 신나지만 걱정도 된다",         axis:"N", dir:"C", rev:false },
+      { num:40, content:"일상의 변화가 크면 긴장한다",                             axis:"N", dir:"N", rev:true  },
+
+      // ── 축 5. 관계 민감도 (Relation Sensitivity) ── R=관계중심 / I=독립
+      { num:41, content:"팀의 목표를 위해 다른 사람과 협력하는 것을 중요하게 생각한다", axis:"R", dir:"R", rev:false },
+      { num:42, content:"내 생각을 고집하기보다 주변 의견에 따라 결정을 바꾸기도 한다",  axis:"R", dir:"R", rev:false },
+      { num:43, content:"혼자 일하는 것보다 팀워크가 잘 맞는 일을 좋아한다",       axis:"R", dir:"R", rev:false },
+      { num:44, content:"중요한 결정은 주로 나 혼자 판단으로 한다",               axis:"R", dir:"I", rev:true  },
+      { num:45, content:"동료나 친구와의 조화를 위해 양보하는 경우가 많다",        axis:"R", dir:"R", rev:false },
+      { num:46, content:"자신의 의견보다 팀의 목표를 우선한다",                    axis:"R", dir:"R", rev:false },
+      { num:47, content:"반드시 다른 사람의 도움 없이 처리하고 싶어 하는 편이다",  axis:"R", dir:"I", rev:true  },
+      { num:48, content:"친밀한 관계를 맺는 것이 나에게 큰 의미가 있다",           axis:"R", dir:"R", rev:false },
+      { num:49, content:"혼자 있을 때 오히려 더 생산적이라고 느낀다",              axis:"R", dir:"I", rev:false },
+      { num:50, content:"다른 사람의 기분을 금방 파악하는 편이다",                 axis:"R", dir:"R", rev:false },
+
+      // ── 축 6. 스트레스 반응 (Stress Response) ── A=직면 / V=회피
+      { num:51, content:"문제가 생기면 즉시 피하거나 회피하려고 한다",             axis:"T", dir:"V", rev:true  },
+      { num:52, content:"어려운 일이 생기면 바로 대응하면서 해결책을 찾는다",      axis:"T", dir:"A", rev:false },
+      { num:53, content:"스트레스를 받으면 쉬어야만 진정될 수 있다고 느낀다",      axis:"T", dir:"V", rev:true  },
+      { num:54, content:"위기 상황에서 침착하게 문제를 해결하려 노력한다",         axis:"T", dir:"A", rev:false },
+      { num:55, content:"갈등 상황은 피해야 한다고 생각한다",                      axis:"T", dir:"V", rev:true  },
+      { num:56, content:"문제가 생기면 적극적으로 빠르게 해결하려 한다",           axis:"T", dir:"A", rev:false },
+      { num:57, content:"스트레스를 받으면 상황을 회피하고 싶어진다",              axis:"T", dir:"V", rev:true  },
+      { num:58, content:"곤란한 상황에서도 당면 과제에 집중하는 편이다",           axis:"T", dir:"A", rev:false },
+      { num:59, content:"문제 상황에서 주변 사람에게 도움 청하는 것을 꺼린다",     axis:"T", dir:"V", rev:true  },
+      { num:60, content:"긴장되는 상황에서도 먼저 해결책을 모색한다",              axis:"T", dir:"A", rev:false },
+    ];
+
+  function calcPhq9() {
+      let total = 0;
+      phq9Q.forEach(q => {
+        const r = phq9Responses[q.num];
+        if (r) total += r;
+      });
+      let level = "정상";
+      let color = "green";
+      if (total >= 20) { level = "높은 우울 신호"; color = "red"; }
+      else if (total >= 15) { level = "중등도 우울 신호"; color = "orange"; }
+      else if (total >= 10) { level = "중간 우울"; color = "orange"; }
+      else if (total >= 5) { level = "가벼운 우울"; color = "yellow"; }
+      return { total, level, color };
+    }
+
+  function calcGad7() {
+      let total = 0;
+      gad7Q.forEach(q => {
+        const r = gad7Responses[q.num];
+        if (r) total += r;
+      });
+      let level = "정상";
+      let color = "green";
+      if (total >= 15) { level = "높은 불안 신호"; color = "red"; }
+      else if (total >= 10) { level = "중간 불안"; color = "orange"; }
+      else if (total >= 5) { level = "가벼운 불안"; color = "yellow"; }
+      return { total, level, color };
+    }
+
+  function calcDass21() {
+      let depression = 0, anxiety = 0, stress = 0;
+      dass21Q.forEach(q => {
+        const r = dass21Responses[q.num];
+        if (r) {
+          const score = r - 1; // 0-3 범위로 변환
+          if (q.scale === "우울") depression += score;
+          else if (q.scale === "불안") anxiety += score;
+          else if (q.scale === "스트레스") stress += score;
+        }
+      });
+      // 곱하기 2 (DASS-42 점수로 변환)
+      depression *= 2;
+      anxiety *= 2;
+      stress *= 2;
+
+      const getLevel = (score, type) => {
+        if (type === "우울") {
+          if (score >= 28) return { level: "극도로 심함", color: "red" };
+          if (score >= 21) return { level: "심함", color: "orange" };
+          if (score >= 14) return { level: "중간", color: "yellow" };
+          if (score >= 10) return { level: "가벼움", color: "blue" };
+          return { level: "정상", color: "green" };
+        } else if (type === "불안") {
+          if (score >= 20) return { level: "극도로 심함", color: "red" };
+          if (score >= 15) return { level: "심함", color: "orange" };
+          if (score >= 10) return { level: "중간", color: "yellow" };
+          if (score >= 8) return { level: "가벼움", color: "blue" };
+          return { level: "정상", color: "green" };
+        } else { // 스트레스
+          if (score >= 34) return { level: "극도로 심함", color: "red" };
+          if (score >= 26) return { level: "심함", color: "orange" };
+          if (score >= 19) return { level: "중간", color: "yellow" };
+          if (score >= 15) return { level: "가벼움", color: "blue" };
+          return { level: "정상", color: "green" };
+        }
+      };
+
+      return {
+        depression: { score: depression, ...getLevel(depression, "우울") },
+        anxiety: { score: anxiety, ...getLevel(anxiety, "불안") },
+        stress: { score: stress, ...getLevel(stress, "스트레스") }
+      };
+    }
+
+  function calcBig5() {
+      const factors = { "외향성": 0, "친화성": 0, "성실성": 0, "신경성": 0, "개방성": 0 };
+      const counts = { "외향성": 0, "친화성": 0, "성실성": 0, "신경성": 0, "개방성": 0 };
+    
+      big5Q.forEach(q => {
+        const r = big5Responses[q.num];
+        if (r) {
+          const score = q.rev ? (6 - r) : r;
+          factors[q.factor] += score;
+          counts[q.factor]++;
+        }
+      });
+
+      // 평균 점수 계산 (1-5 범위)
+      Object.keys(factors).forEach(f => {
+        if (counts[f] > 0) {
+          factors[f] = (factors[f] / counts[f]).toFixed(2);
+        }
+      });
+
+      return factors;
+    }
+
+  function calcBurnout() {
+    
+      let total = 0;
+      const domains = {};
+    
+      // 영역별 초기화
+      const domainConfigs = getBurnoutDomains();
+    
+      domainConfigs.forEach(d => {
+        domains[d.id] = { name: d.name, score: 0, max: d.max, color: d.color };
+      });
+
+      burnoutQ.forEach(q => {
+        const r = burnoutResponses[q.num];
+        if (r !== undefined) {
+          const score = q.rev ? (6 - r) : r;
+          total += score;
+          domains[q.domain].score += score;
+        }
+      });
+    
+
+      // 전체 레벨 판단 (0-240점)
+      const percentage = Math.round((total / 240) * 100);
+      const pct = total / 240;
+      let level = "매우 낮음";
+      let levelColor = "#4ade80";
+      let levelDesc = "번아웃 위험이 낮습니다. 현재 상태를 잘 유지하세요.";
+    
+      if (pct >= 0.86) {
+        level = "매우 높음";
+        levelColor = "#dc2626";
+        levelDesc = "소진 신호가 매우 높습니다. 지금 쉬어가는 것이 중요합니다. 전문가 상담을 권합니다.";
+      } else if (pct >= 0.71) {
+        level = "높음";
+        levelColor = "#f97316";
+        levelDesc = "높은 수준의 번아웃입니다. 전문 상담을 권장합니다.";
+      } else if (pct >= 0.51) {
+        level = "보통";
+        levelColor = "#f59e0b";
+        levelDesc = "번아웃 증상이 보통 수준입니다. 관리가 필요합니다.";
+      } else if (pct >= 0.31) {
+        level = "낮음";
+        levelColor = "#eab308";
+        levelDesc = "가벼운 번아웃 증상이 나타나고 있습니다. 주의가 필요합니다.";
+      }
+
+      // 각 영역별 레벨 판단 및 설명
+      const domainList = [];
+      const domainCrisis = [];
+    
+      Object.entries(domains).forEach(([id, d]) => {
+        const domainPct = (d.score / d.max) * 100;
+        d.percentage = Math.round(domainPct); // 퍼센테이지 저장
+        d.id = id; // 영역 ID 저장
+      
+        if (domainPct >= 85) {
+          d.level = "매우 높음";
+          d.description = "이 영역에서 심각한 번아웃 증상을 보이고 있습니다.";
+          domainCrisis.push(d.name);
+        } else if (domainPct >= 70) {
+          d.level = "높음";
+          d.description = "이 영역에서 높은 수준의 스트레스를 경험하고 있습니다.";
+        } else if (domainPct >= 50) {
+          d.level = "보통";
+          d.description = "이 영역에서 보통 수준의 피로를 느끼고 있습니다.";
+        } else if (domainPct >= 30) {
+          d.level = "낮음";
+          d.description = "이 영역에서 약간의 스트레스가 있습니다.";
+        } else {
+          d.level = "매우 낮음";
+          d.description = "이 영역은 건강한 상태입니다.";
+        }
+      
+        domainList.push(d);
+      });
+
+      const crisis = pct >= 0.75 || domainCrisis.length > 0;
+
+      return { 
+        totalScore: total,
+        percentage,
+        domains: domainList, 
+        level, 
+        levelColor, 
+        levelDesc, 
+        crisis,
+        domainCrisis
+      };
+    }
+
+  // SRCI: 문장완성형 완성 수 계산
+  function calcSrci() {
+    const filled = sdriCompletionQ.filter(q => srciResponses[q.num]?.trim()).length;
+    const byScale = {};
+    sdriCompletionQ.forEach(q => {
+      if (!byScale[q.scale]) byScale[q.scale] = [];
+      if (srciResponses[q.num]?.trim()) byScale[q.scale].push({ prompt: q.prompt, answer: srciResponses[q.num] });
+    });
+    return { filled, total: sdriCompletionQ.length, byScale };
+  }
+
+  // SDRI: 평정형 소척도 점수 계산
+  function calcSdri() {
+    const scales = { "자기입장 유지": 0, "정서반응성": 0, "정서적 단절": 0, "융합·관계의존": 0 };
+    const counts = { "자기입장 유지": 0, "정서반응성": 0, "정서적 단절": 0, "융합·관계의존": 0 };
+    sdriLikertQ.forEach(q => {
+      const r = sdriResponses[q.num];
+      if (r) {
+        const s = q.rev ? 6 - r : r;
+        scales[q.scale] += s;
+        counts[q.scale]++;
+      }
+    });
+    const total = Object.values(scales).reduce((a,b) => a+b, 0);
+    return { scales, counts, total };
+  }
+
+  function calcLost() {
+      const axisScores = { E:0, D:0, S:0, N:0, R:0, T:0 };
+      const axisCount  = { E:0, D:0, S:0, N:0, R:0, T:0 };
+      lostQ.forEach(q => {
+        const r = lostResponses[q.num];
+        if (r === undefined) return;
+        const score = q.rev ? (6 - r) : r;
+        axisScores[q.axis] += score;
+        axisCount[q.axis]++;
+      });
+      const avg = {};
+      Object.keys(axisScores).forEach(k => {
+        avg[k] = axisCount[k] > 0 ? (axisScores[k] / axisCount[k]) : 3;
+      });
+      // 4축 유형 코드 결정 (각 축 평균 3.0 기준)
+      const EI = avg.E >= 3.0 ? "E" : "I";
+      const TF = avg.D >= 3.0 ? "T" : "F";
+      const PJ = avg.S >= 3.0 ? "P" : "J";
+      const RC = avg.R >= 3.0 ? "R" : "C";
+      // 스트레스 반응 부가 축 (직면=A 또는 회피=V)
+      const TV = avg.T >= 3.0 ? "A" : "V";
+      // 안정성 부가 정보
+      const NC = avg.N >= 3.0 ? "변화선호" : "안정선호";
+      const typeCode = EI + TF + PJ + RC;
+      const typeInfo = LOST_TYPES[typeCode] || LOST_TYPES["ETPR"];
+      return { axisAvg: avg, typeCode, typeInfo, stressStyle: TV, stabilityStyle: NC };
+    }
+
+  // ⚠️ main.jsx 에 없던 함수 — stub
+  const startTest = (...args) => {};
+  const forgotPassword = (...args) => {};
+
+  // ============================================================
+  // ── 검사 소개 페이지에서 바로 검사 시작 처리 ────────────────
+  useEffect(() => {
+    if (!view || !view.startsWith('startTest:')) return;
+    const testId = view.split(':')[1];  // 예: 'PHQ9', 'SCT', 'DSI' 등
+    const TEST_VIEW_MAP = {
+      PHQ9: 'phq9Test', GAD7: 'gad7Test', DASS21: 'dass21Test',
+      BIG5: 'big5Test', BURNOUT: 'burnoutTest', LOST: 'lostTest',
+      SCT: 'sctTest', DSI: 'dsiTest',
+    };
+    const targetView = TEST_VIEW_MAP[testId];
+    if (!targetView) { setView('memberDashboard'); return; }
+
+    // 비로그인 + 유료 검사 → 로그인 유도
+    // 비로그인 + 무료 검사(PHQ9·GAD7) → 바로 허용
+    if (!currentUser && !FREE_TESTS.includes(testId)) {
+      setView('memberSignup'); return;
+    }
+
+    // 비로그인 무료 검사: 크레딧 차감 없이 바로 시작
+    if (!currentUser && FREE_TESTS.includes(testId)) {
+      setPendingTests([testId]);
+      setCurrentTestIndex(0);
+      setMultiSessionIds([]);
+      setSessionId(genId('session'));
+      resetChat();
+      setView(targetView);
+      return;
+    }
+
+    // 로그인 상태: 크레딧 차감 후 검사 시작
+    (async () => {
+      const ok = await chargeForTest(testId);
+      if (!ok) { setView('memberDashboard'); return; }
+      setPendingTests([testId]);
+      setCurrentTestIndex(0);
+      setMultiSessionIds([]);
+      setSessionId(genId('session'));
+      resetChat();
+      setView(targetView);
+    })();
+  }, [view]);
+
+  // ── 비로그인 결과/완료 화면 진입 시 ChatBox 초기화 ─────────────
+  useEffect(() => {
+    if (view === 'phq9Result' || view === 'gad7Result') {
+      if (!isLoggedIn) setChatOpen(true);
+    }
+    // complete: 비로그인 검사 완료 시 채팅 메시지 초기화
+    if (view === 'complete' && !isLoggedIn) {
+      setChatMessages([]);
+      setChatOpen(false);
+    }
+  }, [view]);
+
+  // ── 마음커플 연동: 결과 화면 진입 시 result_json 자동 동기화 ──
+  // submitBig5/submitLost에서 저장하지 못한 기존 세션을 백필하는 fallback
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    if (view === 'big5Result' && Object.keys(big5Responses).length >= 50) {
+      try {
+        const factors = { '외향성': 0, '친화성': 0, '성실성': 0, '신경성': 0, '개방성': 0 };
+        const counts  = { '외향성': 0, '친화성': 0, '성실성': 0, '신경성': 0, '개방성': 0 };
+        big5Q.forEach(q => {
+          const r = big5Responses[q.num];
+          if (r) { const s = q.rev ? (6 - r) : r; factors[q.factor] += s; counts[q.factor]++; }
+        });
+        const keyMap = { '외향성': 'E', '친화성': 'A', '성실성': 'C', '신경성': 'N', '개방성': 'O' };
+        const resultJson = {};
+        Object.keys(factors).forEach(f => {
+          resultJson[keyMap[f]] = counts[f] > 0 ? parseFloat((factors[f] / counts[f]).toFixed(2)) : 3.0;
+        });
+        fetch('/api/test/save-result', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+          body: JSON.stringify({ test_type: 'BIG5', result_json: resultJson }),
+        }).catch(() => {});
+      } catch(e) {}
+    }
+
+    if (view === 'lostResult' && Object.keys(lostResponses).length >= 60) {
+      try {
+        const axisScores = { E:0, D:0, S:0, N:0, R:0, T:0 };
+        const axisCount  = { E:0, D:0, S:0, N:0, R:0, T:0 };
+        lostQ.forEach(q => {
+          const r = lostResponses[q.num];
+          if (r !== undefined) {
+            const s = q.rev ? (6 - r) : r;
+            axisScores[q.axis] += s; axisCount[q.axis]++;
+          }
+        });
+        const avg = {};
+        Object.keys(axisScores).forEach(k => {
+          avg[k] = axisCount[k] > 0 ? parseFloat((axisScores[k] / axisCount[k]).toFixed(2)) : 3.0;
+        });
+        const typeCode = (avg.E >= 3.0 ? 'E' : 'I') + (avg.D >= 3.0 ? 'T' : 'F')
+                       + (avg.S >= 3.0 ? 'P' : 'J') + (avg.R >= 3.0 ? 'R' : 'C');
+        const typeInfo = (typeof LOST_TYPES !== 'undefined' && LOST_TYPES[typeCode]) || { name: typeCode };
+        const resultJson = {
+          typeCode, typeName: typeInfo.name || typeCode,
+          axisAvg: avg,
+          stressStyle: avg.T >= 3.0 ? 'A' : 'V',
+          stabilityStyle: avg.N >= 3.0 ? '변화선호' : '안정선호',
+        };
+        fetch('/api/test/save-result', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+          body: JSON.stringify({ test_type: 'LOST', result_json: resultJson }),
+        }).catch(() => {});
+      } catch(e) {}
+    }
+
+    if (view === 'dsiResult' && Object.keys(sdriResponses).length >= 25) {
+      try {
+        const scalesAcc = { '자기입장 유지': 0, '정서반응성': 0, '정서적 단절': 0, '융합·관계의존': 0 };
+        const countsAcc = { '자기입장 유지': 0, '정서반응성': 0, '정서적 단절': 0, '융합·관계의존': 0 };
+        sdriLikertQ.forEach(q => {
+          const r = sdriResponses[q.num];
+          if (r) { const s = q.rev ? 6 - r : r; scalesAcc[q.scale] += s; countsAcc[q.scale]++; }
+        });
+        const total = Object.values(scalesAcc).reduce((a, b) => a + b, 0);
+        const SCALE_MAX = { '자기입장 유지': 50, '정서반응성': 35, '정서적 단절': 20, '융합·관계의존': 20 };
+        const scaleRatios = {};
+        Object.keys(SCALE_MAX).forEach(k => {
+          scaleRatios[k] = parseFloat(((scalesAcc[k] || 0) / SCALE_MAX[k]).toFixed(2));
+        });
+        const level = total >= 94 ? '높음' : total >= 56 ? '보통' : '낮음';
+        fetch('/api/test/save-result', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+          body: JSON.stringify({ test_type: 'DSI', result_json: { total, maxTotal: 125, level, scales: scalesAcc, scaleRatios } }),
+        }).catch(() => {});
+      } catch(e) {}
+    }
+  }, [view, isLoggedIn]);
+
+  // ── 브라우저 뒤로가기 차단 (검사 진행 중 이탈 방지) ──────────
+  useEffect(() => {
+    const TEST_VIEWS = [
+      'sctTest','dsiTest','phq9Test','gad7Test','dass21Test',
+      'burnoutTest','big5Test','lostTest',
+      'sctResult','dsiResult','phq9Result','gad7Result','dass21Result',
+      'burnoutResult','big5Result','lostResult',
+      'memberDashboard','counseling',
+    ];
+
+    const isTestView = TEST_VIEWS.includes(view);
+
+    if (isTestView) {
+      // 현재 상태를 history에 push해서 뒤로갈 곳을 만들어 둠
+      window.history.pushState({ maumful: true }, '', window.location.href);
+
+      const handlePopState = (e) => {
+        // 뒤로가기 감지 → 다시 push해서 이탈 차단 + 메인으로 이동
+        window.history.pushState({ maumful: true }, '', window.location.href);
+        setView('landing');
+      };
+
+      window.addEventListener('popstate', handlePopState);
+      return () => window.removeEventListener('popstate', handlePopState);
+    }
+  }, [view]);
+
+  // ⏬ 원래 component 하단에 있던 useEffect 두 개 (React #310 수정)
+  // ============================================================
+// ✅ 컴포넌트 마운트 시 데이터 로드 및 로그인 상태 복원
+  useEffect(() => {
+    const init = async () => {
+      console.log('🔄 앱 초기화 - LocalStorage 데이터 로드 시작');
+      
+      // 🕐 만료된 검사 결과 자동 삭제 (최우선)
+      checkAndCleanExpiredSessions();
+      
+      // ✅ 로그인 상태 복원
+      const restored = await restoreLoginState();
+      if (restored) {
+        console.log('✅ 로그인 상태 자동 복원 완료');
+      } else {
+        console.log('ℹ️ 복원할 로그인 정보 없음 - 로그인 화면 표시');
+      }
+      
+      // 디버깅: LocalStorage 키 확인
+      const keys = Object.keys(localStorage);
+      console.log('📦 저장된 키 목록:', keys.filter(k => 
+        k.includes('counselor') || k.includes('submitted') || k.includes('link_') || k.includes('session_') || k.includes('login')
+      ));
+      
+      // 승인된 상담사 수 확인
+      const approvedData = storage.get("approved_counselors");
+      if (approvedData) {
+        const approved = JSON.parse(approvedData.value);
+        console.log('✅ 승인된 상담사:', approved.length + '명');
+      }
+      
+      // 대기 중인 상담사 수 확인
+      const pendingData = storage.get("counselor_requests");
+      if (pendingData) {
+        const pending = JSON.parse(pendingData.value).filter(c => c.status === "pending");
+        console.log('⏳ 대기 중인 상담사:', pending.length + '명');
+      }
+      
+      // 📖 성경적 참고자료 로드 (관리자만)
+      if (isAdmin) {
+        await loadBiblicalRefs();
+      }
+    };
+    
+    init();
+    
+    // 제출된 검사 수 확인
+    const submittedData = storage.get("submitted_list");
+    if (submittedData) {
+      const submitted = JSON.parse(submittedData.value);
+      console.log('📊 제출된 검사:', submitted.length + '건');
+    }
+    
+    console.log('✅ 데이터 로드 완료');
+    
+    // 🔄 1분마다 만료 체크 (백그라운드)
+    const intervalId = setInterval(() => {
+      checkAndCleanExpiredSessions();
+    }, 60000); // 1분
+    
+    return () => clearInterval(intervalId);
+  }, []); // 한 번만 실행
+
+
+
+
+  // ── 하위 호환: 기존 검사 코드가 참조하는 변수들 ─────────
+  // activeLinkData → 로그인 회원 정보로 대체
+  const activeLinkData = currentUser ? {
+    clientName:    currentUser.nickname || currentUser.email,
+    counselingType: counselingMode,   // 사용자가 설정한 상담 모드 반영
+    testTypes:     selectedTests,
+    testType:      selectedTests[0],
+    lang:          currentUser.locale || 'ko',
+  } : null;
+  const activeLinkId   = currentUser ? 'member_' + currentUser.id : null;
+  // 기존 코드가 isCounselor/isAdmin 체크하는 곳 → 항상 false
+  const isCounselor    = false;
+  const isAdmin        = false;
+  const counselorPhone = '';
+  // no-op stubs — B2B 레거시 코드 호환용
+  const setIsAdmin           = () => {};
+  const setIsCounselor       = () => {};
+  const setCounselorPhone    = () => {};
+  const setActiveLinkData    = () => {};
+  const setApprovedCounselors = () => {};
+  const setPendingCounselors  = () => {};
+  const setOrgCounselors      = () => {};
+  const setQuotaEditingPhone  = () => {};
+  const setQuotaEditingValue  = () => {};
+  const setApiTestLoading     = () => {};
+  const setApiTestResult      = () => {};
+
+  // ============================================================
+  // 초기화: 로그인 복원 + 지역 설정 로드
+  // ============================================================
+  useEffect(() => {
+    (async () => {
+      // 지역 설정 먼저 로드
+      try {
+        const cfg = await api.getRegionConfig();
+        setRegionConfig(cfg);
+      } catch { /* 무시 */ }
+
+      // 저장된 토큰으로 자동 로그인 복원
+      const savedUser = tokenStore.getUser();
+      const accessToken = tokenStore.getAccess();
+      if (savedUser && accessToken) {
+        try {
+          const result = await api.getMe();
+          if (result.success) {
+            setCurrentUser(result.data);
+            setCredits(result.data.credits);
+            setIsLoggedIn(true);
+            setView('memberDashboard');
+            loadTestHistory();
+            checkAndCleanExpiredSessions();
+          } else {
+            tokenStore.clear();
+          }
+        } catch { tokenStore.clear(); }
+      }
+
+      // 로컬 제출 목록 복원
+      loadAllSubmitted();
+
+      // 결제 완료 후 URL 파라미터 처리 (?payment=success|fail|cancel)
+      const urlParams = new URLSearchParams(window.location.search);
+      const paymentStatus = urlParams.get('payment');
+      const resetToken    = urlParams.get('reset_token');
+
+      if (paymentStatus === 'success') {
+        // URL 파라미터 제거 (히스토리 교체)
+        window.history.replaceState({}, '', '/');
+        // 크레딧 갱신 (Stripe Webhook 처리 딜레이 감안, 1.5초 후 조회)
+        setTimeout(async () => {
+          try {
+            const r = await fetch('/api/payment/stripe/verify', { headers: api._authHeader() });
+            const d = await r.json();
+            if (d.success) setCredits(d.data.credits);
+          } catch { /* 무시 */ }
+          // 충전 성공 알림
+          setLoginMsg({ type: 'success', text: '✦ 크레딧 충전이 완료되었습니다!' });
+          setTimeout(() => setLoginMsg({ type: '', text: '' }), 4000);
+        }, 1500);
+      } else if (paymentStatus === 'fail' || paymentStatus === 'cancel') {
+        window.history.replaceState({}, '', '/');
+        setLoginMsg({ type: 'error', text: '결제가 취소되었거나 실패했습니다.' });
+        setTimeout(() => setLoginMsg({ type: '', text: '' }), 4000);
+      }
+
+      // 비밀번호 재설정 토큰 처리
+      if (resetToken) {
+        window.history.replaceState({}, '', '/');
+        setView('resetPassword');
+        window.__resetToken = resetToken;
+      }
+
+      // 마음커플 → 상담 예약 deep link (#counseling?type=couple|bowen)
+      const urlHash = window.location.hash;
+      if (urlHash.startsWith('#counseling')) {
+        const hashParams = new URLSearchParams(urlHash.slice('#counseling'.length + 1));
+        const ctype = hashParams.get('type'); // 'couple' | 'bowen'
+        window.history.replaceState({}, '', '/');
+        if (isLoggedIn) {
+          setView('counseling');
+          // 상담 유형 힌트를 localStorage에 저장 (counseling.jsx에서 읽을 수 있도록)
+          if (ctype) {
+            try { localStorage.setItem('couple_counseling_type', ctype); } catch {}
+          }
+        } else {
+          setView('memberLogin');
+        }
+      }
+
+      // 친구 초대 ?ref= 파라미터 처리
+      // 로그인 전 접속이면 sessionStorage에 저장 → 회원가입 완료 후 자동 적용
+      const refCode = urlParams.get('ref');
+      if (refCode) {
+        sessionStorage.setItem('pending_ref_code', refCode.toUpperCase());
+        window.history.replaceState({}, '', '/');
+      }
+    })();
+  }, []);
+
+  // ============================================================
+  // 인증 함수
+  // ============================================================
+  async function handleLogin(e) {
+    if (e) e.preventDefault();
+    const email    = (document.getElementById('login-email')?.value || '').trim();
+    const password = document.getElementById('login-pw')?.value || '';
+    if (!email || !password) { setLoginMsg({ type: 'error', text: '이메일과 비밀번호를 입력해주세요.' }); return; }
+
+    setLoginMsg({ type: 'loading', text: '로그인 중...' });
+    const result = await api.login(email, password);
+    if (!result.success) {
+      if (result.requiresVerification) {
+        setLoginMsg({
+          type: 'error',
+          text: `📧 이메일 인증이 필요합니다. ${result.email || ''}로 발송된 인증 메일을 확인해주세요.`,
+        });
+        setPendingVerifyEmail(result.email || '');
+      } else {
+        setLoginMsg({ type: 'error', text: result.error || '로그인에 실패했습니다.' });
+      }
+      return;
+    }
+
+    const { accessToken, refreshToken, user } = result.data;
+    tokenStore.setTokens(accessToken, refreshToken);
+    tokenStore.setUser(user);
+    setCurrentUser(user);
+    setCredits(user.credits);
+    setIsLoggedIn(true);
+    setLoginMsg({ type: '', text: '' });
+    setView('memberDashboard');
+    loadTestHistory();
+
+    // 초대 코드 자동 적용 (가입 전 ?ref= 링크로 접속한 경우)
+    const pendingRef = sessionStorage.getItem('pending_ref_code');
+    if (pendingRef) {
+      sessionStorage.removeItem('pending_ref_code');
+      fetch('/api/referral/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+        body: JSON.stringify({ code: pendingRef }),
+      }).then(r => r.json()).then(r => {
+        if (r.success) {
+          setCredits(r.data.balance);
+          setLoginMsg({ type: 'success', text: `초대 코드 적용! +${r.data.credits} 크레딧이 지급되었습니다.` });
+          setTimeout(() => setLoginMsg({ type: '', text: '' }), 4000);
+        }
+      }).catch(() => {});
+    }
+  }
+
+  async function handleSignup(e) {
+    if (e) e.preventDefault();
+    const { email, password, pwConfirm, nickname } = signupForm;
+    if (!email || !password) { setFormMsg({ type: 'error', text: '이메일과 비밀번호는 필수입니다.' }); return; }
+    if (password !== pwConfirm) { setFormMsg({ type: 'error', text: '비밀번호가 일치하지 않습니다.' }); return; }
+    if (password.length < 8) { setFormMsg({ type: 'error', text: '비밀번호는 8자 이상이어야 합니다.' }); return; }
+
+    setFormMsg({ type: 'loading', text: '가입 처리 중...' });
+    const result = await api.register(email, password, nickname || email.split('@')[0]);
+    if (!result.success) { setFormMsg({ type: 'error', text: result.error || '가입에 실패했습니다.' }); return; }
+
+    setFormMsg({ type: 'success', text: '가입 완료! 바로 로그인하세요.' });
+    // 초대 코드가 있으면 가입 완료 후 자동 적용 (이메일 인증 후 로그인 시 처리)
+    // sessionStorage에 저장만 해두고 로그인 성공 시 적용
+    setTimeout(() => { setView('memberLogin'); setFormMsg({ type: '', text: '' }); }, 2000);
+  }
+
+  async function handleLogout() {
+    await api.logout();
+    setCurrentUser(null);
+    setIsLoggedIn(false);
+    setCredits(0);
+    setView('memberLogin');
+    setLoginMsg({ type: '', text: '' });
+    // AI 채팅 일일 횟수 초기화
+    setAiChatUsed(0);
+    try { localStorage.removeItem(AI_LIMIT_KEY); } catch {}
+  }
+
+  // ============================================================
+  // 크레딧 함수
+  // ============================================================
+  async function refreshCredits() {
+    if (!isLoggedIn) return;
+    try {
+      const r = await api.getCredits();
+      if (r.success) { setCredits(r.data.balance); setCreditTxns(r.data.transactions); }
+    } catch { /* 무시 */ }
+  }
+
+  // 검사 시작 시 크레딧 차감 요청
+  async function chargeForTest(testType) {
+    // 무료 검사 3종 (PHQ-9·GAD-7·Big5): 크레딧 차감 없이 바로 시작
+    if (FREE_TESTS.includes(testType)) return true;
+
+    // 유료 검사: 크레딧 10 차감
+    const result = await api.startTest(testType, currentUser?.locale || 'ko');
+    if (!result.success) {
+      if (result.needsCharge) setShowCreditModal(true);
+      return false;
+    }
+    setCredits(result.data.balance);
+    return true;
+  }
+
+  // ============================================================
+  // 마음 게임 SSO 연동 (JWT 토큰 전달 → 별도 로그인 불필요)
+  // ============================================================
+  async function openMaumGame(gameKey = null) {
+    if (!isLoggedIn) {
+      setView('memberLogin');
+      return;
+    }
+    try {
+      // 게임 전용 장기 토큰 발급 (7일) — accessToken(1시간) 만료로 인한 로그인 풀림 방지
+      const res = await fetch('/api/game-token', { headers: api._authHeader() });
+      const data = await res.json();
+      const token = data.success ? data.gameToken : tokenStore.getAccess();
+      const gameParam = gameKey ? `&game=${encodeURIComponent(gameKey)}` : '';
+      const gameUrl = `https://game.maumful.com${token ? '?t=' + encodeURIComponent(token) + gameParam : ''}`;
+      window.open(gameUrl, '_blank', 'noopener noreferrer');
+    } catch {
+      // 실패 시 기존 토큰으로 fallback
+      const token = tokenStore.getAccess();
+      const gameUrl = `https://game.maumful.com${token ? '?t=' + encodeURIComponent(token) : ''}`;
+      window.open(gameUrl, '_blank', 'noopener noreferrer');
+    }
+  }
+
+  // ── 마음커플 오픈 (마음게임과 동일 패턴) ───────────────
+  async function openMaumCouple(inviteCode = null) {
+    if (!isLoggedIn) {
+      setView('memberLogin');
+      return;
+    }
+    try {
+      const res = await fetch('/api/couple-token', { headers: api._authHeader() });
+      const data = await res.json();
+      const token = data.success ? data.coupleToken : tokenStore.getAccess();
+      const codeParam = inviteCode ? `&code=${encodeURIComponent(inviteCode)}` : '';
+      const coupleUrl = `https://couple.maumful.com${token ? '?t=' + encodeURIComponent(token) + codeParam : ''}`;
+      window.open(coupleUrl, '_blank', 'noopener noreferrer');
+    } catch {
+      const token = tokenStore.getAccess();
+      const coupleUrl = `https://couple.maumful.com${token ? '?t=' + encodeURIComponent(token) : ''}`;
+      window.open(coupleUrl, '_blank', 'noopener noreferrer');
+    }
+  }
+
+  // ============================================================
+  // 검사 이력 로드
+  // ============================================================
+  async function loadTestHistory() {
+    try {
+      const r = await api.getTestHistory();
+      if (r.success) setTestHistory(r.data);
+    } catch { /* 무시 */ }
+  }
+
+  // ============================================================
+  // 친구 초대 함수
+  // ============================================================
+  async function loadReferralData() {
+    setReferralLoading(true);
+    try {
+      const [codeRes, listRes] = await Promise.all([
+        fetch('/api/referral/code', { headers: api._authHeader() }).then(r => r.json()),
+        fetch('/api/referral/list', { headers: api._authHeader() }).then(r => r.json()),
+      ]);
+      if (codeRes.success) setReferralData(codeRes.data);
+      if (listRes.success) setReferralList(listRes.data);
+    } catch (e) { console.error('referral load error', e); }
+    setReferralLoading(false);
+  }
+
+  async function applyReferralCode() {
+    const code = referralInput.trim().toUpperCase();
+    if (!code) { setReferralMsg({ type: 'error', text: '초대 코드를 입력해주세요.' }); return; }
+    setReferralMsg({ type: 'loading', text: '적용 중...' });
+    const r = await fetch('/api/referral/apply', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+      body: JSON.stringify({ code }),
+    }).then(r => r.json());
+    if (r.success) {
+      setReferralMsg({ type: 'success', text: r.message });
+      setCredits(r.data.balance);
+      setReferralInput('');
+    } else {
+      setReferralMsg({ type: 'error', text: r.error || '적용 실패' });
+    }
+  }
+
+  function copyInviteLink(url) {
+    navigator.clipboard?.writeText(url).then(() => {
+      setReferralMsg({ type: 'success', text: '초대 링크가 복사되었습니다!' });
+      setTimeout(() => setReferralMsg({ type: '', text: '' }), 2000);
+    }).catch(() => {
+      // fallback
+      const ta = document.createElement('textarea');
+      ta.value = url; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+      setReferralMsg({ type: 'success', text: '링크 복사 완료!' });
+      setTimeout(() => setReferralMsg({ type: '', text: '' }), 2000);
+    });
+  }
+
+  // ============================================================
+  // 관리자 함수
+  // ============================================================
+  async function adminFetch(path, opts = {}) {
+    return fetch(path, {
+      ...opts,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + adminSecretInput,
+        ...(opts.headers || {}),
+      },
+    }).then(r => r.json());
+  }
+
+  async function loadAdminOverview() {
+    setAdminLoading(true);
+    try {
+      const [stats, daily, tests] = await Promise.all([
+        adminFetch('/api/admin/stats'),
+        adminFetch('/api/admin/stats/daily?days=30'),
+        adminFetch('/api/admin/stats/tests'),
+      ]);
+      if (stats.success)  setAdminStats(stats.data);
+      if (daily.success)  setAdminDaily(daily.data);
+      if (tests.success)  setAdminTestStats(tests.data);
+    } catch(e) { setAdminMsg({ type:'error', text:'로드 실패: '+e.message }); }
+    setAdminLoading(false);
+  }
+
+  async function loadAdminUsers(page = 1) {
+    setAdminLoading(true);
+    try {
+      const r = await adminFetch(`/api/admin/users?page=${page}&limit=20${adminSearch ? '&search='+encodeURIComponent(adminSearch) : ''}`);
+      if (r.success) setAdminUsers(r.data);
+      else setAdminMsg({ type:'error', text: r.error });
+    } catch(e) { setAdminMsg({ type:'error', text: e.message }); }
+    setAdminLoading(false);
+  }
+
+  async function loadAdminPayments(page = 1) {
+    setAdminLoading(true);
+    try {
+      const r = await adminFetch(`/api/admin/payments?page=${page}&limit=20`);
+      if (r.success) setAdminPayments(r.data);
+      else setAdminMsg({ type:'error', text: r.error });
+    } catch(e) { setAdminMsg({ type:'error', text: e.message }); }
+    setAdminLoading(false);
+  }
+
+  async function grantCredits() {
+    const { userId, amount, type, reason } = creditGrantForm;
+    if (!userId || !amount) { setAdminMsg({ type:'error', text:'사용자 ID와 금액을 입력하세요.' }); return; }
+    const r = await adminFetch(`/api/admin/users/${userId}/credits`, {
+      method: 'POST',
+      body: JSON.stringify({ amount: parseInt(amount), type, reason }),
+    });
+    if (r.success) {
+      setAdminMsg({ type:'success', text: r.message });
+      setCreditGrantForm({ userId: '', amount: '', type: 'gain', reason: 'admin_grant' });
+    } else {
+      setAdminMsg({ type:'error', text: r.error });
+    }
+  }
+
+  // ============================================================
+  // 기존 검사 로직 유지용 함수들 (하위 호환)
+  // ============================================================
+  function genId(prefix) {
+    return prefix + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9);
+  }
+
+  function storeSession(data) {
+    // 비로그인 체험 세션은 localStorage에 저장하지 않음 (누적 방지)
+    if (!isLoggedIn && !activeLinkId) return;
+    storage.set('session_' + data.sessionId, JSON.stringify(data));
+    const listRaw = storage.get('submitted_list');
+    const list    = listRaw ? JSON.parse(listRaw.value) : [];
+    // 최대 20개 유지
+    list.unshift({ sessionId: data.sessionId, testType: data.testType, createdAt: data.createdAt, linkId: data.linkId });
+    if (list.length > 20) list.splice(20);
+    storage.set('submitted_list', JSON.stringify(list));
+    setSubmitted(list);
+  }
+
+  function loadAllSubmitted() {
+    const r    = storage.get('submitted_list');
+    const list = r ? JSON.parse(r.value) : [];
+    setSubmitted(list);
+  }
+
+  function getSession(sessionId) {
+    const r = storage.get('session_' + sessionId);
+    return r ? JSON.parse(r.value) : null;
+  }
+
+  // ============================================================
+  // AI 채팅 — Authorization 헤더 추가
+  // ============================================================
+  function buildTestSummary(testType) {
+    try {
+      if (testType === 'SCT') {
+        const { filled, byScale } = calcSrci();
+        const sample = Object.entries(byScale).map(([s,items]) => `[${s}] ${items.slice(0,1).map(a=>a.answer).join(' / ')}`).join('\n');
+        return `SRCI 자기반응 완성검사 (완성 ${filled}/25)\n${sample}`;
+      }
+      if (testType === 'DSI') {
+        const { scales, total } = calcSdri();
+        return `SDRI 자기분화 반응성 검사 총점: ${total}점\n${Object.entries(scales).map(([k,v])=>`${k}: ${v}점`).join('\n')}`;
+      }
+      if (testType === 'PHQ9') {
+        const total = Object.values(phq9Responses).reduce((a, b) => a + b, 0);
+        const level = total >= 20 ? '심각' : total >= 15 ? '중증' : total >= 10 ? '중간' : total >= 5 ? '경미' : '정상';
+        const items = Object.entries(phq9Responses).map(([k, v]) => `Q${+k + 1}: ${v}점`).join(', ');
+        return `PHQ-9 총점: ${total}/27 (${level})\n${items}`;
+      }
+      if (testType === 'GAD7') {
+        const total = Object.values(gad7Responses).reduce((a, b) => a + b, 0);
+        const level = total >= 15 ? '심각' : total >= 10 ? '중간' : total >= 5 ? '경미' : '정상';
+        return `GAD-7 총점: ${total}/21 (${level})`;
+      }
+      if (testType === 'DASS21') {
+        const all = Object.entries(dass21Responses);
+        const d = all.filter(([k]) => [3,5,10,13,16,17,21].includes(+k+1)).reduce((a,[,v]) => a+v*2, 0);
+        const ax = all.filter(([k]) => [2,4,7,9,15,19,20].includes(+k+1)).reduce((a,[,v]) => a+v*2, 0);
+        const s = all.filter(([k]) => [1,6,8,11,12,14,18].includes(+k+1)).reduce((a,[,v]) => a+v*2, 0);
+        return `DASS-21 우울:${d} 불안:${ax} 스트레스:${s}`;
+      }
+      if (testType === 'BIG5') {
+        return `Big5 응답 ${Object.keys(big5Responses).length}문항`;
+      }
+      if (testType === 'BURNOUT') {
+        const total = Object.values(burnoutResponses).reduce((a, b) => a + b, 0);
+        return `K-MBI+ 총점: ${total}`;
+      }
+      if (testType === 'LOST') {
+        return `LOST 응답 ${Object.keys(lostResponses).length}문항`;
+      }
+      if (testType === 'GENERAL' || !testType) {
+        return '일반 AI 상담 (검사 결과 없음 — 자유 상담)';
+      }
+    } catch { /* 무시 */ }
+    return '';
+  }
+
+  // AI 채팅 횟수 증가 + localStorage 저장
+  function incrementAiChatUsed() {
+    const next = aiChatUsed + 1;
+    setAiChatUsed(next);
+    try { localStorage.setItem(AI_LIMIT_KEY, String(next)); } catch {}
+    return next;
+  }
+
+  // AI 채팅 한도 초과 여부
+  function isAiChatExhausted() {
+    if (!isLoggedIn) return aiChatUsed >= AI_LIMIT_FREE;
+    if (credits <= 0) return aiChatUsed >= AI_LIMIT_FREE;
+    return aiChatUsed >= AI_LIMIT_PAID;
+  }
+
+  async function sendChatMessage(testType) {
+    const input = chatInput.trim();
+    if (!input || chatStreaming) return;
+
+    // 횟수 초과 확인
+    if (isAiChatExhausted()) {
+      setShowAiLimitModal(true);
+      return;
+    }
+
+    const lang    = currentUser?.locale || 'ko';
+    const summary = buildTestSummary(testType);
+    const userMsg = { role: 'user', content: input, id: Date.now() };
+
+    setChatMessages(prev => [...prev, userMsg]);
+    setChatInput('');
+    setChatStreaming(true);
+    setChatError('');
+
+    const assistantId = Date.now() + 1;
+    setChatMessages(prev => [...prev, { role: 'assistant', content: '', id: assistantId, streaming: true }]);
+
+    try {
+      const history = [...chatMessages.filter(m => m.content && m.content.trim() && !m.streaming), userMsg].map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content.trim() }));
+      const res     = await fetch('/api/ai-chat', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+        body:    JSON.stringify({ messages: history, testContext: { testType, counselingType: counselingMode || 'psychological', summary, lang } }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        if (res.status === 402) {
+          setShowCreditModal(true);
+          setChatMessages(prev => prev.filter(m => m.id !== assistantId));
+          setChatStreaming(false);
+          return;
+        }
+        // 429: 한도 초과 → 항상 모달
+        if (res.status === 429) {
+          setChatMessages(prev => prev.filter(m => m.id !== assistantId));
+          setChatStreaming(false);
+          setAiChatUsed(AI_LIMIT_FREE);
+          setShowAiLimitModal(true);
+          return;
+        }
+        throw new Error(err.error || '서버 오류');
+      }
+
+      // 크레딧 차감됐으므로 잔액 갱신
+      refreshCredits();
+
+      const reader  = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '', fullText = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6).trim();
+          if (data === '[DONE]') break;
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+              fullText += parsed.delta.text;
+              setChatMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content: fullText } : m));
+            }
+          } catch { /* 무시 */ }
+        }
+      }
+      incrementAiChatUsed();
+      setChatMessages(prev => prev.map(m => m.id === assistantId ? { ...m, streaming: false } : m));
+    } catch (e) {
+      const errMsg = e.message || 'AI 채팅 중 오류가 발생했습니다.';
+      // 502는 API 키 미설정 가능성 안내
+      setChatError(errMsg.includes('502') || errMsg.includes('Bad Gateway')
+        ? 'AI 서비스에 연결할 수 없습니다. 잠시 후 다시 시도하거나 관리자에게 문의하세요.'
+        : errMsg);
+      setChatMessages(prev => prev.filter(m => m.id !== assistantId));
+    } finally {
+      setChatStreaming(false);
+    }
+  }
+
+  function resetChat() { setChatMessages([]); setChatInput(''); setChatError(''); setChatStreaming(false); }
+
+  // ============================================================
+  // 공통 UI 컴포넌트
+  // ============================================================
+  const Msg = ({ msg, extra }) => !msg.text ? null : (
+    <div className={`mb-4 px-4 py-3 rounded-lg text-sm font-medium ${
+      msg.type === 'error'   ? 'bg-red-50 text-red-700 border border-red-200' :
+      msg.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' :
+      msg.type === 'loading' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+      'bg-gray-50 text-gray-700 border border-gray-200'
+    }`}>
+      {msg.text}
+      {extra}
+    </div>
+  );
+
+  // 크레딧 표시 배지
+  const CreditBadge = () => (
+    <button
+      onClick={() => setShowChargeView(true)}
+      className="flex items-center gap-1.5 bg-green-50 border border-green-200 text-green-800 px-3 py-1.5 rounded-full text-sm font-semibold hover:bg-green-100 transition"
+    >
+      ✦ {credits} 크레딧
+    </button>
+  );
+
+  // 크레딧 부족 모달
+  const CreditModal = () => !showCreditModal ? null : (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-7 w-full max-w-sm">
+        <div className="text-center mb-5">
+          <div className="text-4xl mb-3">✦</div>
+          <h2 className="text-xl font-bold text-gray-800 mb-1">크레딧이 부족합니다</h2>
+          <p className="text-sm text-gray-500">심리검사 1회 = 10 크레딧<br/>AI 채팅 1회 = 5 크레딧</p>
+        </div>
+        <div className="bg-green-50 rounded-xl p-3 mb-5 text-center">
+          <span className="text-green-800 font-semibold">현재 잔액: {credits} 크레딧</span>
+        </div>
+        <button
+          onClick={() => { setShowCreditModal(false); setShowChargeView(true); }}
+          className="w-full bg-green-700 text-white py-3 rounded-xl font-bold hover:bg-green-800 transition mb-3"
+        >크레딧 충전하기</button>
+        <button
+          onClick={() => setShowCreditModal(false)}
+          className="w-full bg-gray-100 text-gray-600 py-3 rounded-xl font-semibold hover:bg-gray-200 transition"
+        >나중에</button>
+      </div>
+    </div>
+  );
+
+  // ── AI 횟수 초과 모달 ─────────────────────────────────────
+  const AiLimitModal = () => !showAiLimitModal ? null : (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-7 w-full max-w-sm">
+        <div className="text-center mb-5">
+          <div className="text-4xl mb-3">💬</div>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">AI 상담 횟수를 모두 사용했습니다</h2>
+          <p className="text-sm text-gray-500 leading-relaxed">
+            {!isLoggedIn
+              ? `지금까지 AI 상담을 ${AI_LIMIT_FREE}회 체험하셨습니다. 회원가입하면 검사 결과 저장 + 추가 크레딧(10)이 지급됩니다!`
+              : credits <= 0
+                ? `크레딧이 없으면 AI 상담을 ${AI_LIMIT_FREE}회까지 이용할 수 있습니다.`
+                : `크레딧 보유 시 AI 상담을 하루 최대 ${AI_LIMIT_PAID}회 이용할 수 있습니다. 크레딧을 충전하면 더 많이 이용할 수 있어요.`}
+          </p>
+        </div>
+        <div className="space-y-3 mb-4">
+          {isLoggedIn ? (
+            <button onClick={() => { setShowAiLimitModal(false); setShowChargeView(true); }}
+              className="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition text-sm">
+              ✦ 크레딧 충전하여 계속 상담하기
+            </button>
+          ) : (
+            <button onClick={() => { setShowAiLimitModal(false); setView('memberSignup'); }}
+              className="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition text-sm">
+              무료 회원가입 후 계속하기
+            </button>
+          )}
+        </div>
+        <button onClick={() => setShowAiLimitModal(false)}
+          className="w-full text-gray-400 text-sm py-2 hover:text-gray-600 transition">닫기</button>
+      </div>
+    </div>
+  );
+
+  // ── 회복 루틴 카드: 3일 재방문 CTA + 게임 루틴 추천 ──────────
+  function RecoveryCard({ testType, score, level, stressScore }) {
+    // 검사 유형 + 점수 기반 게임 루틴 결정
+    function getGameRoutine() {
+      const isHighStress = (stressScore || score || 0) >= 15;
+      const isHighRisk   = level === 'high';
+      const isMidRisk    = level === 'mid';
+
+      if (testType === 'BURNOUT' || isHighRisk) {
+        return {
+          day1: { key: 'burnout',   emoji: '⚡', label: '번아웃 회복' },
+          day2: { key: 'gratitude', emoji: '🙏', label: '감사 일기' },
+          day3: { key: 'garden',    emoji: '🌱', label: '마음 정원' },
+          reason: '소진 신호가 높을 때는 번아웃 회복 → 감사 → 정원 순서가 효과적입니다.',
+        };
+      }
+      if (testType === 'PHQ9' || testType === 'DASS21') {
+        return {
+          day1: { key: 'gratitude', emoji: '🙏', label: '감사 일기' },
+          day2: { key: 'garden',    emoji: '🌱', label: '마음 정원' },
+          day3: { key: 'tree',      emoji: '🌳', label: '마음 나무' },
+          reason: '감정 안정에는 감사 → 정원 → 나무 루틴이 도움이 됩니다.',
+        };
+      }
+      if (testType === 'GAD7') {
+        return {
+          day1: { key: 'garden',    emoji: '🌱', label: '마음 정원' },
+          day2: { key: 'tree',      emoji: '🌳', label: '마음 나무' },
+          day3: { key: 'gratitude', emoji: '🙏', label: '감사 일기' },
+          reason: '불안이 높을 때는 정원 → 나무 → 감사 순서로 천천히 이완하세요.',
+        };
+      }
+      if (testType === 'LOST' || testType === 'BIG5') {
+        return {
+          day1: { key: 'efmt',      emoji: '😊', label: '감정 표현' },
+          day2: { key: 'tree',      emoji: '🌳', label: '마음 나무' },
+          day3: { key: 'garden',    emoji: '🌱', label: '마음 정원' },
+          reason: '자기이해 검사 후에는 감정 표현 → 나무 → 정원 루틴을 추천합니다.',
+        };
+      }
+      // 기본 (SCT, DSI 등)
+      return {
+        day1: { key: 'garden',    emoji: '🌱', label: '마음 정원' },
+        day2: { key: 'gratitude', emoji: '🙏', label: '감사 일기' },
+        day3: { key: 'efmt',      emoji: '😊', label: '감정 표현' },
+        reason: '오늘부터 3일간 짧은 루틴으로 마음을 돌봐보세요.',
+      };
+    }
+
+    async function launchGame(gameKey) {
+      if (!isLoggedIn) {
+        alert('마음 게임은 로그인 후 이용 가능합니다.');
+        return;
+      }
+      // openMaumGame과 동일하게 7일 게임 토큰 사용
+      await openMaumGame(gameKey);
+    }
+
+    const routine = getGameRoutine();
+    const checkinDate = new Date();
+    checkinDate.setDate(checkinDate.getDate() + 3);
+    const checkinLabel = `${checkinDate.getMonth()+1}월 ${checkinDate.getDate()}일`;
+
+    return (
+      <div className="rounded-2xl border-2 border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50 p-5 mt-4">
+        {/* 헤더 */}
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-2xl">🌿</span>
+          <div>
+            <h3 className="font-bold text-emerald-800 text-base">오늘부터 3일 회복 루틴</h3>
+            <p className="text-xs text-emerald-600">{routine.reason}</p>
+          </div>
+        </div>
+
+        {/* 게임 루틴 3일 */}
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          {[
+            { day: 'Day 1', game: routine.day1 },
+            { day: 'Day 2', game: routine.day2 },
+            { day: 'Day 3', game: routine.day3 },
+          ].map(({ day, game }) => (
+            <button
+              key={day}
+              onClick={() => launchGame(game.key)}
+              className="bg-white rounded-xl p-3 text-center border border-emerald-100 hover:border-emerald-400 hover:shadow-md transition cursor-pointer group"
+            >
+              <p className="text-xs text-emerald-500 font-semibold mb-1">{day}</p>
+              <p className="text-xl mb-1">{game.emoji}</p>
+              <p className="text-xs font-medium text-gray-700 group-hover:text-emerald-700">{game.label}</p>
+            </button>
+          ))}
+        </div>
+
+        {/* 3일 재방문 CTA */}
+        <div className="bg-white rounded-xl p-3 border border-emerald-100 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-bold text-gray-800">📅 {checkinLabel} 변화 체크</p>
+            <p className="text-xs text-gray-500 mt-0.5">3일 후 다시 체크하면 마음의 변화를 비교해 드려요</p>
+          </div>
+          <button
+            onClick={() => {
+              localStorage.setItem('maumful_checkin_date', checkinDate.toISOString());
+              localStorage.setItem('maumful_checkin_test', testType);
+              alert(`✅ ${checkinLabel}에 다시 체크하도록 기억해 드릴게요!\n\n마음풀에 다시 방문해 같은 검사를 진행하시면\n이전 결과와 비교해 드립니다.`);
+            }}
+            className="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition whitespace-nowrap"
+          >
+            기억하기 →
+          </button>
+        </div>
+
+        {/* 면책 */}
+        <p className="text-xs text-gray-400 mt-3 text-center">
+          본 결과는 자기이해를 위한 참고 자료이며, 의학적 진단이 아닙니다.
+        </p>
+      </div>
+    );
+  }
+
+  // ── 전문가 상담 연결 CTA (결과 화면 하단 공통) ──────────────
+  function ExpertCTA({ testType, score, level, onContinueAI }) {
+    const isHighRisk = level === 'high';
+    const limit = isLoggedIn && credits > 0 ? AI_LIMIT_PAID : AI_LIMIT_FREE;
+    return (
+      <div className={`rounded-2xl border-2 p-5 mt-4 ${isHighRisk ? 'border-red-200 bg-red-50' : 'border-indigo-100 bg-indigo-50'}`}>
+        <div className="flex items-start gap-3 mb-4">
+          <span className="text-2xl">{isHighRisk ? '🆘' : '🤝'}</span>
+          <div>
+            <h3 className={`font-bold text-base mb-1 ${isHighRisk ? 'text-red-800' : 'text-indigo-800'}`}>
+              {isHighRisk ? '전문가 상담을 강력히 권장합니다' : '다음 단계를 선택하세요'}
+            </h3>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              {isHighRisk
+                ? 'AI 상담은 참고용이며 실제 치료를 대체할 수 없습니다. 전문가의 도움이 필요한 수준입니다.'
+                : 'AI와 더 이야기하거나, 전문 상담사와 연결할 수 있습니다.'}
+            </p>
+          </div>
+        </div>
+
+        {/* 면책 고지 */}
+        <div className="bg-white/70 rounded-xl p-3 mb-4 text-xs text-gray-500 border border-gray-200 leading-relaxed">
+          ⚠️ <strong>참고 안내:</strong> 이 검사 결과와 AI 분석은 자기 이해를 위한 참고 자료입니다. 의학적 진단이나 치료를 대체하지 않으며, 확정적 결론이 아닙니다. 심리적 어려움이 지속된다면 반드시 전문가와 상담하세요.
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-2">
+          {onContinueAI && (
+            <button onClick={isAiChatExhausted() ? () => setShowAiLimitModal(true) : onContinueAI}
+              className={`flex-1 py-3 px-4 rounded-xl font-semibold text-sm transition
+                ${isAiChatExhausted()
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50'}`}>
+              {isAiChatExhausted()
+                ? `💬 AI 상담 ${aiChatUsed}/${limit}회 완료`
+                : `💬 AI와 상담 계속 (${aiChatUsed}/${limit}회)`}
+            </button>
+          )}
+          <button onClick={() => window.open('https://pro.maumful.com', '_blank', 'noopener noreferrer')}
+            className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition text-white
+              ${isHighRisk ? 'bg-red-600 hover:bg-red-700' : 'bg-indigo-600 hover:bg-indigo-700'}`}>
+            🏥 전문 상담사 연결하기
+          </button>
+        </div>
+
+        {isHighRisk && (
+          <div className="mt-3 text-center text-xs text-red-600 font-semibold">
+            즉각적인 위기 상황이라면 자살예방상담전화 📞 1393 (24시간 무료)
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // 쿠키 동의 배너 (EU 사용자용)
+  const CookieBanner = () => !showCookieBanner ? null : (
+    <div className="fixed bottom-0 left-0 right-0 z-50 bg-gray-900 text-white p-4 shadow-2xl">
+      <div className="max-w-2xl mx-auto flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <p className="text-sm flex-1 text-gray-200">
+          저희 서비스는 필수 쿠키만 사용합니다. 로그인 상태 유지와 서비스 제공에 필요한 최소한의 정보만 저장됩니다.{' '}
+          <button onClick={() => setView('privacy')} className="underline text-green-400 hover:text-green-100">자세히 보기</button>
+        </p>
+        <div className="flex gap-2 shrink-0">
+          <button
+            onClick={() => { localStorage.setItem('cookie_consent', 'accepted'); setShowCookieBanner(false); }}
+            className="bg-green-600 hover:bg-green-600 text-white text-sm font-semibold px-4 py-2 rounded-lg transition"
+          >동의</button>
+          <button
+            onClick={() => { localStorage.setItem('cookie_consent', 'essential'); setShowCookieBanner(false); }}
+            className="bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm px-4 py-2 rounded-lg transition"
+          >필수만</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ============================================================
+  // 뷰: 랜딩 홈 페이지 (비로그인 기본 진입점)
+  // ============================================================
+  if (view === 'landing') return (
+    <>
+      <GlobalNav
+        setView={setView}
+        isLoggedIn={isLoggedIn}
+        currentUser={currentUser}
+        credits={credits}
+        activeView="landing"
+      />
+      <LandingPage setView={setView} isLoggedIn={isLoggedIn} />
+    </>
+  );
+
+  // ============================================================
+  // 뷰: 검사 소개 페이지 (비로그인 접근 가능)
+  // ============================================================
+  if (view === 'testsIntro') return (
+    <>
+      <GlobalNav
+        setView={setView}
+        isLoggedIn={isLoggedIn}
+        currentUser={currentUser}
+        credits={credits}
+        activeView="testsIntro"
+      />
+      <TestsIntroPage setView={setView} isLoggedIn={isLoggedIn} />
+    </>
+  );
+
+  // ============================================================
+  // 뷰: 상담센터 플랫폼
+  // ============================================================
+  if (view === 'counseling') return (
+    <>
+      <GlobalNav
+        setView={setView}
+        isLoggedIn={isLoggedIn}
+        currentUser={currentUser}
+        credits={credits}
+        activeView="counseling"
+      />
+      <CounselingPage
+        setView={setView}
+        isLoggedIn={isLoggedIn}
+        currentUser={currentUser}
+      />
+    </>
+  );
+
+  // ============================================================
+  // 뷰: 상담 어드민 (별도 인증)
+  // ============================================================
+  if (view === 'counselingAdmin') return (
+    <CounselingAdminPage setView={setView} />
+  );
+
+  // ============================================================
+  // 뷰: 게임 소개 (추후 개발 — 임시 안내)
+  // ============================================================
+  if (view === 'gameIntro') return (
+    <>
+      <GlobalNav
+        setView={setView}
+        isLoggedIn={isLoggedIn}
+        currentUser={currentUser}
+        credits={credits}
+        activeView="gameIntro"
+      />
+      <div style={{minHeight:'60vh', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:16, fontFamily:"'Noto Sans KR',sans-serif"}}>
+        <div style={{fontSize:64}}>🎮</div>
+        <h2 style={{fontSize:28, fontWeight:700}}>마음 게임</h2>
+        <p style={{color:'#5A5A5A', fontSize:16}}>현재 개발 중입니다. 곧 출시됩니다!</p>
+        <button onClick={() => setView('landing')} style={{marginTop:8, background:'#2D6A4F', color:'white', border:'none', borderRadius:10, padding:'12px 28px', fontSize:15, fontWeight:600, cursor:'pointer', fontFamily:"'Noto Sans KR',sans-serif"}}>← 홈으로</button>
+      </div>
+    </>
+  );
+
+  // ============================================================
+  // 뷰: 로그인
+  // ============================================================
+  if (!isLoggedIn && view === 'memberLogin') return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-green-100 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+        <button onClick={() => setView('landing')}
+          className="flex items-center gap-1 text-gray-400 hover:text-green-700 text-sm mb-4 transition">
+          ← 홈으로
+        </button>
+        <div className="text-center mb-7">
+          <div className="text-5xl mb-3">🌿</div>
+          <h1 className="text-3xl font-bold text-gray-800">마음풀</h1>
+          <p className="text-gray-400 text-sm mt-1">나를 이해하는 첫걸음</p>
+        </div>
+
+        {sessionStorage.getItem('pending_ref_code') && (
+          <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700 text-center">
+            🎁 초대 링크로 접속하셨습니다! 가입 후 <strong>+10 크레딧</strong>이 추가 지급됩니다.
+          </div>
+        )}
+        <Msg msg={loginMsg} extra={
+          loginMsg.type === 'error' && pendingVerifyEmail ? (
+            <button
+              onClick={async () => {
+                const r = await fetch('/api/auth/resend-verify', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ email: pendingVerifyEmail }),
+                });
+                const d = await r.json();
+                setLoginMsg({ type: d.success ? 'success' : 'error',
+                  text: d.success ? '✅ 인증 메일을 재발송했습니다. 메일함을 확인해주세요.' : (d.error || '재발송 실패') });
+                if (d.success) setPendingVerifyEmail('');
+              }}
+              className="mt-2 block text-xs font-semibold underline text-red-500 hover:text-red-700 cursor-pointer"
+            >
+              📧 인증 메일 재발송하기
+            </button>
+          ) : null
+        } />
+        <div className="space-y-3 mb-5">
+          <input id="login-email" type="email" placeholder="이메일" autoComplete="email"
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm"
+            onKeyDown={e => e.key === 'Enter' && document.getElementById('login-pw').focus()} />
+          <input id="login-pw" type="password" placeholder="비밀번호 (8자 이상)" autoComplete="current-password"
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm"
+            onKeyDown={e => e.key === 'Enter' && handleLogin()} />
+        </div>
+        <button onClick={handleLogin}
+          className="w-full bg-green-700 text-white py-3 rounded-xl font-bold hover:bg-green-800 transition mb-4 text-base">
+          로그인
+        </button>
+        <div className="relative mb-4">
+          <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"/></div>
+          <div className="relative flex justify-center"><span className="px-3 bg-white text-gray-400 text-xs">또는</span></div>
+        </div>
+        <button
+          onClick={() => setView('memberSignup')}
+          className="w-full bg-white border-2 border-green-200 text-green-800 py-3 rounded-xl font-semibold hover:bg-green-50 transition mb-3">
+          이메일로 회원가입
+        </button>
+        <button
+          onClick={() => { setLoginMsg({ type: '', text: '' }); setView('forgotPassword'); }}
+          className="w-full text-center text-gray-400 text-sm hover:text-gray-600 py-1">
+          비밀번호를 잊으셨나요?
+        </button>
+        <button
+          onClick={async () => {
+            const email = document.getElementById('login-email')?.value.trim();
+            if (!email) { setLoginMsg({ type:'error', text:'이메일을 먼저 입력해주세요.' }); return; }
+            setLoginMsg({ type:'loading', text:'인증 메일 발송 중...' });
+            const r = await fetch('/api/auth/resend-verify', {
+              method:'POST', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({ email }),
+            }).then(r => r.json());
+            setLoginMsg({ type: r.success ? 'success' : 'error', text: r.message || r.error });
+            setTimeout(() => setLoginMsg({ type:'', text:'' }), 5000);
+          }}
+          className="w-full text-center text-gray-300 text-xs hover:text-gray-500 py-1">
+          인증 메일을 받지 못하셨나요? 재발송
+        </button>
+        <div className="flex justify-center gap-4 mt-3">
+          <button onClick={() => setView('privacy')} className="text-xs text-gray-300 hover:text-gray-500">개인정보 처리방침</button>
+          <span className="text-gray-200 text-xs">|</span>
+          <button onClick={() => setView('terms')}   className="text-xs text-gray-300 hover:text-gray-500">이용약관</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ============================================================
+  // 뷰: 회원가입
+  // ============================================================
+  if (!isLoggedIn && view === 'memberSignup') return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-green-100 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+        <button onClick={() => { setView('memberLogin'); setFormMsg({ type: '', text: '' }); setSignupForm({ email: '', password: '', pwConfirm: '', nickname: '' }); }}
+          className="text-gray-400 hover:text-gray-600 text-sm mb-5 flex items-center gap-1">← 뒤로</button>
+        <div className="text-center mb-6">
+          <div className="text-4xl mb-2">✨</div>
+          <h2 className="text-2xl font-bold text-gray-800">회원가입</h2>
+          <p className="text-sm text-gray-400 mt-1">가입 시 <span className="text-green-700 font-semibold">10 크레딧</span> 즉시 지급</p>
+        </div>
+        <div className="bg-green-50 rounded-xl p-3 mb-5 text-sm text-green-800 space-y-0.5">
+          <p>✦ 기본 20 크레딧 (검사 2회)</p>
+          <p>✦ AI 채팅 보너스 25 크레딧 (채팅 5회)</p>
+        </div>
+        <Msg msg={formMsg} />
+        <div className="space-y-3 mb-5">
+          <input type="email" placeholder="이메일" value={signupForm.email}
+            onChange={e => setSignupForm(p => ({ ...p, email: e.target.value }))}
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm" />
+          <input type="text" placeholder="닉네임 (선택)" value={signupForm.nickname}
+            onChange={e => setSignupForm(p => ({ ...p, nickname: e.target.value }))}
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm" />
+          <input type="password" placeholder="비밀번호 (8자 이상)" value={signupForm.password}
+            onChange={e => setSignupForm(p => ({ ...p, password: e.target.value }))}
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm" />
+          <input type="password" placeholder="비밀번호 확인" value={signupForm.pwConfirm}
+            onChange={e => setSignupForm(p => ({ ...p, pwConfirm: e.target.value }))}
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm"
+            onKeyDown={e => e.key === 'Enter' && handleSignup()} />
+        </div>
+        {/* 필수 동의 항목 */}
+        <div className="space-y-2 mb-4 text-xs text-gray-600 bg-gray-50 rounded-xl p-3">
+          <p className="text-xs font-semibold text-gray-700 mb-2">서비스 이용을 위한 필수 동의</p>
+          <label className="flex items-start gap-2 cursor-pointer">
+            <input type="checkbox" id="agree-terms" className="mt-0.5 accent-green-600" />
+            <span>
+              <button type="button" onClick={() => setView('terms')} className="text-green-600 underline font-semibold">이용약관</button>
+              {' '}및{' '}
+              <button type="button" onClick={() => setView('privacy')} className="text-green-600 underline font-semibold">개인정보 처리방침</button>
+              에 동의합니다. <span className="text-red-500">(필수)</span>
+            </span>
+          </label>
+          <label className="flex items-start gap-2 cursor-pointer">
+            <input type="checkbox" id="agree-sensitive" className="mt-0.5 accent-green-600" />
+            <span>심리검사·AI 상담 내용 등 <strong>민감정보(정신건강 정보) 수집·처리</strong>에 동의합니다. <span className="text-red-500">(필수)</span></span>
+          </label>
+          <label className="flex items-start gap-2 cursor-pointer">
+            <input type="checkbox" id="agree-overseas" className="mt-0.5 accent-green-600" />
+            <span>AI 상담 시 채팅 내용이 <strong>Anthropic(미국) 서버로 전송</strong>됨에 동의합니다. <span className="text-red-500">(필수)</span></span>
+          </label>
+          <label className="flex items-start gap-2 cursor-pointer">
+            <input type="checkbox" id="agree-age" className="mt-0.5 accent-green-600" />
+            <span>본인은 <strong>만 14세 이상</strong>임을 확인합니다. <span className="text-red-500">(필수)</span></span>
+          </label>
+        </div>
+        <button onClick={() => {
+          const ids = ['agree-terms','agree-sensitive','agree-overseas','agree-age'];
+          if (!ids.every(id => document.getElementById(id)?.checked)) {
+            setFormMsg({ type:'error', text:'모든 필수 항목에 동의해 주세요.' }); return;
+          }
+          handleSignup();
+        }}
+          className="w-full bg-green-700 text-white py-3 rounded-xl font-bold hover:bg-green-800 transition">
+          가입하기
+        </button>
+      </div>
+    </div>
+  );
+
+  // ============================================================
+  // 뷰: 비밀번호 찾기
+  // ============================================================
+  if (!isLoggedIn && view === 'forgotPassword') return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-green-100 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+        <button onClick={() => setView('memberLogin')} className="text-gray-400 hover:text-gray-600 text-sm mb-5 flex items-center gap-1">← 뒤로</button>
+        <div className="text-center mb-6">
+          <div className="text-4xl mb-2">🔑</div>
+          <h2 className="text-2xl font-bold text-gray-800">비밀번호 찾기</h2>
+          <p className="text-sm text-gray-400 mt-1">가입한 이메일로 재설정 링크를 보내드립니다</p>
+        </div>
+        <Msg msg={formMsg} />
+        <input id="forgot-email" type="email" placeholder="가입한 이메일"
+          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm mb-4" />
+        <button
+          onClick={async () => {
+            const email = document.getElementById('forgot-email')?.value.trim();
+            if (!email) { setFormMsg({ type: 'error', text: '이메일을 입력해주세요.' }); return; }
+            setFormMsg({ type: 'loading', text: '전송 중...' });
+            const r = await api.forgotPassword(email);
+            setFormMsg({ type: 'success', text: r.message || '재설정 링크를 발송했습니다.' });
+          }}
+          className="w-full bg-green-700 text-white py-3 rounded-xl font-bold hover:bg-green-800 transition">
+          재설정 링크 전송
+        </button>
+      </div>
+    </div>
+  );
+
+  // ============================================================
+  // 법적 페이지 공통 래퍼
+  // ============================================================
+  function LegalPage({ title, onBack, children }) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
+          <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
+            <button onClick={onBack} className="text-gray-400 hover:text-gray-600 text-sm">← 뒤로</button>
+            <span className="font-bold text-gray-800">{title}</span>
+          </div>
+        </header>
+        <main className="max-w-2xl mx-auto px-4 py-8 prose prose-sm text-gray-700">{children}</main>
+      </div>
+    );
+  }
+
+  // ============================================================
+  // 뷰: AI 상담
+  // ============================================================
+  if (view === 'aiCounsel') {
+    // 현재 세션에 응답 데이터가 있는 검사 목록 계산
+    const hasResponses = {
+      PHQ9:    Object.keys(phq9Responses).length > 0,
+      GAD7:    Object.keys(gad7Responses).length > 0,
+      BIG5:    Object.keys(big5Responses || {}).length > 0,
+      DASS21:  Object.keys(dass21Responses || {}).length > 0,
+      LOST:    Object.keys(lostResponses || {}).length > 0,
+      DSI:     Object.keys(sdriResponses || {}).length >= sdriLikertQ.length,
+      BURNOUT: Object.keys(burnoutResponses || {}).length > 0,
+    };
+    const resultViews = {
+      PHQ9:'phq9Result', GAD7:'gad7Result', BIG5:'big5Result',
+      DASS21:'dass21Result', LOST:'lostResult', DSI:'dsiResult', BURNOUT:'burnoutResult',
+    };
+    const completedThisSession = Object.entries(hasResponses).filter(([,v]) => v).map(([k]) => k);
+    const recentTests = testHistory.slice(0, 5);
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-green-50">
+        {/* 헤더 */}
+        <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
+          <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
+            <button onClick={() => setView('memberDashboard')} className="text-gray-500 hover:text-gray-700 flex items-center gap-1 text-sm">← 뒤로</button>
+            <span className="font-bold text-gray-800">🤖 AI 상담</span>
+            <CreditBadge />
+          </div>
+        </header>
+
+        <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
+          {/* 안내 카드 */}
+          <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+            <div className="flex items-start gap-3 mb-3">
+              <span className="text-3xl">🧠</span>
+              <div>
+                <h2 className="font-bold text-gray-800 text-lg mb-1">AI 심리 상담</h2>
+                <p className="text-sm text-gray-500 leading-relaxed">
+                  검사 결과를 바탕으로 AI와 심층 상담하세요.<br/>
+                  검사 결과가 있으면 AI가 결과를 분석하여 맞춤 상담을 제공합니다.
+                </p>
+              </div>
+            </div>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 leading-relaxed">
+              ⚠️ <strong>참고 안내:</strong> AI 상담은 자기 이해를 위한 참고 정보입니다. 의학적 진단이나 치료를 대체하지 않으며, 모든 답변은 확정적 결론이 아닙니다.
+            </div>
+          </div>
+
+          {/* 이번 세션에 완료한 검사가 있으면 → 결과 화면에서 상담 유도 */}
+          {completedThisSession.length > 0 && (
+            <div className="bg-green-50 border-2 border-green-300 rounded-2xl p-5">
+              <p className="text-sm font-bold text-green-800 mb-3">
+                ✅ 방금 완료한 검사 결과로 AI 상담하기
+              </p>
+              <p className="text-xs text-green-600 mb-3">
+                검사 결과 화면에서 AI와 상담하면 검사 데이터가 자동으로 전달됩니다.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {completedThisSession.map(t => {
+                  const meta = {
+                    PHQ9:'😔 PHQ-9 우울', GAD7:'😰 GAD-7 불안', BIG5:'🌟 Big5 성격',
+                    DASS21:'📊 DASS-21', LOST:'🧭 LOST', DSI:'🪞 SDRI', BURNOUT:'🔥 K-MBI+',
+                  };
+                  return (
+                    <button key={t}
+                      onClick={() => setView(resultViews[t])}
+                      className="flex items-center gap-1.5 bg-green-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-green-700 transition">
+                      <span>{meta[t]}</span>
+                      <span>결과 보고 상담 →</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 새 검사 시작 */}
+          <div className="bg-white rounded-2xl p-5 border border-gray-100">
+            <p className="text-sm font-semibold text-gray-700 mb-1">💡 새 검사 후 상담하기 (더 정확한 상담)</p>
+            <p className="text-xs text-gray-400 mb-3">검사 완료 후 결과 화면에서 AI 상담 버튼을 누르세요</p>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { id:'PHQ9',  label:'PHQ-9 우울', emoji:'🌱', view:'phq9Test'  },
+                { id:'GAD7',  label:'GAD-7 불안', emoji:'💙', view:'gad7Test'  },
+                { id:'LOST',  label:'LOST 행동',  emoji:'🧭', view:'lostTest'  },
+              ].map(t => (
+                <button key={t.id} onClick={() => setView(t.view)}
+                  className="flex items-center gap-1.5 bg-white border border-green-200 text-green-700 px-3 py-2 rounded-xl text-xs font-semibold hover:bg-green-100 transition">
+                  <span>{t.emoji}</span><span>{t.label}</span>
+                  <span className="text-green-400">무료</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 검사 없이 바로 상담 */}
+          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+            <div className="px-5 pt-4 pb-2">
+              <p className="text-sm font-semibold text-gray-700 mb-1">💬 검사 없이 바로 상담하기</p>
+              <p className="text-xs text-gray-400">검사 결과 없이 AI와 자유롭게 대화할 수 있습니다</p>
+            </div>
+            <ChatBox testType="GENERAL" initialPrompts={[
+              "요즘 마음이 무겁고 지쳐있어요. 어떻게 하면 좋을까요?",
+              "불안감이 자주 생기는데 어떻게 다루면 좋을까요?",
+              "직장 스트레스로 힘든데 도움이 필요해요",
+              "스스로를 이해하고 싶어요. 어디서부터 시작할까요?",
+            ]} />
+          </div>
+
+          <ExpertCTA testType="GENERAL" score={0} level="low" onContinueAI={null} />
+        </div>
+      </div>
+    );
+  }
+
+  // ── 개인정보 처리방침  // ── 개인정보 처리방침 ──────────────────────────────────────
+  if (view === 'privacy') return (
+    <LegalPage title="개인정보 처리방침" onBack={() => setView(isLoggedIn ? 'memberDashboard' : 'memberLogin')}>
+      <h2>개인정보 처리방침</h2>
+      <p>마음풀(이하 "서비스")은 「개인정보 보호법」을 준수하며 이용자의 개인정보를 보호합니다.</p>
+
+      <h3>1. 수집하는 개인정보 항목</h3>
+      <p><strong>일반 개인정보 (필수)</strong></p>
+      <ul>
+        <li>이메일 주소, 닉네임, 접속 국가 코드</li>
+      </ul>
+      <p><strong>민감정보 (별도 동의 후 수집)</strong></p>
+      <ul>
+        <li>심리검사 응답 데이터 및 결과 (PHQ-9, GAD-7, DASS-21, BIG5 등)</li>
+        <li>AI 상담 채팅 내용 (정신건강 관련 정보 포함 가능)</li>
+      </ul>
+      <p style={{color:'#dc2626', fontSize:'13px'}}>※ 민감정보는 회원가입 시 별도 동의를 받으며, 동의를 거부하실 경우 서비스 이용이 제한될 수 있습니다.</p>
+
+      <h3>2. 개인정보 이용 목적</h3>
+      <ul>
+        <li>회원 식별 및 로그인 처리</li>
+        <li>심리검사 결과 제공 및 AI 상담 서비스 운영</li>
+        <li>크레딧 잔액 관리 및 결제 처리</li>
+        <li>서비스 이메일 발송 (인증, 안내)</li>
+        <li>서비스 개선을 위한 통계 분석 (익명 처리)</li>
+      </ul>
+
+      <h3>3. 개인정보 보유 및 파기</h3>
+      <ul>
+        <li><strong>회원 정보:</strong> 탈퇴 즉시 익명화 처리</li>
+        <li><strong>결제 기록:</strong> 전자상거래법에 따라 5년 보관</li>
+        <li><strong>검사 기록:</strong> 탈퇴 즉시 삭제</li>
+        <li><strong>AI 채팅 내용:</strong> 서비스에 저장되지 않으며 처리 후 즉시 폐기</li>
+      </ul>
+
+      <h3>4. 개인정보 처리 위탁 및 국외 이전</h3>
+      <p><strong>국내 위탁</strong></p>
+      <ul>
+        <li>토스페이먼츠 (주): 국내 결제 처리 — 이메일, 결제 금액</li>
+      </ul>
+      <p><strong>국외 이전 (개인정보 보호법 제28조의8)</strong></p>
+      <ul>
+        <li><strong>Anthropic, Inc. (미국)</strong> — AI 상담 채팅 처리. 이전 항목: 채팅 내용(비식별화). 이전 국가: 미국. 목적: Claude AI API 서비스 제공</li>
+        <li><strong>Cloudflare, Inc. (미국)</strong> — 서버 인프라 및 DB 운영. 이전 항목: 이메일, 닉네임 등 가입 정보. 이전 국가: 미국·EU. 목적: 서비스 인프라 운영</li>
+        <li><strong>Resend, Inc. (미국)</strong> — 이메일 발송. 이전 항목: 이메일 주소. 목적: 인증·안내 메일 발송</li>
+      </ul>
+      <p style={{color:'#dc2626', fontSize:'13px'}}>※ 이용자는 국외 이전에 동의하지 않을 권리가 있으나, 미동의 시 서비스 이용이 불가합니다.</p>
+
+      <h3>5. 자동화된 의사결정</h3>
+      <p>AI 분석 기능은 알고리즘에 의해 자동으로 결과를 생성합니다. 이는 <strong>참고용 정보</strong>이며 의료적 진단이 아닙니다. 이용자는 AI 분석 결과에 이의를 제기하거나 사람에 의한 재검토를 요청할 수 있습니다.</p>
+
+      <h3>6. 만 14세 미만 이용자</h3>
+      <p>만 14세 미만의 아동은 서비스를 이용할 수 없습니다. 만 14세 미만으로 확인될 경우 수집된 개인정보를 즉시 파기합니다.</p>
+
+      <h3>7. 이용자의 권리</h3>
+      <ul>
+        <li>개인정보 열람, 수정, 삭제 요청: 마이페이지 → 설정 → 회원 탈퇴</li>
+        <li>처리 정지 요청: support@maumful.com</li>
+        <li>개인정보 이동권: 요청 시 CSV 형태로 제공</li>
+      </ul>
+
+      <h3>8. 개인정보 보호책임자 및 문의</h3>
+      <ul>
+        <li>이메일: support@maumful.com</li>
+        <li>개인정보 침해 신고: 개인정보보호위원회 (privacy.go.kr / 182)</li>
+      </ul>
+      <p style={{color:'#9ca3af', fontSize:'12px'}}>최종 업데이트: 2026년 4월</p>
+    </LegalPage>
+  );
+
+  // ── 이용약관 ───────────────────────────────────────────────
+  if (view === 'terms') return (
+    <LegalPage title="이용약관" onBack={() => setView(isLoggedIn ? 'memberDashboard' : 'memberLogin')}>
+      <h2>이용약관</h2>
+      <p>마음풀(이하 "서비스") 이용 전 반드시 읽어주세요.</p>
+
+      <h3>제1조 (목적)</h3>
+      <p>본 약관은 마음풀 서비스의 이용 조건, 절차 및 이용자와 운영자 간의 권리·의무를 규정합니다.</p>
+
+      <h3>제2조 (서비스의 성격 및 의료 면책)</h3>
+      <p><strong>본 서비스는 자기이해 및 정보 제공 목적의 콘텐츠 서비스입니다.</strong></p>
+      <ul>
+        <li>심리검사 결과 및 AI 상담은 의료적 진단, 치료, 처방이 아닙니다.</li>
+        <li>검사 결과를 의학적 판단의 근거로 사용하지 마십시오.</li>
+        <li>AI는 의료인이 아니며, AI 답변은 참고용 정보입니다.</li>
+        <li>심리적 어려움이 지속되면 반드시 정신건강의학과 전문의 또는 공인 심리상담사의 도움을 받으십시오.</li>
+        <li>응급 상황 시: 자살예방상담전화 1393, 정신건강위기상담전화 1577-0199</li>
+      </ul>
+
+      <h3>제3조 (이용 자격)</h3>
+      <ul>
+        <li>본 서비스는 만 14세 이상만 이용할 수 있습니다.</li>
+        <li>만 14세 미만의 경우 법정대리인의 동의가 필요하며, 동의 없이 가입한 사실이 확인되면 계정을 즉시 삭제합니다.</li>
+      </ul>
+
+      <h3>제4조 (크레딧 및 결제)</h3>
+      <ul>
+        <li>크레딧은 서비스 내 가상 화폐로, 현금 환급이 원칙적으로 불가합니다.</li>
+        <li>유료 구매 크레딧은 구매일로부터 30일 이내, 미사용 시에 한해 환불 신청 가능합니다.</li>
+        <li>가입 보너스·이벤트 지급 크레딧은 환불 대상에서 제외됩니다.</li>
+        <li>서비스 오류로 크레딧이 소실된 경우 동일 크레딧으로 보상합니다.</li>
+        <li>청약철회는 「전자상거래 등에서의 소비자보호에 관한 법률」에 따릅니다. 단, 디지털 콘텐츠(검사 결과 열람 후)는 청약철회가 제한됩니다.</li>
+      </ul>
+
+      <h3>제5조 (AI 서비스 책임 제한)</h3>
+      <ul>
+        <li>AI 상담 결과의 정확성을 보장하지 않습니다.</li>
+        <li>AI 답변에 근거한 의사결정으로 발생한 손해에 대해 서비스는 책임을 지지 않습니다.</li>
+        <li>AI는 자동화된 알고리즘으로 응답하며, 인간 상담사를 대체하지 않습니다.</li>
+      </ul>
+
+      <h3>제6조 (금지 행위)</h3>
+      <ul>
+        <li>타인의 계정 무단 사용</li>
+        <li>크레딧 시스템 부정 이용 (중복 가입, 우회 충전 등)</li>
+        <li>서비스 내 타인 비방·혐오 표현</li>
+        <li>서비스를 상업적 목적으로 무단 이용</li>
+        <li>자해·타해를 조장하는 콘텐츠 입력</li>
+      </ul>
+
+      <h3>제7조 (서비스 변경 및 중단)</h3>
+      <p>서비스는 운영상 필요에 따라 변경·중단될 수 있으며, 7일 전 사전 고지를 원칙으로 합니다. 긴급한 경우 사후 고지할 수 있습니다.</p>
+
+      <h3>제8조 (분쟁 해결 및 준거법)</h3>
+      <ul>
+        <li>본 약관은 대한민국 법률에 따라 해석됩니다.</li>
+        <li>분쟁 발생 시 서울중앙지방법원을 제1심 관할 법원으로 합니다.</li>
+        <li>문의: support@maumful.com</li>
+      </ul>
+      <p style={{color:'#9ca3af', fontSize:'12px'}}>최종 업데이트: 2026년 4월</p>
+    </LegalPage>
+  );
+
+  // ============================================================
+  // 뷰: 비밀번호 재설정 (이메일 링크 클릭 후)
+  // ============================================================
+  if (!isLoggedIn && view === 'resetPassword') return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-green-100 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+        <div className="text-center mb-6">
+          <div className="text-4xl mb-2">🔐</div>
+          <h2 className="text-2xl font-bold text-gray-800">새 비밀번호 설정</h2>
+        </div>
+        <Msg msg={formMsg} />
+        <div className="space-y-3 mb-5">
+          <input id="new-pw"  type="password" placeholder="새 비밀번호 (8자 이상)"
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm" />
+          <input id="new-pw2" type="password" placeholder="새 비밀번호 확인"
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm" />
+        </div>
+        <button
+          onClick={async () => {
+            const pw  = document.getElementById('new-pw')?.value  || '';
+            const pw2 = document.getElementById('new-pw2')?.value || '';
+            if (pw.length < 8) { setFormMsg({ type: 'error', text: '비밀번호는 8자 이상이어야 합니다.' }); return; }
+            if (pw !== pw2)    { setFormMsg({ type: 'error', text: '비밀번호가 일치하지 않습니다.' }); return; }
+            setFormMsg({ type: 'loading', text: '변경 중...' });
+            const r = await fetch('/api/auth/reset-password', {
+              method: 'POST', headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+              body: JSON.stringify({ token: window.__resetToken, newPassword: pw }),
+            }).then(r => r.json());
+            if (r.success) { setFormMsg({ type: 'success', text: '비밀번호가 변경되었습니다.' }); setTimeout(() => { setView('memberLogin'); setFormMsg({ type:'',text:'' }); }, 1500); }
+            else setFormMsg({ type: 'error', text: r.error || '변경 실패' });
+          }}
+          className="w-full bg-green-700 text-white py-3 rounded-xl font-bold hover:bg-green-800 transition">
+          비밀번호 변경
+        </button>
+      </div>
+    </div>
+  );
+
+  // ============================================================
+  // 뷰: 메인 대시보드 (검사 선택)
+  // ============================================================
+  if (isLoggedIn && view === 'memberDashboard') {
+    const allTests = regionConfig?.availableTests || ['PHQ9','GAD7','DASS21','BIG5','LOST','SCT','DSI','BURNOUT'];
+    const testMeta = {
+      PHQ9:    { label: 'PHQ-9', desc: '우울 자가점검', emoji: '😔', view: 'phq9Test' },
+      GAD7:    { label: 'GAD-7', desc: '불안 자가점검', emoji: '😰', view: 'gad7Test' },
+      DASS21:  { label: 'DASS-21', desc: '우울/불안/스트레스', emoji: '📊', view: 'dass21Test' },
+      BIG5:    { label: 'Big5', desc: '성격 5요인', emoji: '🌟', view: 'big5Test' },
+      LOST:    { label: 'LOST', desc: '행동 운영체계', emoji: '🧭', view: 'lostTest' },
+      SCT:     { label: 'SRCI', desc: '자기반응 완성', emoji: '✍️', view: 'sctTest' },
+      DSI:     { label: 'SDRI', desc: '자기분화 반응성', emoji: '🪞', view: 'dsiTest' },
+      BURNOUT: { label: 'K-MBI+', desc: '번아웃 증후군', emoji: '🔥', view: 'burnoutTest' },
+    };
+
+    async function startSelectedTest(testType) {
+      const ok = await chargeForTest(testType);
+      if (!ok) return;
+      setPendingTests([testType]);
+      setCurrentTestIndex(0);
+      setMultiSessionIds([]);
+      setSessionId(genId('session'));
+      resetChat();
+      setView(testMeta[testType]?.view || 'phq9Test');
+    }
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-green-50">
+        {/* 헤더 */}
+        <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
+          <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
+            <button onClick={() => setView('landing')}
+              className="flex items-center gap-2 hover:opacity-70 transition">
+              <span className="text-2xl">🌿</span>
+              <span className="font-bold text-gray-800">마음풀</span>
+            </button>
+            <div className="flex items-center gap-2">
+              <CreditBadge />
+              {/* 마음 게임 진입 — 로그인 상태면 JWT SSO로 자동 연동 */}
+              <button onClick={openMaumGame}
+                className="text-gray-500 hover:text-green-700 text-sm px-2 py-1.5 rounded-lg hover:bg-green-50 transition flex items-center gap-1"
+                title="마음 게임 — 별도 로그인 없이 바로 이동">
+                🎮 <span className="hidden sm:inline">마음 게임</span>
+              </button>
+              {/* 마음커플 진입 — 마음게임과 동일한 JWT SSO 방식 */}
+              <button onClick={() => openMaumCouple()}
+                className="text-gray-500 hover:text-rose-600 text-sm px-2 py-1.5 rounded-lg hover:bg-rose-50 transition flex items-center gap-1"
+                title="마음커플 — 파트너와 심리 궁합 분석">
+                💕 <span className="hidden sm:inline">마음커플</span>
+              </button>
+              <button onClick={() => setView('myPage')} className="text-gray-500 hover:text-gray-700 text-sm px-2 py-1.5 rounded-lg hover:bg-gray-100 transition">
+                👤 {currentUser?.nickname || '내 정보'}
+              </button>
+              <button onClick={() => { setAdminAuthenticated(false); setAdminMsg({type:'',text:''}); setView('admin'); }}
+                className="text-gray-400 hover:text-gray-600 text-xs px-2 py-1.5 rounded-lg hover:bg-gray-100 transition">
+                🔐
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <main className="max-w-2xl mx-auto px-4 py-6">
+          {/* 3일 재방문 알림 배너 */}
+          {(() => {
+            const checkinDate = localStorage.getItem('maumful_checkin_date');
+            const checkinTest = localStorage.getItem('maumful_checkin_test');
+            if (!checkinDate) return null;
+            const target = new Date(checkinDate);
+            const now = new Date();
+            const diffDays = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+            const testMeta2 = { PHQ9:'우울 자가점검', GAD7:'불안 자가점검', DASS21:'DASS-21', BIG5:'Big5', BURNOUT:'K-MBI+', LOST:'LOST', SCT:'SRCI', DSI:'SDRI' };
+            const testLabel = testMeta2[checkinTest] || checkinTest;
+            if (diffDays > 0) {
+              return (
+                <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-4 mb-5 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-bold text-emerald-800">📅 {diffDays}일 후 변화 체크 예정</p>
+                    <p className="text-xs text-emerald-600 mt-0.5">{testLabel} 재검사로 마음의 변화를 비교해 드려요</p>
+                  </div>
+                  <button
+                    onClick={() => { localStorage.removeItem('maumful_checkin_date'); localStorage.removeItem('maumful_checkin_test'); }}
+                    className="text-xs text-emerald-400 hover:text-emerald-600 shrink-0">✕</button>
+                </div>
+              );
+            }
+            if (diffDays <= 0) {
+              return (
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-2xl p-4 mb-5">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-bold text-amber-800">🔔 오늘 {testLabel} 재검사 날이에요!</p>
+                    <button
+                      onClick={() => { localStorage.removeItem('maumful_checkin_date'); localStorage.removeItem('maumful_checkin_test'); }}
+                      className="text-xs text-amber-400 hover:text-amber-600">✕</button>
+                  </div>
+                  <p className="text-xs text-amber-700 mb-3">이전 결과와 비교해 마음의 변화를 확인하세요</p>
+                  <button
+                    onClick={async () => {
+                      const testViews = { PHQ9:'phq9Test', GAD7:'gad7Test', DASS21:'dass21Test', BIG5:'big5Test', BURNOUT:'burnoutTest', LOST:'lostTest', SCT:'sctTest', DSI:'dsiTest' };
+                      const ok = await chargeForTest(checkinTest);
+                      if (!ok) return;
+                      setPendingTests([checkinTest]);
+                      setCurrentTestIndex(0);
+                      setMultiSessionIds([]);
+                      setSessionId(genId('session'));
+                      resetChat();
+                      localStorage.removeItem('maumful_checkin_date');
+                      localStorage.removeItem('maumful_checkin_test');
+                      setView(testViews[checkinTest] || 'phq9Test');
+                    }}
+                    className="w-full bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold py-2 rounded-xl transition">
+                    지금 바로 재검사하기 →
+                  </button>
+                </div>
+              );
+            }
+            return null;
+          })()}
+
+          {/* 인사말 */}
+          <div className="mb-6">
+            <h2 className="text-xl font-bold text-gray-800">안녕하세요, {currentUser?.nickname || '회원'}님 👋</h2>
+            <p className="text-gray-500 text-sm mt-1">검사 1회에 10 크레딧이 차감됩니다</p>
+          </div>
+
+          {/* 크레딧 현황 카드 */}
+          <div className="bg-gradient-to-r from-green-500 to-purple-600 rounded-2xl p-5 text-white mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm opacity-80">현재 크레딧</span>
+              <button onClick={() => setShowChargeView(true)} className="text-xs bg-white/20 px-3 py-1 rounded-full hover:bg-white/30 transition">충전 →</button>
+            </div>
+            <div className="text-4xl font-bold">✦ {credits}</div>
+            <div className="text-xs opacity-70 mt-1">검사 {Math.floor(credits / 10)}회 · AI 채팅 {Math.floor(credits / 5)}회 가능</div>
+          </div>
+
+          {/* 검사 목록 */}
+          <h3 className="font-bold text-gray-700 mb-3">심리검사 선택</h3>
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            {allTests.map(type => {
+              const m = testMeta[type];
+              if (!m) return null;
+              return (
+                <button
+                  key={type}
+                  onClick={() => startSelectedTest(type)}
+                  className="bg-white rounded-2xl p-4 text-left border-2 border-gray-100 hover:border-green-300 hover:shadow-md transition group relative overflow-hidden"
+                >
+                  <div className={`absolute top-2 right-2 text-xs font-bold px-2 py-0.5 rounded-full ${
+                    FREE_TESTS.includes(type) ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                  }`}>
+                    {FREE_TESTS.includes(type) ? '✓ 무료' : '10 크레딧'}
+                  </div>
+                  <div className="text-3xl mb-2">{m.emoji}</div>
+                  <div className="font-bold text-gray-800 text-sm">{m.label}</div>
+                  <div className="text-xs text-gray-400 mt-0.5">{m.desc}</div>
+                  <div className="mt-2 text-xs text-green-600 font-semibold opacity-0 group-hover:opacity-100 transition">
+                    {FREE_TESTS.includes(type) ? '바로 시작 →' : '크레딧으로 이용 →'}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* 최근 검사 이력 */}
+          {testHistory.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-bold text-gray-700">최근 검사</h3>
+                <button onClick={() => setView('myPage')} className="text-xs text-green-600 hover:text-green-800">전체 보기 →</button>
+              </div>
+              <div className="space-y-2">
+                {testHistory.slice(0, 5).map((h, i) => {
+                  // 같은 검사 이전 기록 찾기 (변화 비교용)
+                  const prevSame = testHistory.slice(i + 1).find(p => p.test_type === h.test_type);
+                  const daysSince = Math.floor((new Date() - new Date(h.performed_at)) / (1000 * 60 * 60 * 24));
+                  const testEmoji2 = { PHQ9:'😔', GAD7:'😰', DASS21:'📊', BIG5:'🌟', LOST:'🧭', SCT:'✍️', DSI:'🪞', BURNOUT:'🔥' };
+                  return (
+                    <div key={i} className="bg-white rounded-xl p-3 border border-gray-100 hover:border-emerald-200 transition">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">{testEmoji2[h.test_type] || '📋'}</span>
+                          <div>
+                            <span className="font-semibold text-gray-700 text-sm">{h.test_type}</span>
+                            <span className="text-xs text-gray-400 ml-2">
+                              {daysSince === 0 ? '오늘' : daysSince === 1 ? '어제' : `${daysSince}일 전`}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {prevSame && (
+                            <span className="text-xs bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full border border-emerald-100">
+                              재검사
+                            </span>
+                          )}
+                          <span className="text-xs text-red-300">-{h.credits_spent}cr</span>
+                        </div>
+                      </div>
+                      {daysSince >= 3 && !prevSame && (
+                        <button
+                          onClick={async () => {
+                            const testViews = { PHQ9:'phq9Test', GAD7:'gad7Test', DASS21:'dass21Test', BIG5:'big5Test', BURNOUT:'burnoutTest', LOST:'lostTest', SCT:'sctTest', DSI:'dsiTest' };
+                            const ok = await chargeForTest(h.test_type);
+                            if (!ok) return;
+                            setPendingTests([h.test_type]);
+                            setCurrentTestIndex(0);
+                            setMultiSessionIds([]);
+                            setSessionId(genId('session'));
+                            resetChat();
+                            setView(testViews[h.test_type] || 'phq9Test');
+                          }}
+                          className="mt-2 w-full text-xs text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 rounded-lg py-1.5 font-semibold transition">
+                          🔄 {daysSince}일 후 재검사로 변화 확인하기
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* ── 💕 마음커플 위젯 ─────────────────────────────── */}
+          {(() => {
+            const coupleTests = testHistory.filter(h => ['BIG5','LOST','DSI'].includes(h.test_type));
+            const hasCoupleReady = coupleTests.length > 0;
+            const completedTypes = [...new Set(coupleTests.map(h => h.test_type))];
+            const allThreeDone = ['BIG5','LOST','DSI'].every(t => completedTypes.includes(t));
+            const typeEmoji = { BIG5:'🧬', LOST:'⚙️', DSI:'🪞' };
+            if (!hasCoupleReady) return null;
+            return (
+              <div className="mt-6 bg-gradient-to-br from-rose-50 to-purple-50 rounded-2xl p-5 border border-rose-100">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-2xl">💕</span>
+                  <div>
+                    <h3 className="font-bold text-gray-800 text-sm">마음커플 — 파트너와 심리 분석</h3>
+                    <p className="text-xs text-gray-400 mt-0.5">내 검사 결과로 파트너와의 궁합을 분석해보세요</p>
+                  </div>
+                </div>
+                <div className="flex gap-2 mb-4">
+                  {['BIG5','LOST','DSI'].map(t => (
+                    <div key={t} className={`flex-1 rounded-xl p-2.5 text-center border ${
+                      completedTypes.includes(t)
+                        ? 'bg-white border-rose-200 text-rose-700'
+                        : 'bg-white/60 border-gray-200 text-gray-400'
+                    }`}>
+                      <div className="text-lg">{typeEmoji[t]}</div>
+                      <div className="text-xs font-semibold mt-0.5">{t}</div>
+                      <div className="text-xs mt-0.5">{completedTypes.includes(t) ? '✓' : '미완료'}</div>
+                    </div>
+                  ))}
+                </div>
+                {allThreeDone ? (
+                  <div className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 mb-3">
+                    ✦ 3개 검사 완료! BIG5+LOST+자아분화 통합 분석 가능합니다.
+                  </div>
+                ) : (
+                  <div className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-3">
+                    💡 {['BIG5','LOST','DSI'].filter(t => !completedTypes.includes(t)).join(', ')} 검사를 완료하면 더 정확한 분석이 가능해요.
+                  </div>
+                )}
+                <button
+                  onClick={() => openMaumCouple()}
+                  className="w-full bg-gradient-to-r from-rose-500 to-pink-500 text-white text-sm font-bold py-3 rounded-xl hover:from-rose-600 hover:to-pink-600 transition shadow-sm"
+                >
+                  💕 마음커플에서 분석 시작하기 →
+                </button>
+              </div>
+            );
+          })()}
+        </main>
+
+        <CreditModal />
+        <AiLimitModal />
+        <CookieBanner />
+        {showChargeView && <ChargeView onClose={() => { setShowChargeView(false); refreshCredits(); }} credits={credits} regionConfig={regionConfig} />}
+      </div>
+    );
+  }
+
+  // ============================================================
+  // 뷰: 마이페이지
+  // ============================================================
+  if (isLoggedIn && view === 'myPage') return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-green-50">
+      <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
+        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
+          <button onClick={() => setView('memberDashboard')} className="text-gray-500 hover:text-gray-700 flex items-center gap-1 text-sm">← 뒤로</button>
+          <span className="font-bold text-gray-800">마이페이지</span>
+          <div className="flex items-center gap-2">
+            <button onClick={openMaumGame}
+              className="text-green-600 hover:text-green-800 text-sm px-2 py-1.5 rounded-lg hover:bg-green-50 transition"
+              title="마음 게임">
+              🎮
+            </button>
+            <button onClick={() => openMaumCouple()}
+              className="text-rose-500 hover:text-rose-700 text-sm px-2 py-1.5 rounded-lg hover:bg-rose-50 transition"
+              title="마음커플">
+              💕
+            </button>
+            <CreditBadge />
+          </div>
+        </div>
+      </header>
+      <main className="max-w-2xl mx-auto px-4 py-6">
+        {/* 프로필 */}
+        <div className="bg-white rounded-2xl p-5 mb-5 border border-gray-100">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center text-2xl">👤</div>
+            <div>
+              <div className="font-bold text-gray-800">{currentUser?.nickname || '회원'}</div>
+              <div className="text-sm text-gray-400">{currentUser?.email}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* 탭 */}
+        <div className="flex gap-2 mb-5">
+          {[['credits','크레딧 내역'],['history','검사 이력'],['appointments','상담 예약'],['referral','친구 초대'],['settings','설정']].map(([tab, label]) => (
+            <button key={tab} onClick={() => { setMyPageTab(tab); if (tab === 'credits') refreshCredits(); if (tab === 'history') loadTestHistory(); if (tab === 'referral') loadReferralData(); }}
+              className={`px-4 py-2 rounded-full text-sm font-semibold transition ${myPageTab === tab ? 'bg-green-700 text-white' : 'bg-white text-gray-500 border border-gray-200 hover:border-green-300'}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* 크레딧 & 결제 내역 */}
+        {myPageTab === 'credits' && (() => {
+          const usageTxns   = creditTxns.filter(t => t.type === 'spend');
+          const chargeTxns  = creditTxns.filter(t => t.type === 'gain');
+
+          const reasonLabel = (r) => ({
+            signup_bonus:'가입 보너스',
+            test:'심리검사', chat:'AI 채팅',
+            charge:'크레딧 충전', refund_api_error:'오류 환불',
+            admin_grant:'관리자 지급', referral:'친구 초대',
+          }[r] || r);
+
+          const fmtDt = (d) => new Date(d).toLocaleString('ko-KR', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+
+          return (
+            <div>
+              {/* 잔액 카드 */}
+              <div className="bg-gradient-to-r from-green-600 to-teal-500 rounded-2xl p-5 text-white mb-5"
+                style={{fontFamily:"'Noto Sans KR',sans-serif"}}>
+                <div className="flex items-end justify-between">
+                  <div>
+                    <div className="text-xs opacity-75 mb-1">현재 잔액</div>
+                    <div className="text-4xl font-bold">✦ {credits}</div>
+                    <div className="text-xs opacity-75 mt-1">심리검사 {Math.floor(credits/10)}회 가능</div>
+                  </div>
+                  <button onClick={() => setShowChargeView(true)}
+                    className="text-sm bg-white text-green-700 font-bold px-5 py-2.5 rounded-full hover:bg-green-50 transition"
+                    style={{fontFamily:"'Noto Sans KR',sans-serif"}}>
+                    충전하기 →
+                  </button>
+                </div>
+
+                {/* 빠른 통계 */}
+                <div className="mt-4 grid grid-cols-3 gap-2">
+                  {[
+                    { label:'총 충전', val: chargeTxns.filter(t=>t.reason==='charge').reduce((s,t)=>s+t.amount,0) + ' cr' },
+                    { label:'사용 건수', val: usageTxns.length + '건' },
+                    { label:'이번 달 사용', val: usageTxns.filter(t=>new Date(t.created_at).getMonth()===new Date().getMonth()).reduce((s,t)=>s+t.amount,0) + ' cr' },
+                  ].map(s => (
+                    <div key={s.label} className="bg-white/15 rounded-xl p-2 text-center">
+                      <div className="text-xs opacity-75">{s.label}</div>
+                      <div className="font-bold text-sm mt-0.5">{s.val}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 소탭 */}
+              <div className="flex gap-2 mb-4">
+                {[['usage','사용 내역'],['charge','충전/지급 내역']].map(([t,l]) => (
+                  <button key={t} onClick={() => setCreditSubTab(t)}
+                    className={`px-4 py-1.5 rounded-full text-xs font-bold transition ${creditSubTab===t ? 'bg-gray-800 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}
+                    style={{fontFamily:"'Noto Sans KR',sans-serif"}}>{l}</button>
+                ))}
+              </div>
+
+              {/* 사용 내역 */}
+              {creditSubTab === 'usage' && (
+                <div className="space-y-2">
+                  {usageTxns.length === 0 && <p className="text-gray-400 text-sm text-center py-6">사용 내역이 없습니다</p>}
+                  {usageTxns.map((t, i) => (
+                    <div key={i} className="bg-white rounded-xl p-3.5 flex items-center justify-between border border-gray-100">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-red-50 flex items-center justify-center text-base">
+                          {t.reason==='test' ? '📋' : t.reason==='chat' ? '💬' : '💸'}
+                        </div>
+                        <div>
+                          <div className="text-sm font-semibold text-gray-700">{reasonLabel(t.reason)}</div>
+                          <div className="text-xs text-gray-400">{fmtDt(t.created_at)}</div>
+                        </div>
+                      </div>
+                      <span className="font-bold text-sm text-red-500">-{t.amount} cr</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* 충전/지급 내역 */}
+              {creditSubTab === 'charge' && (
+                <div className="space-y-2">
+                  {chargeTxns.length === 0 && <p className="text-gray-400 text-sm text-center py-6">충전 내역이 없습니다</p>}
+                  {chargeTxns.map((t, i) => (
+                    <div key={i} className="bg-white rounded-xl p-3.5 flex items-center justify-between border border-gray-100">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-green-50 flex items-center justify-center text-base">
+                          {t.reason==='charge' ? '💳' : t.reason==='signup_bonus' ? '🎁' : t.reason==='referral' ? '🤝' : '✦'}
+                        </div>
+                        <div>
+                          <div className="text-sm font-semibold text-gray-700">{reasonLabel(t.reason)}</div>
+                          <div className="text-xs text-gray-400">{fmtDt(t.created_at)}</div>
+                          {t.reason==='charge' && t.pg_amount && (
+                            <div className="text-xs text-blue-500 mt-0.5">
+                              ₩{Number(t.pg_amount).toLocaleString('ko-KR')} 결제 완료
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <span className="font-bold text-sm text-green-600">+{t.amount} cr</span>
+                    </div>
+                  ))}
+
+                  {chargeTxns.length > 0 && (
+                    <div className="mt-2 bg-blue-50 rounded-xl p-3 text-center">
+                      <button onClick={() => setShowChargeView(true)}
+                        className="text-sm font-bold text-blue-600 hover:text-blue-800"
+                        style={{fontFamily:"'Noto Sans KR',sans-serif"}}>
+                        + 크레딧 충전하기
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* 검사 이력 */}
+        {myPageTab === 'history' && (
+          <div className="space-y-2">
+            {testHistory.length === 0 && <p className="text-gray-400 text-sm text-center py-4">검사 이력이 없습니다</p>}
+            {testHistory.map((h, i) => (
+              <div key={i} className="bg-white rounded-xl p-3 flex items-center justify-between border border-gray-100">
+                <div>
+                  <span className="font-semibold text-gray-700 text-sm">{h.test_type}</span>
+                  <span className="text-xs text-gray-400 ml-2">{new Date(h.performed_at).toLocaleString('ko-KR')}</span>
+                </div>
+                <span className="text-xs text-red-400">-{h.credits_spent} cr</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* 친구 초대 */}
+        {myPageTab === 'referral' && (
+          <div>
+            <Msg msg={referralMsg} />
+            {referralLoading ? (
+              <div className="text-center py-8 text-gray-400">로딩 중...</div>
+            ) : referralData ? (
+              <div className="space-y-4">
+                {/* 내 초대 코드 */}
+                <div className="bg-gradient-to-r from-green-500 to-purple-600 rounded-2xl p-5 text-white">
+                  <p className="text-xs opacity-75 mb-1">내 초대 코드</p>
+                  <div className="text-3xl font-bold tracking-widest mb-3">{referralData.code}</div>
+                  <button
+                    onClick={() => copyInviteLink(referralData.inviteUrl)}
+                    className="w-full bg-white/20 hover:bg-white/30 text-white py-2.5 rounded-xl font-semibold text-sm transition"
+                  >🔗 초대 링크 복사</button>
+                </div>
+
+                {/* 보상 안내 */}
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-1.5">
+                  <p className="font-bold text-amber-800 text-sm mb-2">🎁 초대 보상</p>
+                  <p className="text-sm text-amber-700">✦ 친구가 링크로 가입하면 친구에게 <strong>+10 크레딧</strong></p>
+                  <p className="text-sm text-amber-700">✦ 친구가 첫 결제 완료 시 나에게 <strong>+30 크레딧</strong></p>
+                </div>
+
+                {/* 통계 */}
+                <div className="grid grid-cols-3 gap-3">
+                  {[['초대', referralData.stats.totalInvited],['완료', referralData.stats.completed],['획득', referralData.stats.totalEarned + ' cr']].map(([label, val]) => (
+                    <div key={label} className="bg-white rounded-2xl p-4 text-center border border-gray-100">
+                      <div className="text-2xl font-bold text-green-700">{val}</div>
+                      <div className="text-xs text-gray-400 mt-1">{label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* 초대 목록 */}
+                {referralList.length > 0 && (
+                  <div>
+                    <p className="font-semibold text-gray-700 text-sm mb-2">초대 목록</p>
+                    <div className="space-y-2">
+                      {referralList.map((r, i) => (
+                        <div key={i} className="bg-white rounded-xl p-3 flex items-center justify-between border border-gray-100">
+                          <div>
+                            <span className="text-sm font-medium text-gray-700">{r.referee_email_masked}</span>
+                            <span className="text-xs text-gray-400 ml-2">{new Date(r.created_at).toLocaleDateString('ko-KR')}</span>
+                          </div>
+                          <span className={`text-xs font-semibold px-2 py-1 rounded-full ${r.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                            {r.status === 'completed' ? '완료 +'+r.referrer_bonus+'cr' : '대기 중'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button onClick={loadReferralData} className="w-full bg-green-700 text-white py-3 rounded-xl font-bold hover:bg-green-800 transition">초대 코드 불러오기</button>
+            )}
+
+            {/* 친구 초대 코드 입력 (내가 코드 적용) */}
+            <div className="mt-5 pt-5 border-t border-gray-100">
+              <p className="font-semibold text-gray-700 text-sm mb-2">친구 초대 코드 입력</p>
+              <div className="flex gap-2">
+                <input
+                  type="text" placeholder="PSY코드 입력"
+                  value={referralInput}
+                  onChange={e => setReferralInput(e.target.value.toUpperCase())}
+                  className="flex-1 px-4 py-2.5 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm font-mono"
+                />
+                <button onClick={applyReferralCode} className="bg-green-700 text-white px-4 py-2.5 rounded-xl font-semibold text-sm hover:bg-green-800 transition">적용</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 설정 */}
+        {myPageTab === 'appointments' && (
+                  <div className="space-y-4">
+                    <MyAppointments setView={setView} />
+                  </div>
+                )}
+                {myPageTab === 'settings' && (
+          <div className="space-y-3">
+            <div className="bg-white rounded-2xl p-5 border border-gray-100">
+              <h4 className="font-bold text-gray-700 mb-3">언어 설정</h4>
+              <div className="flex gap-2">
+                {[['ko','한국어'],['en','English']].map(([lang, label]) => (
+                  <button key={lang} onClick={async () => { await api.updateMe({ locale: lang }); setCurrentUser(p => ({ ...p, locale: lang })); tokenStore.setUser({ ...currentUser, locale: lang }); }}
+                    className={`px-4 py-2 rounded-full text-sm font-semibold transition ${currentUser?.locale === lang ? 'bg-green-700 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 🧠 AI 상담 해석 방식 */}
+            <div className="bg-white rounded-2xl p-5 border border-gray-100">
+              <h4 className="font-bold text-gray-700 mb-1">AI 상담 해석 방식</h4>
+              <p className="text-xs text-gray-400 mb-3">검사 결과를 어떤 관점으로 해석할지 선택합니다</p>
+              <div className="grid gap-2">
+                {[
+                  { mode: 'psychological', icon: '🧠', label: '심리상담 (기본)',
+                    desc: '심리학 이론과 과학적 근거를 바탕으로 해석합니다',
+                    activeClass: 'border-green-500 bg-green-50', checkClass: 'text-green-600' },
+                  { mode: 'biblical', icon: '✝️', label: '기독교 상담',
+                    desc: '성경 말씀과 기독교 신앙을 기반으로 해석합니다',
+                    activeClass: 'border-purple-400 bg-purple-50', checkClass: 'text-purple-600' },
+                ].map(({ mode, icon, label, desc, activeClass, checkClass }) => (
+                  <button key={mode} onClick={() => updateCounselingMode(mode)}
+                    className={`flex items-start gap-3 p-4 rounded-xl border-2 text-left transition w-full
+                      ${counselingMode === mode ? activeClass : 'border-gray-100 hover:border-gray-300'}`}>
+                    <span className="text-xl mt-0.5">{icon}</span>
+                    <div className="flex-1">
+                      <div className={`font-semibold text-sm ${counselingMode === mode ? checkClass : 'text-gray-700'}`}>{label}</div>
+                      <div className="text-xs text-gray-400 mt-0.5">{desc}</div>
+                    </div>
+                    {counselingMode === mode && <span className={`${checkClass} font-bold text-sm`}>✓</span>}
+                  </button>
+                ))}
+              </div>
+              {counselingMode === 'biblical' && (
+                <p className="text-xs text-purple-600 mt-2 bg-purple-50 rounded-lg p-2 leading-relaxed">
+                  ✝️ 기독교 상담 모드 적용 중 — AI 분석과 채팅 상담에 성경적 관점의 해석과 권장사항이 포함됩니다
+                </p>
+              )}
+            </div>
+
+            <button onClick={async () => { if (window.confirm('정말 탈퇴하시겠습니까?')) { await api.deleteMe(); handleLogout(); } }}
+              className="w-full bg-red-50 text-red-500 border border-red-200 py-3 rounded-xl text-sm font-semibold hover:bg-red-100 transition">
+              회원 탈퇴
+            </button>
+            <button onClick={handleLogout}
+              className="w-full bg-gray-100 text-gray-600 py-3 rounded-xl text-sm font-semibold hover:bg-gray-200 transition">
+              로그아웃
+            </button>
+          </div>
+        )}
+      </main>
+      {showChargeView && <ChargeView onClose={() => { setShowChargeView(false); refreshCredits(); }} credits={credits} regionConfig={regionConfig} />}
+    </div>
+  );
+
+  // ============================================================
+  // 충전 화면 컴포넌트 (인라인)
+  // ============================================================
+  // ============================================================
+  // 크레딧 충전 결제 화면 (토스페이먼츠 / 스트라이프)
+  // ============================================================
+  function ChargeView({ onClose, credits, regionConfig }) {
+    const { useState: useS, useEffect: useE } = React;
+    const isKorea   = !regionConfig || regionConfig.pg === 'toss';
+    const currency  = isKorea ? 'KRW' : 'USD';
+
+    const PACKAGES_KR = [
+      { key:'starter_kr',  credits:30,  amount:2000,  label:'스타터',   badge:null },
+      { key:'standard_kr', credits:60,  amount:3500,  label:'표준',     badge:'인기' },
+      { key:'premium_kr',  credits:150, amount:8000,  label:'프리미엄', badge:'추천' },
+      { key:'pro_kr',      credits:350, amount:17000, label:'대용량',   badge:null },
+    ];
+    const PACKAGES_GLOBAL = [
+      { key:'starter_g',  credits:30,  amount:2.99,  label:'Starter',  badge:null },
+      { key:'standard_g', credits:60,  amount:4.99,  label:'Standard', badge:'Popular' },
+      { key:'premium_g',  credits:150, amount:10.99, label:'Premium',  badge:'Best' },
+      { key:'pro_g',      credits:350, amount:22.99, label:'Pro',      badge:null },
+    ];
+    const pkgs = isKorea ? PACKAGES_KR : PACKAGES_GLOBAL;
+    const fmt  = (amt) => isKorea ? amt.toLocaleString('ko-KR') + '원' : '$' + amt.toFixed(2);
+
+    const [selected, setSelected]   = useS(pkgs[1].key); // 표준 기본선택
+    const [loading,  setLoading]    = useS(false);
+    const [errMsg,   setErrMsg]     = useS('');
+    const selPkg = pkgs.find(p => p.key === selected);
+
+    const handlePay = async () => {
+      if (!currentUser) { onClose(); setView('memberLogin'); return; }
+      setLoading(true); setErrMsg('');
+      try {
+        const res = await api.prepareCharge(selected, isKorea ? 'toss' : 'stripe');
+        if (!res.success) { setErrMsg(res.error || '결제 준비 실패'); setLoading(false); return; }
+        const d = res.data;
+
+        if (isKorea) {
+          // 토스페이먼츠 SDK 로드
+          if (!window.TossPayments) {
+            await new Promise((ok, ng) => {
+              const s = document.createElement('script');
+              s.src = 'https://js.tosspayments.com/v1/payment';
+              s.onload = ok; s.onerror = ng;
+              document.head.appendChild(s);
+            });
+          }
+          const tp = window.TossPayments(d.clientKey);
+          await tp.requestPayment('카드', {
+            amount:        d.amount,
+            orderId:       d.orderId,
+            orderName:     d.orderName,
+            customerName:  d.customerName,
+            customerEmail: d.customerEmail,
+            successUrl:    d.successUrl,
+            failUrl:       d.failUrl,
+          });
+        } else {
+          // 스트라이프 — checkoutUrl로 리다이렉트
+          if (d.checkoutUrl) window.location.href = d.checkoutUrl;
+        }
+      } catch (err) {
+        if (err?.code !== 'USER_CANCEL') {
+          setErrMsg('결제 중 오류가 발생했습니다. 다시 시도해 주세요.');
+        }
+        setLoading(false);
+      }
+    };
+
+    const F = "'Noto Sans KR',sans-serif";
+
+    return (
+      <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:1000,
+        display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
+        onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+        <div style={{ background:'white', borderRadius:22, maxWidth:420, width:'100%',
+          boxShadow:'0 24px 64px rgba(0,0,0,0.22)', overflow:'hidden', fontFamily:F }}>
+
+          {/* 헤더 */}
+          <div style={{ background:'linear-gradient(135deg,#2D6A4F,#40916C)', padding:'22px 24px', color:'white' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+              <div>
+                <div style={{ fontSize:12, opacity:0.8, marginBottom:4 }}>현재 잔액</div>
+                <div style={{ fontSize:28, fontWeight:800 }}>✦ {credits}</div>
+                <div style={{ fontSize:12, opacity:0.75, marginTop:2 }}>크레딧</div>
+              </div>
+              <button onClick={onClose}
+                style={{ background:'rgba(255,255,255,0.2)', border:'none', borderRadius:8,
+                  width:32, height:32, cursor:'pointer', color:'white', fontSize:18, display:'flex',
+                  alignItems:'center', justifyContent:'center' }}>×</button>
+            </div>
+            <div style={{ marginTop:14, fontSize:12, opacity:0.85,
+              background:'rgba(255,255,255,0.15)', borderRadius:8, padding:'6px 12px', display:'inline-block' }}>
+              심리검사 1회 = 10 크레딧 · AI 채팅 1회 = 5 크레딧
+            </div>
+          </div>
+
+          <div style={{ padding:'20px 24px 24px' }}>
+            {/* 패키지 선택 */}
+            <div style={{ fontSize:13, fontWeight:700, color:'#374151', marginBottom:12 }}>패키지 선택</div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:9, marginBottom:18 }}>
+              {pkgs.map(pkg => {
+                const isSel = selected === pkg.key;
+                const perCredit = isKorea
+                  ? Math.round(pkg.amount / pkg.credits) + '원/크레딧'
+                  : ('$' + (pkg.amount / pkg.credits).toFixed(2) + '/cr');
+                return (
+                  <button key={pkg.key} onClick={() => setSelected(pkg.key)}
+                    style={{ position:'relative', padding:'12px', border:'2px solid',
+                      borderColor: isSel ? '#2D6A4F' : 'rgba(0,0,0,0.1)',
+                      borderRadius:13, cursor:'pointer', background: isSel ? '#F0FAF4' : 'white',
+                      textAlign:'left', transition:'all 0.15s', fontFamily:F }}>
+                    {pkg.badge && (
+                      <div style={{ position:'absolute', top:-8, right:8,
+                        background: isSel ? '#2D6A4F' : '#F59E0B',
+                        color:'white', fontSize:9, fontWeight:800,
+                        padding:'2px 7px', borderRadius:20 }}>{pkg.badge}</div>
+                    )}
+                    <div style={{ fontSize:12, fontWeight:700, color: isSel ? '#2D6A4F' : '#374151',
+                      marginBottom:3 }}>{pkg.label}</div>
+                    <div style={{ fontSize:20, fontWeight:800,
+                      color: isSel ? '#2D6A4F' : '#111' }}>✦ {pkg.credits}</div>
+                    <div style={{ fontSize:11, color:'#6B7280', marginTop:1 }}>{perCredit}</div>
+                    <div style={{ fontSize:14, fontWeight:700, color: isSel ? '#2D6A4F' : '#374151',
+                      marginTop:5 }}>{fmt(pkg.amount)}</div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* 결제 요약 */}
+            {selPkg && (
+              <div style={{ background:'#F9FAFB', borderRadius:12, padding:'12px 16px',
+                marginBottom:16, border:'1px solid rgba(0,0,0,0.07)' }}>
+                <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'#6B7280' }}>
+                  <span>{selPkg.label} · ✦ {selPkg.credits} 크레딧</span>
+                  <span style={{ fontWeight:700, color:'#111', fontSize:15 }}>{fmt(selPkg.amount)}</span>
+                </div>
+                <div style={{ marginTop:6, fontSize:11, color:'#9CA3AF' }}>
+                  충전 후 잔액: ✦ {credits + selPkg.credits} 크레딧
+                  · 검사 {Math.floor((credits + selPkg.credits) / 10)}회 가능
+                </div>
+              </div>
+            )}
+
+            {/* 오류 메시지 */}
+            {errMsg && (
+              <div style={{ background:'#FEF2F2', border:'1px solid #FCA5A5', borderRadius:9,
+                padding:'8px 12px', fontSize:12, color:'#991B1B', marginBottom:12 }}>
+                {errMsg}
+              </div>
+            )}
+
+            {/* 결제 버튼 */}
+            <button onClick={handlePay} disabled={loading}
+              style={{ width:'100%', padding:'15px', background: loading ? '#9CA3AF' : '#2D6A4F',
+                color:'white', border:'none', borderRadius:14, fontSize:16, fontWeight:700,
+                cursor: loading ? 'not-allowed' : 'pointer', transition:'background 0.2s', fontFamily:F }}>
+              {loading ? '결제 준비 중...' : (isKorea ? '토스페이먼츠로 결제 ' : 'Pay with Card ') + (selPkg ? fmt(selPkg.amount) : '')}
+            </button>
+
+            <div style={{ textAlign:'center', marginTop:10, fontSize:11, color:'#9CA3AF' }}>
+              {isKorea
+                ? '카드 · 카카오페이 · 네이버페이 · 토스페이 지원'
+                : 'Visa · Mastercard · American Express'}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 결과 화면에서 대시보드로 돌아가는 버튼 처리 (기존 코드가 isCounselor/isAdmin 체크)
+  // → setView('memberDashboard') 로 리디렉션
+
+
+
+  // ⏱️ 남은 시간 계산 (밀리초 → 시:분:초)
+  function getTimeRemaining(createdAt) {
+    const now = Date.now();
+    const createdTime = new Date(createdAt).getTime();
+    const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+    const elapsed = now - createdTime;
+    const remaining = TWENTY_FOUR_HOURS - elapsed;
+    
+    if (remaining <= 0) {
+      return { expired: true, text: "만료됨", color: "text-red-600" };
+    }
+    
+    const hours = Math.floor(remaining / (60 * 60 * 1000));
+    const minutes = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
+    const seconds = Math.floor((remaining % (60 * 1000)) / 1000);
+    
+    let color = "text-green-600";
+    if (hours < 3) color = "text-red-600";
+    else if (hours < 6) color = "text-orange-600";
+    
+    return {
+      expired: false,
+      text: `${hours}시간 ${minutes}분 ${seconds}초`,
+      color: color,
+      hours: hours
+    };
+  }
+
+  // 💾 JSON 파일로 검사 결과 다운로드
+  function downloadSessionJson(sessionId) {
+    const r = storage.get("session_" + sessionId);
+    if (!r) {
+      alert('❌ 검사 결과를 찾을 수 없습니다.');
+      return;
+    }
+    
+    const sessionData = JSON.parse(r.value);
+    const jsonStr = JSON.stringify(sessionData, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `검사결과_${sessionData.testType}_${sessionId}_${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    console.log('💾 JSON 다운로드:', sessionId);
+    alert('✅ 검사 결과가 JSON 파일로 다운로드되었습니다!');
+  }
+
+  // 📂 JSON 파일에서 검사 결과 불러오기
+  function handleFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const sessionData = JSON.parse(e.target.result);
+        console.log('📂 JSON 파일 로드:', sessionData.sessionId);
+        
+        // 세션 데이터 복원
+        if (sessionData.testType === "SCT") {
+          setSrciResponses(sessionData.responses?.byScale ? {} : (sessionData.responses || {}));
+          setSctSummaries(sessionData.summaries || {});
+        } else if (sessionData.testType === "DSI") {
+          setSdriResponses((sessionData.responses?.likert) || {});
+          setDsiRec(sessionData.recommendation || "");
+        }
+        
+        setSessionId(sessionData.sessionId);
+        setUserInfo({ phone: sessionData.userPhone || "", password: "" });
+        setView("sctResult");
+        
+        alert(`✅ ${sessionData.testType} 검사 결과를 불러왔습니다!\n세션 ID: ${sessionData.sessionId}`);
+      } catch (error) {
+        console.error('❌ JSON 파싱 오류:', error);
+        alert('❌ 파일 형식이 올바르지 않습니다.');
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function copyLink(linkId) {
+    const text = linkId;
+    try {
+      navigator.clipboard.writeText(text).then(() => {
+        
+      }).catch(() => fallbackCopy(linkId, text));
+    } catch {
+      fallbackCopy(linkId, text);
+    }
+  }
+  
+  function fallbackCopy(linkId, text) {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+    
+  }
+
+  // 📄 PDF 생성 함수들
+  async function generateSctPdf(sessionData) {
+    try {
+      console.log('📄 SRCI PDF 생성 시작...');
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // 한글 폰트 설정 (기본 폰트 사용)
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 20;
+      let yPos = margin;
+
+      // 헤더 (영문만 사용)
+      doc.setFontSize(20);
+      doc.setFont(undefined, 'bold');
+      doc.text('SRCI 자기반응 완성 검사 결과', pageWidth / 2, yPos, { align: 'center' });
+      
+      yPos += 15;
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+      doc.text('Sentence Completion Test', pageWidth / 2, yPos, { align: 'center' });
+      
+      yPos += 15;
+      doc.setDrawColor(0);
+      doc.setLineWidth(0.5);
+      doc.line(margin, yPos, pageWidth - margin, yPos);
+      yPos += 10;
+
+      // 기본 정보
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'bold');
+      doc.text('[ 1. Basic Information ]', margin, yPos);
+      yPos += 8;
+      
+      doc.setFont(undefined, 'normal');
+      doc.setFontSize(10);
+      doc.text(`Session ID: ${sessionData.sessionId}`, margin + 5, yPos);
+      yPos += 6;
+      doc.text(`Test Date: ${new Date(sessionData.createdAt).toLocaleDateString('en-US')}`, margin + 5, yPos);
+      yPos += 6;
+      doc.text(`Phone: ${sessionData.userPhone || 'N/A'}`, margin + 5, yPos);
+      yPos += 10;
+
+      // 카테고리별 응답 (AI 분석은 제외 - 한글 문제)
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'bold');
+      doc.text('[ 2. Responses by Category ]', margin, yPos);
+      yPos += 8;
+
+      // 카테고리 이름 영문 매핑
+      const categoryMap = {
+        "어머니에 대한 태도": "Attitude toward Mother",
+        "아버지에 대한 태도": "Attitude toward Father",
+        "가족 관계": "Family Relationships",
+        "이성 관계": "Romantic Relationships",
+        "친구 관계": "Friendships",
+        "권위자에 대한 태도": "Attitude toward Authority",
+        "두려움": "Fears",
+        "죄책감": "Guilt",
+        "능력에 대한 인식": "Perception of Abilities",
+        "과거": "Past",
+        "미래": "Future",
+        "목표": "Goals"
+      };
+
+      for (const cat of sctCategories) {
+        // 페이지 넘김 체크
+        if (yPos > pageHeight - 40) {
+          doc.addPage();
+          yPos = margin;
+        }
+
+        const englishCatName = categoryMap[cat.name] || cat.name;
+        
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'bold');
+        doc.text(`${cat.emoji} ${englishCatName}`, margin + 5, yPos);
+        yPos += 7;
+
+        const catQs = sdriCompletionQ.filter(q => q.scale === cat);
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(9);
+
+        for (const q of catQs) {
+          const answer = sessionData.responses[q.num] || '(No answer)';
+          
+          // 질문 (한글 제목 제외, 번호만)
+          if (yPos > pageHeight - 30) {
+            doc.addPage();
+            yPos = margin;
+          }
+          
+          doc.text(`Q${q.num}:`, margin + 10, yPos);
+          yPos += 5;
+          
+          // 답변 (영문/숫자만 표시)
+          const answerText = `Answer: ${answer}`;
+          doc.setTextColor(0, 102, 204);
+          doc.text(answerText, margin + 10, yPos);
+          doc.setTextColor(0, 0, 0);
+          yPos += 7;
+        }
+
+        // AI 분석은 한글 문제로 제외
+        yPos += 5;
+      }
+
+      // 푸터
+      const totalPages = doc.internal.pages.length - 1;
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(128, 128, 128);
+        doc.text(
+          `Page ${i} of ${totalPages} | Generated: ${new Date().toLocaleDateString('en-US')}`,
+          pageWidth / 2,
+          pageHeight - 10,
+          { align: 'center' }
+        );
+      }
+
+      // 다운로드
+      const fileName = `SCT_Report_${sessionData.sessionId}_${new Date().getTime()}.pdf`;
+      doc.save(fileName);
+      console.log('✅ SRCI PDF 생성 완료:', fileName);
+      alert('✅ SCT PDF downloaded successfully!');
+    } catch (error) {
+      console.error('❌ PDF 생성 실패:', error);
+      alert('❌ PDF generation failed: ' + error.message);
+    }
+  }
+
+  async function generateDsiPdf(sessionData) {
+    try {
+      console.log('📄 SDRI PDF 생성 시작...');
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 20;
+      let yPos = margin;
+
+      // 임시로 응답 복원
+      const tempDsiResponses = sessionData.responses;
+      
+      // 점수 계산
+      let total = 0;
+      const areas = { "가족불화": 0, "부모관계": 0, "형제관계": 0, "가족퇴행": 0, "투사": 0 };
+      sdriLikertQ.forEach(q => {
+        const r = tempDsiResponses[q.num];
+        if (r) {
+          const s = q.rev ? 6 - r : r;
+          total += s;
+          areas[q.area] += s;
+        }
+      });
+
+      // 헤더 (영문만 사용)
+      doc.setFontSize(20);
+      doc.setFont(undefined, 'bold');
+      doc.text('SDRI 자기분화 반응성 검사 결과', pageWidth / 2, yPos, { align: 'center' });
+      
+      yPos += 15;
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+      doc.text('Differentiation of Self Inventory', pageWidth / 2, yPos, { align: 'center' });
+      
+      yPos += 15;
+      doc.setDrawColor(0);
+      doc.setLineWidth(0.5);
+      doc.line(margin, yPos, pageWidth - margin, yPos);
+      yPos += 10;
+
+      // 기본 정보
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'bold');
+      doc.text('[ 1. Basic Information ]', margin, yPos);
+      yPos += 8;
+      
+      doc.setFont(undefined, 'normal');
+      doc.setFontSize(10);
+      doc.text(`Session ID: ${sessionData.sessionId}`, margin + 5, yPos);
+      yPos += 6;
+      doc.text(`Test Date: ${new Date(sessionData.createdAt).toLocaleString('en-US')}`, margin + 5, yPos);
+      yPos += 6;
+      doc.text(`Phone: ${sessionData.userPhone || 'N/A'}`, margin + 5, yPos);
+      yPos += 12;
+
+      // 종합 점수
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'bold');
+      doc.text('[ 2. Overall Score ]', margin, yPos);
+      yPos += 8;
+
+      const level = total >= 109 ? 'High' : total >= 73 ? 'Medium' : 'Low';
+      const levelColor = total >= 109 ? [76, 175, 80] : total >= 73 ? [255, 193, 7] : [255, 87, 87];
+
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+      doc.text(`Total Score: ${total} / 180`, margin + 5, yPos);
+      yPos += 6;
+      
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(...levelColor);
+      doc.text(`Level: ${level}`, margin + 5, yPos);
+      doc.setTextColor(0, 0, 0);
+      yPos += 12;
+
+      // 영역별 점수
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'bold');
+      doc.text('[ 3. Area Scores ]', margin, yPos);
+      yPos += 8;
+
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'normal');
+
+      // 영역 이름을 영문으로 매핑
+      const areaNameMap = {
+        "가족불화": "Family Conflict",
+        "부모관계": "Parent Relationship", 
+        "형제관계": "Sibling Relationship",
+        "가족퇴행": "Family Regression",
+        "투사": "Projection"
+      };
+
+      const areaNames = Object.keys(areas);
+      for (const areaName of areaNames) {
+        if (yPos > pageHeight - 30) {
+          doc.addPage();
+          yPos = margin;
+        }
+
+        const score = areas[areaName];
+        const areaQs = sdriLikertQ.filter(q => q.scale === areaName);
+        const maxScore = areaQs.length * 5;
+        const avgScore = (score / areaQs.length).toFixed(1);
+        const englishName = areaNameMap[areaName] || areaName;
+
+        doc.text(`${englishName}: ${score}/${maxScore} (Avg: ${avgScore})`, margin + 5, yPos);
+        
+        // 진행 바
+        const barWidth = 100;
+        const barHeight = 4;
+        const fillWidth = (score / maxScore) * barWidth;
+        
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.3);
+        doc.rect(margin + 60, yPos - 3, barWidth, barHeight);
+        
+        doc.setFillColor(...levelColor);
+        doc.rect(margin + 60, yPos - 3, fillWidth, barHeight, 'F');
+        
+        yPos += 8;
+      }
+
+      yPos += 5;
+
+      // 상세 응답
+      doc.addPage();
+      yPos = margin;
+      
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'bold');
+      doc.text('[ 4. Detailed Responses ]', margin, yPos);
+      yPos += 8;
+
+      doc.setFontSize(8);
+      doc.setFont(undefined, 'normal');
+
+      for (const q of sdriLikertQ) {
+        if (yPos > pageHeight - 20) {
+          doc.addPage();
+          yPos = margin;
+        }
+
+        const answer = tempDsiResponses[q.num] || 'N/A';
+        const scoreText = q.rev ? `(Reversed, Score: ${6 - parseInt(answer)})` : `(Score: ${answer})`;
+        const englishArea = areaNameMap[q.area] || q.area;
+        
+        const questionText = `Q${q.num}. [${englishArea}]`;
+        doc.text(questionText, margin + 5, yPos);
+        yPos += 4;
+        
+        doc.setTextColor(0, 102, 204);
+        doc.text(`Answer: ${answer} ${scoreText}`, margin + 5, yPos);
+        doc.setTextColor(0, 0, 0);
+        yPos += 6;
+      }
+
+      // AI 권장사항은 한글 지원 문제로 PDF에서 제외
+      // 웹 화면에서 확인 가능
+
+      // 푸터
+      const totalPages = doc.internal.pages.length - 1;
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(128, 128, 128);
+        doc.text(
+          `Page ${i} of ${totalPages} | Generated: ${new Date().toLocaleDateString('en-US')}`,
+          pageWidth / 2,
+          pageHeight - 10,
+          { align: 'center' }
+        );
+      }
+
+      // 다운로드
+      const fileName = `DSI_Report_${sessionData.sessionId}_${new Date().getTime()}.pdf`;
+      doc.save(fileName);
+      console.log('✅ SDRI PDF 생성 완료:', fileName);
+      alert('✅ DSI PDF downloaded successfully!');
+    } catch (error) {
+      console.error('❌ PDF 생성 실패:', error);
+      alert('❌ PDF generation failed: ' + error.message);
+    }
+  }
+
+  function copyLink(linkId) {
+    const text = linkId;
+    try {
+      navigator.clipboard.writeText(text).then(() => {
+        
+      }).catch(() => fallbackCopy(linkId, text));
+    } catch {
+      fallbackCopy(linkId, text);
+    }
+  }
+  
+  function fallbackCopy(linkId, text) {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+    
+  }
+
+  function enterByLinkId() {
+    const id = linkInput.trim();
+    if (!id) {
+      setLoginMsg({ type: "error", text: "링크 ID를 입력해주세요." });
+      return;
+    }
+    const data = loadLink(id);
+    if (!data) {
+      setLoginMsg({ type: "error", text: "유효하지 않은 링크 ID입니다. 상담사에게 다시 확인하세요." });
+      return;
+    }
+    setActiveLinkId(id);
+    setActiveLinkData(data);
+    setLoginMsg({ type: "", text: "" });
+    setView("clientLogin");
+  }
+
+  function clientLogin() {
+    if (!userInfo.phone || !userInfo.password) {
+      setLoginMsg({ type: "error", text: "전화번호와 비밀번호를 모두 입력해주세요." });
+      return;
+    }
+    if (!activeLinkData) {
+      setLoginMsg({ type: "error", text: "링크 정보가 없습니다." });
+      return;
+    }
+    const inp = userInfo.phone.replace(/-/g, "");
+    const reg = activeLinkData.clientPhone.replace(/-/g, "");
+    if (inp !== reg) {
+      setLoginMsg({ type: "error", text: "등록된 전화번호와 일치하지 않습니다." });
+      return;
+    }
+    setLoginMsg({ type: "", text: "" });
+    setSrciResponses({});
+    setSctSummaries({});
+    setSdriResponses({});
+    setPhq9Responses({});
+    setGad7Responses({});
+    setDass21Responses({});
+    setBig5Responses({});
+    setBurnoutResponses({});
+    setSessionId(genId("session"));
+    setMultiSessionIds([]);
+    
+    // 멀티 검사 큐 초기화 (testTypes 배열 우선, 없으면 testType 단일 사용)
+    const tests = activeLinkData.testTypes && activeLinkData.testTypes.length > 0
+      ? activeLinkData.testTypes
+      : [activeLinkData.testType || "SCT"];
+    setPendingTests(tests);
+    setCurrentTestIndex(0);
+    
+    // 첫 번째 검사 화면으로 이동
+    const testViews = {
+      "SCT": "sctTest", "DSI": "sctTest", "PHQ9": "phq9Test",
+      "GAD7": "gad7Test", "DASS21": "dass21Test", "BIG5": "big5Test", "BURNOUT": "burnoutTest"
+    };
+    setView(testViews[tests[0]] || "sctTest");
+  }
+
+
+
+  // 💬 AI 상담 채팅 함수
+  // 검사 결과 요약 텍스트 생성 (채팅 컨텍스트용)
+  function buildTestSummary(testType) {
+    try {
+      if (testType === 'SCT' || testType === 'DSI') {
+        const cats = Object.keys(sctCategories);
+        const sampleAnswers = cats.slice(0, 5).map(cat => {
+          const nums = sctCategories[cat];
+          const ans = nums.map(n => srciResponses[n] || '').filter(Boolean).slice(0, 2).join(' / ');
+          return ans ? `${cat}: ${ans}` : null;
+        }).filter(Boolean).join('\n');
+        return `검사: SRCI 자기반응 완성 검사\n주요 응답:\n${sampleAnswers}`;
+      }
+      if (testType === 'DSI') {
+        const { scales: areas, total } = calcSdri();
+        const level = total >= 120 ? '높음' : total >= 80 ? '보통' : '낮음';
+        const areaText = Object.entries(areas).map(([k,v]) => `${k}: ${v}/36`).join(', ');
+        return `검사: 자아분화검사(DSI)\n총점: ${total}/180 (${level})\n영역별: ${areaText}`;
+      }
+      if (testType === 'PHQ9') {
+        const r = calcPhq9();
+        return `검사: PHQ-9 우울 자가점검\n총점: ${r.total}/27 (${r.level})`;
+      }
+      if (testType === 'GAD7') {
+        const r = calcGad7();
+        return `검사: GAD-7 불안 자가점검\n총점: ${r.total}/21 (${r.level})`;
+      }
+      if (testType === 'DASS21') {
+        const r = calcDass21();
+        return `검사: DASS-21\n우울: ${r.depression.score}점(${r.depression.level}), 불안: ${r.anxiety.score}점(${r.anxiety.level}), 스트레스: ${r.stress.score}점(${r.stress.level})`;
+      }
+      if (testType === 'BIG5') {
+        const r = calcBig5();
+        const factors = Object.entries(r).map(([k,v]) => `${k}: ${v}`).join(', ');
+        return `검사: Big5 성격검사\n요인별: ${factors}`;
+      }
+      if (testType === 'BURNOUT') {
+        const r = calcBurnout();
+        return `검사: K-MBI+ 번아웃\n총점: ${r.totalScore}/240 (${r.percentage}%, ${r.level})`;
+      }
+      if (testType === 'LOST') {
+        const r = calcLost();
+        const axisLabel = { E:"에너지", D:"의사결정", S:"행동속도", N:"안정성", R:"관계민감도", T:"스트레스반응" };
+        const axisText = Object.entries(r.axisAvg).map(([k,v]) => `${axisLabel[k]}:${Number(v).toFixed(1)}`).join(', ');
+        return `검사: LOST 행동 운영체계\n유형: ${r.typeInfo.name}(${r.typeCode})\n축별 평균: ${axisText}`;
+      }
+      return '검사 결과';
+    } catch(e) {
+      return '검사 결과';
+    }
+  }
+
+  // 채팅 전송 함수
+  async function sendChatMessage(testType) {
+    const input = chatInput.trim();
+    if (!input || chatStreaming) return;
+
+    const counselingType = activeLinkData?.counselingType || 'psychological';
+    const summary = buildTestSummary(testType);
+    const userMsg = { role: 'user', content: input, id: Date.now() };
+
+    setChatMessages(prev => [...prev, userMsg]);
+    setChatInput('');
+    setChatStreaming(true);
+    setChatError('');
+
+    const assistantId = Date.now() + 1;
+    setChatMessages(prev => [...prev, { role: 'assistant', content: '', id: assistantId, streaming: true }]);
+
+    try {
+      const history = [...chatMessages.filter(m => m.content && m.content.trim() && !m.streaming), userMsg].map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content.trim() }));
+      const res = await fetch('/api/ai-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+        body: JSON.stringify({
+          messages: history,
+          testContext: { testType, counselingType, summary }
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        // 429: 한도 초과 → 모달
+        if (res.status === 429) {
+          setChatMessages(prev => prev.filter(m => m.id !== assistantId));
+          setChatStreaming(false);
+          setAiChatUsed(AI_LIMIT_FREE);
+          setShowAiLimitModal(true);
+          return;
+        }
+        throw new Error(err.error || '서버 오류');
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let fullText = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6).trim();
+          if (data === '[DONE]') break;
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+              fullText += parsed.delta.text;
+              setChatMessages(prev => prev.map(m =>
+                m.id === assistantId ? { ...m, content: fullText } : m
+              ));
+            }
+          } catch {}
+        }
+      }
+      // 스트리밍 완료
+      setChatMessages(prev => prev.map(m =>
+        m.id === assistantId ? { ...m, streaming: false } : m
+      ));
+    } catch(e) {
+      setChatError(e.message || 'AI 채팅 중 오류가 발생했습니다.');
+      setChatMessages(prev => prev.filter(m => m.id !== assistantId));
+    } finally {
+      setChatStreaming(false);
+    }
+  }
+
+  // 채팅 초기화
+  function resetChat() {
+    setChatMessages([]);
+    setChatInput('');
+    setChatError('');
+    setChatStreaming(false);
+  }
+
+  // 채팅창 컴포넌트
+  function ChatBox({ testType, initialPrompts }) {
+    const messagesEndRef = React.useRef(null);
+    const inputRef = React.useRef(null);
+    React.useEffect(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [chatMessages]);
+
+    return (
+      <div className="mt-6 border-2 border-blue-200 rounded-xl overflow-hidden shadow-md">
+        {/* 헤더 */}
+        <div
+          className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-blue-600 to-green-600 cursor-pointer"
+          onClick={() => { if (!chatOpen) resetChat(); setChatOpen(v => !v); }}
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-white text-base">💬</span>
+            <span className="text-white font-bold text-sm">AI 상담 대화</span>
+            <span className="text-blue-200 text-xs">검사 결과 활용 방법을 AI와 상담하세요</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {chatMessages.length > 0 && (
+              <span className="bg-white text-blue-700 text-xs px-2 py-0.5 rounded-full font-bold">
+                {chatMessages.filter(m => m.role === 'user').length}회 대화
+              </span>
+            )}
+            <span className="text-white text-sm">{chatOpen ? '▲' : '▼'}</span>
+          </div>
+        </div>
+
+        {chatOpen && (
+          <div className="bg-white">
+            {/* ⚠️ 면책 고지 + 횟수 현황 */}
+            <div className="px-4 pt-3 pb-2 bg-amber-50 border-b border-amber-100">
+              <p className="text-xs text-amber-800 leading-relaxed">
+                <strong>⚠️ 참고 안내:</strong> AI 상담은 자기 이해를 돕는 참고 정보입니다. 의학적 진단·치료를 대체하지 않으며, AI의 모든 답변은 확정적 결론이 아닙니다.
+              </p>
+              <div className="flex items-center justify-between mt-1.5">
+                <span className="text-xs text-amber-700">
+                  오늘 AI 상담 {aiChatUsed}/{isLoggedIn && credits > 0 ? AI_LIMIT_PAID : AI_LIMIT_FREE}회 사용
+                </span>
+                <div className="h-1.5 w-28 bg-amber-200 rounded-full overflow-hidden">
+                  <div className="h-full bg-amber-500 rounded-full transition-all"
+                    style={{ width: `${Math.min(100, (aiChatUsed / (isLoggedIn && credits > 0 ? AI_LIMIT_PAID : AI_LIMIT_FREE)) * 100)}%` }} />
+                </div>
+              </div>
+            </div>
+            {/* 빠른 질문 버튼 */}
+            {chatMessages.length === 0 && (
+              <div className="p-4 border-b border-gray-100">
+                <p className="text-xs text-gray-500 mb-2 font-semibold">💡 자주 묻는 질문</p>
+                <div className="flex flex-wrap gap-2">
+                  {(initialPrompts || []).map((prompt, i) => (
+                    <button
+                      key={i}
+                      onClick={() => { 
+                        // 빠른 질문 버튼: 즉시 전송 (chatInput 우회)
+                        const userMsg = { role: 'user', content: prompt, id: Date.now() };
+                        setChatMessages(prev => [...prev, userMsg]);
+                        setChatStreaming(true);
+                        setChatError('');
+                        const counselingType = activeLinkData?.counselingType || 'psychological';
+                        const summary = buildTestSummary(testType);
+                        const assistantId = Date.now() + 1;
+                        setChatMessages(prev => [...prev, { role: 'assistant', content: '', id: assistantId, streaming: true }]);
+                        
+                        fetch('/api/ai-chat', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+                          body: JSON.stringify({
+                            messages: [...chatMessages.filter(m => m.content && m.content.trim() && !m.streaming), userMsg].map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content.trim() })),
+                            testContext: { testType, counselingType, summary }
+                          })
+                        })
+                        .then(async res => {
+                          if (!res.ok) {
+                            const errD = await res.json().catch(() => ({}));
+                            setChatMessages(prev => prev.filter(m => m.id !== assistantId));
+                            setChatStreaming(false);
+                            // 429: 비로그인 한도 초과 or 로그인 한도 초과 → 모달
+                            if (res.status === 429) {
+                              setAiChatUsed(AI_LIMIT_FREE); // 클라이언트 카운터 동기화
+                              setShowAiLimitModal(true);
+                              return;
+                            }
+                            setChatError(errD.error || '서버 오류');
+                            return;
+                          }
+                          const reader = res.body.getReader();
+                          const decoder = new TextDecoder();
+                          let buffer = '';
+                          let fullText = '';
+                          
+                          function processStream() {
+                            reader.read().then(({ done, value }) => {
+                              if (done) {
+                                setChatMessages(prev => prev.map(m =>
+                                  m.id === assistantId ? { ...m, streaming: false } : m
+                                ));
+                                setChatStreaming(false);
+                                return;
+                              }
+                              buffer += decoder.decode(value, { stream: true });
+                              const lines = buffer.split('\n');
+                              buffer = lines.pop();
+                              for (const line of lines) {
+                                if (!line.startsWith('data: ')) continue;
+                                const data = line.slice(6).trim();
+                                if (data === '[DONE]') break;
+                                try {
+                                  const parsed = JSON.parse(data);
+                                  if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+                                    fullText += parsed.delta.text;
+                                    setChatMessages(prev => prev.map(m =>
+                                      m.id === assistantId ? { ...m, content: fullText } : m
+                                    ));
+                                  }
+                                } catch {}
+                              }
+                              processStream();
+                            });
+                          }
+                          processStream();
+                        })
+                        .catch(e => {
+                          setChatError(e.message || 'AI 채팅 중 오류가 발생했습니다.');
+                          setChatMessages(prev => prev.filter(m => m.id !== assistantId));
+                          setChatStreaming(false);
+                        });
+                      }}
+                      className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1.5 rounded-full hover:bg-blue-100 transition"
+                    >
+                      {prompt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 메시지 목록 */}
+            <div className="h-80 overflow-y-auto p-4 space-y-3 bg-gray-50">
+              {chatMessages.length === 0 && (
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                  <p className="text-4xl mb-3">🤝</p>
+                  <p className="text-sm font-semibold text-gray-600">검사 결과에 대해 AI와 대화해 보세요</p>
+                  <p className="text-xs text-gray-400 mt-1">상담 전략, 해석 방법, 활용 방안 등을 질문하세요</p>
+                  {!isLoggedIn && (
+                    <p className="text-xs text-blue-500 mt-2 font-semibold">
+                      💬 무료 체험 {AI_LIMIT_FREE}회 · 가입하면 더 많이 이용 가능
+                    </p>
+                  )}
+                </div>
+              )}
+              {chatMessages.map(msg => (
+                <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  {msg.role === 'assistant' && (
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-green-600 flex items-center justify-center text-white text-xs font-bold mr-2 mt-0.5 shrink-0">AI</div>
+                  )}
+                  <div className={`max-w-xs lg:max-w-md xl:max-w-lg px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                    msg.role === 'user'
+                      ? 'bg-blue-600 text-white rounded-tr-sm'
+                      : 'bg-white border border-gray-200 text-gray-800 rounded-tl-sm shadow-sm'
+                  }`}>
+                    {msg.content
+                      ? <p className="whitespace-pre-wrap">{msg.content}{msg.streaming && <span className="inline-block w-1.5 h-4 bg-blue-400 animate-pulse ml-0.5 align-middle rounded"></span>}</p>
+                      : <div className="flex gap-1 items-center py-1">
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay:'0ms'}}></div>
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay:'150ms'}}></div>
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay:'300ms'}}></div>
+                        </div>
+                    }
+                  </div>
+                  {msg.role === 'user' && (
+                    <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 text-xs font-bold ml-2 mt-0.5 shrink-0">나</div>
+                  )}
+                </div>
+              ))}
+              {chatError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700">
+                  ⚠️ {chatError}
+                  <button onClick={() => setChatError('')} className="ml-2 underline">닫기</button>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* 입력창 */}
+            <div className="p-3 border-t border-gray-200 bg-white">
+              <div className="flex gap-2 items-end">
+                <textarea
+                  ref={inputRef}
+                  defaultValue={chatInput}
+                  onKeyDown={e => {
+                    console.log('⌨️ ChatBox keydown:', e.key, 'composing:', e.nativeEvent.isComposing);
+                    // IME 조합 중이 아닐 때만 Enter 처리 (한글 입력 문제 해결)
+                    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                      e.preventDefault();
+                      const currentValue = inputRef.current?.value || '';
+                      console.log('📤 Sending message:', currentValue);
+                      if (currentValue.trim()) {
+                        // 직접 메시지 전송 (상태 우회)
+                        const userMsg = { role: 'user', content: currentValue.trim(), id: Date.now() };
+                        setChatMessages(prev => [...prev, userMsg]);
+                        inputRef.current.value = '';
+                        setChatStreaming(true);
+                        setChatError('');
+                        const counselingType = activeLinkData?.counselingType || 'psychological';
+                        const summary = buildTestSummary(testType);
+                        const assistantId = Date.now() + 1;
+                        setChatMessages(prev => [...prev, { role: 'assistant', content: '', id: assistantId, streaming: true }]);
+                        
+                        fetch('/api/ai-chat', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+                          body: JSON.stringify({
+                            messages: [...chatMessages.filter(m => m.content && m.content.trim() && !m.streaming), userMsg].map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content.trim() })),
+                            testContext: { testType, counselingType, summary }
+                          })
+                        })
+                        .then(async res => {
+                          if (!res.ok) {
+                            const errD = await res.json().catch(() => ({}));
+                            setChatMessages(prev => prev.filter(m => m.id !== assistantId));
+                            setChatStreaming(false);
+                            // 429: 비로그인 한도 초과 or 로그인 한도 초과 → 모달
+                            if (res.status === 429) {
+                              setAiChatUsed(AI_LIMIT_FREE); // 클라이언트 카운터 동기화
+                              setShowAiLimitModal(true);
+                              return;
+                            }
+                            setChatError(errD.error || '서버 오류');
+                            return;
+                          }
+                          const reader = res.body.getReader();
+                          const decoder = new TextDecoder();
+                          let buffer = '';
+                          let fullText = '';
+                          
+                          function processStream() {
+                            reader.read().then(({ done, value }) => {
+                              if (done) {
+                                setChatMessages(prev => prev.map(m =>
+                                  m.id === assistantId ? { ...m, streaming: false } : m
+                                ));
+                                setChatStreaming(false);
+                                return;
+                              }
+                              buffer += decoder.decode(value, { stream: true });
+                              const lines = buffer.split('\n');
+                              buffer = lines.pop();
+                              for (const line of lines) {
+                                if (!line.startsWith('data: ')) continue;
+                                const data = line.slice(6).trim();
+                                if (data === '[DONE]') break;
+                                try {
+                                  const parsed = JSON.parse(data);
+                                  if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+                                    fullText += parsed.delta.text;
+                                    setChatMessages(prev => prev.map(m =>
+                                      m.id === assistantId ? { ...m, content: fullText } : m
+                                    ));
+                                  }
+                                } catch {}
+                              }
+                              processStream();
+                            });
+                          }
+                          processStream();
+                        })
+                        .catch(e => {
+                          setChatError(e.message || 'AI 채팅 중 오류가 발생했습니다.');
+                          setChatMessages(prev => prev.filter(m => m.id !== assistantId));
+                          setChatStreaming(false);
+                        });
+                      }
+                    }
+                  }}
+                  placeholder="검사 결과 활용 방법, 상담 전략 등을 질문하세요... (Enter 전송, Shift+Enter 줄바꿈)"
+                  rows={2}
+                  disabled={chatStreaming}
+                  className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm resize-none focus:outline-none focus:border-blue-400 disabled:bg-gray-50"
+                />
+                <div className="flex flex-col gap-1.5">
+                  <button
+                    onClick={() => {
+                      const currentValue = inputRef.current?.value || '';
+                      if (currentValue.trim() && !chatStreaming) {
+                        const userMsg = { role: 'user', content: currentValue.trim(), id: Date.now() };
+                        setChatMessages(prev => [...prev, userMsg]);
+                        inputRef.current.value = '';
+                        setChatStreaming(true);
+                        setChatError('');
+                        const counselingType = activeLinkData?.counselingType || 'psychological';
+                        const summary = buildTestSummary(testType);
+                        const assistantId = Date.now() + 1;
+                        setChatMessages(prev => [...prev, { role: 'assistant', content: '', id: assistantId, streaming: true }]);
+                        
+                        fetch('/api/ai-chat', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+                          body: JSON.stringify({
+                            messages: [...chatMessages.filter(m => m.content && m.content.trim() && !m.streaming), userMsg].map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content.trim() })),
+                            testContext: { testType, counselingType, summary }
+                          })
+                        })
+                        .then(async res => {
+                          if (!res.ok) {
+                            const errD = await res.json().catch(() => ({}));
+                            setChatMessages(prev => prev.filter(m => m.id !== assistantId));
+                            setChatStreaming(false);
+                            // 429: 비로그인 한도 초과 or 로그인 한도 초과 → 모달
+                            if (res.status === 429) {
+                              setAiChatUsed(AI_LIMIT_FREE); // 클라이언트 카운터 동기화
+                              setShowAiLimitModal(true);
+                              return;
+                            }
+                            setChatError(errD.error || '서버 오류');
+                            return;
+                          }
+                          const reader = res.body.getReader();
+                          const decoder = new TextDecoder();
+                          let buffer = '';
+                          let fullText = '';
+                          
+                          function processStream() {
+                            reader.read().then(({ done, value }) => {
+                              if (done) {
+                                setChatMessages(prev => prev.map(m =>
+                                  m.id === assistantId ? { ...m, streaming: false } : m
+                                ));
+                                setChatStreaming(false);
+                                return;
+                              }
+                              buffer += decoder.decode(value, { stream: true });
+                              const lines = buffer.split('\n');
+                              buffer = lines.pop();
+                              for (const line of lines) {
+                                if (!line.startsWith('data: ')) continue;
+                                const data = line.slice(6).trim();
+                                if (data === '[DONE]') break;
+                                try {
+                                  const parsed = JSON.parse(data);
+                                  if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+                                    fullText += parsed.delta.text;
+                                    setChatMessages(prev => prev.map(m =>
+                                      m.id === assistantId ? { ...m, content: fullText } : m
+                                    ));
+                                  }
+                                } catch {}
+                              }
+                              processStream();
+                            });
+                          }
+                          processStream();
+                        })
+                        .catch(e => {
+                          setChatError(e.message || 'AI 채팅 중 오류가 발생했습니다.');
+                          setChatMessages(prev => prev.filter(m => m.id !== assistantId));
+                          setChatStreaming(false);
+                        });
+                      }
+                    }}
+                    disabled={chatStreaming || isAiChatExhausted()}
+                    title={isAiChatExhausted() ? 'AI 상담 횟수를 모두 사용했습니다' : ''}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                  >
+                    {chatStreaming ? '•••' : isAiChatExhausted() ? '횟수 초과' : '전송'}
+                  </button>
+                  {chatMessages.length > 0 && (
+                    <button
+                      onClick={resetChat}
+                      className="text-xs text-gray-400 hover:text-gray-600 text-center"
+                    >초기화</button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* 🏥 전문가 상담 연결 버튼 */}
+            <div className="px-4 py-3 border-t border-gray-100 bg-gray-50">
+              <button
+                onClick={() => window.open('https://pro.maumful.com', '_blank', 'noopener noreferrer')}
+                className="w-full py-2.5 bg-white border border-indigo-200 text-indigo-700 rounded-xl text-sm font-semibold hover:bg-indigo-50 hover:border-indigo-400 transition flex items-center justify-center gap-2 group">
+                <span>🏥</span>
+                <span>전문 상담사와 직접 상담하기</span>
+                <span className="text-indigo-300 group-hover:text-indigo-500 transition">→</span>
+              </button>
+              <p className="text-center text-xs text-gray-400 mt-1">AI 상담은 참고용입니다. 전문 상담사의 도움이 필요하시면 클릭하세요.</p>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // 📖 기독교 상담 참고자료 관리 함수
+  async function loadBiblicalRefs() {
+    try {
+      const res = await fetch('/api/admin/biblical-references');
+      const data = await res.json();
+      if (data.success) setBiblicalRefs(data.data || []);
+    } catch (e) { console.error('참고자료 로드 실패:', e); }
+  }
+
+  async function saveBiblicalRef() {
+    if (!biblicalForm.title.trim() || !biblicalForm.content.trim()) {
+      setBiblicalMsg({ type: 'error', text: '제목과 내용을 모두 입력해주세요.' });
+      return;
+    }
+    setBiblicalLoading(true);
+    setBiblicalMsg({ type: '', text: '' });
+    try {
+      const res = await fetch('/api/admin/biblical-references', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+        body: JSON.stringify(biblicalForm)
+      });
+      const data = await res.json();
+      if (data.success) {
+        setBiblicalMsg({ type: 'success', text: '✅ ' + data.message });
+        setBiblicalForm({ id: null, title: '', category: 'general', content: '', sort_order: 0 });
+        setShowBiblicalForm(false);
+        await loadBiblicalRefs();
+      } else {
+        setBiblicalMsg({ type: 'error', text: '❌ ' + (data.error || '저장 실패') });
+      }
+    } catch (e) {
+      setBiblicalMsg({ type: 'error', text: '❌ 서버 오류: ' + e.message });
+    } finally {
+      setBiblicalLoading(false);
+    }
+  }
+
+  async function deleteBiblicalRef(id, title) {
+    if (!confirm(`"${title}" 자료를 삭제하시겠습니까?`)) return;
+    try {
+      const res = await fetch(`/api/admin/biblical-references/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        setBiblicalMsg({ type: 'success', text: '✅ 삭제되었습니다.' });
+        await loadBiblicalRefs();
+      }
+    } catch (e) {
+      setBiblicalMsg({ type: 'error', text: '❌ 삭제 실패' });
+    }
+  }
+
+  async function toggleBiblicalRef(id) {
+    try {
+      await fetch(`/api/admin/biblical-references/${id}/toggle`, { method: 'PATCH' });
+      await loadBiblicalRefs();
+    } catch (e) { console.error('토글 실패:', e); }
+  }
+
+  function editBiblicalRef(ref) {
+    setBiblicalForm({ id: ref.id, title: ref.title, category: ref.category, content: ref.content, sort_order: ref.sort_order || 0 });
+    setShowBiblicalForm(true);
+    setBiblicalMsg({ type: '', text: '' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function handleBiblicalFileUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 500000) {
+      setBiblicalMsg({ type: 'error', text: '❌ 파일 크기는 500KB 이내여야 합니다.' });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target.result;
+      setBiblicalForm(f => ({
+        ...f,
+        title: f.title || file.name.replace(/\.[^.]+$/, ''),
+        content: text
+      }));
+      setBiblicalMsg({ type: 'success', text: `✅ "${file.name}" 파일 불러오기 완료. 내용 확인 후 저장하세요.` });
+    };
+    reader.readAsText(file, 'UTF-8');
+    e.target.value = '';
+  }
+
+  
+
+  async function approveCounselor(phone) {
+    console.log('🔄 상담사 승인 시작:', phone);
+    
+    try {
+      // D1 API로 승인
+      const result = await api.approveCounselor(phone);
+      
+      if (result.success) {
+        console.log('✅ 승인 완료:', phone);
+        
+        // 대기 중인 상담사 목록 새로고침
+        const pendingResult = await api.getPendingCounselors();
+        if (pendingResult.success) {
+          setPendingCounselors(pendingResult.data);
+        }
+        
+        // 승인된 상담사 목록 새로고침
+        const approvedResult = await api.getApprovedCounselors();
+        if (approvedResult.success) {
+          setApprovedCounselors(approvedResult.data);
+          console.log('✅ 승인된 상담사 목록 업데이트:', approvedResult.data.length + '명');
+        }
+        
+        // 확인 메시지
+        alert(`✅ ${phone} 상담사가 승인되었습니다! (무료 5회 체험 제공)`);
+      } else {
+        alert('❌ 승인 실패: ' + result.error);
+      }
+    } catch (error) {
+      console.error('❌ 상담사 승인 중 오류:', error);
+      alert('❌ 서버 오류가 발생했습니다.');
+    }
+  }
+
+  // 🔢 쿼터 수정 시작
+  function startEditQuota(phone, currentQuota) {
+    setQuotaEditingPhone(phone);
+    setQuotaEditingValue(currentQuota.toString());
+  }
+
+  // 🔢 쿼터 수정 취소
+  function cancelEditQuota() {
+    setQuotaEditingPhone(null);
+    setQuotaEditingValue('');
+  }
+
+  // 🔢 쿼터 수정 저장
+  async function saveQuotaEdit(phone, name) {
+    const newQuota = parseInt(quotaEditingValue, 10);
+    
+    // 유효성 검사
+    if (isNaN(newQuota) || newQuota < 0) {
+      alert('❌ 쿼터는 0 이상의 숫자여야 합니다.');
+      return;
+    }
+    
+    console.log('🔄 쿼터 변경 시작:', phone, '→', newQuota);
+    
+    try {
+      const result = await api.updateCounselorQuota(phone, newQuota);
+      
+      if (result.success) {
+        console.log('✅ 쿼터 변경 완료:', result.data);
+        
+        // 승인된 상담사 목록 새로고침
+        const approvedResult = await api.getApprovedCounselors();
+        if (approvedResult.success) {
+          setApprovedCounselors(approvedResult.data);
+        }
+        
+        // 편집 모드 종료
+        setQuotaEditingPhone(null);
+        setQuotaEditingValue('');
+        
+        // 확인 메시지
+        alert(`✅ ${name}(${phone}) 상담사의 쿼터가 ${newQuota}회로 변경되었습니다.\n남은 쿼터: ${result.data.quotaRemaining}회`);
+      } else {
+        alert('❌ 쿼터 변경 실패: ' + result.error);
+      }
+    } catch (error) {
+      console.error('❌ 쿼터 변경 중 오류:', error);
+      alert('❌ 서버 오류가 발생했습니다.');
+    }
+  }
+
+  async function approveCounselor_OLD(phone) {
+    console.log('🔄 상담사 승인 시작:', phone);
+    
+    try {
+      // D1 API로 승인
+      const result = await api.approveCounselor(phone);
+      
+      if (result.success) {
+        console.log('✅ 승인 완료:', phone);
+        
+        // 대기 중인 상담사 목록 새로고침
+        const pendingResult = await api.getPendingCounselors();
+        if (pendingResult.success) {
+          setPendingCounselors(pendingResult.data);
+        }
+        
+        // 승인된 상담사 목록 새로고침
+        const approvedResult = await api.getApprovedCounselors();
+        if (approvedResult.success) {
+          setApprovedCounselors(approvedResult.data);
+          console.log('✅ 승인된 상담사 목록 업데이트:', approvedResult.data.length + '명');
+        }
+        
+        // 확인 메시지
+        alert(`✅ ${phone} 상담사가 승인되었습니다! (무료 5회 체험 제공)`);
+      } else {
+        alert('❌ 승인 실패: ' + result.error);
+      }
+    } catch (error) {
+      console.error('❌ 승인 오류:', error);
+      alert('❌ 서버 오류가 발생했습니다.');
+    }
+  }
+  
+  async function rejectCounselor(phone) {
+    console.log('🔄 상담사 거부:', phone);
+    
+    // TODO: 거부 API 구현 필요 (현재는 LocalStorage 사용)
+    const r = storage.get("counselor_requests");
+    let list = r ? JSON.parse(r.value) : [];
+    list = list.filter(c => c.phone !== phone);
+    storage.set("counselor_requests", JSON.stringify(list));
+    console.log('📝 대기 목록 업데이트:', list.length + '건 남음');
+    setPendingCounselors(list.filter(c => c.status === "pending"));
+    
+    alert(`❌ ${phone} 상담사를 거부했습니다.`);
+  }
+
+
+  // ===================================================
+  // 멀티 검사 진행 헬퍼: 현재 검사 저장 후 다음으로 이동
+  // ===================================================
+  function advanceToNextTest(currentTestType, sessionData) {
+    storeSession(sessionData);
+    const completedIds = [...multiSessionIds, sessionData.sessionId];
+    setMultiSessionIds(completedIds);
+    const nextIndex = currentTestIndex + 1;
+    if (nextIndex < pendingTests.length) {
+      setCurrentTestIndex(nextIndex);
+      const nextType = pendingTests[nextIndex];
+      const newSessionId = genId("session");
+      setSessionId(newSessionId);
+      setSrciResponses({}); setSdriResponses({}); setDsiRec("");
+      setPhq9Responses({}); setGad7Responses({});
+      setDass21Responses({}); setBig5Responses({});
+      setBurnoutResponses({}); setLostResponses({}); setSaveStatus("");
+      const testViews = { "SCT":"sctTest","DSI":"dsiTest","PHQ9":"phq9Test","GAD7":"gad7Test","DASS21":"dass21Test","BIG5":"big5Test","BURNOUT":"burnoutTest","LOST":"lostTest" };
+      const testViews2 = { "SCT":"sctTest","DSI":"dsiTest","PHQ9":"phq9Test","GAD7":"gad7Test","DASS21":"dass21Test","BIG5":"big5Test","BURNOUT":"burnoutTest","LOST":"lostTest" };
+      console.log("nextTest: " + nextType + " (" + (nextIndex+1) + "/" + pendingTests.length + ")");
+      setView(testViews2[nextType] || "sctTest");
+    } else {
+      if (activeLinkId) {
+        const ld = loadLink(activeLinkId);
+        if (ld) { ld.status = "completed"; ld.completedSessionIds = completedIds; storeLink(ld); }
+      }
+      setView("complete");
+    }
+  }
+
+  // SRCI 제출 (SCT 자리 — 문장완성형)
+  function submitSrci() {
+    const { filled, total, byScale } = calcSrci();
+    if (filled < total) {
+      setSaveStatus("⚠️ " + (total - filled) + "개 문항이 남아있습니다.");
+      return;
+    }
+    const data = {
+      sessionId, testType: "SCT",
+      responses: { byScale, filled },
+      createdAt: new Date().toISOString(),
+      userPhone: userInfo.phone || "미확인", linkId: activeLinkId || null
+    };
+    console.log('📝 SRCI 검사 제출:', sessionId);
+    advanceToNextTest("SCT", data);
+  }
+
+  // SDRI 제출 (DSI 자리 — 평정형)
+  function submitSdri() {
+    const likertFilled = Object.keys(sdriResponses).length;
+    if (likertFilled < sdriLikertQ.length) {
+      setSaveStatus("⚠️ " + (sdriLikertQ.length - likertFilled) + "개 문항이 남아있습니다.");
+      return;
+    }
+
+    const { scales, total } = calcSdri();
+
+    // ── 마음커플 연동: DSI(자아분화) 결과 저장 ───────────
+    if (isLoggedIn) {
+      try {
+        const SCALE_MAX = { '자기입장 유지': 50, '정서반응성': 35, '정서적 단절': 20, '융합·관계의존': 20 };
+        const maxTotal = 125;
+        const level = total >= 94 ? '높음' : total >= 56 ? '보통' : '낮음';
+        const scaleRatios = {};
+        Object.keys(SCALE_MAX).forEach(k => {
+          scaleRatios[k] = parseFloat(((scales[k] || 0) / SCALE_MAX[k]).toFixed(2));
+        });
+        const resultJson = { total, maxTotal, level, scales, scaleRatios };
+        fetch('/api/test/save-result', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+          body: JSON.stringify({ test_type: 'DSI', result_json: resultJson }),
+        }).then(r => r.ok && console.log('✅ DSI(SDRI) result_json 저장 완료'))
+          .catch(() => {});  // 실패해도 검사 진행에 영향 없음
+      } catch(e) { console.warn('DSI result 저장 오류(무시):', e); }
+    }
+    // ────────────────────────────────────────────────────
+
+    const data = {
+      sessionId, testType: "DSI",
+      responses: { scales, total, answers: sdriResponses },
+      createdAt: new Date().toISOString(),
+      userPhone: userInfo.phone || "미확인", linkId: activeLinkId || null
+    };
+    console.log('📝 SDRI 검사 제출:', sessionId);
+    advanceToNextTest("DSI", data);
+  }
+
+  // PHQ-9 제출 함수
+  function submitPhq9() {
+    if (Object.keys(phq9Responses).length < 9) {
+      setSaveStatus("⚠️ " + (9 - Object.keys(phq9Responses).length) + "개 문항이 남아있습니다.");
+      return;
+    }
+    const data = {
+      sessionId, testType: "PHQ9",
+      responses: phq9Responses,
+      createdAt: new Date().toISOString(),
+      userPhone: userInfo.phone || "미확인", linkId: activeLinkId || null
+    };
+    console.log('📝 PHQ-9 검사 제출:', sessionId);
+    advanceToNextTest("PHQ9", data);
+  }
+
+  // GAD-7 제출 함수
+  function submitGad7() {
+    if (Object.keys(gad7Responses).length < 7) {
+      setSaveStatus("⚠️ " + (7 - Object.keys(gad7Responses).length) + "개 문항이 남아있습니다.");
+      return;
+    }
+    const data = {
+      sessionId, testType: "GAD7",
+      responses: gad7Responses,
+      createdAt: new Date().toISOString(),
+      userPhone: userInfo.phone || "미확인", linkId: activeLinkId || null
+    };
+    console.log('📝 GAD-7 검사 제출:', sessionId);
+    advanceToNextTest("GAD7", data);
+  }
+
+  // DASS-21 제출 함수
+  function submitDass21() {
+    if (Object.keys(dass21Responses).length < 21) {
+      setSaveStatus("⚠️ " + (21 - Object.keys(dass21Responses).length) + "개 문항이 남아있습니다.");
+      return;
+    }
+    const data = {
+      sessionId, testType: "DASS21",
+      responses: dass21Responses,
+      createdAt: new Date().toISOString(),
+      userPhone: userInfo.phone || "미확인", linkId: activeLinkId || null
+    };
+    console.log('📝 DASS-21 검사 제출:', sessionId);
+    advanceToNextTest("DASS21", data);
+  }
+
+  // Big5 제출 함수
+  function submitBig5() {
+    if (Object.keys(big5Responses).length < 50) {
+      setSaveStatus("⚠️ " + (50 - Object.keys(big5Responses).length) + "개 문항이 남아있습니다.");
+      return;
+    }
+
+    // ── 마음커플 연동: BIG5 결과 저장 ────────────────────
+    if (isLoggedIn) {
+      try {
+        const factors = { '외향성': 0, '친화성': 0, '성실성': 0, '신경성': 0, '개방성': 0 };
+        const counts  = { '외향성': 0, '친화성': 0, '성실성': 0, '신경성': 0, '개방성': 0 };
+        big5Q.forEach(q => {
+          const r = big5Responses[q.num];
+          if (r) { const s = q.rev ? (6 - r) : r; factors[q.factor] += s; counts[q.factor]++; }
+        });
+        // 영문 키로 변환하여 저장 (커플 분석 API 기대 포맷)
+        const keyMap = { '외향성': 'E', '친화성': 'A', '성실성': 'C', '신경성': 'N', '개방성': 'O' };
+        const resultJson = {};
+        Object.keys(factors).forEach(f => {
+          resultJson[keyMap[f]] = counts[f] > 0 ? parseFloat((factors[f] / counts[f]).toFixed(2)) : 3.0;
+        });
+        fetch('/api/test/save-result', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+          body: JSON.stringify({ test_type: 'BIG5', result_json: resultJson }),
+        }).then(r => r.ok && console.log('✅ BIG5 result_json 저장 완료'))
+          .catch(() => {});  // 실패해도 검사 진행에 영향 없음
+      } catch(e) { console.warn('BIG5 result 저장 오류(무시):', e); }
+    }
+    // ────────────────────────────────────────────────────
+
+    const data = {
+      sessionId, testType: "BIG5",
+      responses: big5Responses,
+      createdAt: new Date().toISOString(),
+      userPhone: userInfo.phone || "미확인", linkId: activeLinkId || null
+    };
+    console.log('📝 Big5 검사 제출:', sessionId);
+    advanceToNextTest("BIG5", data);
+  }
+
+  function submitBurnout() {
+    if (Object.keys(burnoutResponses).length < 50) {
+      setSaveStatus("⚠️ " + (50 - Object.keys(burnoutResponses).length) + "개 문항이 남아있습니다.");
+      return;
+    }
+    const data = {
+      sessionId, testType: "BURNOUT",
+      responses: burnoutResponses,
+      createdAt: new Date().toISOString(),
+      userPhone: userInfo.phone || "미확인", linkId: activeLinkId || null
+    };
+    console.log('📝 번아웃 검사 제출:', sessionId);
+    advanceToNextTest("BURNOUT", data);
+  }
+
+  function submitLost() {
+    if (Object.keys(lostResponses).length < 60) {
+      setSaveStatus("⚠️ " + (60 - Object.keys(lostResponses).length) + "개 문항이 남아있습니다.");
+      return;
+    }
+
+    // ── 마음커플 연동: LOST 결과 저장 ────────────────────
+    if (isLoggedIn) {
+      try {
+        const axisScores = { E:0, D:0, S:0, N:0, R:0, T:0 };
+        const axisCount  = { E:0, D:0, S:0, N:0, R:0, T:0 };
+        lostQ.forEach(q => {
+          const r = lostResponses[q.num];
+          if (r !== undefined) {
+            const s = q.rev ? (6 - r) : r;
+            axisScores[q.axis] += s; axisCount[q.axis]++;
+          }
+        });
+        const avg = {};
+        Object.keys(axisScores).forEach(k => {
+          avg[k] = axisCount[k] > 0 ? parseFloat((axisScores[k] / axisCount[k]).toFixed(2)) : 3.0;
+        });
+        const EI = avg.E >= 3.0 ? 'E' : 'I';
+        const TF = avg.D >= 3.0 ? 'T' : 'F';
+        const PJ = avg.S >= 3.0 ? 'P' : 'J';
+        const RC = avg.R >= 3.0 ? 'R' : 'C';
+        const typeCode = EI + TF + PJ + RC;
+        const typeInfo = (typeof LOST_TYPES !== 'undefined' && LOST_TYPES[typeCode]) || { name: typeCode, desc: '' };
+        const resultJson = {
+          typeCode,
+          typeName: typeInfo.name || typeCode,
+          axisAvg: avg,
+          stressStyle: avg.T >= 3.0 ? 'A' : 'V',
+          stabilityStyle: avg.N >= 3.0 ? '변화선호' : '안정선호',
+        };
+        fetch('/api/test/save-result', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+          body: JSON.stringify({ test_type: 'LOST', result_json: resultJson }),
+        }).then(r => r.ok && console.log('✅ LOST result_json 저장 완료'))
+          .catch(() => {});  // 실패해도 검사 진행에 영향 없음
+      } catch(e) { console.warn('LOST result 저장 오류(무시):', e); }
+    }
+    // ────────────────────────────────────────────────────
+
+    const data = {
+      sessionId, testType: "LOST",
+      responses: lostResponses,
+      createdAt: new Date().toISOString(),
+      userPhone: userInfo.phone || "미확인", linkId: activeLinkId || null
+    };
+    console.log('📝 LOST 검사 제출:', sessionId);
+    advanceToNextTest("LOST", data);
+  }
+
+  function viewSession(sid, returnDataOnly = false) {
+    console.log('🔍 viewSession 호출:', sid, 'returnDataOnly:', returnDataOnly);
+    
+    const r = storage.get("session_" + sid);
+    if (!r) {
+      console.log('❌ 세션을 찾을 수 없습니다:', sid);
+      return null;
+    }
+    
+    const data = JSON.parse(r.value);
+    console.log('✅ 세션 데이터 로드:', data.testType, data.userPhone);
+    
+    // PDF 생성을 위해 데이터만 반환하는 경우
+    if (returnDataOnly) {
+      console.log('📄 PDF 생성용 데이터 반환');
+      return data;
+    }
+    
+    // linkId가 있으면 링크 데이터 복원 (상담 유형 정보 포함)
+    if (data.linkId) {
+      const linkData = loadLink(data.linkId);
+      if (linkData) {
+        console.log('🔗 링크 데이터 복원:', linkData.counselingType);
+        setActiveLinkData(linkData);
+      }
+    }
+    
+    // 일반 뷰어 모드
+    if (data.testType === "SCT") {
+      setSrciResponses(data.responses?.byScale ? {} : (data.responses || {}));
+      setSctSummaries(data.summaries || {});
+      console.log('📝 SCT 응답 설정 완료');
+    } else if (data.testType === "DSI") {
+      setSdriResponses(data.responses?.answers || data.responses || {});
+      setDsiRec(data.recommendation || "");
+      console.log('🔍 SDRI 응답 설정 완료');
+    } else if (data.testType === "PHQ9") {
+      setPhq9Responses(data.responses || {});
+      console.log('😔 PHQ-9 응답 설정 완료');
+    } else if (data.testType === "GAD7") {
+      setGad7Responses(data.responses || {});
+      console.log('😰 GAD-7 응답 설정 완료');
+    } else if (data.testType === "DASS21") {
+      setDass21Responses(data.responses || {});
+      console.log('📊 DASS-21 응답 설정 완료');
+    } else if (data.testType === "BIG5") {
+      setBig5Responses(data.responses || {});
+      console.log('🌟 Big5 응답 설정 완료');
+    } else if (data.testType === "BURNOUT") {
+      setBurnoutResponses(data.responses || {});
+      console.log('🔥 번아웃 응답 설정 완료');
+    } else if (data.testType === "LOST") {
+      setLostResponses(data.responses || {});
+      console.log('🧭 LOST 응답 설정 완료');
+    }
+    
+    setSessionId(sid);
+    setUserInfo({ phone: data.userPhone || "", password: "" });
+    
+    // 검사 유형에 따라 결과 화면 설정
+    const resultViews = {
+      "SCT": "sctResult",
+      "DSI": "sctResult",
+      "PHQ9": "phq9Result",
+      "GAD7": "gad7Result",
+      "DASS21": "dass21Result",
+      "BIG5": "big5Result",
+      "BURNOUT": "burnoutResult",
+      "LOST": "lostResult"
+    };
+    const targetView = resultViews[data.testType] || "sctResult";
+    console.log('🎯 뷰 전환:', targetView);
+    setView(targetView);
+    
+    return data;
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // 🔑 API 설정 관리 함수 (관리자 전용)
+  // ═══════════════════════════════════════════════════════
+
+  // API 설정 목록 로드
+  async function loadApiSettings() {
+    try {
+      const res = await fetch('/api/admin/api-settings');
+      const data = await res.json();
+      if (data.success) setApiSettings(data.data || []);
+    } catch (e) {
+      console.error('API 설정 로드 실패:', e);
+    }
+  }
+
+  // API 키 저장
+  async function saveApiSetting() {
+    if (!apiSettingForm.key_value.trim()) {
+      setApiSettingMsg({ type: 'error', text: 'API 키를 입력해주세요.' });
+      return;
+    }
+    setApiSettingLoading(true);
+    setApiSettingMsg({ type: '', text: '' });
+    setApiTestResult({ type: '', text: '' });
+    try {
+      const res = await fetch('/api/admin/api-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+        body: JSON.stringify(apiSettingForm)
+      });
+      const data = await res.json();
+      if (data.success) {
+        setApiSettingMsg({ type: 'success', text: '✅ ' + data.message });
+        setApiSettingForm(f => ({ ...f, key_value: '' }));
+        setShowApiKeyInput(false);
+        await loadApiSettings();
+      } else {
+        setApiSettingMsg({ type: 'error', text: '❌ ' + (data.error || '저장 실패') });
+      }
+    } catch (e) {
+      setApiSettingMsg({ type: 'error', text: '❌ 서버 오류: ' + e.message });
+    } finally {
+      setApiSettingLoading(false);
+    }
+  }
+
+  // API 키 연결 테스트
+  async function testApiConnection() {
+    setApiTestLoading(true);
+    setApiTestResult({ type: '', text: '' });
+    try {
+      const res = await fetch('/api/admin/api-settings/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+        body: JSON.stringify({
+          key_name: apiSettingForm.key_name,
+          key_value: apiSettingForm.key_value || undefined
+        })
+      });
+      const data = await res.json();
+      setApiTestResult({
+        type: data.success ? 'success' : 'error',
+        text: data.success ? data.message : '❌ ' + (data.error || '연결 실패')
+      });
+    } catch (e) {
+      setApiTestResult({ type: 'error', text: '❌ 서버 오류: ' + e.message });
+    } finally {
+      setApiTestLoading(false);
+    }
+  }
+
+  // API 키 비활성화
+  async function deactivateApiKey(keyName) {
+    if (!confirm(`${keyName} 키를 비활성화하시겠습니까?\nAI 분석 기능이 중단됩니다.`)) return;
+    try {
+      const res = await fetch(`/api/admin/api-settings/${keyName}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        setApiSettingMsg({ type: 'success', text: '✅ ' + data.message });
+        await loadApiSettings();
+      }
+    } catch (e) {
+      setApiSettingMsg({ type: 'error', text: '❌ 비활성화 실패' });
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // 🤖 AI 실시간 분석 (Claude API 스트리밍) - 공통 함수
+  // ═══════════════════════════════════════════════════════
+  async function runAiAnalysis(key, testType, responses, category) {
+    const counselingType = activeLinkData?.counselingType || "psychological";
+    // B2C: AI 채팅 일일 횟수 제한 체크
+    if (isAiChatExhausted()) {
+      setShowAiLimitModal(true);
+      return;
+    }
+    // ────────────────────────────────────────────────────────
+
+    setAiLoading(p => ({ ...p, [key]: true }));
+    setAiError(p => ({ ...p, [key]: "" }));
+    setAiAnalysis(p => ({ ...p, [key]: "" }));
+    try {
+      const res = await fetch("/api/ai-analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...api._authHeader() },
+        body: JSON.stringify({ testType, counselingType, responses, category, lang: currentUser?.locale || 'ko' })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        if (res.status === 401) throw new Error("로그인이 필요합니다.");
+        if (res.status === 429) throw new Error("요청이 너무 많습니다. 잠시 후 다시 시도해주세요.");
+        throw new Error(err.error || "서버 오류가 발생했습니다.");
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop();
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const data = line.slice(6).trim();
+          if (data === "[DONE]") break;
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.type === "content_block_delta" && parsed.delta?.text) {
+              setAiAnalysis(p => ({ ...p, [key]: (p[key] || "") + parsed.delta.text }));
+            }
+          } catch {}
+        }
+      }
+    } catch (e) {
+      setAiError(p => ({ ...p, [key]: e.message || "AI 분석 중 오류가 발생했습니다." }));
+    } finally {
+      setAiLoading(p => ({ ...p, [key]: false }));
+    }
+  }
+
+  // AI 분석 결과 박스 컴포넌트 (인라인)
+  function AiAnalysisBox({ aiKey, onRun }) {
+    const text = aiAnalysis[aiKey] || "";
+    const loading = aiLoading[aiKey] || false;
+    const error = aiError[aiKey] || "";
+    const done = !loading && text.length > 0;
+
+    // B2C: 크레딧 기반 제한 (크레딧 없으면 무료 플랜)
+    const isFree = !isLoggedIn || credits <= 0;
+    const limit = isFree ? AI_LIMIT_FREE : AI_LIMIT_PAID;
+    const remainingFree = Math.max(0, limit - aiChatUsed);
+
+    // ── 유료 플랜 업그레이드 유도 (5회 초과) ──────────────
+    if (error === "UPGRADE_REQUIRED") {
+      return (
+        <div className="mt-4 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-xl p-5">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">🔒</span>
+            <div className="flex-1">
+              <p className="font-bold text-amber-800 text-sm mb-1">무료 AI 분석 횟수를 모두 사용했습니다</p>
+              <p className="text-xs text-amber-700 mb-3">
+                무료 플랜은 AI 실시간 분석을 <strong>{AI_LIMIT_FREE}회</strong>까지 제공합니다.<br/>
+                유료 플랜으로 업그레이드하면 <strong>무제한</strong>으로 사용할 수 있습니다.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowChargeView(true)}
+                  className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-xs font-bold transition shadow"
+                >
+                  💎 플랜 업그레이드
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ── 버튼 영역 ─────────────────────────────────────────
+    const showButton = !text && !loading && !error;
+
+    return (
+      <div className="mt-4">
+        {showButton && (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onRun}
+              className="flex items-center gap-2 bg-gradient-to-r from-violet-600 to-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:from-violet-700 hover:to-green-700 transition shadow"
+            >
+              ✨ AI 실시간 분석
+            </button>
+            {/* 무료 플랜 잔여 횟수 배지 */}
+            {isFree && (
+              <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${
+                remainingFree <= 1
+                  ? "bg-red-100 text-red-700"
+                  : remainingFree <= 3
+                  ? "bg-amber-100 text-amber-700"
+                  : "bg-green-100 text-green-700"
+              }`}>
+                무료 {remainingFree}회 남음
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* 로딩 중 */}
+        {loading && (
+          <div className="bg-violet-50 border border-violet-200 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 bg-violet-500 rounded-full animate-bounce" style={{animationDelay:"0ms"}}></div>
+              <div className="w-2 h-2 bg-violet-500 rounded-full animate-bounce" style={{animationDelay:"150ms"}}></div>
+              <div className="w-2 h-2 bg-violet-500 rounded-full animate-bounce" style={{animationDelay:"300ms"}}></div>
+              <span className="text-xs text-violet-600 font-semibold">AI가 실시간으로 분석 중...</span>
+            </div>
+            {text && (
+              <p className="text-sm text-violet-800 whitespace-pre-wrap leading-relaxed">{text}<span className="inline-block w-1 h-4 bg-violet-500 animate-pulse ml-0.5 align-middle"></span></p>
+            )}
+          </div>
+        )}
+
+        {/* 분석 완료 */}
+        {done && (
+          <div className="bg-gradient-to-br from-violet-50 to-green-50 border border-violet-200 rounded-xl p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-1.5">
+                <span className="text-base">✨</span>
+                <p className="text-xs font-bold text-violet-700">AI 실시간 분석 결과</p>
+              </div>
+              <button
+                onClick={() => setAiAnalysis(p => ({ ...p, [aiKey]: "" }))}
+                className="text-xs text-violet-400 hover:text-violet-600"
+              >다시 분석</button>
+            </div>
+            <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{text}</p>
+          </div>
+        )}
+
+        {/* 일반 에러 */}
+        {error && error !== "UPGRADE_REQUIRED" && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+            <p className="text-xs font-bold text-red-600 mb-1">⚠️ 오류</p>
+            <p className="text-sm text-red-700">{error}</p>
+            <button onClick={onRun} className="mt-2 text-xs text-red-600 underline hover:text-red-800">다시 시도</button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ✅ SCT AI 권장사항 생성 (룰 기반 - 상담 유형별)
+  function generateSctRecommendation(cat, nums) {
+    
+    // 응답 수집
+    const responses = nums.map(n => ({
+      question: sdriCompletionQ.find(q=>q.num===Number(n))?.prompt || n,
+      answer: srciResponses[n] || "(미응답)"
+    }));
+    
+    // 키워드 분석
+    const allText = responses.map(r => r.answer).join(" ").toLowerCase();
+    
+    // 상담 유형에 따라 분석 분기
+    let analysis = "";
+    let recommendations = [];
+    
+    if (counselingType === "biblical") {
+      // 🕊️ 기독교 상담 분석
+      analysis = generateBiblicalSctAnalysis(cat, allText);
+      recommendations = generateBiblicalSctRecommendations(cat, allText);
+    } else {
+      // 🧠 심리상담 분석 (기존 로직)
+      analysis = generatePsychologicalSctAnalysis(cat, allText);
+      recommendations = generatePsychologicalSctRecommendations(allText);
+    }
+    
+    const finalSummary = analysis + (recommendations.length > 0 ? "\n\n[권장사항]\n" + recommendations.join("\n") : "");
+    
+    setTimeout(() => {
+      setSctSummaries(p => ({ ...p, [cat]: finalSummary }));
+      setLoadingSummary(p => ({ ...p, [cat]: false }));
+    }, 800);
+  }
+
+  // 🧠 심리상담 SCT 분석
+  function generatePsychologicalSctAnalysis(cat, allText) {
+    let analysis = "";
+    
+    if (cat.includes("어머니")) {
+      if (allText.includes("좋") || allText.includes("사랑") || allText.includes("따뜻")) {
+        analysis = "어머니와의 관계가 긍정적으로 형성되어 있습니다. 애착 관계가 안정적이며, 이는 대인관계 형성의 긍정적 기반이 됩니다.";
+      } else if (allText.includes("힘들") || allText.includes("어렵") || allText.includes("갈등")) {
+        analysis = "어머니와의 관계에서 일부 어려움이 관찰됩니다. 이는 정서적 지지 체계 강화가 필요함을 시사합니다. 상담을 통한 관계 개선이 도움이 될 수 있습니다.";
+      } else {
+        analysis = "어머니와의 관계에 대한 복합적인 감정이 나타납니다. 애착 패턴을 탐색하고 긍정적 측면을 강화하는 것이 도움이 될 수 있습니다.";
+      }
+    } else if (cat.includes("아버지")) {
+      if (allText.includes("존경") || allText.includes("좋") || allText.includes("따뜻")) {
+        analysis = "아버지와의 관계가 긍정적입니다. 권위 인물에 대한 건강한 태도가 형성되어 있으며, 이는 사회적응에 긍정적 영향을 줍니다.";
+      } else if (allText.includes("무섭") || allText.includes("엄격") || allText.includes("거리")) {
+        analysis = "아버지와의 관계에서 심리적 거리감이 느껴집니다. 권위에 대한 양가감정이 있을 수 있으며, 이는 상담을 통해 탐색할 필요가 있습니다.";
+      } else {
+        analysis = "아버지 상에 대한 다층적인 인식이 나타납니다. 권위 관계에 대한 이해를 심화하는 것이 성장에 도움이 될 수 있습니다.";
+      }
+    } else if (cat.includes("가족")) {
+      if (allText.includes("화목") || allText.includes("행복") || allText.includes("사랑")) {
+        analysis = "가족 관계가 전반적으로 긍정적입니다. 안정적인 가족 기반은 심리적 안녕감의 중요한 자원입니다.";
+      } else if (allText.includes("갈등") || allText.includes("힘들") || allText.includes("불화")) {
+        analysis = "가족 내 역동에 어려움이 있는 것으로 보입니다. 가족 상담이나 의사소통 개선이 도움이 될 수 있습니다.";
+      } else {
+        analysis = "가족 관계에 대한 복합적 인식이 나타납니다. 가족 내 자신의 역할과 위치를 재정립하는 것이 도움이 될 수 있습니다.";
+      }
+    } else if (cat.includes("두려움")) {
+      if (allText.includes("없") || allText.includes("괜찮")) {
+        analysis = "불안 수준이 낮고 심리적 안정감이 양호합니다. 현재의 대처 방식을 유지하는 것이 좋습니다.";
+      } else if (allText.includes("실패") || allText.includes("거절") || allText.includes("혼자")) {
+        analysis = "특정 영역에 대한 불안감이 관찰됩니다. 이는 자존감과 연결될 수 있으며, 인지행동치료적 접근이 도움이 될 수 있습니다.";
+      } else {
+        analysis = "다양한 두려움 요인이 나타납니다. 불안 관리 기법을 학습하고 대처 자원을 강화하는 것이 권장됩니다.";
+      }
+    } else if (cat.includes("죄책감")) {
+      if (allText.includes("없") || allText.includes("후회")) {
+        analysis = "죄책감이 적절한 수준으로 관리되고 있습니다. 자기 성찰 능력이 있으나 과도하지 않습니다.";
+      } else if (allText.includes("많") || allText.includes("미안") || allText.includes("잘못")) {
+        analysis = "죄책감 수준이 다소 높게 나타납니다. 자기 비난 패턴을 탐색하고 자기 용서를 연습하는 것이 도움이 될 수 있습니다.";
+      } else {
+        analysis = "죄책감에 대한 복합적 인식이 나타납니다. 과거 경험을 재해석하고 수용하는 과정이 필요할 수 있습니다.";
+      }
+    } else if (cat.includes("능력")) {
+      if (allText.includes("잘") || allText.includes("자신") || allText.includes("능력")) {
+        analysis = "자기 효능감이 양호합니다. 자신의 능력에 대한 긍정적 인식은 목표 달성의 중요한 자원입니다.";
+      } else if (allText.includes("부족") || allText.includes("못") || allText.includes("없")) {
+        analysis = "자기 효능감이 다소 낮게 나타납니다. 작은 성공 경험을 축적하고 강점을 재발견하는 것이 도움이 될 수 있습니다.";
+      } else {
+        analysis = "자기 능력에 대한 현실적 평가가 나타납니다. 강점을 더욱 발전시키고 약점을 보완하는 균형적 접근이 권장됩니다.";
+      }
+    } else if (cat.includes("미래")) {
+      if (allText.includes("밝") || allText.includes("희망") || allText.includes("기대")) {
+        analysis = "미래에 대한 낙관적 태도가 나타납니다. 긍정적 미래 전망은 현재의 동기와 에너지를 높입니다.";
+      } else if (allText.includes("불안") || allText.includes("걱정") || allText.includes("어두")) {
+        analysis = "미래에 대한 불안감이 관찰됩니다. 구체적 목표 설정과 단계적 계획이 불안을 감소시킬 수 있습니다.";
+      } else {
+        analysis = "미래에 대한 현실적 태도가 나타납니다. 희망과 준비를 균형있게 유지하는 것이 중요합니다.";
+      }
+    } else if (cat.includes("목표")) {
+      if (allText.includes("명확") || allText.includes("계획") || allText.includes("꿈")) {
+        analysis = "목표가 명확하고 동기 수준이 양호합니다. 구체적 실행 계획을 수립하면 목표 달성 가능성이 높습니다.";
+      } else if (allText.includes("모르") || allText.includes("없") || allText.includes("막연")) {
+        analysis = "목표가 불명확한 상태입니다. 자기 탐색을 통해 가치관과 방향성을 명료화하는 것이 필요합니다.";
+      } else {
+        analysis = "목표에 대한 탐색 과정에 있습니다. 다양한 가능성을 열어두고 점진적으로 방향을 설정하는 것이 도움이 됩니다.";
+      }
+    } else {
+      analysis = "이 영역에 대한 응답을 종합적으로 분석한 결과, 개인의 고유한 경험과 인식이 반영되어 있습니다. 상담을 통해 더 깊이 탐색할 수 있습니다.";
+    }
+    
+    return analysis;
+  }
+  
+  // 🧠 심리상담 SCT 권장사항
+  function generatePsychologicalSctRecommendations(allText) {
+    const recommendations = [];
+    if (allText.includes("힘들") || allText.includes("어렵") || allText.includes("갈등")) {
+      recommendations.push("• 정기적인 심리 상담을 통한 감정 표현 및 해소");
+      recommendations.push("• 인지행동치료(CBT) 기법을 통한 사고 패턴 개선");
+    }
+    if (allText.includes("불안") || allText.includes("걱정") || allText.includes("두렵")) {
+      recommendations.push("• 이완 훈련 및 마음챙김 명상 실천");
+      recommendations.push("• 불안 관리 기법 학습 (복식호흡, 점진적 근육 이완)");
+    }
+    if (allText.includes("없") || allText.includes("모르")) {
+      recommendations.push("• 자기 탐색 활동 및 가치관 명료화 작업");
+      recommendations.push("• 진로 상담 및 심리검사를 통한 자기 이해");
+    }
+    if (allText.includes("우울") || allText.includes("슬프") || allText.includes("의욕")) {
+      recommendations.push("• 우울감 관리를 위한 행동 활성화 전략");
+      recommendations.push("• 규칙적인 운동과 충분한 수면");
+    }
+    return recommendations;
+  }
+  
+  // 🕊️ 기독교 상담 SCT 분석
+  function generateBiblicalSctAnalysis(cat, allText) {
+    let analysis = "";
+    
+    if (cat.includes("어머니")) {
+      if (allText.includes("좋") || allText.includes("사랑") || allText.includes("따뜻")) {
+        analysis = "어머니와의 관계에서 하나님의 사랑과 돌보심이 반영되어 있습니다. '어머니가 자식을 위로함같이 내가 너희를 위로하리니'(이사야 66:13)라는 말씀처럼, 건강한 어머니상은 하나님의 사랑을 경험하는 통로가 됩니다.";
+      } else if (allText.includes("힘들") || allText.includes("어렵") || allText.includes("갈등")) {
+        analysis = "어머니와의 관계에서 어려움이 있지만, 하나님께서는 '고아의 아버지'(시편 68:5)이시며 모든 관계의 상처를 치유하실 수 있습니다. 용서와 화해의 과정을 통해 하나님의 회복을 경험할 수 있습니다.";
+      } else {
+        analysis = "어머니와의 관계에 대한 복합적인 감정이 나타납니다. 이는 모든 인간 관계의 불완전함을 보여주며, 완전한 사랑은 오직 하나님 안에서만 발견됩니다(요한일서 4:19).";
+      }
+    } else if (cat.includes("아버지")) {
+      if (allText.includes("존경") || allText.includes("좋") || allText.includes("따뜻")) {
+        analysis = "아버지와의 긍정적 관계는 하늘 아버지를 이해하는 데 도움이 됩니다. '아버지께서 자식을 긍휼히 여기심같이 여호와께서는 자기를 경외하는 자를 긍휼히 여기시나니'(시편 103:13).";
+      } else if (allText.includes("무섭") || allText.includes("엄격") || allText.includes("거리")) {
+        analysis = "아버지와의 관계에서 두려움이나 거리감이 느껴지지만, 하나님 아버지는 '사랑의 아버지시오 모든 위로의 하나님이시며'(고린도후서 1:3) 우리를 완전히 받아주십니다. 땅의 아버지의 불완전함이 하늘 아버지의 완전한 사랑을 가리지 않도록 기도가 필요합니다.";
+      } else {
+        analysis = "아버지 상에 대한 다층적인 인식이 나타납니다. 하나님은 완전한 아버지이시며, 땅의 아버지와의 관계를 통해 하나님의 아버지 되심을 더 깊이 이해할 수 있습니다.";
+      }
+    } else if (cat.includes("가족")) {
+      if (allText.includes("화목") || allText.includes("행복") || allText.includes("사랑")) {
+        analysis = "가족 관계가 전반적으로 긍정적입니다. '보라 형제가 연합하여 동거함이 어찌 그리 선하고 아름다운고'(시편 133:1). 감사함으로 이 축복을 지키고 더욱 발전시켜 나가세요.";
+      } else if (allText.includes("갈등") || allText.includes("힘들") || allText.includes("불화")) {
+        analysis = "가족 내 어려움이 있지만, '그리스도의 평강이 너희 마음을 주장하게 하라'(골로새서 3:15). 용서와 화해는 성경적 가족 회복의 핵심입니다. 먼저 자신의 죄를 인정하고 용서를 구하는 것부터 시작하세요.";
+      } else {
+        analysis = "가족 관계에 대한 복합적 인식이 나타납니다. 가족은 하나님이 세우신 첫 번째 공동체이며, '서로 사랑하라'(요한복음 13:34)는 명령이 가장 먼저 실천되어야 할 곳입니다.";
+      }
+    } else if (cat.includes("두려움")) {
+      if (allText.includes("없") || allText.includes("괜찮")) {
+        analysis = "두려움이 적은 것은 하나님을 신뢰하는 믿음의 표현일 수 있습니다. '두려워하지 말라 내가 너와 함께함이라'(이사야 41:10)는 약속을 계속 붙들으세요.";
+      } else if (allText.includes("실패") || allText.includes("거절") || allText.includes("혼자")) {
+        analysis = "두려움이 관찰되지만, 성경은 '두려워 말라'를 365번 말씀합니다. 하나님은 '너를 버리지 아니하고 너를 떠나지 아니하시리라'(히브리서 13:5)고 약속하십니다. 두려움은 하나님께 맡기고 말씀 안에서 평안을 찾으세요.";
+      } else {
+        analysis = "다양한 두려움이 나타납니다. '완전한 사랑이 두려움을 내쫓나니'(요한일서 4:18). 하나님의 사랑을 더 깊이 경험할수록 두려움은 줄어듭니다.";
+      }
+    } else if (cat.includes("죄책감")) {
+      if (allText.includes("없") || allText.includes("후회")) {
+        analysis = "적절한 죄책감은 회개로 이끄는 건강한 양심의 표현입니다. '우리가 우리 죄를 자백하면 그는 미쁘시고 의로우사 우리 죄를 사하시며'(요한일서 1:9).";
+      } else if (allText.includes("많") || allText.includes("미안") || allText.includes("잘못")) {
+        analysis = "과도한 죄책감이 나타납니다. 그리스도 안에서 '정죄함이 없나니'(로마서 8:1). 이미 용서받았다면 계속 죄책감에 매여 있는 것은 사탄의 전략입니다. 하나님의 완전한 용서를 믿고 받아들이세요.";
+      } else {
+        analysis = "죄책감에 대한 복합적 인식이 나타납니다. 성경적으로 죄는 인정하되, 그리스도의 십자가를 통해 이미 용서받았음을 기억하세요(에베소서 1:7).";
+      }
+    } else if (cat.includes("능력")) {
+      if (allText.includes("잘") || allText.includes("자신") || allText.includes("능력")) {
+        analysis = "자신의 능력을 긍정적으로 인식하고 있습니다. 이는 하나님이 주신 은사를 잘 활용하는 것입니다. '내게 능력 주시는 자 안에서 내가 모든 것을 할 수 있느니라'(빌립보서 4:13).";
+      } else if (allText.includes("부족") || allText.includes("못") || allText.includes("없")) {
+        analysis = "자신의 부족함을 인식하는 것은 겸손의 시작입니다. '내 은혜가 네게 족하도다 이는 내 능력이 약한 데서 온전하여짐이라'(고린도후서 12:9). 하나님은 약한 자를 통해 일하십니다.";
+      } else {
+        analysis = "자기 능력에 대한 현실적 평가가 나타납니다. 성경은 '자기를 낮추는 자는 높아지고'(마태복음 23:12)라고 말씀합니다. 겸손과 자신감의 균형을 유지하세요.";
+      }
+    } else if (cat.includes("미래")) {
+      if (allText.includes("밝") || allText.includes("희망") || allText.includes("기대")) {
+        analysis = "미래에 대한 희망적 태도가 나타납니다. '너희를 향한 나의 생각을 아나니 평안이요 재앙이 아니니라 너희에게 미래와 희망을 주는 것이니라'(예레미야 29:11).";
+      } else if (allText.includes("불안") || allText.includes("걱정") || allText.includes("어두")) {
+        analysis = "미래에 대한 불안이 관찰됩니다. '내일 일을 위하여 염려하지 말라... 한 날의 괴로움은 그 날로 족하니라'(마태복음 6:34). 하나님이 인도하시는 미래를 신뢰하세요.";
+      } else {
+        analysis = "미래에 대한 현실적 태도가 나타납니다. '사람이 마음으로 자기의 길을 계획할지라도 그의 걸음을 인도하시는 이는 여호와시니라'(잠언 16:9).";
+      }
+    } else if (cat.includes("목표")) {
+      if (allText.includes("명확") || allText.includes("계획") || allText.includes("꿈")) {
+        analysis = "목표가 명확한 것은 좋은 청지기의 모습입니다. '네가 하는 일을 여호와께 맡기라 그리하면 네가 경영하는 것이 이루어지리라'(잠언 16:3). 하나님의 뜻 안에서 목표를 추구하세요.";
+      } else if (allText.includes("모르") || allText.includes("없") || allText.includes("막연")) {
+        analysis = "목표가 불명확한 상태입니다. '너희는 먼저 그의 나라와 그의 의를 구하라 그리하면 이 모든 것을 너희에게 더하시리라'(마태복음 6:33). 하나님의 뜻을 구하는 기도부터 시작하세요.";
+      } else {
+        analysis = "목표에 대한 탐색 과정에 있습니다. '너는 마음을 다하여 여호와를 신뢰하고 네 명철을 의지하지 말라 너는 범사에 그를 인정하라 그리하면 네 길을 지도하시리라'(잠언 3:5-6).";
+      }
+    } else {
+      analysis = "이 영역에 대한 응답을 종합적으로 분석한 결과, 하나님의 형상으로 지음 받은 개인의 고유한 경험과 인식이 반영되어 있습니다. 기독교 상담을 통해 더 깊이 탐색하고 하나님의 뜻을 발견할 수 있습니다.";
+    }
+    
+    return analysis;
+  }
+  
+  // 🕊️ 기독교 상담 SCT 권장사항
+  function generateBiblicalSctRecommendations(cat, allText) {
+    const recommendations = [];
+    
+    if (allText.includes("힘들") || allText.includes("어렵") || allText.includes("갈등")) {
+      recommendations.push("• 매일 성경 읽기와 기도로 하나님과의 관계 깊이하기");
+      recommendations.push("• 기독교 상담을 통해 관계 회복과 용서의 과정 경험하기");
+      recommendations.push("• 소그룹이나 셀 모임에서 영적 지지 받기");
+    }
+    
+    if (allText.includes("불안") || allText.includes("걱정") || allText.includes("두렵")) {
+      recommendations.push("• 시편 말씀 묵상과 암송 (시편 23, 27, 46편 등)");
+      recommendations.push("• 염려를 기도로 전환하기 (빌립보서 4:6-7)");
+      recommendations.push("• 찬양과 경배를 통한 영적 평안 경험");
+    }
+    
+    if (allText.includes("없") || allText.includes("모르")) {
+      recommendations.push("• 하나님의 뜻을 구하는 기도 생활 (야고보서 1:5)");
+      recommendations.push("• 성경적 비전 발견을 위한 금식기도");
+      recommendations.push("• 영적 멘토나 목회자와의 정기적 만남");
+    }
+    
+    if (allText.includes("죄책") || allText.includes("잘못") || allText.includes("미안")) {
+      recommendations.push("• 십자가 복음 묵상과 용서의 확신 갖기");
+      recommendations.push("• 필요시 화해와 용서를 구하는 실천");
+      recommendations.push("• '그리스도 안에서의 새로운 피조물' 정체성 확립 (고린도후서 5:17)");
+    }
+    
+    if (allText.includes("우울") || allText.includes("슬프") || allText.includes("의욕")) {
+      recommendations.push("• 시편 기도로 하나님께 감정 토로하기");
+      recommendations.push("• 성도들과의 교제를 통한 영적 회복");
+      recommendations.push("• 감사 일기 쓰기 (데살로니가전서 5:18)");
+    }
+    
+    // 모든 경우에 공통 권장사항
+    recommendations.push("• 정기적인 교회 출석과 말씀 사역 참여");
+    recommendations.push("• 성경 통독 및 QT(Quiet Time) 습관화");
+    
+    return recommendations;
+  }
+
+  // ✅ DSI AI 권장사항 생성 (상담 유형별 분기)
+  function generateDsiRecommendation() {
+    setLoadingRec(true);
+    setDsiRec("");
+    
+    // 상담 유형 확인 (기본값: 심리상담)
+    const counselingType = activeLinkData?.counselingType || "psychological";
+    
+    const { scales: areas, total } = calcSdri();
+    
+    let finalRec = "";
+    if (counselingType === "biblical") {
+      // 🕊️ 기독교 상담 분석
+      finalRec = generateBiblicalDsiAnalysis(total, areas);
+    } else {
+      // 🧠 심리상담 분석
+      finalRec = generatePsychologicalDsiAnalysis(total, areas);
+    }
+    
+    setTimeout(() => {
+      setDsiRec(finalRec);
+      setLoadingRec(false);
+    }, 1000);
+  }
+  
+  // 🧠 심리상담 DSI 분석
+  function generatePsychologicalDsiAnalysis(total, areas) {
+    const level = total >= 120 ? "높음(양호)" : total >= 80 ? "중간(보통)" : "낮음(취약)";
+    
+    // 영역별 분석
+    const areaAnalysis = [];
+    const weakAreas = [];
+    const strongAreas = [];
+    
+    Object.entries(areas).forEach(([area, score]) => {
+      const maxScore = 36;
+      const percentage = (score / maxScore) * 100;
+      
+      if (percentage >= 70) {
+        strongAreas.push(area);
+      } else if (percentage < 50) {
+        weakAreas.push(area);
+      }
+      
+      let areaComment = "";
+      if (area === "인지적 기능") {
+        if (percentage >= 70) {
+          areaComment = "감정 조절과 의사결정 능력이 우수합니다. 충동성이 낮고 논리적 사고가 가능합니다.";
+        } else if (percentage < 50) {
+          areaComment = "충동성 조절에 어려움이 있을 수 있습니다. 감정과 사고를 분리하는 연습이 필요합니다.";
+        } else {
+          areaComment = "감정 조절 능력이 보통 수준입니다. 스트레스 관리 기법을 익히면 도움이 됩니다.";
+        }
+      } else if (area === "자아통합") {
+        if (percentage >= 70) {
+          areaComment = "자기 정체성이 명확하고 가치관이 일관됩니다. 자율성이 높습니다.";
+        } else if (percentage < 50) {
+          areaComment = "타인의 영향을 많이 받는 편입니다. 자기 가치관을 명료화하는 작업이 필요합니다.";
+        } else {
+          areaComment = "자아 정체성 형성 과정에 있습니다. 자기 탐색을 통해 더 강화할 수 있습니다.";
+        }
+      } else if (area === "가족투사") {
+        if (percentage >= 70) {
+          areaComment = "가족 문제로부터 건강하게 분리되어 있습니다. 객관적 시각을 유지합니다.";
+        } else if (percentage < 50) {
+          areaComment = "가족 문제가 현재 삶에 영향을 주고 있습니다. 가족 상담이 도움이 될 수 있습니다.";
+        } else {
+          areaComment = "가족 영향을 인식하고 있습니다. 건강한 경계 설정이 필요합니다.";
+        }
+      } else if (area === "정서적 단절") {
+        if (percentage >= 70) {
+          areaComment = "가족과 적절한 거리를 유지합니다. 독립성과 친밀감의 균형이 좋습니다.";
+        } else if (percentage < 50) {
+          areaComment = "가족으로부터 과도하게 단절되어 있을 수 있습니다. 연결감 회복이 필요합니다.";
+        } else {
+          areaComment = "가족과의 거리감이 적절합니다. 현재 수준을 유지하는 것이 좋습니다.";
+        }
+      } else if (area === "가족퇴행") {
+        if (percentage >= 70) {
+          areaComment = "가족 스트레스 상황에서도 성숙하게 대응합니다. 퇴행 경향이 낮습니다.";
+        } else if (percentage < 50) {
+          areaComment = "가족 상황에서 스트레스를 많이 받습니다. 감정 조절 기법이 필요합니다.";
+        } else {
+          areaComment = "가족 상황 대처가 보통입니다. 스트레스 관리를 강화하면 좋습니다.";
+        }
+      }
+      
+      areaAnalysis.push(`${area} (${score}/${maxScore}점, ${percentage.toFixed(0)}%):\n${areaComment}`);
+    });
+    
+    // 종합 분석
+    let overallAnalysis = `전반적인 자아분화 수준이 ${level}입니다. `;
+    if (total >= 120) {
+      overallAnalysis += "자기 자신에 대한 이해가 깊고, 타인과의 관계에서 건강한 경계를 유지할 수 있습니다. 정서적으로 안정적이며 독립적인 의사결정이 가능합니다.";
+    } else if (total >= 80) {
+      overallAnalysis += "기본적인 자아분화가 이루어져 있으나, 일부 영역에서 개선의 여지가 있습니다. 지속적인 자기 성찰과 성장이 도움이 됩니다.";
+    } else {
+      overallAnalysis += "자아분화 수준이 다소 낮은 편입니다. 가족이나 타인의 영향을 많이 받을 수 있으며, 전문적인 상담을 통한 지원이 권장됩니다.";
+    }
+    
+    // 권장사항
+    const recommendations = [];
+    
+    if (weakAreas.length > 0) {
+      recommendations.push(`[취약 영역 개선]\n취약한 영역: ${weakAreas.join(", ")}\n• 해당 영역에 초점을 맞춘 상담 진행\n• 자기 인식 강화 활동 (일기 쓰기, 자기 성찰)\n• 가족과의 건강한 경계 설정 연습`);
+    }
+    
+    if (total < 120) {
+      recommendations.push("[상담 접근법]\n• Bowen 가족치료 기법 활용\n• 자아분화 향상 프로그램 참여\n• 정서 조절 기술 훈련\n• 가족 관계 재구조화 작업");
+    }
+    
+    if (strongAreas.length > 0) {
+      recommendations.push(`[강점 활용]\n강점 영역: ${strongAreas.join(", ")}\n• 강점을 활용한 대처 전략 강화\n• 긍정적 경험 확대 적용`);
+    }
+    
+    recommendations.push("[단기 목표 (1-3개월)]\n• 주 1회 정기 상담 참여\n• 감정 일지 작성 (일일)\n• 이완 훈련 실천 (주 3회)");
+    
+    recommendations.push("[장기 목표 (6-12개월)]\n• 자아분화 수준 20% 향상\n• 가족과의 건강한 관계 재정립\n• 스트레스 상황에서의 대처 능력 강화");
+    
+    return `${overallAnalysis}\n\n[영역별 상세 분석]\n${areaAnalysis.join("\n\n")}\n\n${recommendations.join("\n\n")}\n\n[주의사항]\n본 권장사항은 자동 분석 결과이며, 전문 상담사의 해석과 병행되어야 합니다. 개인의 고유한 맥락을 고려한 맞춤형 상담이 중요합니다.`;
+  }
+  
+  // 🕊️ 기독교 상담 DSI 분석
+  function generateBiblicalDsiAnalysis(total, areas) {
+    const level = total >= 120 ? "높음(양호)" : total >= 80 ? "중간(보통)" : "낮음(취약)";
+    
+    // 영역별 분석
+    const areaAnalysis = [];
+    const weakAreas = [];
+    const strongAreas = [];
+    
+    Object.entries(areas).forEach(([area, score]) => {
+      const maxScore = 36;
+      const percentage = (score / maxScore) * 100;
+      
+      if (percentage >= 70) {
+        strongAreas.push(area);
+      } else if (percentage < 50) {
+        weakAreas.push(area);
+      }
+      
+      let areaComment = "";
+      if (area === "인지적 기능") {
+        if (percentage >= 70) {
+          areaComment = "감정을 잘 조절하고 논리적으로 사고합니다. '너희는 이 세대를 본받지 말고 오직 마음을 새롭게 함으로 변화를 받아 하나님의 선하시고 기뻐하시고 온전하신 뜻이 무엇인지 분별하도록 하라'(로마서 12:2). 하나님이 주신 이성의 선물을 잘 사용하고 있습니다.";
+        } else if (percentage < 50) {
+          areaComment = "충동적인 반응이 나타날 수 있습니다. '사람의 성내는 것이 하나님의 의를 이루지 못함이라'(야고보서 1:20). 감정에 휘둘리기 전에 기도하며 하나님의 지혜를 구하세요.";
+        } else {
+          areaComment = "감정 조절 능력이 보통입니다. '너희 안에 이 마음을 품으라 곧 그리스도 예수의 마음이니'(빌립보서 2:5). 그리스도의 마음을 품고 성령의 열매를 구하세요.";
+        }
+      } else if (area === "자아통합") {
+        if (percentage >= 70) {
+          areaComment = "자기 정체성이 명확합니다. '그리스도 안에서 새로운 피조물'(고린도후서 5:17)로서의 정체성을 잘 확립하고 있습니다. 하나님의 자녀로서 확신 있게 살아가고 있습니다.";
+        } else if (percentage < 50) {
+          areaComment = "타인의 영향을 많이 받습니다. '사람을 기쁘게 하는 자가 되려 하였더라면 그리스도의 종이 아니니라'(갈라디아서 1:10). 하나님 안에서 자신의 정체성을 찾고, 하나님만을 기쁘시게 하는 삶을 추구하세요.";
+        } else {
+          areaComment = "자아 정체성 형성 중입니다. '너희 믿음을 시험하여 너희가 믿음 안에 있는가 너희 자신을 확증하라'(고린도후서 13:5). 그리스도 안에서 자신이 누구인지 확인하는 시간을 가지세요.";
+        }
+      } else if (area === "가족투사") {
+        if (percentage >= 70) {
+          areaComment = "가족 문제로부터 건강하게 분리되어 있습니다. '그러므로 사람이 부모를 떠나 그의 아내와 합하여 둘이 한 몸을 이룰지로다'(창세기 2:24). 성경적 독립과 분리를 이루었습니다.";
+        } else if (percentage < 50) {
+          areaComment = "가족 문제가 현재 삶에 영향을 줍니다. '또 다른 사람들도 건지고자 하여 두려움으로 붙들어 끌어내며'(유다서 1:23). 가족을 사랑하되, 가족의 문제가 당신의 정체성을 정의하지 않도록 기도하세요. 용서와 경계 설정이 필요합니다.";
+        } else {
+          areaComment = "가족 영향을 인식하고 있습니다. '내 멍에는 쉽고 내 짐은 가벼우니라'(마태복음 11:30). 가족의 짐을 주님께 맡기고 건강한 경계를 세우세요.";
+        }
+      } else if (area === "정서적 단절") {
+        if (percentage >= 70) {
+          areaComment = "가족과 적절한 거리를 유지합니다. '각 사람은 자기 자신의 행위를 살피라 그리하면 자랑할 것이 자기에게만 있고 남에게는 있지 아니하리니'(갈라디아서 6:4). 독립성과 친밀감의 균형이 좋습니다.";
+        } else if (percentage < 50) {
+          areaComment = "가족으로부터 과도하게 단절되어 있을 수 있습니다. '네 부모를 공경하라'(출애굽기 20:12)는 명령을 기억하세요. 상처가 있더라도 용서하고 화해를 추구하세요.";
+        } else {
+          areaComment = "가족과의 거리가 적절합니다. '모든 사람과 더불어 화평함과 거룩함을 따르라'(히브리서 12:14). 관계를 유지하며 성장하세요.";
+        }
+      } else if (area === "가족퇴행") {
+        if (percentage >= 70) {
+          areaComment = "가족 스트레스에도 성숙하게 대응합니다. '내가 어렸을 때에는 말하는 것이 어린 아이와 같고... 장성한 사람이 되어서는 어린 아이의 일을 버렸노라'(고린도전서 13:11). 영적 성숙함이 나타납니다.";
+        } else if (percentage < 50) {
+          areaComment = "가족 상황에서 스트레스를 많이 받습니다. '너희 염려를 다 주께 맡기라 이는 그가 너희를 돌보심이라'(베드로전서 5:7). 가족 문제를 하나님께 맡기고 평안을 찾으세요.";
+        } else {
+          areaComment = "가족 상황 대처가 보통입니다. '주 안에서 항상 기뻐하라'(빌립보서 4:4). 어려운 상황에서도 주님을 바라보세요.";
+        }
+      }
+      
+      areaAnalysis.push(`${area} (${score}/${maxScore}점, ${percentage.toFixed(0)}%):\n${areaComment}`);
+    });
+    
+    // 종합 분석
+    let overallAnalysis = `전반적인 자아분화 수준이 ${level}입니다. `;
+    if (total >= 120) {
+      overallAnalysis += "하나님께서 주신 건강한 자아가 잘 형성되어 있습니다. '그리스도 안에서 자유롭게 하는 것'(갈라디아서 5:1)을 경험하고 있으며, 타인과의 관계에서도 그리스도의 사랑으로 균형을 유지합니다. 이 은혜를 감사히 여기며 다른 이들을 세우는 데 사용하세요.";
+    } else if (total >= 80) {
+      overallAnalysis += "기본적인 자아분화가 이루어져 있습니다. '선을 행하되 낙심하지 말지니 포기하지 아니하면 때가 이르매 거두리라'(갈라디아서 6:9). 더 깊은 영적 성숙을 향해 나아가세요.";
+    } else {
+      overallAnalysis += "자아분화 수준이 낮은 편입니다. 그러나 하나님은 '연약한 자들을 강하게 하시는'(고린도후서 12:9) 분이십니다. 주님의 능력이 약한 데서 온전하여집니다. 겸손히 도움을 구하고 기독교 상담을 받으세요.";
+    }
+    
+    // 성경적 권장사항
+    const recommendations = [];
+    
+    if (weakAreas.length > 0) {
+      recommendations.push(`[취약 영역의 영적 치유]\n취약한 영역: ${weakAreas.join(", ")}\n• 해당 영역에 대한 성경 말씀 묵상과 암송\n• 기독교 상담을 통한 하나님의 관점 회복\n• 기도와 금식으로 영적 돌파 경험\n• 소그룹에서 중보기도 받기`);
+    }
+    
+    if (total < 120) {
+      recommendations.push("[영적 성장 전략]\n• 매일 성경 읽기와 QT로 하나님과의 관계 깊이하기\n• 십자가 복음 묵상 - 정체성의 근원 확인\n• 용서와 화해의 실천 (가족 관계 회복)\n• 성령 충만과 성령의 열매 구하기");
+    }
+    
+    if (strongAreas.length > 0) {
+      recommendations.push(`[강점을 통한 섬김]\n강점 영역: ${strongAreas.join(", ")}\n• 이 은사를 교회와 이웃 섬김에 사용하기\n• 약한 자들을 돌보고 격려하기\n• 하나님께 감사와 찬양 드리기`);
+    }
+    
+    recommendations.push("[단기 영적 목표 (1-3개월)]\n• 주 1회 기독교 상담 참여\n• 매일 성경 묵상과 기도 일기 작성\n• 주일 예배 및 소그룹 모임 참석\n• 가족을 위한 중보기도");
+    
+    recommendations.push("[장기 영적 목표 (6-12개월)]\n• 그리스도 안에서의 정체성 확립\n• 가족과의 성경적 관계 회복\n• 영적 성숙을 통한 자아분화 향상\n• 섬김과 사역을 통한 은사 개발");
+    
+    recommendations.push("[추천 성경 구절 묵상]\n• 정체성: 고린도후서 5:17, 갈라디아서 2:20\n• 가족 관계: 에베소서 6:1-4, 골로새서 3:18-21\n• 감정 조절: 잠언 16:32, 야고보서 1:19-20\n• 자유와 성숙: 갈라디아서 5:1, 고린도전서 13:11");
+    
+    return `${overallAnalysis}\n\n[영역별 상세 분석]\n${areaAnalysis.join("\n\n")}\n\n${recommendations.join("\n\n")}\n\n[기독교 상담의 원칙]\n본 권장사항은 성경 말씀에 기초한 분석이며, 숙련된 기독교 상담사와 함께 더 깊이 탐색하시기를 권장합니다. '모든 성경은 하나님의 감동으로 된 것으로 교훈과 책망과 바르게 함과 의로 교육하기에 유익하니'(디모데후서 3:16). 하나님의 말씀이 당신을 인도하고 치유하시기를 기도합니다.`;
+  }
+
+  function logout() {
+    // B2C 로그아웃 — handleLogout 위임
+    clearLoginState();
+    setSrciResponses({});
+    setSctSummaries({});
+    setSdriResponses({});
+    setDsiRec("");
+    setActiveLinkId(null);
+    setSubmitted([]);
+    setLinkInput("");
+    setPendingTests([]);
+    setCurrentTestIndex(0);
+    setMultiSessionIds([]);
+    // AI 채팅 횟수 초기화
+    setAiChatUsed(0);
+    try { localStorage.removeItem(AI_LIMIT_KEY); } catch {}
+    setView('memberDashboard');
+  }
+
+  function getCounselorSessions() {
+    return submitted.filter(s => {
+      if (!s.linkId) return false;
+      const linkData = loadLink(s.linkId);
+      return false; // B2B 제거됨
+    });
+  }
+
+  // ========== VIEWS ==========
+  console.log('🎬 렌더링 시작 - current view:', view);
+
+  if (view === "login") {
+    console.log('🎬 로그인 화면 렌더링');
+  }
+  
+  if (view === "login") return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-green-100 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+        <div className="text-center mb-6">
+          <div className="text-5xl mb-3">🧠</div>
+          <h1 className="text-3xl font-bold text-gray-800">심리검사 시스템</h1>
+          <p className="text-gray-400 text-sm mt-1">상담사에게 받은 링크 ID로 검사를 시작하세요</p>
+        </div>
+        <Msg msg={loginMsg} />
+        <div className="bg-green-50 border-2 border-green-200 rounded-xl p-5 mb-5">
+          <p className="text-sm font-bold text-green-800 mb-3">📋 검사 응시 (내담자)</p>
+          <input
+            className="w-full px-4 py-3 border-2 border-green-300 rounded-lg outline-none focus:border-green-500 text-sm mb-3 font-mono"
+            placeholder="상담사에게 받은 링크 ID를 여기에 붙여넣으세요"
+            value={linkInput}
+            onChange={e => setLinkInput(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && enterByLinkId()}
+          />
+          <button onClick={enterByLinkId} className="w-full bg-green-700 text-white py-3 rounded-lg font-bold hover:bg-green-800 transition text-base">
+            검사 시작하기 →
+          </button>
+        </div>
+        <div className="relative mb-5">
+          <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200" /></div>
+          </div>
+      </div>
+    </div>
+  );
+
+  if (view === "clientLogin") return (
+    <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-100 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+        <button onClick={() => { setView("login"); setLoginMsg({ type: "", text: "" }); }} className="text-gray-400 hover:text-gray-600 text-sm mb-5 flex items-center gap-1">
+          ← 뒤로
+        </button>
+        <div className="text-center mb-6">
+          <div className="text-4xl mb-2">🧪</div>
+          <h1 className="text-2xl font-bold text-gray-800">
+            심리검사 시작
+          </h1>
+          <div className="mt-2 inline-block bg-teal-100 text-teal-800 px-3 py-1 rounded-full text-sm font-semibold">
+            내담자: {activeLinkData?.clientName}
+          </div>
+          {activeLinkData && (activeLinkData.testTypes || [activeLinkData.testType]).length > 0 && (
+            <div className="mt-3">
+              <p className="text-xs text-gray-500 mb-1.5">진행할 검사 ({(activeLinkData.testTypes || [activeLinkData.testType]).length}개)</p>
+              <div className="flex flex-wrap justify-center gap-1.5">
+                {(activeLinkData.testTypes || [activeLinkData.testType]).map((t, i) => (
+                  <span key={t} className="px-2.5 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-bold border border-purple-200">
+                    {i+1}. {t}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="bg-teal-50 border border-teal-200 rounded-lg p-3 mb-4 text-sm text-teal-700">
+          ✅ 링크 확인 완료. 전화번호와 비밀번호를 입력해 검사를 시작하세요.
+        </div>
+        <Msg msg={loginMsg} />
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">전화번호</label>
+            <input type="tel" value={userInfo.phone} onChange={e => setUserInfo({ ...userInfo, phone: e.target.value })} placeholder="010-1234-5678" className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-teal-500 outline-none" />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">비밀번호</label>
+            <input type="password" value={userInfo.password} onChange={e => setUserInfo({ ...userInfo, password: e.target.value })} placeholder="사용하실 비밀번호를 입력하세요" className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-teal-500 outline-none" onKeyDown={e => e.key === "Enter" && clientLogin()} />
+            <p className="text-xs text-gray-400 mt-1">* 본인이 직접 설정하는 비밀번호입니다</p>
+          </div>
+          <button onClick={clientLogin} className="w-full bg-teal-600 text-white py-3 rounded-lg font-bold hover:bg-teal-700 transition text-lg">
+            검사 시작 →
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── SRCI: 자기반응 완성 검사 (SCT 자리, 문장완성형 25문항) ──
+  if (view === "sctTest") {
+    const filled = sdriCompletionQ.filter(q => srciResponses[q.num]?.trim()).length;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-violet-50 to-indigo-50 p-4">
+        <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-6">
+          {pendingTests.length > 1 && (
+            <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
+              <p className="text-xs font-bold text-purple-700 mb-2">📋 검사 진행 현황 ({currentTestIndex + 1}/{pendingTests.length})</p>
+              <div className="flex gap-2 flex-wrap">
+                {pendingTests.map((t, i) => (
+                  <span key={t} className={`px-3 py-1 rounded-full text-xs font-bold border ${i < currentTestIndex ? "bg-green-100 border-green-300 text-green-700" : i === currentTestIndex ? "bg-purple-600 text-white border-purple-600" : "bg-gray-100 border-gray-300 text-gray-400"}`}>
+                    {i < currentTestIndex ? "✅ " : i === currentTestIndex ? "▶ " : ""}{t}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="text-center mb-6">
+            <div className="inline-flex items-center gap-2 bg-violet-50 border border-violet-200 rounded-full px-4 py-1.5 mb-3">
+              <span className="text-violet-600 font-bold text-sm">✍️ SRCI</span>
+              <span className="text-violet-400 text-xs">자기반응 완성 검사</span>
+            </div>
+            <h1 className="text-2xl font-bold text-violet-900 mb-1">자기반응 완성 검사</h1>
+            <p className="text-gray-400 text-sm">빈칸에 가장 먼저 떠오르는 것을 솔직하게 완성해 주세요 (25문항)</p>
+          </div>
+          <div className="bg-violet-50 border border-violet-200 rounded-lg p-3 mb-5 text-xs text-violet-800 text-center">
+            진행: <strong>{filled}</strong> / {sdriCompletionQ.length} 문항
+            <div className="mt-2 bg-violet-200 rounded-full h-1.5">
+              <div className="bg-violet-500 h-1.5 rounded-full transition-all" style={{width:`${(filled/sdriCompletionQ.length)*100}%`}}/>
+            </div>
+          </div>
+          {saveStatus && <div className="mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded text-sm text-yellow-800 text-center">{saveStatus}</div>}
+          <div className="space-y-4">
+            {[...sdriCompletionQ].sort((a,b) => a.num - b.num).map((q, idx) => (
+              <div key={q.num} className="border-b border-gray-100 pb-4">
+                <div className="flex items-start gap-2 mb-2">
+                  <span className="text-xs w-6 h-6 flex items-center justify-center rounded-full font-bold shrink-0 mt-0.5 bg-violet-100 text-violet-700">
+                    {idx + 1}
+                  </span>
+                  <label className="font-semibold text-gray-700 text-sm leading-relaxed">
+                    {q.prompt} <span className="text-gray-300 font-normal">___________</span>
+                  </label>
+                </div>
+                <input type="text"
+                  value={srciResponses[q.num] || ''}
+                  onChange={e => setSrciResponses(p => ({...p, [q.num]: e.target.value}))}
+                  placeholder="떠오르는 대로 자유롭게..."
+                  className={`w-full px-4 py-2.5 border-2 rounded-lg outline-none text-sm transition ${srciResponses[q.num]?.trim() ? 'border-violet-300 bg-violet-50 focus:border-violet-500' : 'border-gray-200 focus:border-violet-400'}`}
+                />
+              </div>
+            ))}
+          </div>
+          <div className="mt-8 text-center">
+            <button onClick={submitSrci}
+              className="bg-violet-600 text-white px-10 py-3 rounded-xl font-bold text-lg hover:bg-violet-700 transition">
+              {pendingTests.length > 1 && currentTestIndex < pendingTests.length - 1
+                ? `다음 검사로 → (${currentTestIndex+1}/${pendingTests.length})`
+                : '검사 제출'} ({filled}/{sdriCompletionQ.length})
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── SDRI: 자기분화 반응성 검사 (DSI 자리, 평정형 25문항) ──
+  if (view === "dsiTest") {
+    const likertFilled = Object.keys(sdriResponses).length;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-50 p-4">
+        <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-6">
+          {pendingTests.length > 1 && (
+            <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
+              <p className="text-xs font-bold text-purple-700 mb-2">📋 검사 진행 현황 ({currentTestIndex + 1}/{pendingTests.length})</p>
+              <div className="flex gap-2 flex-wrap">
+                {pendingTests.map((t, i) => (
+                  <span key={t} className={`px-3 py-1 rounded-full text-xs font-bold border ${i < currentTestIndex ? "bg-green-100 border-green-300 text-green-700" : i === currentTestIndex ? "bg-teal-600 text-white border-teal-600" : "bg-gray-100 border-gray-300 text-gray-400"}`}>
+                    {i < currentTestIndex ? "✅ " : i === currentTestIndex ? "▶ " : ""}{t}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="text-center mb-6">
+            <div className="inline-flex items-center gap-2 bg-teal-50 border border-teal-200 rounded-full px-4 py-1.5 mb-3">
+              <span className="text-teal-600 font-bold text-sm">🪞 SDRI</span>
+              <span className="text-teal-400 text-xs">자기분화 반응성 검사</span>
+            </div>
+            <h1 className="text-2xl font-bold text-teal-900 mb-1">자기분화 반응성 검사</h1>
+            <p className="text-gray-400 text-sm">각 문항이 나와 얼마나 일치하는지 선택해 주세요 (25문항)</p>
+          </div>
+          <div className="bg-teal-50 border border-teal-200 rounded-lg p-3 mb-5 text-xs text-teal-800">
+            <div className="flex flex-wrap gap-3 justify-center mb-2">
+              {['1: 전혀 아니다','2: 거의 아니다','3: 가끔 그렇다','4: 자주 그렇다','5: 항상 그렇다'].map(t => (
+                <span key={t} className="font-semibold">{t}</span>
+              ))}
+            </div>
+            <div className="bg-teal-200 rounded-full h-1.5">
+              <div className="bg-teal-500 h-1.5 rounded-full transition-all" style={{width:`${(likertFilled/sdriLikertQ.length)*100}%`}}/>
+            </div>
+            <div className="text-center mt-1">진행: <strong>{likertFilled}</strong> / {sdriLikertQ.length}</div>
+          </div>
+          {saveStatus && <div className="mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded text-sm text-yellow-800 text-center">{saveStatus}</div>}
+          <div className="space-y-3">
+            {sdriLikertQ.map(q => (
+              <div key={q.num} className={`border-2 rounded-xl p-4 transition ${sdriResponses[q.num] ? 'border-teal-300 bg-teal-50' : 'border-gray-100'}`}>
+                <div className="flex items-start gap-2 mb-3">
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-semibold shrink-0 mt-0.5 ${
+                    q.scale === '자기입장 유지' ? 'bg-indigo-100 text-indigo-700' :
+                    q.scale === '정서반응성'   ? 'bg-rose-100 text-rose-700' :
+                    q.scale === '정서적 단절'  ? 'bg-amber-100 text-amber-700' :
+                                                 'bg-purple-100 text-purple-700'}`}>
+                    {q.scale}
+                  </span>
+                  <p className="text-sm font-semibold text-gray-700 leading-relaxed">
+                    {q.num}. {q.content}
+                    {q.rev && <span className="ml-1 text-gray-400 font-normal text-xs">(역문항)</span>}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  {[1,2,3,4,5].map(s => (
+                    <button key={s}
+                      onClick={() => setSdriResponses(p => ({...p, [q.num]: s}))}
+                      className={`flex-1 py-2 rounded-lg font-bold text-sm border-2 transition ${sdriResponses[q.num] === s ? 'bg-teal-600 text-white border-teal-600' : 'bg-white border-gray-300 text-gray-500 hover:border-teal-400'}`}>
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-8 text-center">
+            <button onClick={submitSdri} disabled={likertFilled < sdriLikertQ.length}
+              className="bg-teal-600 text-white px-10 py-3 rounded-xl font-bold text-lg hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition">
+              {pendingTests.length > 1 && currentTestIndex < pendingTests.length - 1
+                ? `다음 검사로 → (${currentTestIndex+1}/${pendingTests.length})`
+                : '검사 제출'} ({likertFilled}/{sdriLikertQ.length})
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (view === "phq9Test") return (
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
+        {pendingTests.length > 1 && (
+          <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
+            <p className="text-xs font-bold text-purple-700 mb-2">📋 검사 진행 현황 ({currentTestIndex + 1}/{pendingTests.length})</p>
+            <div className="flex gap-2 flex-wrap">
+              {pendingTests.map((t, i) => (
+                <span key={t} className={`px-3 py-1 rounded-full text-xs font-bold border ${i < currentTestIndex ? "bg-green-100 border-green-300 text-green-700" : i === currentTestIndex ? "bg-purple-600 text-white border-purple-600" : "bg-gray-100 border-gray-300 text-gray-400"}`}>
+                  {i < currentTestIndex ? "✅ " : i === currentTestIndex ? "▶ " : ""}{t}
+                </span>
+              ))}
+            </div>
+            <div className="mt-2 bg-gray-200 rounded-full h-1.5">
+              <div className="bg-purple-500 h-1.5 rounded-full transition-all" style={{width: `${((currentTestIndex) / pendingTests.length) * 100}%`}}></div>
+            </div>
+          </div>
+        )}
+        <h1 className="text-2xl font-bold text-center text-green-800 mb-1">😔 우울 자가점검 (PHQ-9)</h1>
+        <p className="text-center text-gray-400 text-sm mb-2">지난 2주간 얼마나 자주 다음의 문제들로 어려움을 겪었는지 표시해 주세요 (9문항)</p>
+        <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4 text-xs text-green-800">
+          <div className="flex flex-wrap gap-3">
+            {["0: 전혀 없음", "1: 여러 날 동안", "2: 7일 이상", "3: 거의 매일"].map(t => <span key={t} className="font-semibold">{t}</span>)}
+          </div>
+        </div>
+        <div className="bg-green-50 border border-green-200 rounded-lg p-2 text-xs text-green-800 mb-6 text-center">
+          진행: <strong>{Object.keys(phq9Responses).length}</strong> / 9 문항
+        </div>
+        {saveStatus && <div className="mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded text-sm text-yellow-800 text-center">{saveStatus}</div>}
+        <div className="space-y-3">
+          {phq9Q.map(q => (
+            <div key={q.num} className="border-b border-gray-100 pb-3">
+              <label className="block mb-2 font-semibold text-gray-700 text-sm">{q.num}. {q.content}</label>
+              <div className="flex gap-2">
+                {[0, 1, 2, 3].map(v => (
+                  <button key={v} onClick={() => setPhq9Responses(p => ({ ...p, [q.num]: v }))} className={`flex-1 py-2 rounded-lg text-sm font-semibold transition ${phq9Responses[q.num] === v ? "bg-green-700 text-white" : "bg-gray-100 text-gray-600 hover:bg-green-100"}`}>
+                    {v}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-8 text-center">
+          <button onClick={submitPhq9} className="bg-green-700 text-white px-10 py-3 rounded-xl font-bold text-lg hover:bg-green-800 transition">
+            검사 제출 ({Object.keys(phq9Responses).length}/9)
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // GAD-7 검사 화면
+  if (view === "gad7Test") return (
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
+        {pendingTests.length > 1 && (
+          <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
+            <p className="text-xs font-bold text-purple-700 mb-2">📋 검사 진행 현황 ({currentTestIndex + 1}/{pendingTests.length})</p>
+            <div className="flex gap-2 flex-wrap">
+              {pendingTests.map((t, i) => (
+                <span key={t} className={`px-3 py-1 rounded-full text-xs font-bold border ${i < currentTestIndex ? "bg-green-100 border-green-300 text-green-700" : i === currentTestIndex ? "bg-purple-600 text-white border-purple-600" : "bg-gray-100 border-gray-300 text-gray-400"}`}>
+                  {i < currentTestIndex ? "✅ " : i === currentTestIndex ? "▶ " : ""}{t}
+                </span>
+              ))}
+            </div>
+            <div className="mt-2 bg-gray-200 rounded-full h-1.5">
+              <div className="bg-purple-500 h-1.5 rounded-full transition-all" style={{width: `${((currentTestIndex) / pendingTests.length) * 100}%`}}></div>
+            </div>
+          </div>
+        )}
+        <h1 className="text-2xl font-bold text-center text-orange-800 mb-1">😰 불안 자가점검 (GAD-7)</h1>
+        <p className="text-center text-gray-400 text-sm mb-2">지난 2주간 다음의 문제들로 얼마나 자주 시달렸는지 표시해 주세요 (7문항)</p>
+        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4 text-xs text-orange-800">
+          <div className="flex flex-wrap gap-3">
+            {["0: 전혀 없음", "1: 여러 날 동안", "2: 7일 이상", "3: 거의 매일"].map(t => <span key={t} className="font-semibold">{t}</span>)}
+          </div>
+        </div>
+        <div className="bg-orange-50 border border-orange-200 rounded-lg p-2 text-xs text-orange-700 mb-6 text-center">
+          진행: <strong>{Object.keys(gad7Responses).length}</strong> / 7 문항
+        </div>
+        {saveStatus && <div className="mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded text-sm text-yellow-800 text-center">{saveStatus}</div>}
+        <div className="space-y-3">
+          {gad7Q.map(q => (
+            <div key={q.num} className="border-b border-gray-100 pb-3">
+              <label className="block mb-2 font-semibold text-gray-700 text-sm">{q.num}. {q.content}</label>
+              <div className="flex gap-2">
+                {[0, 1, 2, 3].map(v => (
+                  <button key={v} onClick={() => setGad7Responses(p => ({ ...p, [q.num]: v }))} className={`flex-1 py-2 rounded-lg text-sm font-semibold transition ${gad7Responses[q.num] === v ? "bg-orange-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-orange-100"}`}>
+                    {v}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-8 text-center">
+          <button onClick={submitGad7} className="bg-orange-600 text-white px-10 py-3 rounded-xl font-bold text-lg hover:bg-orange-700 transition">
+            검사 제출 ({Object.keys(gad7Responses).length}/7)
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // DASS-21 검사 화면
+  if (view === "dass21Test") return (
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
+        {pendingTests.length > 1 && (
+          <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
+            <p className="text-xs font-bold text-purple-700 mb-2">📋 검사 진행 현황 ({currentTestIndex + 1}/{pendingTests.length})</p>
+            <div className="flex gap-2 flex-wrap">
+              {pendingTests.map((t, i) => (
+                <span key={t} className={`px-3 py-1 rounded-full text-xs font-bold border ${i < currentTestIndex ? "bg-green-100 border-green-300 text-green-700" : i === currentTestIndex ? "bg-purple-600 text-white border-purple-600" : "bg-gray-100 border-gray-300 text-gray-400"}`}>
+                  {i < currentTestIndex ? "✅ " : i === currentTestIndex ? "▶ " : ""}{t}
+                </span>
+              ))}
+            </div>
+            <div className="mt-2 bg-gray-200 rounded-full h-1.5">
+              <div className="bg-purple-500 h-1.5 rounded-full transition-all" style={{width: `${((currentTestIndex) / pendingTests.length) * 100}%`}}></div>
+            </div>
+          </div>
+        )}
+        <h1 className="text-2xl font-bold text-center text-teal-800 mb-1">📊 우울/불안/스트레스 척도 (DASS-21)</h1>
+        <p className="text-center text-gray-400 text-sm mb-2">지난 일주일 동안 자신에게 해당되는 정도를 표시해 주세요 (21문항)</p>
+        <div className="bg-teal-50 border border-teal-200 rounded-lg p-3 mb-4 text-xs text-teal-800">
+          <div className="flex flex-wrap gap-2">
+            {["1: 전혀 아님", "2: 가끔", "3: 자주", "4: 대부분"].map(t => <span key={t} className="font-semibold">{t}</span>)}
+          </div>
+        </div>
+        <div className="bg-teal-50 border border-teal-200 rounded-lg p-2 text-xs text-teal-700 mb-6 text-center">
+          진행: <strong>{Object.keys(dass21Responses).length}</strong> / 21 문항
+        </div>
+        {saveStatus && <div className="mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded text-sm text-yellow-800 text-center">{saveStatus}</div>}
+        <div className="space-y-3">
+          {dass21Q.map(q => (
+            <div key={q.num} className="border-b border-gray-100 pb-3">
+              <label className="block mb-2 font-semibold text-gray-700 text-sm">{q.num}. {q.content}</label>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4].map(v => (
+                  <button key={v} onClick={() => setDass21Responses(p => ({ ...p, [q.num]: v }))} className={`flex-1 py-2 rounded-lg text-sm font-semibold transition ${dass21Responses[q.num] === v ? "bg-teal-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-teal-100"}`}>
+                    {v}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-8 text-center">
+          <button onClick={submitDass21} className="bg-teal-600 text-white px-10 py-3 rounded-xl font-bold text-lg hover:bg-teal-700 transition">
+            검사 제출 ({Object.keys(dass21Responses).length}/21)
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Big5 검사 화면
+  // 번아웃 검사 화면
+  if (view === "burnoutTest") return (
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-6">
+        {pendingTests.length > 1 && (
+          <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
+            <p className="text-xs font-bold text-purple-700 mb-2">📋 검사 진행 현황 ({currentTestIndex + 1}/{pendingTests.length})</p>
+            <div className="flex gap-2 flex-wrap">
+              {pendingTests.map((t, i) => (
+                <span key={t} className={`px-3 py-1 rounded-full text-xs font-bold border ${i < currentTestIndex ? "bg-green-100 border-green-300 text-green-700" : i === currentTestIndex ? "bg-purple-600 text-white border-purple-600" : "bg-gray-100 border-gray-300 text-gray-400"}`}>
+                  {i < currentTestIndex ? "✅ " : i === currentTestIndex ? "▶ " : ""}{t}
+                </span>
+              ))}
+            </div>
+            <div className="mt-2 bg-gray-200 rounded-full h-1.5">
+              <div className="bg-purple-500 h-1.5 rounded-full transition-all" style={{width: `${((currentTestIndex) / pendingTests.length) * 100}%`}}></div>
+            </div>
+          </div>
+        )}
+        <h1 className="text-3xl font-bold text-center text-red-600 mb-2">🔥 번아웃 증후군 검사 (K-MBI+)</h1>
+        <p className="text-center text-gray-500 text-sm mb-4">
+          최근 한 달간 경험한 빈도를 선택해 주세요 (50문항)
+        </p>
+        
+        {/* 응답 옵션 안내 */}
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+          <div className="grid grid-cols-7 gap-1 text-xs text-center font-semibold text-red-800">
+            <div>0: 전혀없음</div>
+            <div>1: 1년에 몇번</div>
+            <div>2: 한달에 한번</div>
+            <div>3: 한달에 몇번</div>
+            <div>4: 일주일에 한번</div>
+            <div>5: 일주일에 몇번</div>
+            <div>6: 매일</div>
+          </div>
+        </div>
+        
+        {/* 진행 상태 */}
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-6 text-center">
+          <div className="text-sm text-red-700 mb-2">
+            진행: <strong className="text-xl">{Object.keys(burnoutResponses).length}</strong> / 50 문항
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-3">
+            <div 
+              className="bg-red-600 h-3 rounded-full transition-all duration-300"
+              style={{ width: `${(Object.keys(burnoutResponses).length / 50) * 100}%` }}
+            ></div>
+          </div>
+        </div>
+        
+        {/* 문항 섹션별 렌더링 */}
+        <div className="space-y-6">
+          {getBurnoutDomains().map((domain, dIdx) => (
+            <div key={dIdx} className="border-2 border-gray-200 rounded-lg p-4 bg-gray-50">
+              <h2 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+                <span className="text-red-600">{domain.icon}</span>
+                {domain.name} ({domain.questions.length}문항)
+              </h2>
+              <div className="space-y-3">
+                {domain.questions.map((q, qIdx) => (
+                  <div key={q.num} className="bg-white border border-gray-200 rounded-lg p-3">
+                    <label className="block mb-2 font-semibold text-gray-700 text-sm">
+                      {q.num}. {q.content}
+                    </label>
+                    <div className="grid grid-cols-7 gap-1">
+                      {[0, 1, 2, 3, 4, 5, 6].map(v => (
+                        <button
+                          key={v}
+                          onClick={() => setBurnoutResponses(p => ({ ...p, [q.num]: v }))}
+                          className={`py-2 px-1 rounded-lg text-xs font-bold transition ${
+                            burnoutResponses[q.num] === v 
+                              ? "bg-red-600 text-white shadow-lg scale-105" 
+                              : "bg-gray-100 text-gray-600 hover:bg-red-100"
+                          }`}
+                        >
+                          {v}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        
+        {/* 제출 버튼 */}
+        <div className="mt-8 text-center">
+          <button 
+            onClick={submitBurnout} 
+            className="bg-red-600 text-white px-12 py-4 rounded-xl font-bold text-lg hover:bg-red-700 transition shadow-lg transform hover:scale-105"
+          >
+            🔥 검사 제출 ({Object.keys(burnoutResponses).length}/50)
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (view === "big5Test") return (
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
+        {pendingTests.length > 1 && (
+          <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
+            <p className="text-xs font-bold text-purple-700 mb-2">📋 검사 진행 현황 ({currentTestIndex + 1}/{pendingTests.length})</p>
+            <div className="flex gap-2 flex-wrap">
+              {pendingTests.map((t, i) => (
+                <span key={t} className={`px-3 py-1 rounded-full text-xs font-bold border ${i < currentTestIndex ? "bg-green-100 border-green-300 text-green-700" : i === currentTestIndex ? "bg-purple-600 text-white border-purple-600" : "bg-gray-100 border-gray-300 text-gray-400"}`}>
+                  {i < currentTestIndex ? "✅ " : i === currentTestIndex ? "▶ " : ""}{t}
+                </span>
+              ))}
+            </div>
+            <div className="mt-2 bg-gray-200 rounded-full h-1.5">
+              <div className="bg-purple-500 h-1.5 rounded-full transition-all" style={{width: `${((currentTestIndex) / pendingTests.length) * 100}%`}}></div>
+            </div>
+          </div>
+        )}
+        {pendingTests.length > 1 && (
+          <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
+            <p className="text-xs font-bold text-purple-700 mb-2">📋 검사 진행 현황 ({currentTestIndex + 1}/{pendingTests.length})</p>
+            <div className="flex gap-2 flex-wrap">
+              {pendingTests.map((t, i) => (
+                <span key={t} className={`px-3 py-1 rounded-full text-xs font-bold border ${i < currentTestIndex ? "bg-green-100 border-green-300 text-green-700" : i === currentTestIndex ? "bg-purple-600 text-white border-purple-600" : "bg-gray-100 border-gray-300 text-gray-400"}`}>
+                  {i < currentTestIndex ? "✅ " : i === currentTestIndex ? "▶ " : ""}{t}
+                </span>
+              ))}
+            </div>
+            <div className="mt-2 bg-gray-200 rounded-full h-1.5">
+              <div className="bg-purple-500 h-1.5 rounded-full transition-all" style={{width: `${((currentTestIndex) / pendingTests.length) * 100}%`}}></div>
+            </div>
+          </div>
+        )}
+        <h1 className="text-2xl font-bold text-center text-purple-800 mb-1">🌟 Big5 성격검사</h1>
+        <p className="text-center text-gray-400 text-sm mb-2">각 문장이 자신을 얼마나 잘 설명하는지 표시해 주세요 (50문항)</p>
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 mb-4 text-xs text-purple-800">
+          <div className="flex flex-wrap gap-2">
+            {["1: 전혀 아님", "2: 아님", "3: 보통", "4: 그러함", "5: 매우 그러함"].map(t => <span key={t} className="font-semibold">{t}</span>)}
+          </div>
+        </div>
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-2 text-xs text-purple-700 mb-6 text-center">
+          진행: <strong>{Object.keys(big5Responses).length}</strong> / 50 문항
+        </div>
+        {saveStatus && <div className="mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded text-sm text-yellow-800 text-center">{saveStatus}</div>}
+        <div className="space-y-3">
+          {big5Q.map(q => (
+            <div key={q.num} className="border-b border-gray-100 pb-3">
+              <label className="block mb-2 font-semibold text-gray-700 text-sm">{q.num}. {q.content}</label>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map(v => (
+                  <button key={v} onClick={() => setBig5Responses(p => ({ ...p, [q.num]: v }))} className={`flex-1 py-2 rounded-lg text-sm font-semibold transition ${big5Responses[q.num] === v ? "bg-purple-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-purple-100"}`}>
+                    {v}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-8 text-center">
+          <button onClick={submitBig5} className="bg-purple-600 text-white px-10 py-3 rounded-xl font-bold text-lg hover:bg-purple-700 transition">
+            검사 제출 ({Object.keys(big5Responses).length}/50)
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (view === "lostTest") {
+    const AXIS_INFO = [
+      { axis:"E", label:"에너지 방향",   range:[1,10],  color:"teal",   desc:"외향(E) vs 내향(I)" },
+      { axis:"D", label:"의사결정 방식", range:[11,20], color:"blue",   desc:"논리(T) vs 감정(F)" },
+      { axis:"S", label:"행동 속도",     range:[21,30], color:"orange", desc:"빠름(P) vs 신중(J)" },
+      { axis:"N", label:"안정성",        range:[31,40], color:"green",  desc:"변화(C) vs 안정(N)" },
+      { axis:"R", label:"관계 민감도",   range:[41,50], color:"purple", desc:"관계중심(R) vs 독립(I)" },
+      { axis:"T", label:"스트레스 반응", range:[51,60], color:"red",    desc:"직면(A) vs 회피(V)" },
+    ];
+    const btnActiveMap = {
+      teal:"bg-teal-600 text-white", blue:"bg-blue-600 text-white",
+      orange:"bg-orange-500 text-white", green:"bg-green-600 text-white",
+      purple:"bg-purple-600 text-white", red:"bg-red-500 text-white",
+    };
+    const headerMap = {
+      teal:"bg-teal-50 border-teal-200 text-teal-800",
+      blue:"bg-blue-50 border-blue-200 text-blue-800",
+      orange:"bg-orange-50 border-orange-200 text-orange-800",
+      green:"bg-green-50 border-green-200 text-green-800",
+      purple:"bg-purple-50 border-purple-200 text-purple-800",
+      red:"bg-red-50 border-red-200 text-red-800",
+    };
+    const answered = Object.keys(lostResponses).length;
+    return (
+      <div className="min-h-screen bg-gray-50 p-4">
+        <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
+          {pendingTests.length > 1 && (
+            <div className="mb-4 bg-teal-50 border border-teal-200 rounded-xl p-3">
+              <p className="text-xs font-bold text-teal-700 mb-2">📋 검사 진행 현황 ({currentTestIndex + 1}/{pendingTests.length})</p>
+              <div className="flex gap-2 flex-wrap">
+                {pendingTests.map((t, i) => (
+                  <span key={t} className={`px-3 py-1 rounded-full text-xs font-bold border ${i < currentTestIndex ? "bg-green-100 border-green-300 text-green-700" : i === currentTestIndex ? "bg-teal-600 text-white border-teal-600" : "bg-gray-100 border-gray-300 text-gray-400"}`}>
+                    {i < currentTestIndex ? "✅ " : i === currentTestIndex ? "▶ " : ""}{t}
+                  </span>
+                ))}
+              </div>
+              <div className="mt-2 bg-gray-200 rounded-full h-1.5">
+                <div className="bg-teal-500 h-1.5 rounded-full transition-all" style={{width:`${(currentTestIndex/pendingTests.length)*100}%`}}></div>
+              </div>
+            </div>
+          )}
+          <h1 className="text-2xl font-bold text-center text-teal-800 mb-1">🧭 행동 운영체계 검사 (LOST)</h1>
+          <p className="text-center text-gray-500 text-sm mb-1">나는 어떻게 행동하고 결정하는가 — 6개 축, 60문항</p>
+          <p className="text-center text-gray-400 text-xs mb-4">Big Five · HEXACO · TCI 이론 기반 | 한국 문화 요소 반영</p>
+          <div className="bg-teal-50 border border-teal-200 rounded-lg p-3 mb-3 text-xs text-teal-800 flex flex-wrap gap-3">
+            {["1: 전혀 아님","2: 아님","3: 보통","4: 그러함","5: 매우 그러함"].map(t => <span key={t} className="font-semibold">{t}</span>)}
+          </div>
+          <div className="mb-5">
+            <div className="flex justify-between text-xs text-gray-500 mb-1">
+              <span>전체 진행률</span>
+              <span className="font-bold text-teal-700">{answered} / 60 문항</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="bg-teal-500 h-2 rounded-full transition-all" style={{width:`${(answered/60)*100}%`}}></div>
+            </div>
+          </div>
+          {saveStatus && <div className="mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded text-sm text-yellow-800 text-center">{saveStatus}</div>}
+          <div className="space-y-6">
+            {AXIS_INFO.map(({ axis, label, range, color, desc }) => {
+              const axisQs = lostQ.filter(q => q.num >= range[0] && q.num <= range[1]);
+              const axisAnswered = axisQs.filter(q => lostResponses[q.num] !== undefined).length;
+              return (
+                <div key={axis} className={`border-2 rounded-xl overflow-hidden ${axisAnswered === 10 ? "border-teal-300" : "border-gray-200"}`}>
+                  <div className={`px-4 py-2 border-b flex justify-between items-center ${headerMap[color]}`}>
+                    <div>
+                      <span className="font-bold text-sm">{label}</span>
+                      <span className="ml-2 text-xs opacity-75">({desc})</span>
+                    </div>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${axisAnswered === 10 ? "bg-teal-600 text-white" : "bg-white/60 text-gray-600"}`}>
+                      {axisAnswered}/10
+                    </span>
+                  </div>
+                  <div className="p-3 space-y-3">
+                    {axisQs.map(q => (
+                      <div key={q.num} className="border-b border-gray-100 pb-3 last:border-0 last:pb-0">
+                        <label className="block mb-2 font-medium text-gray-700 text-sm">
+                          <span className="text-gray-400 mr-1">{q.num}.</span>{q.content}
+                        </label>
+                        <div className="flex gap-1.5">
+                          {[1,2,3,4,5].map(v => (
+                            <button key={v}
+                              onClick={() => setLostResponses(p => ({...p, [q.num]: v}))}
+                              className={`flex-1 py-2 rounded-lg text-sm font-semibold transition ${lostResponses[q.num] === v ? btnActiveMap[color] : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+                            >{v}</button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-8 text-center">
+            <button onClick={submitLost} className="bg-teal-600 text-white px-10 py-3 rounded-xl font-bold text-lg hover:bg-teal-700 transition">
+              검사 제출 ({answered}/60)
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (view === "complete") {
+    const completedTest = pendingTests[0] || 'PHQ9';
+    return (
+      <div className="min-h-screen bg-gray-50 p-4 flex flex-col items-center justify-start pt-10"
+        style={{fontFamily:"'Noto Sans KR',sans-serif"}}>
+        <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-lg text-center mb-4">
+          <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">검사 완료!</h1>
+          <div className="flex flex-wrap justify-center gap-2 mb-6">
+            {pendingTests.map(t => (
+              <span key={t} className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-bold border border-green-300">
+                ✅ {t}
+              </span>
+            ))}
+          </div>
+
+          {/* AI 상담 체험 */}
+          <div className="mb-4 text-left">
+            <div className="text-sm font-bold text-blue-800 mb-1">💬 AI 상담 체험하기</div>
+            <div className="text-xs text-blue-600 mb-3">검사 결과를 바탕으로 AI와 3회 무료 상담을 받아보세요</div>
+            <ChatBox testType={completedTest} initialPrompts={
+              ['PHQ9','GAD7'].includes(completedTest) ? [
+                '제 검사 결과가 어떤 의미인지 설명해주세요',
+                '일상에서 할 수 있는 것이 있나요?',
+                '전문가 상담이 필요한 수준인가요?'
+              ] : [
+                '검사 결과 전체적으로 설명해주세요',
+                '가장 주목해야 할 부분은 무엇인가요?'
+              ]
+            } />
+          </div>
+
+          {/* 비로그인: 회원가입 유도 */}
+          {!isLoggedIn && (
+            <div className="bg-gradient-to-r from-green-50 to-teal-50 border border-green-200 rounded-xl p-4 mb-4">
+              <div className="text-sm font-bold text-green-800 mb-1">🌱 결과를 저장하고 싶으신가요?</div>
+              <div className="text-xs text-green-700 mb-3">무료 가입하면 검사 이력 저장 + 10 크레딧이 지급됩니다</div>
+              <button onClick={() => setView('memberSignup')}
+                className="w-full bg-green-600 text-white py-2.5 rounded-xl font-bold text-sm hover:bg-green-700 transition">
+                무료로 가입하기 →
+              </button>
+            </div>
+          )}
+
+          <button
+            onClick={() => { if (isLoggedIn) { setView('memberDashboard'); } else { setView('landing'); } }}
+            className="w-full bg-gray-100 text-gray-600 py-2.5 rounded-xl font-semibold text-sm hover:bg-gray-200 transition">
+            {isLoggedIn ? '대시보드로 →' : '시작화면으로'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+  if (view === "sctResult") {
+    const { filled, byScale } = calcSrci();
+    const counselingType = activeLinkData?.counselingType || "psychological";
+    const counselingTypeLabel = counselingType === "biblical" ? "🕊️ 기독교 상담" : "🧠 심리상담";
+
+    const SCALE_META = {
+      "자기입장 유지": { emoji:'🎯', color:'violet', border:'border-violet-200', bg:'bg-violet-50', text:'text-violet-700' },
+      "정서반응성":    { emoji:'💫', color:'rose',   border:'border-rose-200',   bg:'bg-rose-50',   text:'text-rose-700'   },
+      "정서적 단절":   { emoji:'🌿', color:'amber',  border:'border-amber-200',  bg:'bg-amber-50',  text:'text-amber-700'  },
+      "융합·관계의존": { emoji:'🔗', color:'purple', border:'border-purple-200', bg:'bg-purple-50', text:'text-purple-700' },
+    };
+
+    return (
+      <div className="min-h-screen bg-gray-50 p-4">
+        <div className="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <h1 className="text-2xl font-bold text-violet-900">✍️ SRCI 검사 결과</h1>
+              <p className="text-sm text-gray-400 mt-1">자기반응 완성 검사 — 문장완성형 25문항</p>
+            </div>
+            <button onClick={() => setView("memberDashboard")} className="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg text-sm hover:bg-gray-200">← 목록</button>
+          </div>
+          <div className="border rounded-lg p-4 mb-6 bg-violet-50 border-violet-200 text-violet-700">
+            <p className="text-sm"><strong>상담 유형:</strong> {counselingTypeLabel}</p>
+            <p className="text-sm"><strong>세션 ID:</strong> {sessionId}</p>
+            <p className="text-sm mt-1"><strong>완성 문항:</strong> {filled}/25</p>
+          </div>
+
+          <h2 className="text-lg font-bold text-gray-800 mb-4">소척도별 응답</h2>
+          <div className="space-y-4 mb-8">
+            {Object.entries(SCALE_META).map(([scaleName, meta]) => {
+              const answers = byScale[scaleName] || [];
+              return (
+                <div key={scaleName} className={`border ${meta.border} rounded-xl p-5 ${meta.bg}`}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-lg">{meta.emoji}</span>
+                    <span className={`font-bold text-sm ${meta.text}`}>{scaleName}</span>
+                    <span className="text-xs text-gray-400 ml-auto">{answers.length}문항 완성</span>
+                  </div>
+                  {answers.length > 0 ? (
+                    <div className="space-y-2">
+                      {answers.map((a, i) => (
+                        <div key={i} className={`pl-3 border-l-2 ${meta.border}`}>
+                          <p className="text-xs text-gray-400">{a.prompt}</p>
+                          <p className="text-sm text-gray-700 mt-0.5 font-medium">{a.answer}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400">응답 없음</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <AiAnalysisBox aiKey="SCT"
+            onRun={() => {
+              const { byScale } = calcSrci();
+              const sample = Object.entries(byScale).flatMap(([scale, items]) =>
+                items.slice(0,2).map(a => ({ scale, prompt: a.prompt, answer: a.answer }))
+              );
+              runAiAnalysis("SCT", "SCT", { completionSample: sample });
+            }}
+          />
+          <RecoveryCard testType="SCT" score={0} level="low" />
+          <ExpertCTA testType="SCT" score={0} level="low"
+            onContinueAI={() => { setChatOpen(true); window.scrollTo(0,document.body.scrollHeight); }} />
+          <ChatBox testType="SCT" initialPrompts={[
+            "SRCI 검사 결과에서 주목해야 할 패턴은 무엇인가요?",
+            "자기입장 유지와 관련된 응답을 분석해 주세요",
+            "정서반응성을 건강하게 조절하려면 어떻게 해야 하나요?",
+            "대인관계에서 건강한 경계를 설정하는 방법을 알려주세요",
+          ]} />
+        </div>
+      </div>
+    );
+  }
+
+  // ── SDRI 결과 화면 (평정형) ────────────────────────────────
+  if (view === "dsiResult") {
+    const { scales, total } = calcSdri();
+    const counselingType = activeLinkData?.counselingType || "psychological";
+    const counselingTypeLabel = counselingType === "biblical" ? "🕊️ 기독교 상담" : "🧠 심리상담";
+
+    const SCALE_META = {
+      "자기입장 유지": { emoji:'🎯', max:50, colorBar:'bg-indigo-500', bg:'bg-indigo-50 border-indigo-200', text:'text-indigo-700',
+        desc:'타인 압력에도 자신의 기준을 유지하는 능력' },
+      "정서반응성":    { emoji:'💫', max:35, colorBar:'bg-rose-500',   bg:'bg-rose-50 border-rose-200',     text:'text-rose-700',
+        desc:'갈등·스트레스 상황에서 감정적으로 반응하는 정도' },
+      "정서적 단절":   { emoji:'🌿', max:20, colorBar:'bg-amber-500',  bg:'bg-amber-50 border-amber-200',   text:'text-amber-700',
+        desc:'갈등 시 정서적 거리를 두거나 대화를 피하는 경향' },
+      "융합·관계의존": { emoji:'🔗', max:20, colorBar:'bg-purple-500', bg:'bg-purple-50 border-purple-200', text:'text-purple-700',
+        desc:'타인 감정에 과도하게 동화되거나 의존하는 정도' },
+    };
+
+    const getLevel = (score, max) => {
+      const pct = score / max;
+      if (pct >= 0.75) return { label:'높음', color:'text-emerald-600' };
+      if (pct >= 0.45) return { label:'보통', color:'text-blue-600' };
+      return               { label:'낮음', color:'text-amber-600' };
+    };
+
+    return (
+      <div className="min-h-screen bg-gray-50 p-4">
+        <div className="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <h1 className="text-2xl font-bold text-teal-900">🪞 SDRI 검사 결과</h1>
+              <p className="text-sm text-gray-400 mt-1">자기분화 반응성 검사 — 평정형 25문항</p>
+            </div>
+            <button onClick={() => setView("memberDashboard")} className="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg text-sm hover:bg-gray-200">← 목록</button>
+          </div>
+          <div className="border rounded-lg p-4 mb-6 bg-teal-50 border-teal-200 text-teal-700">
+            <p className="text-sm"><strong>상담 유형:</strong> {counselingTypeLabel}</p>
+            <p className="text-sm"><strong>세션 ID:</strong> {sessionId}</p>
+            <p className="text-lg font-bold mt-2">총점: {total}점</p>
+          </div>
+
+          <h2 className="text-lg font-bold text-gray-800 mb-4">소척도별 결과</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            {Object.entries(SCALE_META).map(([scaleName, meta]) => {
+              const score = scales[scaleName] || 0;
+              const pct   = Math.round((score / meta.max) * 100);
+              const level = getLevel(score, meta.max);
+              return (
+                <div key={scaleName} className={`border rounded-xl p-5 ${meta.bg}`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">{meta.emoji}</span>
+                      <span className={`font-bold text-sm ${meta.text}`}>{scaleName}</span>
+                    </div>
+                    <span className={`text-sm font-bold ${level.color}`}>{level.label}</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mb-3 leading-relaxed">{meta.desc}</p>
+                  <div className="bg-white bg-opacity-60 rounded-full h-3 mb-1 overflow-hidden">
+                    <div className={`${meta.colorBar} h-3 rounded-full`} style={{width:`${pct}%`, transition:'width 0.5s'}}/>
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-400 mt-1">
+                    <span>{score}점</span><span>최대 {meta.max}점 ({pct}%)</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <AiAnalysisBox aiKey="DSI"
+            onRun={() => {
+              const { scales, total } = calcSdri();
+              runAiAnalysis("DSI", "DSI", { scales, total });
+            }}
+          />
+          <RecoveryCard testType="DSI" score={0} level="low" />
+          <ExpertCTA testType="DSI" score={0} level="low"
+            onContinueAI={() => { setChatOpen(true); window.scrollTo(0,document.body.scrollHeight); }} />
+          {/* 💕 마음커플 — 자아분화 비교 */}
+          <div className="mt-4 bg-gradient-to-r from-teal-50 to-rose-50 border border-teal-100 rounded-2xl p-4 flex items-center justify-between gap-3">
+            <div>
+              <div className="font-bold text-teal-700 text-sm">💕 파트너와 자아분화 비교해보기</div>
+              <div className="text-xs text-gray-500 mt-0.5">두 사람의 분화 수준 차이로 관계 패턴 분석</div>
+            </div>
+            <button
+              onClick={() => openMaumCouple()}
+              className="shrink-0 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-sm">
+              분석 시작 →
+            </button>
+          </div>
+          <ChatBox testType="DSI" initialPrompts={[
+            "SDRI 소척도 결과가 어떤 의미인지 설명해 주세요",
+            "자기입장 유지 능력을 높이는 방법이 있나요?",
+            "정서적 단절 경향을 어떻게 이해하면 좋을까요?",
+            "융합·관계의존이 높을 때 어떻게 경계를 설정하나요?",
+          ]} />
+        </div>
+      </div>
+    );
+  }
+
+  if (view === "phq9Result") {
+    const result = calcPhq9();
+    return (
+      <div className="min-h-screen bg-gray-50 p-4">
+        <div className="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-bold text-green-800">😔 PHQ-9 우울 자가점검 결과</h1>
+            <button onClick={() => setView(isLoggedIn ? "memberDashboard" : "testsIntro")} className="bg-gray-400 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-500">
+              ← 목록
+            </button>
+          </div>
+          <div className="border rounded-lg p-4 mb-6 bg-gray-50">
+            <p className="text-sm"><strong>세션 ID:</strong> {sessionId}</p>
+            <p className="text-sm"><strong>전화번호:</strong> {userInfo.phone || "N/A"}</p>
+            <p className="text-lg font-bold mt-2">총점: {result.total}/27 ({result.level})</p>
+          </div>
+          <div className={`p-4 rounded-lg mb-6 ${result.color === 'green' ? 'bg-green-50 border border-green-200' : result.color === 'yellow' ? 'bg-yellow-50 border border-yellow-200' : result.color === 'orange' ? 'bg-orange-50 border border-orange-200' : 'bg-red-50 border border-red-200'}`}>
+            <h3 className="font-bold mb-2">해석</h3>
+            <p className="text-sm">
+              {result.total < 5 && "우울증 증상이 거의 없습니다."}
+              {result.total >= 5 && result.total < 10 && "가벼운 우울 증상이 있습니다. 필요시 전문가 상담을 고려하세요."}
+              {result.total >= 10 && result.total < 15 && "중간 정도의 우울 증상이 있습니다. 전문가 상담을 권장합니다."}
+              {result.total >= 15 && result.total < 20 && "정서적 피로가 상당한 수준입니다. 전문가와 이야기 나눠보시길 권합니다."}
+              {result.total >= 20 && "마음의 부담이 매우 높게 나타났습니다. 신뢰할 수 있는 전문가의 도움을 받아보세요."}
+            </p>
+          </div>
+          <div className="space-y-2">
+            <h3 className="font-bold mb-2">응답 내역</h3>
+            {phq9Q.map(q => (
+              <div key={q.num} className="border-b pb-2">
+                <p className="text-sm text-gray-600">{q.num}. {q.content}</p>
+                <p className="text-sm font-semibold">응답: {phq9Responses[q.num]}점</p>
+              </div>
+            ))}
+          </div>
+          <AiAnalysisBox
+            aiKey="PHQ9"
+            onRun={() => {
+              const r = calcPhq9();
+              runAiAnalysis("PHQ9", "PHQ9", {
+                total: r.total, level: r.level,
+                items: phq9Q.map(q => ({ question: q.content, score: phq9Responses[q.num] || 0 }))
+              });
+            }}
+          />
+
+          
+          {/* 🤝 전문가 상담 CTA */}
+          {(() => {
+            const r = calcPhq9();
+            const lvl = r.total >= 15 ? 'high' : r.total >= 10 ? 'mid' : 'low';
+            return (<>
+            {!isLoggedIn && (
+              <div className="mt-4 p-4 bg-gradient-to-r from-green-50 to-teal-50 border border-green-200 rounded-2xl text-center">
+                <div className="text-2xl mb-2">🌱</div>
+                <div className="font-bold text-green-800 mb-1">결과를 저장하고 싶으신가요?</div>
+                <div className="text-sm text-green-700 mb-3">무료 가입하면 검사 이력 저장 + 10 크레딧이 지급됩니다</div>
+                <button onClick={() => setView('memberSignup')}
+                  className="bg-green-600 text-white px-6 py-2 rounded-xl font-bold text-sm hover:bg-green-700 transition"
+                  style={{fontFamily:"'Noto Sans KR',sans-serif"}}>
+                  무료로 가입하기 →
+                </button>
+              </div>
+            )}
+              <RecoveryCard testType="PHQ9" score={r.total} level={lvl} />
+              <ExpertCTA testType="PHQ9" score={r.total} level={lvl}
+              onContinueAI={() => { setChatOpen(true); window.scrollTo(0,document.body.scrollHeight); }} />
+            </>);
+          })()}
+{/* 💬 AI 상담 채팅 */}
+          <ChatBox testType="PHQ9" initialPrompts={[
+            "제 PHQ-9 검사 결과가 어떤 의미인지 설명해주세요",
+            "이 점수로 보아 저는 어떤 상태인가요?",
+            "우울 증상을 개선하기 위해 일상에서 할 수 있는 것이 있나요?",
+            "전문가 상담이 필요한 수준인지 판단해주세요"
+          ]} />
+        </div>
+      </div>
+    );
+  }
+  if (view === "gad7Result") {
+    const result = calcGad7();
+    return (
+      <div className="min-h-screen bg-gray-50 p-4">
+        <div className="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-bold text-orange-800">😰 GAD-7 불안 자가점검 결과</h1>
+            <button onClick={() => setView(isLoggedIn ? "memberDashboard" : "testsIntro")} className="bg-gray-400 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-500">
+              ← 목록
+            </button>
+          </div>
+          <div className="border rounded-lg p-4 mb-6 bg-gray-50">
+            <p className="text-sm"><strong>세션 ID:</strong> {sessionId}</p>
+            <p className="text-sm"><strong>전화번호:</strong> {userInfo.phone || "N/A"}</p>
+            <p className="text-lg font-bold mt-2">총점: {result.total}/21 ({result.level})</p>
+          </div>
+          <div className={`p-4 rounded-lg mb-6 ${result.color === 'green' ? 'bg-green-50 border border-green-200' : result.color === 'yellow' ? 'bg-yellow-50 border border-yellow-200' : result.color === 'orange' ? 'bg-orange-50 border border-orange-200' : 'bg-red-50 border border-red-200'}`}>
+            <h3 className="font-bold mb-2">해석</h3>
+            <p className="text-sm">
+              {result.total < 5 && "불안 증상이 거의 없습니다."}
+              {result.total >= 5 && result.total < 10 && "가벼운 불안 증상이 있습니다. 필요시 전문가 상담을 고려하세요."}
+              {result.total >= 10 && result.total < 15 && "중간 정도의 불안 증상이 있습니다. 전문가 상담을 권장합니다."}
+              {result.total >= 15 && "불안 신호가 높게 나타났습니다. 전문가와 이야기 나눠보시길 권합니다."}
+            </p>
+          </div>
+          <div className="space-y-2">
+            <h3 className="font-bold mb-2">응답 내역</h3>
+            {gad7Q.map(q => (
+              <div key={q.num} className="border-b pb-2">
+                <p className="text-sm text-gray-600">{q.num}. {q.content}</p>
+                <p className="text-sm font-semibold">응답: {gad7Responses[q.num]}점</p>
+              </div>
+            ))}
+          </div>
+          <AiAnalysisBox
+            aiKey="GAD7"
+            onRun={() => {
+              const r = calcGad7();
+              runAiAnalysis("GAD7", "GAD7", {
+                total: r.total, level: r.level,
+                items: gad7Q.map(q => ({ question: q.content, score: gad7Responses[q.num] || 0 }))
+              });
+            }}
+          />
+
+          
+          {/* 🤝 전문가 상담 CTA */}
+          {(() => {
+            const r = calcGad7();
+            const lvl = r.total >= 15 ? 'high' : r.total >= 10 ? 'mid' : 'low';
+            return (<>
+            {!isLoggedIn && (
+              <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl text-center">
+                <div className="text-2xl mb-2">💙</div>
+                <div className="font-bold text-blue-800 mb-1">결과를 저장하고 싶으신가요?</div>
+                <div className="text-sm text-blue-700 mb-3">무료 가입하면 검사 이력 저장 + 10 크레딧이 지급됩니다</div>
+                <button onClick={() => setView('memberSignup')}
+                  className="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold text-sm hover:bg-blue-700 transition"
+                  style={{fontFamily:"'Noto Sans KR',sans-serif"}}>
+                  무료로 가입하기 →
+                </button>
+              </div>
+            )}
+              <RecoveryCard testType="GAD7" score={r.total} level={lvl} />
+              <ExpertCTA testType="GAD7" score={r.total} level={lvl}
+              onContinueAI={() => { setChatOpen(true); window.scrollTo(0,document.body.scrollHeight); }} />
+            </>);
+          })()}
+{/* 💬 AI 상담 채팅 */}
+          <ChatBox testType="GAD7" initialPrompts={[
+            "불안 증상이 심한 경우 초기 상담 전략은 무엇인가요?",
+            "GAD-7 결과에서 특히 주목해야 할 문항이 있나요?",
+            "불안과 일상 기능 저하의 관계를 어떻게 이해하면 좋을까요?",
+            "불안 완화를 위한 즉각적인 개입 방법을 알려주세요"
+          ]} />
+        </div>
+      </div>
+    );
+  }
+
+  // DASS-21 결과 화면
+  if (view === "dass21Result") {
+    const result = calcDass21();
+    return (
+      <div className="min-h-screen bg-gray-50 p-4">
+        <div className="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-bold text-teal-800">📊 DASS-21 결과</h1>
+            <button onClick={() => setView(isLoggedIn ? "memberDashboard" : "testsIntro")} className="bg-gray-400 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-500">
+              ← 목록
+            </button>
+          </div>
+          <div className="border rounded-lg p-4 mb-6 bg-gray-50">
+            <p className="text-sm"><strong>세션 ID:</strong> {sessionId}</p>
+            <p className="text-sm"><strong>전화번호:</strong> {userInfo.phone || "N/A"}</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className={`p-4 rounded-lg border-2 ${result.depression.color === 'green' ? 'border-green-300 bg-green-50' : result.depression.color === 'blue' ? 'border-blue-300 bg-blue-50' : result.depression.color === 'yellow' ? 'border-yellow-300 bg-yellow-50' : result.depression.color === 'orange' ? 'border-orange-300 bg-orange-50' : 'border-red-300 bg-red-50'}`}>
+              <h3 className="font-bold text-lg mb-2">😔 우울</h3>
+              <p className="text-2xl font-bold">{result.depression.score}</p>
+              <p className="text-sm mt-1">{result.depression.level}</p>
+            </div>
+            <div className={`p-4 rounded-lg border-2 ${result.anxiety.color === 'green' ? 'border-green-300 bg-green-50' : result.anxiety.color === 'blue' ? 'border-blue-300 bg-blue-50' : result.anxiety.color === 'yellow' ? 'border-yellow-300 bg-yellow-50' : result.anxiety.color === 'orange' ? 'border-orange-300 bg-orange-50' : 'border-red-300 bg-red-50'}`}>
+              <h3 className="font-bold text-lg mb-2">😰 불안</h3>
+              <p className="text-2xl font-bold">{result.anxiety.score}</p>
+              <p className="text-sm mt-1">{result.anxiety.level}</p>
+            </div>
+            <div className={`p-4 rounded-lg border-2 ${result.stress.color === 'green' ? 'border-green-300 bg-green-50' : result.stress.color === 'blue' ? 'border-blue-300 bg-blue-50' : result.stress.color === 'yellow' ? 'border-yellow-300 bg-yellow-50' : result.stress.color === 'orange' ? 'border-orange-300 bg-orange-50' : 'border-red-300 bg-red-50'}`}>
+              <h3 className="font-bold text-lg mb-2">😓 스트레스</h3>
+              <p className="text-2xl font-bold">{result.stress.score}</p>
+              <p className="text-sm mt-1">{result.stress.level}</p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <h3 className="font-bold mb-2">응답 내역</h3>
+            {dass21Q.map(q => (
+              <div key={q.num} className="border-b pb-2">
+                <p className="text-sm text-gray-600">{q.num}. {q.content} <span className="text-xs text-gray-400">({q.scale})</span></p>
+                <p className="text-sm font-semibold">응답: {dass21Responses[q.num]}점</p>
+              </div>
+            ))}
+          </div>
+          <AiAnalysisBox
+            aiKey="DASS21"
+            onRun={() => {
+              const r = calcDass21();
+              runAiAnalysis("DASS21", "DASS21", {
+                depression: { score: r.depression.score, level: r.depression.level },
+                anxiety: { score: r.anxiety.score, level: r.anxiety.level },
+                stress: { score: r.stress.score, level: r.stress.level }
+              });
+            }}
+          />
+
+          
+          {/* 🤝 전문가 상담 CTA */}
+          {(() => {
+            const r = calcDass21();
+            const lvl = r.depression >= 21 || r.anxiety >= 15 || r.stress >= 27 ? 'high' : r.depression >= 14 || r.anxiety >= 10 ? 'mid' : 'low';
+            return (<>
+              <RecoveryCard testType="DASS21" score={0} level={lvl} stressScore={r.stress?.score} />
+              <ExpertCTA testType="DASS21" score={0} level={lvl}
+              onContinueAI={() => { setChatOpen(true); window.scrollTo(0,document.body.scrollHeight); }} />
+            </>);
+          })()}
+{/* 💬 AI 상담 채팅 */}
+          <ChatBox testType="DASS21" initialPrompts={[
+            "우울/불안/스트레스가 모두 높을 때 우선순위는 무엇인가요?",
+            "DASS-21 결과에서 가장 시급한 개입 영역은 어디인가요?",
+            "세 가지 영역 간의 상호작용을 어떻게 이해해야 하나요?",
+            "각 영역별 맞춤 상담 전략을 제안해주세요"
+          ]} />
+        </div>
+      </div>
+    );
+  }
+
+  // Big5 결과 화면
+  if (view === "burnoutResult") {
+    console.log('🔥 번아웃 결과 화면 렌더링 시작');
+    console.log('📊 burnoutResponses 개수:', Object.keys(burnoutResponses).length);
+    console.log('📊 burnoutResponses 내용:', burnoutResponses);
+    console.log('📊 sessionId:', sessionId);
+
+    
+    // 응답이 없는 경우 경고
+    if (Object.keys(burnoutResponses).length === 0) {
+      console.error('❌ burnoutResponses가 비어 있습니다!');
+      return (
+        <div className="min-h-screen bg-gray-50 p-4 flex items-center justify-center">
+          <div className="bg-white rounded-xl shadow-lg p-8 text-center">
+            <h1 className="text-2xl font-bold text-red-600 mb-4">⚠️ 데이터 오류</h1>
+            <p className="text-gray-600 mb-4">검사 응답 데이터를 찾을 수 없습니다.</p>
+            <p className="text-sm text-gray-500 mb-4">세션 ID: {sessionId || 'N/A'}</p>
+            <button 
+              onClick={() => setView("memberDashboard")} 
+              className="bg-gray-400 text-white px-6 py-2 rounded-lg hover:bg-gray-500"
+            >
+              ← 돌아가기
+            </button>
+          </div>
+        </div>
+      );
+    }
+    
+    try {
+      const result = calcBurnout();
+      console.log('📊 calcBurnout 결과:', result);
+      
+      if (!result || !result.domains) {
+        console.error('❌ calcBurnout 결과가 유효하지 않습니다');
+        return (
+          <div className="min-h-screen bg-gray-50 p-4 flex items-center justify-center">
+            <div className="bg-white rounded-xl shadow-lg p-8 text-center">
+              <h1 className="text-2xl font-bold text-red-600 mb-4">⚠️ 데이터 오류</h1>
+              <p className="text-gray-600 mb-4">검사 결과를 계산할 수 없습니다.</p>
+              <button 
+                onClick={() => setView("memberDashboard")} 
+                className="bg-gray-400 text-white px-6 py-2 rounded-lg hover:bg-gray-500"
+              >
+                ← 돌아가기
+              </button>
+            </div>
+          </div>
+        );
+      }
+      
+      const { domains, totalScore, percentage, level, crisis, domainCrisis } = result;
+      
+      console.log('📊 domains:', domains);
+      console.log('📊 totalScore:', totalScore);
+      console.log('📊 percentage:', percentage);
+      
+      // 레벨별 색상 및 아이콘
+      const levelConfig = {
+        "매우 낮음": { color: "bg-green-100 text-green-800 border-green-300", icon: "😊" },
+        "낮음": { color: "bg-blue-100 text-blue-800 border-blue-300", icon: "🙂" },
+        "보통": { color: "bg-yellow-100 text-yellow-800 border-yellow-300", icon: "😐" },
+        "높음": { color: "bg-orange-100 text-orange-800 border-orange-300", icon: "😰" },
+        "매우 높음": { color: "bg-red-100 text-red-800 border-red-300", icon: "🔥" }
+      };
+      
+      const config = levelConfig[level] || levelConfig["보통"];
+    
+    return (
+      <div className="min-h-screen bg-gray-50 p-4">
+        <div className="max-w-5xl mx-auto bg-white rounded-xl shadow-lg p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-3xl font-bold text-red-600">🔥 번아웃 증후군 검사 결과 (K-MBI+)</h1>
+            <button onClick={() => setView(isLoggedIn ? "memberDashboard" : "testsIntro")} className="bg-gray-400 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-500">
+              ← 목록
+            </button>
+          </div>
+          
+          {/* 세션 정보 */}
+          <div className="border rounded-lg p-4 mb-6 bg-gray-50">
+            <p className="text-sm"><strong>세션 ID:</strong> {sessionId}</p>
+            <p className="text-sm"><strong>전화번호:</strong> {userInfo.phone || "N/A"}</p>
+          </div>
+          
+          {/* 위기 경고 배너 */}
+          {crisis && (
+            <div className="mb-6 bg-red-50 border-2 border-red-400 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <span className="text-3xl">⚠️</span>
+                <div>
+                  <h3 className="text-lg font-bold text-red-700 mb-2">🚨 심각한 번아웃 상태</h3>
+                  <p className="text-sm text-red-600 mb-2">
+                    전반적인 번아웃 수준이 매우 높거나, 하나 이상의 영역에서 위기 수준의 점수가 나타났습니다.
+                  </p>
+                  <p className="text-sm text-red-700 font-semibold">
+                    즉각적인 전문가 상담과 휴식이 필요합니다.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* 전체 점수 카드 */}
+          <div className={`border-2 rounded-lg p-6 mb-6 ${config.color}`}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold">전체 번아웃 수준</h2>
+              <span className="text-5xl">{config.icon}</span>
+            </div>
+            <div className="flex items-baseline gap-4 mb-2">
+              <span className="text-5xl font-bold">{totalScore}</span>
+              <span className="text-2xl text-gray-600">/ 240점</span>
+              <span className="text-3xl font-bold ml-4">{percentage}%</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-6 mb-3">
+              <div 
+                className={`h-6 rounded-full ${percentage >= 75 ? 'bg-red-600' : percentage >= 50 ? 'bg-orange-500' : percentage >= 30 ? 'bg-yellow-500' : 'bg-green-500'}`}
+                style={{ width: `${percentage}%` }}
+              ></div>
+            </div>
+            <p className="text-xl font-bold">{level}</p>
+          </div>
+          
+          {/* 영역별 점수 */}
+          <div className="mb-6">
+            <h2 className="text-xl font-bold mb-4 text-gray-800">📊 영역별 분석</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {domains.map((domain, idx) => {
+                const isCrisis = domainCrisis.includes(domain.name);
+                
+                return (
+                  <div key={domain.id || idx} className={`border rounded-lg p-4 ${isCrisis ? 'bg-red-50 border-red-300' : 'bg-white'}`}>
+                    <div className="flex justify-between items-center mb-2">
+                      <h3 className="font-bold text-lg">{domain.name}</h3>
+                      {isCrisis && <span className="text-red-600 font-bold text-sm">⚠️ 위기</span>}
+                    </div>
+                    <div className="flex items-baseline gap-2 mb-2">
+                      <span className="text-3xl font-bold">{domain.score}</span>
+                      <span className="text-sm text-gray-600">/ {domain.max}점</span>
+                      <span className="text-xl font-bold ml-2">{domain.percentage}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
+                      <div 
+                        className={`h-3 rounded-full ${isCrisis ? 'bg-red-600' : 'bg-blue-500'}`}
+                        style={{ width: `${domain.percentage}%` }}
+                      ></div>
+                    </div>
+                    <p className="text-xs text-gray-600 mb-2">
+                      <strong>수준:</strong> {domain.level}
+                    </p>
+                    <p className="text-sm text-gray-700">{domain.description}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          
+          {/* 해석 및 권고사항 */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <h2 className="text-xl font-bold mb-4 text-blue-800">💡 결과 해석 및 권고사항</h2>
+            <div className="space-y-3 text-sm text-gray-700">
+              <div>
+                <p className="font-bold text-base mb-1">📌 점수 해석 기준:</p>
+                <ul className="list-disc ml-5 space-y-1">
+                  <li>0-30%: 매우 낮음 (건강한 상태)</li>
+                  <li>31-50%: 낮음 (주의 필요)</li>
+                  <li>51-70%: 보통 (관리 필요)</li>
+                  <li>71-85%: 높음 (상담 권장)</li>
+                  <li>86-100%: 매우 높음 (즉시 개입 필요)</li>
+                </ul>
+              </div>
+              
+              <div>
+                <p className="font-bold text-base mb-1">🩺 권장 조치:</p>
+                <ul className="list-disc ml-5 space-y-1">
+                  {percentage < 30 && <li>현재 건강한 상태를 유지하고 있습니다. 지속적인 자기 관리를 권장합니다.</li>}
+                  {percentage >= 30 && percentage < 50 && <li>가벼운 번아웃 증상이 나타나고 있습니다. 충분한 휴식과 스트레스 관리가 필요합니다.</li>}
+                  {percentage >= 50 && percentage < 70 && <li>번아웃 증상이 보통 수준입니다. 전문가 상담 및 생활 습관 개선을 고려해 보세요.</li>}
+                  {percentage >= 70 && percentage < 85 && <li>높은 수준의 번아웃입니다. 전문 상담사와의 상담을 권장합니다.</li>}
+                  {percentage >= 85 && <li>소진 신호가 매우 높습니다. 지금 쉬어가는 것이 중요합니다. 전문가 상담을 권합니다.</li>}
+                </ul>
+              </div>
+              
+              <div>
+                <p className="font-bold text-base mb-1">🌱 자가 관리 팁:</p>
+                <ul className="list-disc ml-5 space-y-1">
+                  <li>규칙적인 수면 패턴 유지 (하루 7-8시간)</li>
+                  <li>업무와 개인 시간의 명확한 경계 설정</li>
+                  <li>취미 활동 및 사회적 관계 유지</li>
+                  <li>정기적인 신체 활동 (주 3회 이상)</li>
+                  <li>마음챙김 명상 및 이완 기법 연습</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <AiAnalysisBox
+            aiKey="BURNOUT"
+            onRun={() => {
+              const r = calcBurnout();
+              runAiAnalysis("BURNOUT", "BURNOUT", {
+                totalScore: r.totalScore,
+                percentage: r.percentage,
+                level: r.level,
+                domains: r.domains
+              });
+            }}
+          />
+
+          
+          {/* 🤝 전문가 상담 CTA */}
+          {(() => {
+            const r = calcBurnout();
+            const lvl = r.ee >= 27 ? 'high' : r.ee >= 17 ? 'mid' : 'low';
+            return (<>
+              <RecoveryCard testType="BURNOUT" score={result.totalScore} level={lvl} />
+              <ExpertCTA testType="BURNOUT" score={0} level={lvl}
+              onContinueAI={() => { setChatOpen(true); window.scrollTo(0,document.body.scrollHeight); }} />
+            </>);
+          })()}
+{/* 💬 AI 상담 채팅 */}
+          <ChatBox testType="BURNOUT" initialPrompts={[
+            "소진 수준이 높은 내담자를 위한 즉각적인 개입 방법은?",
+            "K-MBI+ 결과에서 가장 우선적으로 다뤄야 할 영역은?",
+            "업무 복귀를 위한 단계적 접근 방법을 알려주세요",
+            "번아웃 회복을 위한 장기적인 전략을 제안해주세요"
+          ]} />
+        </div>
+      </div>
+    );
+    } catch (error) {
+      console.error('❌ 번아웃 결과 렌더링 에러:', error);
+      return (
+        <div className="min-h-screen bg-gray-50 p-4 flex items-center justify-center">
+          <div className="bg-white rounded-xl shadow-lg p-8 text-center">
+            <h1 className="text-2xl font-bold text-red-600 mb-4">⚠️ 오류 발생</h1>
+            <p className="text-gray-600 mb-4">결과 화면을 표시할 수 없습니다.</p>
+            <p className="text-sm text-gray-500 mb-4">{error.toString()}</p>
+            <button 
+              onClick={() => setView("memberDashboard")} 
+              className="bg-gray-400 text-white px-6 py-2 rounded-lg hover:bg-gray-500"
+            >
+              ← 돌아가기
+            </button>
+          </div>
+        </div>
+      );
+    }
+  }
+
+  if (view === "big5Result") {
+    const result = calcBig5();
+    return (
+      <div className="min-h-screen bg-gray-50 p-4">
+        <div className="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-bold text-purple-800">🌟 Big5 성격검사 결과</h1>
+            <button onClick={() => setView(isLoggedIn ? "memberDashboard" : "testsIntro")} className="bg-gray-400 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-500">
+              ← 목록
+            </button>
+          </div>
+          <div className="border rounded-lg p-4 mb-6 bg-gray-50">
+            <p className="text-sm"><strong>세션 ID:</strong> {sessionId}</p>
+            <p className="text-sm"><strong>전화번호:</strong> {userInfo.phone || "N/A"}</p>
+          </div>
+          <div className="space-y-4">
+            {Object.entries(result).map(([factor, score]) => (
+              <div key={factor} className="border rounded-lg p-4 bg-white">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="font-bold text-lg">{factor}</h3>
+                  <span className="text-2xl font-bold text-purple-600">{score}</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-3">
+                  <div className="bg-purple-600 h-3 rounded-full" style={{ width: `${(score / 5) * 100}%` }}></div>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {factor === "외향성" && (score >= 3.5 ? "사교적이고 활동적입니다" : "조용하고 내성적입니다")}
+                  {factor === "친화성" && (score >= 3.5 ? "협조적이고 친절합니다" : "독립적이고 경쟁적입니다")}
+                  {factor === "성실성" && (score >= 3.5 ? "계획적이고 책임감이 강합니다" : "융통성 있고 자발적입니다")}
+                  {factor === "신경성" && (score >= 3.5 ? "감정적으로 민감합니다" : "정서적으로 안정적입니다")}
+                  {factor === "개방성" && (score >= 3.5 ? "창의적이고 호기심이 많습니다" : "실용적이고 현실적입니다")}
+                </p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-6 p-4 bg-purple-50 rounded-lg">
+            <h3 className="font-bold mb-2">해석 안내</h3>
+            <p className="text-sm text-gray-700">
+              각 요인은 1-5점 범위로 측정됩니다. 3.5점 이상은 해당 특성이 강함을, 
+              2.5점 이하는 해당 특성이 약함을 의미합니다. 중간 범위(2.5-3.5)는 
+              균형 잡힌 특성을 나타냅니다.
+            </p>
+          </div>
+          <AiAnalysisBox
+            aiKey="BIG5"
+            onRun={() => {
+              const r = calcBig5();
+              runAiAnalysis("BIG5", "BIG5", { factors: r });
+            }}
+          />
+
+          
+          {/* 🤝 전문가 상담 CTA */}
+          <RecoveryCard testType="BIG5" score={0} level="low" />
+          <ExpertCTA testType="BIG5" score={0} level="low"
+            onContinueAI={() => { setChatOpen(true); window.scrollTo(0,document.body.scrollHeight); }} />
+          {/* 💕 마음커플 — 파트너와 비교하기 */}
+          <div className="mt-4 bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-100 rounded-2xl p-4 flex items-center justify-between gap-3">
+            <div>
+              <div className="font-bold text-rose-700 text-sm">💕 파트너와 성격 비교해보기</div>
+              <div className="text-xs text-gray-500 mt-0.5">BIG5 결과를 활용한 커플 심리 분석</div>
+            </div>
+            <button
+              onClick={() => openMaumCouple()}
+              className="shrink-0 bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-sm">
+              분석 시작 →
+            </button>
+          </div>
+{/* 💬 AI 상담 채팅 */}
+          <ChatBox testType="BIG5" initialPrompts={[
+            "성격 특성을 상담에 어떻게 활용할 수 있나요?",
+            "Big-5 결과에서 가장 주목해야 할 요인은 무엇인가요?",
+            "성격 강점을 발견하고 개발하는 방법은?",
+            "성격 특성 간의 상호작용이 삶에 어떤 영향을 미치나요?"
+          ]} />
+        </div>
+      </div>
+    );
+  }
+
+  if (view === "lostResult") {
+    const { axisAvg, typeCode, typeInfo, stressStyle, stabilityStyle } = calcLost();
+    const counselingType = activeLinkData?.counselingType || "psychological";
+    const counselingLabel = counselingType === "biblical" ? "🕊️ 기독교 상담" : "🧠 심리상담";
+    const counselingColor = counselingType === "biblical" ? "bg-purple-50 border-purple-200 text-purple-700" : "bg-teal-50 border-teal-200 text-teal-700";
+
+    const AXIS_LABELS = {
+      E: { label:"에너지 방향", low:"내향(I)", high:"외향(E)", color:"teal" },
+      D: { label:"의사결정",   low:"감정(F)", high:"논리(T)", color:"blue" },
+      S: { label:"행동 속도",  low:"신중(J)", high:"빠름(P)", color:"orange" },
+      N: { label:"안정성",     low:"안정(N)", high:"변화(C)", color:"green" },
+      R: { label:"관계 민감도",low:"독립(I)", high:"관계중심(R)", color:"purple" },
+      T: { label:"스트레스",   low:"회피(V)", high:"직면(A)", color:"red" },
+    };
+    const barColorMap = { teal:"bg-teal-500", blue:"bg-blue-500", orange:"bg-orange-400", green:"bg-green-500", purple:"bg-purple-500", red:"bg-red-400" };
+
+    return (
+      <div className="min-h-screen bg-gray-50 p-4">
+        <div className="max-w-4xl mx-auto space-y-4">
+          {/* 헤더 */}
+          <div className="bg-white rounded-xl shadow p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h1 className="text-2xl font-bold text-teal-800">🧭 LOST 행동 운영체계 검사 결과</h1>
+              <button onClick={() => setView("memberDashboard")} className="bg-gray-400 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-500">← 목록</button>
+            </div>
+            <div className={`border rounded-lg p-3 mb-4 ${counselingColor}`}>
+              <p className="text-sm"><strong>상담 유형:</strong> {counselingLabel}</p>
+              <p className="text-sm"><strong>세션 ID:</strong> {sessionId}</p>
+              <p className="text-sm"><strong>전화번호:</strong> {userInfo.phone || "N/A"}</p>
+            </div>
+
+            {/* 유형 카드 */}
+            <div className="bg-gradient-to-br from-teal-600 to-teal-800 rounded-2xl p-6 text-white text-center mb-4">
+              <div className="text-6xl mb-2">{typeInfo.icon}</div>
+              <div className="text-3xl font-black mb-1">{typeInfo.name}</div>
+              <div className="text-teal-200 text-sm font-semibold mb-2">{typeInfo.eng} · 유형 코드: {typeCode}</div>
+              <p className="text-teal-100 text-sm leading-relaxed max-w-md mx-auto">{typeInfo.desc}</p>
+              <div className="mt-3 flex justify-center gap-2 flex-wrap">
+                <span className="bg-white/20 text-white text-xs px-3 py-1 rounded-full font-semibold">
+                  스트레스: {stressStyle === "A" ? "직면형" : "회피형"}
+                </span>
+                <span className="bg-white/20 text-white text-xs px-3 py-1 rounded-full font-semibold">
+                  변화 선호도: {stabilityStyle}
+                </span>
+              </div>
+            </div>
+
+            {/* 핵심 특징 */}
+            <div className="flex flex-wrap gap-2 justify-center mb-2">
+              {typeInfo.traits.map(t => (
+                <span key={t} className="bg-teal-50 border border-teal-200 text-teal-800 px-3 py-1 rounded-full text-sm font-semibold">{t}</span>
+              ))}
+            </div>
+          </div>
+
+          {/* 6축 레이더/바 차트 */}
+          <div className="bg-white rounded-xl shadow p-6">
+            <h2 className="text-lg font-bold text-gray-800 mb-4">📊 6축 프로파일</h2>
+            <div className="space-y-4">
+              {Object.entries(AXIS_LABELS).map(([k, info]) => {
+                const val = axisAvg[k] || 3;
+                const pct = ((val - 1) / 4) * 100;
+                return (
+                  <div key={k}>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-sm font-semibold text-gray-700">{info.label}</span>
+                      <div className="flex gap-2 items-center">
+                        <span className="text-xs text-gray-400">{info.low}</span>
+                        <span className="text-sm font-bold text-gray-800">{Number(val).toFixed(2)}</span>
+                        <span className="text-xs text-gray-400">{info.high}</span>
+                      </div>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3 relative">
+                      <div className={`h-3 rounded-full transition-all ${barColorMap[info.color]}`} style={{width:`${pct}%`}}></div>
+                      <div className="absolute top-0 left-1/2 w-0.5 h-3 bg-gray-400 opacity-50"></div>
+                    </div>
+                    <div className="flex justify-between text-xs text-gray-400 mt-0.5">
+                      <span>1.0</span><span>3.0 (중립)</span><span>5.0</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 강점 · 약점 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-white rounded-xl shadow p-5">
+              <h2 className="text-base font-bold text-green-700 mb-3">💪 강점</h2>
+              <ul className="space-y-2">
+                {typeInfo.strength.map((s, i) => (
+                  <li key={i} className="flex gap-2 text-sm text-gray-700"><span className="text-green-500 font-bold mt-0.5">✓</span>{s}</li>
+                ))}
+              </ul>
+            </div>
+            <div className="bg-white rounded-xl shadow p-5">
+              <h2 className="text-base font-bold text-orange-600 mb-3">⚠️ 성장 포인트</h2>
+              <ul className="space-y-2">
+                {typeInfo.weakness.map((w, i) => (
+                  <li key={i} className="flex gap-2 text-sm text-gray-700"><span className="text-orange-400 font-bold mt-0.5">△</span>{w}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {/* 상황별 행동 팁 */}
+          <div className="bg-white rounded-xl shadow p-5">
+            <h2 className="text-base font-bold text-gray-800 mb-3">💡 상황별 행동 팁</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
+                <p className="text-xs font-bold text-blue-700 mb-1">🏢 직장</p>
+                <p className="text-sm text-gray-700">{typeInfo.work}</p>
+              </div>
+              <div className="bg-pink-50 border border-pink-100 rounded-lg p-3">
+                <p className="text-xs font-bold text-pink-700 mb-1">💑 연애·관계</p>
+                <p className="text-sm text-gray-700">{typeInfo.love}</p>
+              </div>
+              <div className="bg-yellow-50 border border-yellow-100 rounded-lg p-3">
+                <p className="text-xs font-bold text-yellow-700 mb-1">😤 스트레스</p>
+                <p className="text-sm text-gray-700">{typeInfo.stress}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* 궁합 유형 */}
+          <div className="bg-white rounded-xl shadow p-5">
+            <h2 className="text-base font-bold text-gray-800 mb-3">🤝 유형 궁합</h2>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-sm font-semibold text-green-700 mb-2">✅ 잘 맞는 유형</p>
+                <div className="flex flex-wrap gap-2">
+                  {typeInfo.match.map(m => {
+                    const matchType = Object.values(LOST_TYPES).find(t => t.name === m);
+                    return (
+                      <span key={m} className="bg-green-50 border border-green-200 text-green-800 px-3 py-1 rounded-full text-sm font-semibold">
+                        {matchType ? matchType.icon : "🤝"} {m}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-red-600 mb-2">⚡ 마찰이 있을 수 있는 유형</p>
+                <div className="flex flex-wrap gap-2">
+                  {typeInfo.conflict.map(c => {
+                    const conflictType = Object.values(LOST_TYPES).find(t => t.name === c);
+                    return (
+                      <span key={c} className="bg-red-50 border border-red-200 text-red-800 px-3 py-1 rounded-full text-sm font-semibold">
+                        {conflictType ? conflictType.icon : "⚡"} {c}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 전체 16유형 맵 */}
+          <div className="bg-white rounded-xl shadow p-5">
+            <h2 className="text-base font-bold text-gray-800 mb-3">🗺️ 전체 16유형 맵</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {Object.entries(LOST_TYPES).map(([code, t]) => (
+                <div key={code} className={`rounded-lg p-2 border text-center text-xs transition ${code === typeCode ? "border-teal-500 bg-teal-50 shadow-md scale-105" : "border-gray-200 bg-gray-50"}`}>
+                  <div className="text-xl mb-0.5">{t.icon}</div>
+                  <div className={`font-bold text-xs ${code === typeCode ? "text-teal-800" : "text-gray-700"}`}>{t.name}</div>
+                  <div className="text-gray-400 text-xs">{code}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* AI 분석 */}
+          <div className="bg-white rounded-xl shadow p-5">
+            <AiAnalysisBox
+              aiKey="LOST"
+              onRun={() => {
+                const r = calcLost();
+                runAiAnalysis("LOST", "LOST", {
+                  typeCode: r.typeCode,
+                  typeName: r.typeInfo.name,
+                  axisAvg: r.axisAvg,
+                  stressStyle: r.stressStyle,
+                  stabilityStyle: r.stabilityStyle,
+                });
+              }}
+            />
+          </div>
+
+          
+          {/* 🤝 전문가 상담 CTA */}
+          {(() => {
+            const r = calcLost();
+            const lvl = 'low';
+            return (<>
+              <RecoveryCard testType="LOST" score={0} level={lvl} />
+              <ExpertCTA testType="LOST" score={0} level={lvl}
+              onContinueAI={() => { setChatOpen(true); window.scrollTo(0,document.body.scrollHeight); }} />
+          {/* 💕 마음커플 — 파트너와 비교하기 */}
+          <div className="mt-4 bg-gradient-to-r from-rose-50 to-purple-50 border border-rose-100 rounded-2xl p-4 flex items-center justify-between gap-3">
+            <div>
+              <div className="font-bold text-rose-700 text-sm">💕 파트너와 행동유형 비교해보기</div>
+              <div className="text-xs text-gray-500 mt-0.5">LOST 결과를 활용한 커플 심리 분석</div>
+            </div>
+            <button
+              onClick={() => openMaumCouple()}
+              className="shrink-0 bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-sm">
+              분석 시작 →
+            </button>
+          </div>
+            </>);
+          })()}
+{/* AI 채팅 */}
+          <div className="bg-white rounded-xl shadow p-5">
+            <ChatBox testType="LOST" initialPrompts={[
+              "이 유형의 가장 큰 강점을 상담에서 어떻게 활용할 수 있나요?",
+              "행동 유형이 대인관계에 미치는 영향을 설명해 주세요",
+              "스트레스 반응 방식을 개선하는 방법은 무엇인가요?",
+              "이 내담자에게 가장 적합한 상담 접근법은?"
+            ]} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+}
+
+function SessionList({ sessions, onView }) {
+  const [currentTime, setCurrentTime] = React.useState(Date.now());
+  
+  // 1초마다 시간 업데이트 (카운트다운)
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+  
+  if (sessions.length === 0) return (
+    <div className="text-center py-12 text-gray-400">
+      <div className="text-5xl mb-3">📋</div>
+      <p>제출된 검사가 없습니다</p>
+    </div>
+  );
+  
+  // 만료 시간 계산 함수
+  const getTimeRemaining = (createdAt) => {
+    const now = currentTime;
+    const createdTime = new Date(createdAt).getTime();
+    const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+    const elapsed = now - createdTime;
+    const remaining = TWENTY_FOUR_HOURS - elapsed;
+    
+    if (remaining <= 0) {
+      return { expired: true, text: "만료됨", color: "text-red-600" };
+    }
+    
+    const hours = Math.floor(remaining / (60 * 60 * 1000));
+    const minutes = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
+    const seconds = Math.floor((remaining % (60 * 1000)) / 1000);
+    
+    let color = "text-green-600";
+    if (hours < 3) color = "text-red-600";
+    else if (hours < 6) color = "text-orange-600";
+    
+    return {
+      expired: false,
+      text: `${hours}시간 ${minutes}분 ${seconds}초`,
+      color: color,
+      hours: hours
+    };
+  };
+  
+  // JSON 다운로드 함수
+  const downloadJson = (sessionId, e) => {
+    e.stopPropagation();
+    const r = localStorage.getItem("session_" + sessionId);
+    if (!r) {
+      alert('❌ 검사 결과를 찾을 수 없습니다.');
+      return;
+    }
+    
+    const sessionData = JSON.parse(r);
+    const jsonStr = JSON.stringify(sessionData, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `검사결과_${sessionData.testType}_${sessionId}_${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    alert('✅ 검사 결과가 JSON 파일로 다운로드되었습니다!');
+  };
+  
+  return (
+    <div className="space-y-4">
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <p className="text-sm text-yellow-800 font-semibold">⚠️ 검사 결과는 24시간 후 자동 삭제됩니다</p>
+        <p className="text-xs text-yellow-700 mt-1">중요한 결과는 <strong>💾 JSON 저장</strong> 버튼으로 로컬에 저장해주세요!</p>
+      </div>
+      
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm border-collapse">
+          <thead>
+            <tr className="bg-gray-100">
+              {["#", "검사 유형", "전화번호", "제출 시간", "⏱️ 남은 시간", "액션"].map(h => <th key={h} className="border p-2 text-left">{h}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {sessions.map((s, i) => {
+              const timeInfo = getTimeRemaining(s.createdAt);
+              return (
+                <tr key={s.sessionId} className={`hover:bg-gray-50 ${timeInfo.expired ? 'opacity-50 bg-red-50' : ''}`}>
+                  <td className="border p-2 text-center text-gray-400">{i + 1}</td>
+                  <td className="border p-2">
+                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                      s.testType === "SCT" ? "bg-blue-100 text-blue-800" : 
+                      s.testType === "DSI" ? "bg-green-100 text-green-800" : 
+                      s.testType === "PHQ9" ? "bg-yellow-100 text-yellow-800" : 
+                      s.testType === "GAD7" ? "bg-orange-100 text-orange-800" : 
+                      s.testType === "DASS21" ? "bg-pink-100 text-pink-800" : 
+                      s.testType === "BIG5" ? "bg-purple-100 text-purple-800" : 
+                      s.testType === "BURNOUT" ? "bg-red-100 text-red-800" : 
+                      s.testType === "LOST" ? "bg-teal-100 text-teal-800" :
+                      "bg-gray-100 text-gray-800"
+                    }`}>
+                      {s.testType === "SCT" ? "📝 문장완성" : 
+                       s.testType === "DSI" ? "🔍 자아분화" : 
+                       s.testType === "PHQ9" ? "😔 PHQ-9" : 
+                       s.testType === "GAD7" ? "😰 GAD-7" : 
+                       s.testType === "DASS21" ? "📊 DASS-21" : 
+                       s.testType === "BIG5" ? "🌟 Big5" : 
+                       s.testType === "BURNOUT" ? "🔥 번아웃" : 
+                       s.testType === "LOST" ? "🧭 LOST" :
+                       s.testType}
+                    </span>
+                  </td>
+                  <td className="border p-2">{s.userPhone}</td>
+                  <td className="border p-2 text-xs text-gray-600">{new Date(s.createdAt).toLocaleString("ko-KR")}</td>
+                  <td className="border p-2">
+                    <span className={`font-bold text-xs ${timeInfo.color}`}>
+                      {timeInfo.expired ? '🔴 만료됨' : `⏱️ ${timeInfo.text}`}
+                    </span>
+                    {!timeInfo.expired && timeInfo.hours < 6 && (
+                      <div className="text-xs text-red-600 mt-1 font-semibold">
+                        ⚠️ 곧 삭제됩니다!
+                      </div>
+                    )}
+                  </td>
+                  <td className="border p-2">
+                    <div className="flex flex-col gap-1">
+                      {!timeInfo.expired ? (
+                        <>
+                          <button 
+                            onClick={() => onView(s.sessionId)} 
+                            className="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold hover:bg-blue-700 w-full"
+                          >
+                            📊 결과 보기
+                          </button>
+                          <button 
+                            onClick={(e) => downloadJson(s.sessionId, e)} 
+                            className="bg-green-600 text-white px-3 py-1.5 rounded text-xs font-semibold hover:bg-green-700 w-full"
+                            title="로컬에 JSON 파일로 저장"
+                          >
+                            💾 저장
+                          </button>
+                        </>
+                      ) : (
+                        <span className="text-xs text-red-600 font-semibold px-2 py-1">삭제됨</span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+}
+
+
+// Render
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<PsychologicalTestSystem />);
+

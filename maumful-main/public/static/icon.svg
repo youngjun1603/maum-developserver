@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="40" fill="#4f46e5"/>
+  <!-- 뇌 심볼 -->
+  <circle cx="96" cy="75" r="38" fill="none" stroke="white" stroke-width="8"/>
+  <path d="M60 75 Q58 55 75 50 Q80 42 96 43 Q112 42 117 50 Q134 55 132 75" fill="none" stroke="white" stroke-width="7" stroke-linecap="round"/>
+  <line x1="96" y1="43" x2="96" y2="113" stroke="white" stroke-width="6" stroke-linecap="round"/>
+  <line x1="60" y1="75" x2="132" y2="75" stroke="white" stroke-width="6" stroke-linecap="round"/>
+  <!-- 심리검사 텍스트 -->
+  <rect x="30" y="125" width="132" height="36" rx="10" fill="rgba(255,255,255,0.15)"/>
+  <text x="96" y="149" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" font-weight="bold" fill="white">심리검사</text>
+</svg>

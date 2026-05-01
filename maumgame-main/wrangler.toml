@@ -1,0 +1,16 @@
+name = "maumgame"
+main = "src/index.tsx"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "./public"
+
+[[d1_databases]]
+binding       = "DB"
+database_name = "maumful-db"
+database_id   = "f8046693-876a-4ae4-b734-20c515f9994f"
+
+[[kv_namespaces]]
+binding = "KV"
+id      = "9f7426807e924916be4dec75793422d9"

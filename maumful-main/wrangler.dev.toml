@@ -1,0 +1,21 @@
+name = "maumful-dev"
+main = "src/index.tsx"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "./public"
+
+# 스테이징 전용 D1 (별도 생성 필요: wrangler d1 create maumful-db-dev)
+[[d1_databases]]
+binding       = "DB"
+database_name = "maumful-db-dev"
+database_id   = "9a35e35e-bd8d-4dc3-b308-898675c8f434"
+
+# KV는 운영과 공유 (JWT_SECRET 동일하게 유지)
+[[kv_namespaces]]
+binding = "KV"
+id      = "9f7426807e924916be4dec75793422d9"
+
+[triggers]
+crons = ["0 0 1 * *"]

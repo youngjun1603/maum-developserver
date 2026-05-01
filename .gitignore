@@ -1,0 +1,25 @@
+# Node
+node_modules/
+dist/
+.cache/
+
+# Wrangler
+.wrangler/
+*.local
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+.dev.vars
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# Build output
+*.tsbuildinfo

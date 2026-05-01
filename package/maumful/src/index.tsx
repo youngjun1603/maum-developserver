@@ -1,0 +1,3018 @@
+import { Hono } from 'hono'
+import { cors } from 'hono/cors'
+
+// ============================================================
+// 타입 정의
+// ============================================================
+type Bindings = {
+  DB: D1Database
+  KV: KVNamespace
+  ANTHROPIC_API_KEY?: string
+  TOSS_SECRET_KEY?: string        // 토스페이먼츠 결제 요청 시크릿
+  TOSS_WEBHOOK_SECRET?: string    // 토스 Webhook 서명 검증
+  STRIPE_SECRET_KEY?: string      // Stripe 결제 요청 시크릿
+  STRIPE_WEBHOOK_SECRET?: string  // Stripe Webhook 서명 검증
+  ADMIN_SECRET?: string
+  ADMIN_ALLOWED_IPS?: string      // 콤마 구분 허용 IP (미설정 시 모두 허용)
+  RESEND_API_KEY?: string
+  RESEND_FROM_EMAIL?: string      // 이메일 발신자 주소 (예: noreply@your-domain.com)
+  TOSS_CLIENT_KEY?: string        // 토스페이먼츠 클라이언트 키 (브라우저용)         // 이메일 발송
+  SERVICE_URL?: string            // 서비스 도메인 (예: https://maumful.kr)
+  COUNSELING_NOTIFY_EMAIL?: string // 상담 알림 수신 이메일
+}
+
+type User = {
+  id: number
+  email: string
+  password_hash: string | null
+  social_provider: string | null
+  social_id: string | null
+  nickname: string | null
+  locale: string
+  country_code: string
+  credits: number
+  is_email_verified: number
+}
+
+const app = new Hono<{ Bindings: Bindings }>()
+
+app.use('/api/*', cors())
+// 정적 파일은 Cloudflare Assets가 자동 처리 ([assets] 설정)
+
+// ============================================================
+// Rate Limiting 미들웨어 (Cloudflare KV 기반)
+// ─ 인증 엔드포인트: IP당 분당 10회
+// ─ AI 엔드포인트:   유저당 분당 20회
+// ─ 일반 API:        IP당 분당 60회
+// ============================================================
+async function checkRateLimit(
+  kv: KVNamespace,
+  key: string,
+  limit: number,
+  windowSec = 60
+): Promise<{ allowed: boolean; remaining: number }> {
+  const kvKey  = `rl:${key}`
+  const now    = Math.floor(Date.now() / 1000)
+  const bucket = Math.floor(now / windowSec)        // 윈도우 버킷
+  const fullKey = `${kvKey}:${bucket}`
+
+  try {
+    const raw = await kv.get(fullKey)
+    const count = raw ? parseInt(raw) : 0
+    if (count >= limit) return { allowed: false, remaining: 0 }
+    // 비동기로 카운터 증가 (응답 지연 최소화)
+    kv.put(fullKey, String(count + 1), { expirationTtl: windowSec * 2 }).catch(() => {})
+    return { allowed: true, remaining: limit - count - 1 }
+  } catch {
+    return { allowed: true, remaining: limit }   // KV 오류 시 통과 (가용성 우선)
+  }
+}
+
+// 관리자 IP 화이트리스트 체크
+function isAdminIp(c: { req: { header: (k: string) => string | undefined }, env: Bindings }): boolean {
+  const allowedIps = (c.env as unknown as Record<string, string>).ADMIN_ALLOWED_IPS   // 콤마 구분 IP 목록
+  if (!allowedIps) return true    // 미설정 시 허용 (개발 환경 대응)
+  const clientIp = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || ''
+  return allowedIps.split(',').map(ip => ip.trim()).includes(clientIp)
+}
+
+// ============================================================
+// 유틸리티
+// ============================================================
+
+async function hashPassword(password: string): Promise<string> {
+  const salt = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+    .map(b => b.toString(16).padStart(2, '0')).join('')
+  const enc = new TextEncoder()
+  const key = await crypto.subtle.importKey('raw', enc.encode(password), { name: 'PBKDF2' }, false, ['deriveBits'])
+  const buf = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt: enc.encode(salt), iterations: 100000, hash: 'SHA-256' }, key, 256
+  )
+  const hash = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('')
+  return `pbkdf2:sha256:100000:${salt}:${hash}`
+}
+
+async function verifyPassword(password: string, stored: string): Promise<boolean> {
+  try {
+    const [, , iterStr, salt, expected] = stored.split(':')
+    const enc = new TextEncoder()
+    const key = await crypto.subtle.importKey('raw', enc.encode(password), { name: 'PBKDF2' }, false, ['deriveBits'])
+    const buf = await crypto.subtle.deriveBits(
+      { name: 'PBKDF2', salt: enc.encode(salt), iterations: parseInt(iterStr), hash: 'SHA-256' }, key, 256
+    )
+    const actual = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('')
+    if (actual.length !== expected.length) return false
+    let diff = 0
+    for (let i = 0; i < actual.length; i++) diff |= actual.charCodeAt(i) ^ expected.charCodeAt(i)
+    return diff === 0
+  } catch { return false }
+}
+
+// JWT HS256 (Cloudflare Workers Web Crypto)
+async function signJwt(payload: Record<string, unknown>, secret: string): Promise<string> {
+  const toB64 = (obj: unknown) =>
+    btoa(JSON.stringify(obj)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
+  const header = toB64({ alg: 'HS256', typ: 'JWT' })
+  const body   = toB64(payload)
+  const enc    = new TextEncoder()
+  const key    = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+  const sig    = await crypto.subtle.sign('HMAC', key, enc.encode(`${header}.${body}`))
+  const sigB64 = btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
+  return `${header}.${body}.${sigB64}`
+}
+
+async function verifyJwt(token: string, secret: string): Promise<Record<string, unknown> | null> {
+  try {
+    const [header, body, sig] = token.split('.')
+    const enc  = new TextEncoder()
+    const key  = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['verify'])
+    const sigB = Uint8Array.from(atob(sig.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0))
+    const ok   = await crypto.subtle.verify('HMAC', key, sigB, enc.encode(`${header}.${body}`))
+    if (!ok) return null
+    const p = JSON.parse(atob(body.replace(/-/g, '+').replace(/_/g, '/')))
+    if (p.exp && p.exp < Date.now() / 1000) return null
+    return p
+  } catch { return null }
+}
+
+// ── 마스터(테스트) 계정 ─────────────────────────────────────
+const MASTER_EMAILS = ['limyj007@gmail.com']
+function isMasterAccount(email: string | null | undefined): boolean {
+  return !!email && MASTER_EMAILS.includes(email.toLowerCase())
+}
+
+async function getJwtSecret(kv: KVNamespace): Promise<string> {
+  return (await kv.get('JWT_SECRET')) ?? 'dev_secret_change_in_production'
+}
+
+async function getAuthUserId(req: Request, kv: KVNamespace): Promise<number | null> {
+  const auth = req.headers.get('Authorization') ?? ''
+  if (!auth.startsWith('Bearer ')) return null
+  const secret  = await getJwtSecret(kv)
+  const payload = await verifyJwt(auth.slice(7), secret)
+  if (!payload || typeof payload.sub !== 'number') return null
+  return payload.sub
+}
+
+// 크레딧 차감
+// Race Condition 방지: WHERE credits >= ? 조건으로 단일 UPDATE 사용
+// SELECT 후 UPDATE 패턴 제거 → 동시 요청이 와도 DB 레벨에서 원자적으로 처리
+async function spendCredits(
+  db: D1Database, userId: number, amount: number, reason: string, refId?: string
+): Promise<{ ok: boolean; balance: number; error?: string }> {
+  // credits >= amount 조건을 WHERE에 포함 → 잔액 부족이면 0 rows affected
+  const result = await db.prepare(
+    'UPDATE users SET credits = credits - ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND credits >= ?'
+  ).bind(amount, userId, amount).run()
+
+  if (!result.meta.changes || result.meta.changes === 0) {
+    // 변경된 행 없음 → 사용자 없거나 잔액 부족
+    const user = await db.prepare('SELECT credits FROM users WHERE id = ?').bind(userId).first<{ credits: number }>()
+    if (!user) return { ok: false, balance: 0, error: 'user_not_found' }
+    return { ok: false, balance: user.credits, error: 'insufficient_credits' }
+  }
+
+  // 차감 후 잔액 조회 (변경된 행이 있으므로 반드시 존재)
+  const updated = await db.prepare('SELECT credits FROM users WHERE id = ?').bind(userId).first<{ credits: number }>()
+  const newBalance = updated!.credits
+
+  await db.prepare('INSERT INTO credit_transactions (user_id,type,amount,reason,balance_after,ref_id) VALUES (?,?,?,?,?,?)')
+    .bind(userId, 'spend', amount, reason, newBalance, refId ?? null).run()
+
+  return { ok: true, balance: newBalance }
+}
+
+// 크레딧 지급 (원자적 UPDATE, SELECT 없이 처리)
+async function gainCredits(
+  db: D1Database, userId: number, amount: number, reason: string, refId?: string
+): Promise<number> {
+  await db.prepare(
+    'UPDATE users SET credits = credits + ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+  ).bind(amount, userId).run()
+
+  const updated = await db.prepare('SELECT credits FROM users WHERE id = ?').bind(userId).first<{ credits: number }>()
+  const newBalance = updated?.credits ?? 0
+
+  await db.prepare('INSERT INTO credit_transactions (user_id,type,amount,reason,balance_after,ref_id) VALUES (?,?,?,?,?,?)')
+    .bind(userId, 'gain', amount, reason, newBalance, refId ?? null).run()
+
+  return newBalance
+}
+
+// API 키 복호화 (기존 로직 유지)
+function decryptApiKey(encrypted: string, secret: string): string {
+  const key   = secret.padEnd(32, '0').slice(0, 32)
+  const kB    = new TextEncoder().encode(key)
+  const bytes = Uint8Array.from(atob(encrypted), c => c.charCodeAt(0))
+  return new TextDecoder().decode(bytes.map((b, i) => b ^ kB[i % kB.length]))
+}
+
+async function getAnthropicKey(db: D1Database, env: Bindings): Promise<string | null> {
+  // Cloudflare Secret (env) 만 사용 — DB 조회 제거 (구 키 오염 방지)
+  return env.ANTHROPIC_API_KEY ?? null
+}
+
+// 랜덤 토큰 생성
+function randomToken(bytes = 32): string {
+  return Array.from(crypto.getRandomValues(new Uint8Array(bytes)))
+    .map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
+// ============================================================
+// 지역 설정 API
+// ============================================================
+app.get('/api/config/region', (c) => {
+  const country = (c.req.header('cf-ipcountry') ?? 'KR').toUpperCase()
+  const lang    = (c.req.header('accept-language') ?? 'ko').slice(0, 2).toLowerCase()
+  const isKorea = country === 'KR' || lang === 'ko'
+
+  const globalTests = ['PHQ9', 'GAD7', 'DASS21', 'BIG5', 'LOST']
+  const koreaTests  = ['SCT', 'DSI', ...globalTests, 'BURNOUT']
+
+  return c.json({
+    country,
+    lang: isKorea ? 'ko' : 'en',
+    pg: isKorea ? 'toss' : 'stripe',
+    currency: isKorea ? 'KRW' : 'USD',
+    availableTests: isKorea ? koreaTests : globalTests,
+    crisisLine: isKorea
+      ? { label: '자살예방상담전화', number: '1393' }
+      : { label: 'Crisis Lifeline', number: '988' },
+    creditPrices: isKorea
+      ? {
+          starter:  { credits: 30,  amount: 2000  },
+          standard: { credits: 60,  amount: 3500  },
+          premium:  { credits: 150, amount: 8000  },
+          pro:      { credits: 350, amount: 17000 },
+        }
+      : {
+          starter:  { credits: 30,  amount: 299   },
+          standard: { credits: 60,  amount: 499   },
+          premium:  { credits: 150, amount: 1099  },
+          pro:      { credits: 350, amount: 2299  },
+        },
+  })
+})
+
+// ============================================================
+// 인증 API
+// ============================================================
+
+// 회원가입
+app.post('/api/auth/register', async (c) => {
+  const { DB, KV } = c.env
+  const ip = c.req.header('cf-connecting-ip') || 'unknown'
+  const rl = await checkRateLimit(KV, `register:${ip}`, 5, 3600) // 시간당 5회
+  if (!rl.allowed) return c.json({ success: false, error: '잠시 후 다시 시도해주세요.' }, 429)
+
+  const body = await c.req.json()
+  const { email, password, nickname, locale = 'ko' } = body
+
+  if (!email || !password)
+    return c.json({ success: false, error: '이메일과 비밀번호는 필수입니다.' }, 400)
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    return c.json({ success: false, error: '유효하지 않은 이메일입니다.' }, 400)
+  if (password.length < 8)
+    return c.json({ success: false, error: '비밀번호는 8자 이상이어야 합니다.' }, 400)
+
+  const existing = await DB.prepare('SELECT id FROM users WHERE email = ?').bind(email.toLowerCase()).first()
+  if (existing) return c.json({ success: false, error: '이미 가입된 이메일입니다.' }, 409)
+
+  const passwordHash = await hashPassword(password)
+  const country      = (c.req.header('cf-ipcountry') ?? 'KR').toUpperCase()
+
+  // 가입 보너스: 10 크레딧
+  const result = await DB.prepare(`
+    INSERT INTO users (email, password_hash, nickname, locale, country_code, credits, is_email_verified)
+    VALUES (?, ?, ?, ?, ?, 10, 1)
+  `).bind(email.toLowerCase(), passwordHash, nickname ?? email.split('@')[0], locale, country).run()
+
+  const userId = result.meta.last_row_id as number
+
+  await DB.batch([
+    DB.prepare('INSERT INTO credit_transactions (user_id,type,amount,reason,balance_after) VALUES (?,?,?,?,?)')
+      .bind(userId, 'gain', 10, 'signup_bonus', 10),
+  ])
+
+  // 이메일 인증 생략 (추후 활성화 예정)
+  // 이메일 인증 토큰 생성 및 발송
+  const verifyToken = randomToken()
+  const expiresAt   = new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString()
+  await DB.prepare(
+    'INSERT INTO auth_tokens (user_id, token, type, expires_at) VALUES (?, ?, ?, ?)'
+  ).bind(userId, verifyToken, 'email_verify', expiresAt).run()
+  await sendVerifyEmail(c.env, email.toLowerCase(), nickname ?? email.split('@')[0], verifyToken)
+
+  return c.json({
+    success: true,
+    message: '가입 완료! 이메일로 발송된 인증 링크를 확인해주세요. (6시간 이내)',
+    data: { userId, email: email.toLowerCase(), credits: 45, requiresVerification: true },
+  }, 201)
+})
+
+// 이메일 인증
+app.get('/api/auth/verify/:token', async (c) => {
+  const { DB } = c.env
+  const token = c.req.param('token')
+  const row   = await DB.prepare(`
+    SELECT id, user_id, expires_at, used_at FROM auth_tokens WHERE token = ? AND type = 'email_verify'
+  `).bind(token).first<{ id: number; user_id: number; expires_at: string; used_at: string | null }>()
+
+  if (!row)          return c.json({ success: false, error: '유효하지 않은 인증 링크입니다.' }, 400)
+  if (row.used_at)   return c.json({ success: false, error: '이미 사용된 인증 링크입니다.' }, 400)
+  if (new Date(row.expires_at) < new Date())
+    return c.json({ success: false, error: '만료된 링크입니다. 다시 요청해주세요.' }, 400)
+
+  await DB.batch([
+    DB.prepare('UPDATE users SET is_email_verified = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?').bind(row.user_id),
+    DB.prepare('UPDATE auth_tokens SET used_at = CURRENT_TIMESTAMP WHERE id = ?').bind(row.id),
+  ])
+  return c.json({ success: true, message: '이메일 인증 완료. 로그인해주세요.' })
+})
+
+// 이메일 로그인
+app.post('/api/auth/login', async (c) => {
+  const { DB, KV } = c.env
+  const ip = c.req.header('cf-connecting-ip') || 'unknown'
+  const rl = await checkRateLimit(KV, `login:${ip}`, 10, 60) // 분당 10회
+  if (!rl.allowed) return c.json({ success: false, error: '로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.' }, 429)
+
+  const { email, password } = await c.req.json()
+
+  if (!email || !password)
+    return c.json({ success: false, error: '이메일과 비밀번호를 입력해주세요.' }, 400)
+
+  const user = await DB.prepare('SELECT * FROM users WHERE email = ?')
+    .bind(email.toLowerCase()).first<User>()
+  if (!user)
+    return c.json({ success: false, error: '이메일 또는 비밀번호가 올바르지 않습니다.' }, 401)
+  if (!user.password_hash)
+    return c.json({ success: false, error: '소셜 로그인 계정입니다.' }, 401)
+
+  const valid = await verifyPassword(password, user.password_hash)
+  if (!valid)
+    return c.json({ success: false, error: '이메일 또는 비밀번호가 올바르지 않습니다.' }, 401)
+
+
+  // 이메일 인증 차단 비활성화 (추후 활성화 예정)
+  // 이메일 인증 확인
+  // 베타 기간: 이메일 미인증도 로그인 허용
+  // if (user.is_email_verified === 0) {
+  //   return c.json({ success: false, error: '이메일 인증이 필요합니다.', requiresVerification: true, email: user.email }, 403)
+  // }
+
+  const secret       = await getJwtSecret(KV)
+  const now          = Math.floor(Date.now() / 1000)
+  const accessToken  = await signJwt({ sub: user.id, email: user.email, iat: now, exp: now + 3600 }, secret)
+  const refreshToken = await signJwt({ sub: user.id, type: 'refresh', iat: now, exp: now + 30 * 86400 }, secret)
+  await KV.put(`refresh:${user.id}`, refreshToken, { expirationTtl: 30 * 86400 })
+
+  return c.json({
+    success: true,
+    data: {
+      accessToken, refreshToken,
+      user: { id: user.id, email: user.email, nickname: user.nickname, locale: user.locale, credits: user.credits },
+      emailVerified: user.is_email_verified === 1,
+    },
+  })
+})
+
+// 토큰 갱신
+app.post('/api/auth/refresh', async (c) => {
+  const { KV } = c.env
+  const { refreshToken } = await c.req.json()
+  if (!refreshToken) return c.json({ success: false, error: 'refresh token 필요' }, 400)
+
+  const secret  = await getJwtSecret(KV)
+  const payload = await verifyJwt(refreshToken, secret)
+  if (!payload || payload.type !== 'refresh' || typeof payload.sub !== 'number')
+    return c.json({ success: false, error: '유효하지 않은 토큰' }, 401)
+
+  const stored = await KV.get(`refresh:${payload.sub}`)
+  if (stored !== refreshToken) return c.json({ success: false, error: '만료된 토큰' }, 401)
+
+  const now         = Math.floor(Date.now() / 1000)
+  const accessToken = await signJwt({ sub: payload.sub, iat: now, exp: now + 3600 }, secret)
+  return c.json({ success: true, data: { accessToken } })
+})
+
+// 로그아웃
+app.post('/api/auth/logout', async (c) => {
+  const { KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (userId) await KV.delete(`refresh:${userId}`)
+  return c.json({ success: true })
+})
+
+// 이메일 인증 재발송
+app.post('/api/auth/resend-verify', async (c) => {
+  const { DB, KV } = c.env
+  const { email } = await c.req.json()
+  if (!email) return c.json({ success: false, error: '이메일을 입력해주세요.' }, 400)
+
+  // Rate Limit: 이메일당 1시간에 3회
+  const ip = c.req.header('cf-connecting-ip') || 'unknown'
+  const rl = await checkRateLimit(KV, `resend-verify:${ip}`, 3, 3600)
+  if (!rl.allowed) return c.json({ success: false, error: '잠시 후 다시 시도해주세요.' }, 429)
+
+  const user = await DB.prepare(
+    'SELECT id, nickname, is_email_verified FROM users WHERE email = ?'
+  ).bind(email.toLowerCase()).first<{ id: number; nickname: string | null; is_email_verified: number }>()
+
+  // 보안: 존재 여부 노출하지 않음
+  if (!user) return c.json({ success: true, message: '인증 메일을 발송했습니다.' })
+  if (user.is_email_verified === 1) return c.json({ success: false, error: '이미 인증된 이메일입니다.' }, 400)
+
+  // 기존 미사용 토큰 무효화
+  await DB.prepare(
+    "UPDATE auth_tokens SET used_at = CURRENT_TIMESTAMP WHERE user_id = ? AND type = 'email_verify' AND used_at IS NULL"
+  ).bind(user.id).run()
+
+  // 새 토큰 생성 (6시간)
+  const token     = randomToken()
+  const expiresAt = new Date(Date.now() + 6 * 3600 * 1000).toISOString()
+  await DB.prepare('INSERT INTO auth_tokens (user_id, token, type, expires_at) VALUES (?,?,?,?)')
+    .bind(user.id, token, 'email_verify', expiresAt).run()
+
+  // 메일 발송
+  await sendVerifyEmail(c.env, email.toLowerCase(), user.nickname || '', token)
+
+  return c.json({ success: true, message: '인증 메일을 발송했습니다. 받은 편지함을 확인해주세요.' })
+})
+
+// 구글 로그인
+app.post('/api/auth/google', async (c) => {
+  const { DB, KV } = c.env
+  const { idToken } = await c.req.json()
+  if (!idToken) return c.json({ success: false, error: 'idToken 필요' }, 400)
+
+  const verifyRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`)
+  if (!verifyRes.ok) return c.json({ success: false, error: '구글 토큰 검증 실패' }, 401)
+  const info = await verifyRes.json() as { sub: string; email: string; name?: string }
+
+  let user = await DB.prepare('SELECT * FROM users WHERE social_provider = ? AND social_id = ?')
+    .bind('google', info.sub).first<User>()
+
+  if (!user) {
+    const existing = await DB.prepare('SELECT * FROM users WHERE email = ?')
+      .bind(info.email.toLowerCase()).first<User>()
+
+    if (existing) {
+      await DB.prepare('UPDATE users SET social_provider=?,social_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=?')
+        .bind('google', info.sub, existing.id).run()
+      user = { ...existing, social_provider: 'google', social_id: info.sub }
+    } else {
+      const country = (c.req.header('cf-ipcountry') ?? 'KR').toUpperCase()
+      const r = await DB.prepare(
+        'INSERT INTO users (email,social_provider,social_id,nickname,locale,country_code,is_email_verified,credits) VALUES (?,?,?,?,?,?,1,10)'
+      ).bind(info.email.toLowerCase(), 'google', info.sub, info.name ?? info.email.split('@')[0], 'ko', country).run()
+      const newId = r.meta.last_row_id as number
+      await DB.batch([
+        DB.prepare('INSERT INTO credit_transactions (user_id,type,amount,reason,balance_after) VALUES (?,?,?,?,?)').bind(newId,'gain',10,'signup_bonus',10),
+      ])
+      user = await DB.prepare('SELECT * FROM users WHERE id = ?').bind(newId).first<User>() as User
+    }
+  }
+
+  const secret       = await getJwtSecret(KV)
+  const now          = Math.floor(Date.now() / 1000)
+  const accessToken  = await signJwt({ sub: user.id, email: user.email, iat: now, exp: now + 3600 }, secret)
+  const refreshToken = await signJwt({ sub: user.id, type: 'refresh', iat: now, exp: now + 30 * 86400 }, secret)
+  await KV.put(`refresh:${user.id}`, refreshToken, { expirationTtl: 30 * 86400 })
+
+  return c.json({ success: true, data: { accessToken, refreshToken, user: { id: user.id, email: user.email, nickname: user.nickname, locale: user.locale, credits: user.credits } } })
+})
+
+// 비밀번호 찾기 — 재설정 메일 요청
+app.post('/api/auth/forgot-password', async (c) => {
+  const { DB } = c.env
+  const { email } = await c.req.json()
+  if (!email) return c.json({ success: false, error: '이메일을 입력해주세요.' }, 400)
+
+  const user = await DB.prepare('SELECT id FROM users WHERE email = ?').bind(email.toLowerCase()).first<{ id: number }>()
+  // 보안: 존재 여부 노출하지 않음
+  if (!user) return c.json({ success: true, message: '이메일이 존재하면 재설정 링크를 발송합니다.' })
+
+  const resetToken = randomToken()
+  const expiresAt  = new Date(Date.now() + 3600 * 1000).toISOString() // 1시간
+  await DB.prepare('INSERT INTO auth_tokens (user_id,token,type,expires_at) VALUES (?,?,?,?)')
+    .bind(user.id, resetToken, 'pw_reset', expiresAt).run()
+
+  // 비밀번호 재설정 메일 발송
+  const userForEmail = await DB.prepare('SELECT nickname FROM users WHERE id=?').bind(user.id).first<{ nickname: string | null }>()
+  sendPasswordResetEmail(c.env, email.toLowerCase(), userForEmail?.nickname || '', resetToken)
+    .catch(e => console.error('[ForgotPw] 메일 발송 실패:', e))
+
+  return c.json({
+    success: true,
+    message: '비밀번호 재설정 링크를 발송했습니다.',
+    ...(!c.env.RESEND_API_KEY ? { _dev: { resetToken } } : {}),
+  })
+})
+
+// 비밀번호 재설정
+app.post('/api/auth/reset-password', async (c) => {
+  const { DB } = c.env
+  const { token, newPassword } = await c.req.json()
+  if (!token || !newPassword) return c.json({ success: false, error: '토큰과 새 비밀번호가 필요합니다.' }, 400)
+  if (newPassword.length < 8) return c.json({ success: false, error: '비밀번호는 8자 이상이어야 합니다.' }, 400)
+
+  const row = await DB.prepare(`
+    SELECT id, user_id, expires_at, used_at FROM auth_tokens WHERE token = ? AND type = 'pw_reset'
+  `).bind(token).first<{ id: number; user_id: number; expires_at: string; used_at: string | null }>()
+
+  if (!row || row.used_at || new Date(row.expires_at) < new Date())
+    return c.json({ success: false, error: '유효하지 않거나 만료된 링크입니다.' }, 400)
+
+  const newHash = await hashPassword(newPassword)
+  await DB.batch([
+    DB.prepare('UPDATE users SET password_hash=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(newHash, row.user_id),
+    DB.prepare('UPDATE auth_tokens SET used_at=CURRENT_TIMESTAMP WHERE id=?').bind(row.id),
+  ])
+  return c.json({ success: true, message: '비밀번호가 변경되었습니다. 다시 로그인해주세요.' })
+})
+
+// ============================================================
+// 내 계정 API
+// ============================================================
+app.get('/api/user/me', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false, error: '로그인이 필요합니다.' }, 401)
+
+  const user = await DB.prepare(
+    'SELECT id,email,nickname,locale,country_code,credits,is_email_verified,created_at FROM users WHERE id=?'
+  ).bind(userId).first()
+  if (!user) return c.json({ success: false, error: '사용자 없음' }, 404)
+  return c.json({ success: true, data: user })
+})
+
+app.get('/api/user/credits', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false, error: '로그인이 필요합니다.' }, 401)
+
+  const user = await DB.prepare('SELECT credits FROM users WHERE id=?').bind(userId).first<{ credits: number }>()
+
+  // 트랜잭션 + 충전 금액 JOIN (영수증용)
+  const txns = await DB.prepare(`
+    SELECT ct.type, ct.amount, ct.reason, ct.balance_after, ct.created_at, ct.ref_id,
+           cc.amount AS pg_amount, cc.currency AS pg_currency
+    FROM credit_transactions ct
+    LEFT JOIN credit_charges cc ON ct.ref_id = cc.pg_tid AND ct.reason = 'charge'
+    WHERE ct.user_id = ?
+    ORDER BY ct.created_at DESC
+    LIMIT 50
+  `).bind(userId).all()
+
+  return c.json({ success: true, data: { balance: user?.credits ?? 0, transactions: txns.results } })
+})
+
+app.patch('/api/user/me', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false, error: '로그인이 필요합니다.' }, 401)
+
+  const { nickname, locale } = await c.req.json()
+  const sets: string[] = []; const vals: unknown[] = []
+  if (nickname) { sets.push('nickname=?'); vals.push(nickname) }
+  if (locale && ['ko','en'].includes(locale)) { sets.push('locale=?'); vals.push(locale) }
+  if (!sets.length) return c.json({ success: false, error: '변경 항목 없음' }, 400)
+  sets.push('updated_at=CURRENT_TIMESTAMP'); vals.push(userId)
+  await DB.prepare(`UPDATE users SET ${sets.join(',')} WHERE id=?`).bind(...vals).run()
+  return c.json({ success: true })
+})
+
+app.delete('/api/user/me', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false, error: '로그인이 필요합니다.' }, 401)
+
+  // 개인 식별 정보 익명화 (GDPR)
+  await DB.prepare(`
+    UPDATE users SET
+      email='deleted_'||id||'@deleted.local',
+      password_hash=NULL, social_provider=NULL, social_id=NULL,
+      nickname='탈퇴 회원', email_verify_token=NULL,
+      updated_at=CURRENT_TIMESTAMP
+    WHERE id=?
+  `).bind(userId).run()
+  await KV.delete(`refresh:${userId}`)
+  return c.json({ success: true, message: '탈퇴 완료' })
+})
+
+// ============================================================
+// 심리검사 API
+// ============================================================
+// 무료 검사 목록 (PHQ-9, GAD-7, Big5) — 크레딧 차감 없음
+const FREE_TESTS_SERVER = ['PHQ9', 'GAD7']
+
+app.post('/api/test/start', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false, error: '로그인이 필요합니다.' }, 401)
+
+  const { testType, lang = 'ko' } = await c.req.json()
+  if (!testType) return c.json({ success: false, error: 'testType 필요' }, 400)
+
+  // 마스터 계정 또는 무료 검사: 크레딧 차감 없이 바로 처리
+  const userRow = await DB.prepare('SELECT email, credits FROM users WHERE id=?').bind(userId).first<{ email: string; credits: number }>()
+  if (FREE_TESTS_SERVER.includes(testType) || isMasterAccount(userRow?.email)) {
+    await DB.prepare('INSERT INTO test_history (user_id,test_type,lang,credits_spent) VALUES (?,?,?,?)')
+      .bind(userId, testType, lang, 0).run()
+    return c.json({ success: true, data: { testType, creditsSpent: 0, balance: userRow?.credits ?? 0, isFree: true } })
+  }
+
+  // 유료 검사: 크레딧 10 차감
+  const COST = 10
+  const result = await spendCredits(DB, userId, COST, 'test')
+  if (!result.ok) {
+    return c.json({
+      success: false,
+      error: result.error === 'insufficient_credits'
+        ? `크레딧 부족 (보유: ${result.balance}, 필요: ${COST})`
+        : '오류 발생',
+      balance: result.balance,
+      needsCharge: true,
+    }, 402)
+  }
+  await DB.prepare('INSERT INTO test_history (user_id,test_type,lang,credits_spent) VALUES (?,?,?,?)')
+    .bind(userId, testType, lang, COST).run()
+
+  return c.json({ success: true, data: { testType, creditsSpent: COST, balance: result.balance, isFree: false } })
+})
+
+app.get('/api/test/history', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false, error: '로그인이 필요합니다.' }, 401)
+
+  const h = await DB.prepare(
+    'SELECT test_type,lang,credits_spent,performed_at FROM test_history WHERE user_id=? ORDER BY performed_at DESC LIMIT 50'
+  ).bind(userId).all()
+  return c.json({ success: true, data: h.results })
+})
+
+// ============================================================
+// AI 분석 프롬프트 빌더 — B2C 친화적 양식 (심리상담 / 기독교 상담)
+// ============================================================
+type AnalyzeRequest = { testType: string; counselingType: string; responses: Record<string, unknown>; category?: string; lang?: string }
+
+function buildAnalysisPrompt(req: AnalyzeRequest): string {
+  const lang       = req.lang ?? 'ko'
+  const isBiblical = req.counselingType === 'biblical'
+  const r          = req.responses
+
+  const sysKo = isBiblical
+    ? '당신은 기독교 상담사입니다. 성경 말씀과 따뜻한 신앙적 공감으로 내담자의 마음을 살핍니다. 진단적 표현은 절대 사용하지 마세요.'
+    : '당신은 마음풀의 심리 안내자입니다. 판단 없이 내담자의 마음을 관찰하고, 상담사가 활용할 수 있는 따뜻한 통찰을 제공합니다. 임상적·진단적 표현은 절대 사용하지 마세요.'
+  const sysEn = 'You are a compassionate psychological guide. Observe without judgment and provide warm insights. Never use clinical diagnostic language.'
+  const ctx = lang === 'ko' ? sysKo : sysEn
+
+  const psychFormat = `
+아래 4개 섹션만 작성해 주세요. 임상 진단명·병명은 절대 사용하지 마세요.
+
+[현재 상태 요약]
+판단 없이 관찰로만 1~2문장. "~처럼 보입니다", "~경향이 나타납니다" 같은 표현 사용.
+
+[눈에 띄는 응답]
+점수가 높거나 주목할 응답 2~3가지를 간결하게 나열하고, 마지막에 "이 부분을 좀 더 여쭤보시면 좋을 것 같습니다" 한 문장 추가.
+
+[상담 시 참고 포인트]
+- 대화 시작 질문: 마음을 열 수 있는 열린 질문 2개 (예시 형식으로 작성)
+- 주의 깊게 살펴볼 부분: 놓치기 쉬운 신호나 맥락 1~2가지
+
+[일상 제안]
+부담 없이 실천 가능한 작은 것 1~2가지. 치료나 약물 언급 금지.`
+
+  const biblicalFormat = `
+아래 4개 섹션만 작성해 주세요. 따뜻하고 신앙적인 언어를 사용하세요.
+
+[마음 살피기]
+공감적으로 마음 상태 1~2문장. 판단 없이 내담자의 감정을 반영.
+
+[말씀 묵상]
+- 연결 말씀: 구절 전문 (책명 장:절 형식)
+- 말씀 의미: 이 구절이 내담자 상황에 주는 위로 2~3문장
+- 상담 연결: 상담사가 자연스럽게 꺼낼 방법 한 문장
+
+[상담 나눔 포인트]
+- 대화 주제: 신앙과 연결된 열린 질문 2가지
+- 함께 기도할 방향: 기도 제목 1~2가지
+
+[소망의 한마디]
+격려와 성경적 소망을 담은 한 문장.`
+
+  const fmt = isBiblical ? biblicalFormat : psychFormat
+  const NL = '\n'
+
+  // PHQ-9
+  if (req.testType === 'PHQ9') {
+    const total = r.total as number
+    const level = r.level as string
+    const items = (r.items as Array<{question:string;score:number}>) ?? []
+    const formatted = items.map((item, idx) => (idx+1) + '. ' + item.question + ': ' + item.score + '점').join(NL)
+    if (lang === 'ko') return ctx + NL + NL + 'PHQ-9 우울 자가점검 결과' + NL + '총점: ' + total + '/27 (' + level + ')' + NL + NL + '문항별 응답:' + NL + formatted + NL + fmt
+    return ctx + NL + NL + 'PHQ-9 Result — Total: ' + total + '/27 (' + level + ')' + NL + formatted + NL + NL + '[Summary][Notable Responses][Counseling Points][Daily Suggestions]'
+  }
+
+  // GAD-7
+  if (req.testType === 'GAD7') {
+    const total = r.total as number
+    const level = r.level as string
+    const items = (r.items as Array<{question:string;score:number}>) ?? []
+    const formatted = items.map((item, idx) => (idx+1) + '. ' + item.question + ': ' + item.score + '점').join(NL)
+    if (lang === 'ko') return ctx + NL + NL + 'GAD-7 불안 자가점검 결과' + NL + '총점: ' + total + '/21 (' + level + ')' + NL + NL + '문항별 응답:' + NL + formatted + NL + fmt
+    return ctx + NL + NL + 'GAD-7 Result — Total: ' + total + '/21 (' + level + ')' + NL + formatted + NL + NL + '[Summary][Notable Responses][Counseling Points][Daily Suggestions]'
+  }
+
+  // DASS-21
+  if (req.testType === 'DASS21') {
+    const dep = r.depression as {score:number;level:string}
+    const anx = r.anxiety   as {score:number;level:string}
+    const str = r.stress    as {score:number;level:string}
+    if (lang === 'ko') return ctx + NL + NL + 'DASS-21 결과' + NL + '우울: ' + (dep?.score) + '점 (' + (dep?.level) + ') · 불안: ' + (anx?.score) + '점 (' + (anx?.level) + ') · 스트레스: ' + (str?.score) + '점 (' + (str?.level) + ')' + NL + fmt
+    return ctx + NL + NL + 'DASS-21' + NL + 'Depression: ' + (dep?.score) + ' (' + (dep?.level) + ') · Anxiety: ' + (anx?.score) + ' (' + (anx?.level) + ') · Stress: ' + (str?.score) + ' (' + (str?.level) + ')' + NL + '[Summary][Notable][Counseling Points][Daily Suggestions]'
+  }
+
+  // BIG5
+  if (req.testType === 'BIG5') {
+    const factors = r.factors as Record<string,number>
+    const formatted = Object.entries(factors ?? {}).map(([k,v]) => k + ': ' + v + '/5').join(NL)
+    if (lang === 'ko') return ctx + NL + NL + 'Big5 성격검사 결과' + NL + formatted + NL + fmt
+    return ctx + NL + NL + 'Big Five Personality' + NL + formatted + NL + '[Summary][Notable][Counseling Points][Daily Suggestions]'
+  }
+
+  // LOST
+  if (req.testType === 'LOST') {
+    const typeCode = r.typeCode as string
+    const typeName = r.typeName as string
+    const axisAvg  = r.axisAvg  as Record<string,number>
+    const axisText = Object.entries(axisAvg ?? {}).map(([k,v]) => k + ': ' + Number(v).toFixed(2)).join(NL)
+    if (lang === 'ko') return ctx + NL + NL + 'LOST 행동 운영체계 검사' + NL + '유형: ' + typeCode + ' (' + typeName + ')' + NL + NL + '축별 점수:' + NL + axisText + NL + fmt
+    return ctx + NL + NL + 'LOST Assessment' + NL + 'Type: ' + typeCode + ' (' + typeName + ')' + NL + axisText + NL + '[Summary][Notable][Counseling Points][Daily Suggestions]'
+  }
+
+  // SRCI — 자기반응 완성 검사
+  if (req.testType === 'SCT') {
+    const sample     = (r.completionSample as Array<{scale:string;prompt:string;answer:string}>) ?? []
+    const sampleText = sample.map((s, i) => '[' + s.scale + '] ' + s.prompt + ' → ' + s.answer).join(NL)
+    return ctx + NL + NL + 'SRCI 자기반응 완성 검사 결과 (문장완성형 25문항)' + NL + NL + '소척도별 응답 예시:' + NL + sampleText + NL + fmt
+  }
+
+  // SDRI — 자기분화 반응성 검사
+  if (req.testType === 'DSI') {
+    const scales    = (r.scales as Record<string,number>) ?? {}
+    const total     = (r.total  as number) ?? 0
+    const scaleText = Object.entries(scales).map(([k,v]) => k + ': ' + v + '점').join(NL)
+    return ctx + NL + NL + 'SDRI 자기분화 반응성 검사 결과' + NL + '총점: ' + total + '점' + NL + NL + '소척도별 점수:' + NL + scaleText + NL + fmt
+  }
+
+  // K-MBI+ 번아웃
+  if (req.testType === 'BURNOUT') {
+    const totalScore = r.totalScore as number
+    const level      = r.level as string
+    const domains    = r.domains as Array<{name:string;score:number;max:number;percentage:number;level:string}>
+    const domainText = (domains ?? []).map(d => d.name + ': ' + d.score + '/' + d.max + ' (' + d.percentage + '%) - ' + d.level).join(NL)
+    return ctx + NL + NL + 'K-MBI+ 소진 자가점검 결과' + NL + '전체 소진 지수: ' + totalScore + '/240 (' + level + ')' + NL + NL + '영역별 결과:' + NL + domainText + NL + fmt
+  }
+
+  return ctx + NL + NL + '검사: ' + req.testType + NL + '결과: ' + JSON.stringify(r, null, 2) + NL + fmt
+}
+app.post('/api/ai-analyze', async (c) => {
+  const { DB, KV } = c.env
+
+  // 인증 필수 — 미로그인 시 401
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ error: '로그인이 필요합니다.' }, 401)
+
+  // Rate Limit (마스터 계정 면제)
+  const analyzeUser = await DB.prepare('SELECT email FROM users WHERE id=?').bind(userId).first<{ email: string }>()
+  if (!isMasterAccount(analyzeUser?.email)) {
+    const rl = await checkRateLimit(KV, `analyze:${userId}`, 10, 60)
+    if (!rl.allowed) return c.json({ error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' }, 429)
+  }
+
+  const apiKey = await getAnthropicKey(DB, c.env)
+  if (!apiKey) return c.json({ error: 'API 키 미설정' }, 500)
+
+  let body: AnalyzeRequest
+  try { body = await c.req.json() } catch { return c.json({ error: '잘못된 요청' }, 400) }
+
+  const prompt   = buildAnalysisPrompt(body)
+  const upstream = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1500, stream: true, messages: [{ role: 'user', content: prompt }] }),
+  })
+  if (!upstream.ok) return c.json({ error: 'AI 오류' }, 502)
+  return new Response(upstream.body, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Access-Control-Allow-Origin': '*' } })
+})
+
+// ============================================================
+// AI 채팅 — 크레딧 차감 + 실패 시 환불
+// ============================================================
+// ============================================================
+// 게임 SSO 토큰 발급 — 마음게임 전용 장기 토큰 (7일)
+// accessToken(1시간)과 별도로 게임 진입 시 사용
+// ============================================================
+app.get('/api/game-token', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ error: '로그인이 필요합니다.' }, 401)
+
+  const secret = await getJwtSecret(KV)
+  const now    = Math.floor(Date.now() / 1000)
+  // 7일 유효 게임 전용 토큰
+  const gameToken = await signJwt(
+    { sub: userId, type: 'game', iat: now, exp: now + 7 * 86400 },
+    secret
+  )
+  return c.json({ success: true, gameToken })
+})
+
+// ── 커플 전용 7일 토큰 발급 ────────────────────────────────
+app.get('/api/couple-token', async (c) => {
+  const { KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ error: '로그인이 필요합니다.' }, 401)
+
+  const secret = await getJwtSecret(KV)
+  const now    = Math.floor(Date.now() / 1000)
+  const coupleToken = await signJwt(
+    { sub: userId, type: 'couple', iat: now, exp: now + 7 * 86400 },
+    secret
+  )
+  return c.json({ success: true, coupleToken })
+})
+
+// ── BIG5/LOST 결과 저장 (마음커플 연동용) ─────────────────
+// 마음커플에서도 /api/couple/save-result 로 직접 저장하지만
+// 마음풀 analyze 완료 시점에도 자동 저장 가능하도록 엔드포인트 제공
+app.post('/api/test/save-result', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ error: '로그인이 필요합니다.' }, 401)
+
+  const { test_type, result_json } = await c.req.json().catch(() => ({})) as {
+    test_type?: string; result_json?: Record<string, unknown>
+  }
+  if (!test_type || !result_json) return c.json({ error: '파라미터 부족' }, 400)
+  if (!['BIG5', 'LOST', 'DSI'].includes(test_type)) return c.json({ error: '지원하지 않는 유형' }, 400)
+
+  await DB.prepare(
+    `UPDATE test_history SET result_json=? WHERE id=(
+       SELECT id FROM test_history WHERE user_id=? AND test_type=? ORDER BY performed_at DESC LIMIT 1
+     )`
+  ).bind(JSON.stringify(result_json), userId, test_type).run()
+
+  return c.json({ success: true })
+})
+
+app.post('/api/ai-chat', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  // 비로그인 허용 — IP 기반 Rate Limit으로 제한
+  const isGuest = !userId
+
+  const today = new Date().toISOString().slice(0, 10)
+
+  if (isGuest) {
+    // 비로그인: IP 기반 하루 3회 제한
+    const ip = c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For') || 'unknown'
+    const guestKey = `ai_guest:${ip}:${today}`
+    const guestUsed = parseInt(await KV.get(guestKey) || '0', 10)
+    const GUEST_LIMIT = 5  // 비로그인 하루 5회 체험
+    if (guestUsed >= GUEST_LIMIT) {
+      return c.json({
+        success: false,
+        error: `비로그인 AI 상담은 하루 ${GUEST_LIMIT}회까지 가능합니다. 회원가입하면 더 많이 이용할 수 있어요.`,
+        dailyUsed: guestUsed, dailyLimit: GUEST_LIMIT,
+        needsSignup: true,
+        errorCode: 'guest_limit_exceeded',
+      }, 429)
+    }
+    await KV.put(guestKey, String(guestUsed + 1), { expirationTtl: 86400 })
+    // 비로그인은 크레딧 차감 없이 바로 AI 호출로 진행
+  } else {
+    // 로그인: 마스터 계정 무제한
+    const userRow = await DB.prepare('SELECT email, credits FROM users WHERE id=?').bind(userId).first<{ email: string; credits: number }>()
+    const isMaster = isMasterAccount(userRow?.email)
+
+    if (!isMaster) {
+      // 분당 Rate Limit
+      const rl = await checkRateLimit(KV, `chat:${userId}`, 20, 60)
+      if (!rl.allowed) return c.json({ success: false, error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' }, 429)
+
+      // 일일 횟수 제한 (크레딧 기반)
+      const dailyKey = `ai_daily:${userId}:${today}`
+      const dailyUsed = parseInt(await KV.get(dailyKey) || '0', 10)
+      const dailyLimit = (userRow?.credits ?? 0) > 0 ? 10 : 3
+
+      if (dailyUsed >= dailyLimit) {
+        return c.json({
+          success: false,
+          error: `오늘 AI 상담 횟수(${dailyLimit}회)를 모두 사용했습니다.`,
+          dailyUsed, dailyLimit,
+          needsCharge: (userRow?.credits ?? 0) <= 0,
+          errorCode: 'daily_limit_exceeded',
+        }, 429)
+      }
+
+      await KV.put(dailyKey, String(dailyUsed + 1), { expirationTtl: 86400 })
+
+      const COST = 5
+      const result = await spendCredits(DB, userId, COST, 'chat')
+      if (!result.ok) {
+        return c.json({
+          success: false,
+          error: `크레딧 부족 (보유: ${result.balance}, 필요: ${COST})`,
+          balance: result.balance,
+          needsCharge: true,
+        }, 402)
+      }
+    }
+    // 마스터 계정: 횟수 제한·크레딧 차감 없이 바로 통과
+  }
+
+  const { messages, testContext } = await c.req.json()
+  const { testType, counselingType = 'psychological', summary, lang = 'ko' } = testContext ?? {}
+
+  const apiKey = await getAnthropicKey(DB, c.env)
+  if (!apiKey) {
+    if (!isGuest && userId) await gainCredits(DB, userId, 5, 'refund_api_error')
+    return c.json({ error: 'API 키 미설정' }, 500)
+  }
+
+  const systemKo = counselingType === 'biblical'
+    ? `당신은 기독교 상담 전문가입니다. 따뜻하고 공감적인 태도로 상담하세요.
+
+검사 결과 맥락:
+${summary ?? '검사 결과 없음 — 일반적인 마음 돌봄 상담으로 진행하세요.'}
+
+상담 원칙:
+- 진단명이나 병명을 절대 단정하지 마세요
+- "의료적 진단이 필요합니다"는 표현 대신 "전문가와 이야기 나눠보세요"로 표현하세요
+- 성경 말씀은 강요하지 말고 위로의 맥락에서 자연스럽게 인용하세요
+- 약물 복용이나 처방은 절대 언급하지 마세요
+- 답변은 400자 이내로 간결하게 유지하세요`
+    : `당신은 따뜻하고 전문적인 마음 돌봄 상담사입니다.
+
+검사 결과 맥락:
+${summary ?? '검사 결과 없음 — 일반적인 마음 돌봄 상담으로 진행하세요.'}
+
+상담 원칙:
+- 진단명이나 병명을 절대 단정하지 마세요 (예: "우울증입니다" 금지)
+- "의료적 진단이 필요합니다" 대신 "전문가와 이야기 나눠보시면 도움이 될 것 같아요"로 표현하세요
+- 공감 → 탐색 → 실천 순서로 대화를 이끌어 주세요
+- 약물 복용이나 처방은 절대 언급하지 마세요
+- 답변은 400자 이내로 간결하게 유지하세요
+- 사용자가 위기 신호(자해, 죽고 싶다 등)를 보이면 즉시 "자살예방상담전화 1393"을 안내하세요`
+  const systemEn = `You are a licensed mental health counselor.\n\nTest summary:\n${summary ?? 'N/A'}\n\nProvide professional, practical responses in English.`
+
+  // messages 기본 검증
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return c.json({ error: '메시지가 없습니다.' }, 400)
+  }
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1500, stream: true, system: lang === 'ko' ? systemKo : systemEn, messages }),
+  })
+
+  if (!res.ok) {
+    const errBody = await res.text().catch(() => '')
+    console.error('[ai-chat] Anthropic error:', res.status, errBody.slice(0, 300))
+    if (!isGuest && userId) await gainCredits(DB, userId, 5, 'refund_api_error')
+    const msg = res.status === 404 ? 'AI 모델을 찾을 수 없습니다. 관리자에게 문의하세요.'
+              : res.status === 401 ? 'AI API 키가 유효하지 않습니다. 관리자에게 문의하세요.'
+              : res.status === 400 ? 'AI 요청 형식 오류입니다. 다시 시도해주세요.'
+              : res.status === 529 ? 'AI 서버가 혼잡합니다. 잠시 후 다시 시도해주세요.'
+              : `AI 서비스 오류 (${res.status}): ${errBody.slice(0, 200)}`
+    return c.json({ error: msg, status: res.status, detail: errBody.slice(0, 500) }, 502)
+  }
+
+  if (!isGuest && userId) {
+    await DB.prepare('INSERT INTO chat_sessions (user_id,test_type,lang,credits_spent) VALUES (?,?,?,?)')
+      .bind(userId, testType ?? null, lang, 5).run()
+  }
+
+  return new Response(res.body, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Access-Control-Allow-Origin': '*' } })
+})
+
+// ============================================================
+// 결제 Webhook
+// ============================================================
+// ── 패키지 정의 (credits: 지급량, amount: 결제금액, currency 단위에 맞게)
+// KRW: 원 단위 / USD: 센트 단위 (Stripe 기준)
+const PACKAGES: Record<string, { credits: number; amount: number; label: string }> = {
+  starter_kr:  { credits: 30,  amount: 2000,  label: '스타터' },
+  standard_kr: { credits: 60,  amount: 3500,  label: '표준'   },
+  premium_kr:  { credits: 150, amount: 8000,  label: '프리미엄' },
+  pro_kr:      { credits: 350, amount: 17000, label: '대용량' },
+  starter_g:   { credits: 30,  amount: 299,   label: 'Starter'  },
+  standard_g:  { credits: 60,  amount: 499,   label: 'Standard' },
+  premium_g:   { credits: 150, amount: 1099,  label: 'Premium'  },
+  pro_g:       { credits: 350, amount: 2299,  label: 'Pro'      },
+}
+
+// ── 구독 플랜 정의 ─────────────────────────────────────────
+const SUBSCRIPTION_PLANS: Record<string, {
+  name: string; monthlyCredits: number; price: number; currency: string
+  features: string[]
+}> = {
+  basic:    { name: '베이직',   monthlyCredits: 60,  price: 3900,  currency: 'KRW', features: ['월 60 크레딧', '심리검사 6회', 'AI 채팅 무제한', '마음 게임 무료'] },
+  standard: { name: '스탠다드', monthlyCredits: 150, price: 8900,  currency: 'KRW', features: ['월 150 크레딧', '심리검사 15회', 'AI 채팅 무제한', '마음 게임 무료', '상담 예약 할인 10%'] },
+  pro:      { name: '프로',     monthlyCredits: 400, price: 19900, currency: 'KRW', features: ['월 400 크레딧', '심리검사 무제한', 'AI 채팅 무제한', '마음 게임 무료', '상담 예약 할인 20%', '전문가 월간 리포트'] },
+}
+
+// ── GET /api/subscription/plans ───────────────────────────
+app.get('/api/subscription/plans', (c) => {
+  return c.json({ success: true, data: SUBSCRIPTION_PLANS })
+})
+
+// ── GET /api/subscription/me ───────────────────────────────
+app.get('/api/subscription/me', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+
+  const sub = await DB.prepare(
+    'SELECT * FROM user_subscriptions WHERE user_id=? AND status="active" ORDER BY created_at DESC LIMIT 1'
+  ).bind(userId).first()
+  return c.json({ success: true, data: sub || null })
+})
+
+// ── POST /api/subscription/checkout ───────────────────────
+// 토스 빌링키 발급 흐름 시작
+app.post('/api/subscription/checkout', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+
+  const { planKey } = await c.req.json() as { planKey: string }
+  const plan = SUBSCRIPTION_PLANS[planKey]
+  if (!plan) return c.json({ success: false, error: '잘못된 플랜' }, 400)
+
+  const user = await DB.prepare('SELECT email, nickname FROM users WHERE id=?')
+    .bind(userId).first<{ email: string; nickname: string | null }>()
+  if (!user) return c.json({ success: false, error: '사용자 없음' }, 404)
+
+  const serviceUrl = c.env.SERVICE_URL || 'http://localhost:3000'
+  const customerKey = `maumful_user_${userId}`
+  const successUrl  = `${serviceUrl}/api/subscription/toss/success?planKey=${planKey}&userId=${userId}`
+  const failUrl     = `${serviceUrl}/?sub=fail`
+
+  // 토스 빌링키 발급: 클라이언트 리다이렉트 방식
+  return c.json({
+    success: true,
+    data: {
+      // 프론트에서 토스 빌링키 발급 URL로 리다이렉트
+      authUrl: `https://api.tosspayments.com/v1/billing/authorizations/card?customerKey=${customerKey}&successUrl=${encodeURIComponent(successUrl)}&failUrl=${encodeURIComponent(failUrl)}`,
+      clientKey: (c.env as Record<string, string>).TOSS_CLIENT_KEY || 'test_ck_OyL0qZ4G1VOgAKo3MaZVKX2m',
+      customerKey,
+      planKey,
+      plan,
+    },
+  })
+})
+
+// ── GET /api/subscription/toss/success ────────────────────
+app.get('/api/subscription/toss/success', async (c) => {
+  const { DB } = c.env
+  const { authKey, customerKey, planKey, userId } = c.req.query() as Record<string, string>
+  const tossKey = c.env.TOSS_BILLING_KEY || c.env.TOSS_SECRET_KEY
+  if (!tossKey) return c.redirect('/?sub=fail&msg=서버오류')
+
+  try {
+    // 빌링키 발급 확인
+    const res = await fetch('https://api.tosspayments.com/v1/billing/authorizations/confirm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Basic ' + btoa(tossKey + ':') },
+      body: JSON.stringify({ authKey, customerKey }),
+    })
+    if (!res.ok) return c.redirect('/?sub=fail&msg=빌링키발급실패')
+    const billing = await res.json() as { billingKey: string }
+
+    const plan = SUBSCRIPTION_PLANS[planKey]
+    if (!plan || !billing.billingKey) return c.redirect('/?sub=fail&msg=플랜오류')
+
+    const uId = parseInt(userId)
+    const nextBillingDate = new Date(); nextBillingDate.setMonth(nextBillingDate.getMonth() + 1)
+
+    // DB에 구독 기록 생성
+    // user_subscriptions 테이블 필요 (0007_subscriptions.sql 참조)
+    try {
+      await DB.prepare(`
+        INSERT OR REPLACE INTO user_subscriptions
+        (user_id, plan_key, billing_key, customer_key, status, monthly_credits, price, next_billing_date)
+        VALUES (?,?,?,?,'active',?,?,?)
+      `).bind(uId, planKey, billing.billingKey, customerKey, plan.monthlyCredits, plan.price,
+               nextBillingDate.toISOString()).run()
+    } catch {
+      // user_subscriptions 테이블 없으면 무시 (마이그레이션 필요)
+    }
+
+    // 첫 달 크레딧 즉시 지급
+    await DB.prepare('UPDATE users SET credits = credits + ? WHERE id=?').bind(plan.monthlyCredits, uId).run()
+    await DB.prepare('INSERT INTO credit_transactions (user_id,type,amount,reason,balance_after) SELECT ?,?,?,?,credits FROM users WHERE id=?')
+      .bind(uId, 'gain', plan.monthlyCredits, `subscription_${planKey}`, uId).run()
+
+    return c.redirect('/?sub=success&plan=' + planKey)
+  } catch (e) {
+    console.error('[구독] 오류:', e)
+    return c.redirect('/?sub=fail&msg=처리오류')
+  }
+})
+
+// ── DELETE /api/subscription/cancel ───────────────────────
+app.delete('/api/subscription/cancel', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+
+  try {
+    await DB.prepare("UPDATE user_subscriptions SET status='cancelled', cancelled_at=CURRENT_TIMESTAMP WHERE user_id=? AND status='active'")
+      .bind(userId).run()
+    return c.json({ success: true, message: '구독이 해지되었습니다. 현재 기간 만료 후 갱신되지 않습니다.' })
+  } catch {
+    return c.json({ success: false, error: '구독 정보 없음' }, 404)
+  }
+})
+
+
+app.post('/api/webhook/toss', async (c) => {
+  const { DB } = c.env
+  const rawBody = await c.req.text()
+
+  // ── 토스페이먼츠 Webhook 서명 검증 ──────────────────────────
+  // 토스는 Authorization: Basic base64(secret:) 헤더로 검증
+  const tossSecret = c.env.TOSS_WEBHOOK_SECRET
+  if (tossSecret) {
+    const authHeader = c.req.header('Authorization') ?? ''
+    const expected = 'Basic ' + btoa(tossSecret + ':')
+    if (authHeader !== expected) {
+      console.error('[Toss Webhook] 서명 불일치 — 위조 요청 차단')
+      return c.json({ error: 'Unauthorized' }, 401)
+    }
+  } else {
+    // 시크릿 미설정 시 로그만 남기고 개발 환경에서 통과 (프로덕션에서는 반드시 설정)
+    console.warn('[Toss Webhook] TOSS_WEBHOOK_SECRET 미설정 — 서명 검증 건너뜀')
+  }
+
+  let body: Record<string, unknown>
+  try { body = JSON.parse(rawBody) } catch { return c.json({ error: 'invalid json' }, 400) }
+  if (body.status !== 'DONE') return c.json({ ok: true })
+
+  const { userId, packageKey } = (body.metadata as Record<string, string>) ?? {}
+  if (!userId || !packageKey) return c.json({ error: 'metadata 누락' }, 400)
+  const pkg = PACKAGES[packageKey]; if (!pkg) return c.json({ error: '잘못된 패키지' }, 400)
+
+  const pgTid = body.paymentKey as string
+  if (!pgTid) return c.json({ error: 'paymentKey 누락' }, 400)
+
+  // 중복 처리 방지
+  const existing = await DB.prepare('SELECT id FROM credit_charges WHERE pg_tid=?').bind(pgTid).first()
+  if (existing) return c.json({ ok: true, msg: 'already_processed' })
+
+  await DB.prepare('UPDATE credit_charges SET status=?,pg_tid=?,completed_at=CURRENT_TIMESTAMP WHERE pg=? AND status=? AND user_id=?')
+    .bind('completed', pgTid, 'toss', 'pending', parseInt(userId)).run()
+  await gainCredits(DB, parseInt(userId), pkg.credits, 'charge', pgTid)
+  console.log('[Toss Webhook] 크레딧 지급 완료 — userId:', userId, 'credits:', pkg.credits)
+
+  // 영수증 이메일 (비동기)
+  const twUser = await DB.prepare('SELECT email, nickname FROM users WHERE id=?').bind(parseInt(userId)).first<{ email: string; nickname: string | null }>()
+  if (twUser) sendReceiptEmail(c.env, twUser.email, twUser.nickname || '', pkg.credits, pkg.amount, 'KRW', pgTid).catch(() => {})
+
+  return c.json({ ok: true })
+})
+
+app.post('/api/webhook/stripe', async (c) => {
+  const { DB } = c.env
+  const rawBody = await c.req.text()
+
+  // ── Stripe Webhook 서명 검증 (HMAC-SHA256) ──────────────────
+  const stripeSecret = c.env.STRIPE_WEBHOOK_SECRET
+  if (stripeSecret) {
+    const sigHeader = c.req.header('stripe-signature') ?? ''
+    // stripe-signature: t=timestamp,v1=hmac_hash
+    const tMatch  = sigHeader.match(/t=(\d+)/)
+    const v1Match = sigHeader.match(/v1=([a-f0-9]+)/)
+
+    if (!tMatch || !v1Match) {
+      console.error('[Stripe Webhook] stripe-signature 헤더 형식 오류')
+      return c.json({ error: 'Unauthorized' }, 401)
+    }
+
+    const timestamp = tMatch[1]
+    const received  = v1Match[1]
+
+    // Stripe 서명: HMAC-SHA256(timestamp.rawBody, secret)
+    const enc = new TextEncoder()
+    const key = await crypto.subtle.importKey(
+      'raw', enc.encode(stripeSecret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+    )
+    const sig = await crypto.subtle.sign('HMAC', key, enc.encode(timestamp + '.' + rawBody))
+    const expected = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2,'0')).join('')
+
+    // 타이밍 공격 방지 비교
+    if (received.length !== expected.length) {
+      console.error('[Stripe Webhook] 서명 불일치 — 위조 요청 차단')
+      return c.json({ error: 'Unauthorized' }, 401)
+    }
+    let diff = 0
+    for (let i = 0; i < received.length; i++) diff |= received.charCodeAt(i) ^ expected.charCodeAt(i)
+    if (diff !== 0) {
+      console.error('[Stripe Webhook] 서명 불일치 — 위조 요청 차단')
+      return c.json({ error: 'Unauthorized' }, 401)
+    }
+
+    // Timestamp 허용 범위: 5분 이내 (리플레이 공격 방지)
+    const age = Math.floor(Date.now() / 1000) - parseInt(timestamp)
+    if (age > 300) {
+      console.error('[Stripe Webhook] 타임스탬프 만료 — 리플레이 공격 차단')
+      return c.json({ error: 'Request too old' }, 400)
+    }
+  } else {
+    console.warn('[Stripe Webhook] STRIPE_WEBHOOK_SECRET 미설정 — 서명 검증 건너뜀')
+  }
+
+  let body: Record<string, unknown>
+  try { body = JSON.parse(rawBody) } catch { return c.json({ error: 'invalid json' }, 400) }
+  if (body.type !== 'checkout.session.completed') return c.json({ ok: true })
+
+  const session = body.data as Record<string, Record<string, unknown>>
+  const obj = session?.object ?? {}
+  const meta = (obj.metadata ?? {}) as Record<string, string>
+  const { userId, packageKey } = meta
+
+  if (!userId || !packageKey) return c.json({ error: 'metadata 누락' }, 400)
+  const pkg = PACKAGES[packageKey]; if (!pkg) return c.json({ error: '잘못된 패키지' }, 400)
+
+  const pgTid = obj.id as string
+  if (!pgTid) return c.json({ error: 'session.id 누락' }, 400)
+
+  const existing = await DB.prepare('SELECT id FROM credit_charges WHERE pg_tid=?').bind(pgTid).first()
+  if (existing) return c.json({ ok: true, msg: 'already_processed' })
+
+  await DB.prepare('UPDATE credit_charges SET status=?,pg_tid=?,completed_at=CURRENT_TIMESTAMP WHERE pg=? AND status=? AND user_id=?')
+    .bind('completed', pgTid, 'stripe', 'pending', parseInt(userId)).run()
+  await gainCredits(DB, parseInt(userId), pkg.credits, 'charge', pgTid)
+  console.log('[Stripe Webhook] 크레딧 지급 완료 — userId:', userId, 'credits:', pkg.credits)
+  completeReferral(DB, parseInt(userId)).catch(() => {})
+
+  // 영수증 이메일 (비동기)
+  const swUser = await DB.prepare('SELECT email, nickname FROM users WHERE id=?').bind(parseInt(userId)).first<{ email: string; nickname: string | null }>()
+  if (swUser) sendReceiptEmail(c.env, swUser.email, swUser.nickname || '', pkg.credits, pkg.amount, 'USD', pgTid).catch(() => {})
+
+  return c.json({ ok: true })
+})
+
+// ============================================================
+// 결제창 생성 API
+// ============================================================
+
+// ── 토스페이먼츠 결제창 파라미터 반환 ─────────────────────────
+// 흐름: 프론트 → POST /api/payment/toss/checkout
+//      → clientKey + orderId 반환 → 프론트 SDK로 결제창 오픈
+//      → 결제 완료 → successUrl redirect → GET /api/payment/toss/success
+//      → 토스 Webhook POST /api/webhook/toss (크레딧 이중 지급 방지용)
+app.post('/api/payment/toss/checkout', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+
+  const tossKey = c.env.TOSS_SECRET_KEY
+  if (!tossKey) return c.json({ success: false, error: '토스페이먼츠 키 미설정. wrangler secret put TOSS_SECRET_KEY' }, 500)
+
+  const { packageKey } = await c.req.json()
+  const pkg = PACKAGES[packageKey]
+  if (!pkg) return c.json({ success: false, error: '잘못된 패키지' }, 400)
+
+  const user = await DB.prepare('SELECT email, nickname FROM users WHERE id=?')
+    .bind(userId).first<{ email: string; nickname: string | null }>()
+  if (!user) return c.json({ success: false, error: '사용자 없음' }, 404)
+
+  // pending 레코드 생성
+  const r = await DB.prepare(
+    'INSERT INTO credit_charges (user_id,package_key,credits,amount,currency,pg) VALUES (?,?,?,?,?,?)'
+  ).bind(userId, packageKey, pkg.credits, pkg.amount, 'KRW', 'toss').run()
+  const chargeId = r.meta.last_row_id as number
+  const orderId  = `charge_${chargeId}_${Date.now()}`
+  const serviceUrl = c.env.SERVICE_URL || 'http://localhost:3000'
+
+  // 토스는 클라이언트 SDK 방식 — 서버에서 파라미터만 반환
+  return c.json({
+    success: true,
+    data: {
+      // 토스 대시보드 > 개발정보 > 클라이언트 키로 교체
+      // 토스 클라이언트 키: wrangler secret put TOSS_CLIENT_KEY 으로 등록
+      // 미설정 시 개발용 테스트 키 사용 (실제 결제 불가)
+      clientKey:     (c.env as unknown as Record<string,string>).TOSS_CLIENT_KEY || 'test_ck_OyL0qZ4G1VOgAKo3MaZVKX2m',
+      orderId,
+      orderName:     `${pkg.label} 크레딧 ${pkg.credits}개`,
+      amount:        pkg.amount,
+      customerName:  user.nickname || user.email.split('@')[0],
+      customerEmail: user.email,
+      successUrl:    `${serviceUrl}/api/payment/toss/success?chargeId=${chargeId}&orderId=${orderId}`,
+      failUrl:       `${serviceUrl}/api/payment/toss/fail?chargeId=${chargeId}`,
+      chargeId,
+    },
+  })
+})
+
+// 토스 결제 성공 콜백 (브라우저 redirect)
+app.get('/api/payment/toss/success', async (c) => {
+  const { DB } = c.env
+  const { paymentKey, orderId, amount, chargeId } = c.req.query() as Record<string, string>
+
+  const tossKey = c.env.TOSS_SECRET_KEY
+  if (!tossKey) return c.redirect('/?payment=fail&msg=서버오류')
+
+  try {
+    // 토스 결제 승인 API 호출
+    const confirmRes = await fetch('https://api.tosspayments.com/v1/payments/confirm', {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': 'Basic ' + btoa(tossKey + ':'),
+      },
+      body: JSON.stringify({ paymentKey, orderId, amount: parseInt(amount) }),
+    })
+
+    if (!confirmRes.ok) {
+      const err = await confirmRes.json() as { message: string }
+      console.error('[Toss] 결제 승인 실패:', err)
+      return c.redirect(`/?payment=fail&msg=${encodeURIComponent(err.message || '승인실패')}`)
+    }
+
+    // 중복 처리 방지
+    const existing = await DB.prepare('SELECT id FROM credit_charges WHERE pg_tid=?').bind(paymentKey).first()
+    if (!existing) {
+      const charge = await DB.prepare(
+        'SELECT user_id, credits, package_key FROM credit_charges WHERE id=? AND status=?'
+      ).bind(parseInt(chargeId), 'pending').first<{ user_id: number; credits: number; package_key: string }>()
+
+      if (charge) {
+        await DB.prepare(
+          'UPDATE credit_charges SET status=?,pg_tid=?,completed_at=CURRENT_TIMESTAMP WHERE id=?'
+        ).bind('completed', paymentKey, parseInt(chargeId)).run()
+
+        const newBalance = await gainCredits(DB, charge.user_id, charge.credits, 'charge', paymentKey)
+        console.log('[Toss] 크레딧 지급:', charge.user_id, '+', charge.credits, '→', newBalance)
+        completeReferral(DB, charge.user_id).catch(() => {})
+
+        // 영수증 이메일
+        const user = await DB.prepare('SELECT email, nickname FROM users WHERE id=?')
+          .bind(charge.user_id).first<{ email: string; nickname: string | null }>()
+        const pkg  = PACKAGES[charge.package_key]
+        if (user && pkg) {
+          await sendReceiptEmail(c.env, user.email, user.nickname || '', charge.credits, pkg.amount, 'KRW', paymentKey)
+        }
+      }
+    }
+
+    return c.redirect('/?payment=success')
+  } catch (e) {
+    console.error('[Toss] 처리 오류:', e)
+    return c.redirect('/?payment=fail&msg=처리오류')
+  }
+})
+
+// 토스 결제 실패 콜백
+app.get('/api/payment/toss/fail', async (c) => {
+  const { DB } = c.env
+  const { code, message, chargeId } = c.req.query() as Record<string, string>
+  if (chargeId) {
+    await DB.prepare('UPDATE credit_charges SET status=? WHERE id=? AND status=?')
+      .bind('failed', parseInt(chargeId), 'pending').run()
+  }
+  console.error('[Toss] 결제 실패:', code, message)
+  return c.redirect(`/?payment=fail&msg=${encodeURIComponent(message || '결제취소')}`)
+})
+
+// ── Stripe Checkout Session 생성 ─────────────────────────────
+// 흐름: 프론트 → POST /api/payment/stripe/checkout
+//      → checkoutUrl 반환 → 프론트가 window.location = checkoutUrl
+//      → 결제 완료 → success_url redirect
+//      → Stripe Webhook POST /api/webhook/stripe (크레딧 지급)
+app.post('/api/payment/stripe/checkout', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+
+  const stripeKey = c.env.STRIPE_SECRET_KEY
+  if (!stripeKey) return c.json({ success: false, error: 'Stripe 키 미설정. wrangler secret put STRIPE_SECRET_KEY' }, 500)
+
+  const { packageKey } = await c.req.json()
+  const pkg = PACKAGES[packageKey]
+  if (!pkg) return c.json({ success: false, error: '잘못된 패키지' }, 400)
+
+  const user = await DB.prepare('SELECT email, nickname FROM users WHERE id=?')
+    .bind(userId).first<{ email: string; nickname: string | null }>()
+  if (!user) return c.json({ success: false, error: '사용자 없음' }, 404)
+
+  // pending 레코드 생성
+  const r = await DB.prepare(
+    'INSERT INTO credit_charges (user_id,package_key,credits,amount,currency,pg) VALUES (?,?,?,?,?,?)'
+  ).bind(userId, packageKey, pkg.credits, pkg.amount, 'USD', 'stripe').run()
+  const chargeId = r.meta.last_row_id as number
+  const serviceUrl = c.env.SERVICE_URL || 'http://localhost:3000'
+
+  try {
+    const params = new URLSearchParams({
+      'payment_method_types[]':                           'card',
+      'line_items[0][price_data][currency]':              'usd',
+      'line_items[0][price_data][unit_amount]':           String(pkg.amount),
+      'line_items[0][price_data][product_data][name]':    `${pkg.label} — ${pkg.credits} Credits`,
+      'line_items[0][quantity]':                          '1',
+      'mode':                                             'payment',
+      'customer_email':                                   user.email,
+      'metadata[userId]':                                 String(userId),
+      'metadata[packageKey]':                             packageKey,
+      'metadata[chargeId]':                               String(chargeId),
+      'payment_intent_data[metadata][userId]':            String(userId),
+      'payment_intent_data[metadata][packageKey]':        packageKey,
+      'payment_intent_data[metadata][chargeId]':          String(chargeId),
+      'success_url':                                      `${serviceUrl}/?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+      'cancel_url':                                       `${serviceUrl}/?payment=cancel`,
+    })
+
+    const sessionRes = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+      method:  'POST',
+      headers: { 'Authorization': 'Bearer ' + stripeKey, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body:    params.toString(),
+    })
+
+    if (!sessionRes.ok) {
+      const err = await sessionRes.json() as { error: { message: string } }
+      console.error('[Stripe] 세션 생성 실패:', err)
+      return c.json({ success: false, error: err.error?.message || 'Stripe 오류' }, 502)
+    }
+
+    const session = await sessionRes.json() as { id: string; url: string }
+    console.log('[Stripe] Checkout 세션 생성:', session.id)
+    return c.json({ success: true, data: { checkoutUrl: session.url, sessionId: session.id, chargeId } })
+
+  } catch (e) {
+    console.error('[Stripe] 세션 생성 오류:', e)
+    return c.json({ success: false, error: '결제 세션 생성 실패' }, 500)
+  }
+})
+
+// Stripe 결제 완료 후 잔액 확인 (프론트가 success_url 도달 후 호출)
+app.get('/api/payment/stripe/verify', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+  const user = await DB.prepare('SELECT credits FROM users WHERE id=?').bind(userId).first<{ credits: number }>()
+  return c.json({ success: true, data: { credits: user?.credits ?? 0 } })
+})
+
+// ============================================================
+// 이메일 발송 (Resend API)
+// ============================================================
+async function sendEmail(env: Bindings, to: string, subject: string, html: string): Promise<boolean> {
+  const key = env.RESEND_API_KEY
+  if (!key) { console.warn('[Email] RESEND_API_KEY 미설정'); return false }
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+      // 발신자: RESEND_FROM_EMAIL 환경변수 없으면 기본값 사용
+      // wrangler secret put RESEND_FROM_EMAIL 으로 등록 (예: noreply@your-domain.com)
+      body:    JSON.stringify({
+        from: (env as unknown as Record<string,string>).RESEND_FROM_EMAIL || 'noreply@maumful.kr',
+        to: [to], subject, html
+      }),
+    })
+    if (!res.ok) { console.error('[Email] 오류:', await res.text()); return false }
+    return true
+  } catch (e) { console.error('[Email] 발송 실패:', e); return false }
+}
+
+async function sendVerifyEmail(env: Bindings, to: string, nickname: string, token: string): Promise<void> {
+  const url  = `${env.SERVICE_URL || 'http://localhost:3000'}/api/auth/verify/${token}`
+  const name = nickname || to.split('@')[0]
+  await sendEmail(env, to, '마음풀 — 이메일 인증',
+    `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
+      <h2 style="color:#4f46e5">🌿 마음풀</h2>
+      <p>안녕하세요 <strong>${name}</strong>님,</p>
+      <p>아래 버튼을 눌러 이메일 인증을 완료해주세요. <em>(6시간 이내)</em></p>
+      <a href="${url}" style="display:inline-block;margin:16px 0;padding:12px 28px;background:#4f46e5;color:#fff;border-radius:8px;text-decoration:none;font-weight:bold">이메일 인증하기</a>
+      <p style="color:#999;font-size:12px">버튼이 작동하지 않으면: ${url}</p>
+    </div>`
+  )
+}
+
+async function sendPasswordResetEmail(env: Bindings, to: string, nickname: string, token: string): Promise<void> {
+  const url  = `${env.SERVICE_URL || 'http://localhost:3000'}/?reset_token=${token}`
+  const name = nickname || to.split('@')[0]
+  await sendEmail(env, to, '마음풀 — 비밀번호 재설정',
+    `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
+      <h2 style="color:#4f46e5">🌿 마음풀</h2>
+      <p>안녕하세요 <strong>${name}</strong>님, 비밀번호 재설정 링크입니다. <em>(1시간 이내)</em></p>
+      <a href="${url}" style="display:inline-block;margin:16px 0;padding:12px 28px;background:#dc2626;color:#fff;border-radius:8px;text-decoration:none;font-weight:bold">비밀번호 재설정</a>
+      <p style="color:#999;font-size:12px">본인이 요청하지 않았다면 무시하세요.</p>
+    </div>`
+  )
+}
+
+async function sendReceiptEmail(env: Bindings, to: string, nickname: string, credits: number, amount: number, currency: string, txId: string): Promise<void> {
+  const amountStr = currency === 'KRW' ? `₩${amount.toLocaleString()}` : `$${(amount / 100).toFixed(2)}`
+  const name = nickname || to.split('@')[0]
+  await sendEmail(env, to, '마음풀 — 크레딧 충전 완료',
+    `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
+      <h2 style="color:#4f46e5">🌿 마음풀</h2>
+      <p>안녕하세요 <strong>${name}</strong>님, 크레딧 충전이 완료되었습니다!</p>
+      <div style="background:#f0f0ff;border-radius:12px;padding:20px;margin:16px 0">
+        <p style="margin:4px 0">✦ 충전 크레딧: <strong>${credits}개</strong></p>
+        <p style="margin:4px 0">💳 결제 금액: <strong>${amountStr}</strong></p>
+        <p style="margin:4px 0;color:#aaa;font-size:12px">거래 ID: ${txId}</p>
+      </div>
+      <p style="color:#999;font-size:12px">문의: support@maumful.kr</p>
+    </div>`
+  )
+}
+
+// ============================================================
+// 기존 인증 API에 이메일 발송 연결 (register / forgot-password)
+// ── 이미 register/forgot-password API가 위에 구현되어 있으므로
+//    이메일 함수는 해당 핸들러 내에서 직접 호출
+// ============================================================
+
+// prepare-charge (기존 → 금액 포함으로 업그레이드)
+app.post('/api/credits/prepare-charge', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+  const { packageKey, pg } = await c.req.json()
+  const pkg = PACKAGES[packageKey]; if (!pkg) return c.json({ success: false, error: '잘못된 패키지' }, 400)
+  const r = await DB.prepare('INSERT INTO credit_charges (user_id,package_key,credits,amount,currency,pg) VALUES (?,?,?,?,?,?)')
+    .bind(userId, packageKey, pkg.credits, pkg.amount, pg === 'stripe' ? 'USD' : 'KRW', pg).run()
+  return c.json({ success: true, data: { chargeId: r.meta.last_row_id, credits: pkg.credits, amount: pkg.amount } })
+})
+
+// ============================================================
+// 관리자 API 미들웨어 — ADMIN_SECRET 헤더 검증
+// ============================================================
+// 호출 방법: Authorization: Bearer <ADMIN_SECRET 값>
+// wrangler secret put ADMIN_SECRET 으로 등록
+function requireAdmin(c: { req: { header: (k: string) => string | undefined }, env: Bindings }) {
+  const adminSecret = c.env.ADMIN_SECRET
+  if (!adminSecret) {
+    // 시크릿 미설정: 개발 환경에서는 경고만, 프로덕션에서는 차단
+    console.warn('[Admin] ADMIN_SECRET 미설정 — 개발 환경으로 간주')
+    return null // 통과
+  }
+  const auth = c.req.header('Authorization') ?? ''
+  if (auth !== 'Bearer ' + adminSecret) return 'Unauthorized'
+  return null // 통과
+}
+
+
+// ============================================================
+// 친구 초대 API
+// ============================================================
+
+// 내 초대 코드 조회 (없으면 자동 생성)
+app.get('/api/referral/code', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false, error: '로그인이 필요합니다.' }, 401)
+
+  // KV에서 기존 코드 조회
+  const kvKey = `referral_code:${userId}`
+  let code = await KV.get(kvKey)
+
+  if (!code) {
+    // 없으면 생성 (userId + 랜덤 6자)
+    const rand = Math.random().toString(36).slice(2, 8).toUpperCase()
+    code = `PSY${userId}${rand}`
+    await KV.put(kvKey, code)               // 만료 없이 영구 보관
+    await KV.put(`referral_user:${code}`, String(userId))  // 역방향 조회
+  }
+
+  // 초대 통계
+  const stats = await DB.prepare(`
+    SELECT
+      COUNT(*) AS total,
+      SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed,
+      SUM(CASE WHEN status = 'completed' THEN referrer_bonus ELSE 0 END) AS earned
+    FROM referrals WHERE referrer_id = ?
+  `).bind(userId).first<{ total: number; completed: number; earned: number }>()
+
+  const serviceUrl = (c.env as unknown as Record<string,string>).SERVICE_URL || 'http://localhost:3000'
+
+  return c.json({
+    success: true,
+    data: {
+      code,
+      inviteUrl: `${serviceUrl}/?ref=${code}`,
+      stats: {
+        totalInvited:    stats?.total ?? 0,
+        completed:       stats?.completed ?? 0,
+        totalEarned:     stats?.earned ?? 0,
+      },
+      rewards: {
+        referrerBonus: 30,   // 피초대자 첫 결제 완료 시 지급
+        refereeBonus:  10,   // 초대 링크로 가입 시 즉시 지급
+      },
+    },
+  })
+})
+
+// 초대 코드로 가입 처리 (회원가입 API 완료 후 별도 호출)
+// 흐름: 가입 완료 → POST /api/referral/apply { code }
+//      → referee +10 크레딧 즉시 지급
+//      → referrals 테이블에 pending 레코드 생성
+//      → 피초대자 첫 결제 완료(Webhook) 시 referrer +30 크레딧
+app.post('/api/referral/apply', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false, error: '로그인이 필요합니다.' }, 401)
+
+  const { code } = await c.req.json()
+  if (!code) return c.json({ success: false, error: '초대 코드가 필요합니다.' }, 400)
+
+  // 이미 초대 적용 여부 확인
+  const alreadyApplied = await DB.prepare('SELECT id FROM referrals WHERE referee_id = ?').bind(userId).first()
+  if (alreadyApplied) return c.json({ success: false, error: '이미 초대 코드를 적용했습니다.' }, 409)
+
+  // 초대자 조회
+  const referrerIdStr = await KV.get(`referral_user:${code.toUpperCase()}`)
+  if (!referrerIdStr) return c.json({ success: false, error: '유효하지 않은 초대 코드입니다.' }, 404)
+
+  const referrerId = parseInt(referrerIdStr)
+  if (referrerId === userId) return c.json({ success: false, error: '본인의 초대 코드는 사용할 수 없습니다.' }, 400)
+
+  // referrals 레코드 생성
+  await DB.prepare(
+    'INSERT INTO referrals (referrer_id, referee_id, referrer_bonus, referee_bonus, status) VALUES (?,?,20,10,"pending")'
+  ).bind(referrerId, userId).run()
+
+  // 피초대자 +10 크레딧 즉시 지급
+  const newBalance = await gainCredits(DB, userId, 10, 'referral', code)
+
+  return c.json({
+    success: true,
+    message: '초대 코드 적용 완료! 10 크레딧이 지급되었습니다.',
+    data: { credits: 10, balance: newBalance },
+  })
+})
+
+// 초대 완료 처리 — 피초대자 첫 결제 시 호출 (Webhook 내부에서 사용)
+async function completeReferral(db: D1Database, refereeId: number): Promise<void> {
+  const ref = await db.prepare(
+    'SELECT id, referrer_id, referrer_bonus FROM referrals WHERE referee_id = ? AND status = "pending"'
+  ).bind(refereeId).first<{ id: number; referrer_id: number; referrer_bonus: number }>()
+
+  if (!ref) return
+
+  await db.prepare('UPDATE referrals SET status = "completed" WHERE id = ?').bind(ref.id).run()
+  await gainCredits(db, ref.referrer_id, ref.referrer_bonus, 'referral', `referee_${refereeId}`)
+}
+
+// 내 초대 목록 조회
+app.get('/api/referral/list', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false, error: '로그인이 필요합니다.' }, 401)
+
+  const list = await DB.prepare(`
+    SELECT
+      r.id, r.status, r.referrer_bonus, r.referee_bonus, r.created_at,
+      u.nickname AS referee_nickname,
+      SUBSTR(u.email, 1, 3) || '***' AS referee_email_masked
+    FROM referrals r
+    JOIN users u ON u.id = r.referee_id
+    WHERE r.referrer_id = ?
+    ORDER BY r.created_at DESC
+    LIMIT 50
+  `).bind(userId).all()
+
+  return c.json({ success: true, data: list.results })
+})
+
+// ============================================================
+// 관리자 통계 대시보드 API
+// ============================================================
+
+// 공통 관리자 인증 래퍼
+function adminGuard(c: Parameters<typeof requireAdmin>[0]): string | null {
+  if (!isAdminIp(c)) return 'Forbidden'
+  return requireAdmin(c)
+}
+
+// GET /api/admin/stats — 핵심 KPI 요약
+app.get('/api/admin/stats', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  try {
+    const now       = new Date()
+    const today     = now.toISOString().slice(0, 10)             // YYYY-MM-DD
+    const month1st  = now.toISOString().slice(0, 7) + '-01'     // 이번 달 1일
+
+    const [users, activeToday, newThisMonth, credits, tests, chats, charges, referrals] = await DB.batch([
+      // 전체 회원 수
+      DB.prepare('SELECT COUNT(*) AS cnt FROM users WHERE email NOT LIKE "deleted_%"'),
+      // 오늘 로그인 (credit_transactions 기준)
+      DB.prepare(`SELECT COUNT(DISTINCT user_id) AS cnt FROM credit_transactions WHERE DATE(created_at) = ?`).bind(today),
+      // 이번 달 신규 가입
+      DB.prepare(`SELECT COUNT(*) AS cnt FROM users WHERE created_at >= ? AND email NOT LIKE "deleted_%"`).bind(month1st),
+      // 전체 발행 크레딧 합계 (gain)
+      DB.prepare(`SELECT COALESCE(SUM(amount),0) AS total, COALESCE(SUM(CASE WHEN reason='charge' THEN amount ELSE 0 END),0) AS paid FROM credit_transactions WHERE type='gain'`),
+      // 검사 수행 수 (전체 / 오늘)
+      DB.prepare(`SELECT COUNT(*) AS total, SUM(CASE WHEN DATE(performed_at)=? THEN 1 ELSE 0 END) AS today FROM test_history`).bind(today),
+      // AI 채팅 수 (전체 / 오늘)
+      DB.prepare(`SELECT COUNT(*) AS total, SUM(CASE WHEN DATE(created_at)=? THEN 1 ELSE 0 END) AS today FROM chat_sessions`).bind(today),
+      // 결제 완료 (이번 달)
+      DB.prepare(`SELECT COUNT(*) AS cnt, COALESCE(SUM(amount),0) AS revenue FROM credit_charges WHERE status='completed' AND created_at >= ?`).bind(month1st),
+      // 친구 초대 완료 수
+      DB.prepare(`SELECT COUNT(*) AS cnt FROM referrals WHERE status='completed'`),
+    ])
+
+    const u  = (users.results[0]  as Record<string,number>)
+    const at = (activeToday.results[0] as Record<string,number>)
+    const nm = (newThisMonth.results[0] as Record<string,number>)
+    const cr = (credits.results[0] as Record<string,number>)
+    const te = (tests.results[0]  as Record<string,number>)
+    const ch = (chats.results[0]  as Record<string,number>)
+    const pg = (charges.results[0] as Record<string,number>)
+    const rf = (referrals.results[0] as Record<string,number>)
+
+    return c.json({
+      success: true,
+      data: {
+        users: {
+          total:       u?.cnt ?? 0,
+          activeToday: at?.cnt ?? 0,
+          newThisMonth: nm?.cnt ?? 0,
+        },
+        credits: {
+          totalIssued:  cr?.total ?? 0,
+          totalPaid:    cr?.paid ?? 0,
+        },
+        tests: {
+          total: te?.total ?? 0,
+          today: te?.today ?? 0,
+        },
+        chats: {
+          total: ch?.total ?? 0,
+          today: ch?.today ?? 0,
+        },
+        revenue: {
+          thisMonthCount:   pg?.cnt ?? 0,
+          thisMonthAmount:  pg?.revenue ?? 0,
+        },
+        referrals: {
+          completed: rf?.cnt ?? 0,
+        },
+      },
+    })
+  } catch (e) {
+    return c.json({ success: false, error: (e as Error).message }, 500)
+  }
+})
+
+// GET /api/admin/stats/daily?days=30 — 일별 추이
+app.get('/api/admin/stats/daily', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  const days = Math.min(parseInt(c.req.query('days') || '30'), 90)
+
+  try {
+    const [signups, tests, chats, revenue] = await DB.batch([
+      DB.prepare(`
+        SELECT DATE(created_at) AS day, COUNT(*) AS cnt
+        FROM users WHERE created_at >= DATE('now', ? || ' days')
+        GROUP BY day ORDER BY day
+      `).bind(`-${days}`),
+      DB.prepare(`
+        SELECT DATE(performed_at) AS day, COUNT(*) AS cnt
+        FROM test_history WHERE performed_at >= DATE('now', ? || ' days')
+        GROUP BY day ORDER BY day
+      `).bind(`-${days}`),
+      DB.prepare(`
+        SELECT DATE(created_at) AS day, COUNT(*) AS cnt
+        FROM chat_sessions WHERE created_at >= DATE('now', ? || ' days')
+        GROUP BY day ORDER BY day
+      `).bind(`-${days}`),
+      DB.prepare(`
+        SELECT DATE(completed_at) AS day,
+               COUNT(*) AS cnt,
+               COALESCE(SUM(amount),0) AS amount
+        FROM credit_charges
+        WHERE status='completed' AND completed_at >= DATE('now', ? || ' days')
+        GROUP BY day ORDER BY day
+      `).bind(`-${days}`),
+    ])
+
+    return c.json({
+      success: true,
+      data: {
+        signups:  signups.results,
+        tests:    tests.results,
+        chats:    chats.results,
+        revenue:  revenue.results,
+      },
+    })
+  } catch (e) {
+    return c.json({ success: false, error: (e as Error).message }, 500)
+  }
+})
+
+// GET /api/admin/stats/tests — 검사 유형별 통계
+app.get('/api/admin/stats/tests', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  try {
+    const result = await DB.prepare(`
+      SELECT test_type, lang,
+             COUNT(*) AS cnt,
+             COALESCE(SUM(credits_spent),0) AS credits
+      FROM test_history
+      GROUP BY test_type, lang
+      ORDER BY cnt DESC
+    `).all()
+
+    return c.json({ success: true, data: result.results })
+  } catch (e) {
+    return c.json({ success: false, error: (e as Error).message }, 500)
+  }
+})
+
+// GET /api/admin/users?page=1&limit=20&search=email — 회원 목록
+app.get('/api/admin/users', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  const page   = Math.max(1, parseInt(c.req.query('page')  || '1'))
+  const limit  = Math.min(50, parseInt(c.req.query('limit') || '20'))
+  const search = (c.req.query('search') || '').trim()
+  const offset = (page - 1) * limit
+
+  try {
+    const whereClause = search
+      ? `WHERE (u.email LIKE ? OR u.nickname LIKE ?) AND u.email NOT LIKE 'deleted_%'`
+      : `WHERE u.email NOT LIKE 'deleted_%'`
+    const bindParams: unknown[] = search
+      ? [`%${search}%`, `%${search}%`, limit, offset]
+      : [limit, offset]
+
+    const [countResult, rows] = await DB.batch([
+      DB.prepare(`SELECT COUNT(*) AS cnt FROM users u ${whereClause}`)
+        .bind(...(search ? [`%${search}%`, `%${search}%`] : [])),
+      DB.prepare(`
+        SELECT
+          u.id, u.email, u.nickname, u.locale, u.country_code,
+          u.credits, u.is_email_verified, u.social_provider, u.created_at,
+          (SELECT COUNT(*) FROM test_history th WHERE th.user_id = u.id) AS test_count,
+          (SELECT COUNT(*) FROM chat_sessions cs WHERE cs.user_id = u.id) AS chat_count,
+          (SELECT COALESCE(SUM(amount),0) FROM credit_charges cc WHERE cc.user_id = u.id AND cc.status='completed') AS total_paid
+        FROM users u
+        ${whereClause}
+        ORDER BY u.created_at DESC
+        LIMIT ? OFFSET ?
+      `).bind(...bindParams),
+    ])
+
+    const total = (countResult.results[0] as Record<string,number>)?.cnt ?? 0
+
+    return c.json({
+      success: true,
+      data: {
+        users:      rows.results,
+        pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+      },
+    })
+  } catch (e) {
+    return c.json({ success: false, error: (e as Error).message }, 500)
+  }
+})
+
+// POST /api/admin/users/:id/credits — 크레딧 수동 지급/회수
+app.post('/api/admin/users/:id/credits', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  const userId = parseInt(c.req.param('id'))
+  const { amount, reason = 'admin_grant', type = 'gain' } = await c.req.json()
+
+  if (!amount || amount <= 0) return c.json({ success: false, error: '금액은 1 이상이어야 합니다.' }, 400)
+  if (!['gain', 'spend'].includes(type)) return c.json({ success: false, error: 'type은 gain 또는 spend' }, 400)
+
+  try {
+    const user = await DB.prepare('SELECT id, credits, email FROM users WHERE id = ?').bind(userId).first<{ id:number; credits:number; email:string }>()
+    if (!user) return c.json({ success: false, error: '사용자를 찾을 수 없습니다.' }, 404)
+
+    let newBalance: number
+    if (type === 'gain') {
+      newBalance = await gainCredits(DB, userId, amount, reason)
+    } else {
+      const result = await spendCredits(DB, userId, amount, reason)
+      if (!result.ok) return c.json({ success: false, error: result.error || '차감 실패', balance: result.balance }, 400)
+      newBalance = result.balance
+    }
+
+    return c.json({
+      success: true,
+      message: `${user.email} — ${type === 'gain' ? '+' : '-'}${amount} 크레딧 처리 완료`,
+      data: { userId, newBalance },
+    })
+  } catch (e) {
+    return c.json({ success: false, error: (e as Error).message }, 500)
+  }
+})
+
+// GET /api/admin/payments?page=1 — 결제 내역
+app.get('/api/admin/payments', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  const page  = Math.max(1, parseInt(c.req.query('page')  || '1'))
+  const limit = Math.min(50, parseInt(c.req.query('limit') || '20'))
+  const offset = (page - 1) * limit
+
+  try {
+    const [countResult, rows] = await DB.batch([
+      DB.prepare(`SELECT COUNT(*) AS cnt FROM credit_charges`),
+      DB.prepare(`
+        SELECT cc.*, u.email, u.nickname
+        FROM credit_charges cc
+        JOIN users u ON u.id = cc.user_id
+        ORDER BY cc.created_at DESC
+        LIMIT ? OFFSET ?
+      `).bind(limit, offset),
+    ])
+
+    const total = (countResult.results[0] as Record<string,number>)?.cnt ?? 0
+
+    return c.json({
+      success: true,
+      data: {
+        payments:   rows.results,
+        pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+      },
+    })
+  } catch (e) {
+    return c.json({ success: false, error: (e as Error).message }, 500)
+  }
+})
+
+// ============================================================
+// 관리자 API 설정
+// ============================================================
+app.get('/api/admin/api-settings', async (c) => {
+  const { DB } = c.env
+  if (!isAdminIp(c)) return c.json({ success: false, error: 'Forbidden' }, 403)
+  const denied = requireAdmin(c)
+  if (denied) return c.json({ success: false, error: denied }, 401)
+  try {
+    await DB.prepare('CREATE TABLE IF NOT EXISTS api_settings (id INTEGER PRIMARY KEY AUTOINCREMENT, key_name TEXT UNIQUE NOT NULL, key_value TEXT NOT NULL, is_active INTEGER DEFAULT 1, description TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)').run()
+    const rows = await DB.prepare('SELECT id,key_name,is_active,description,created_at,updated_at FROM api_settings ORDER BY id').all()
+    return c.json({ success: true, data: rows.results })
+  } catch (e) { return c.json({ success: false, error: (e as Error).message }, 500) }
+})
+
+app.post('/api/admin/api-settings', async (c) => {
+  const { DB } = c.env
+  const denied = requireAdmin(c)
+  if (denied) return c.json({ success: false, error: denied }, 401)
+  const { key_name, key_value, description } = await c.req.json()
+  if (!key_name || !key_value) return c.json({ success: false, error: '키와 값 필수' }, 400)
+  const secret = 'psy_system_secret_2026'
+  const kB  = new TextEncoder().encode(secret.padEnd(32,'0').slice(0,32))
+  const vB  = new TextEncoder().encode(key_value)
+  const enc = btoa(String.fromCharCode(...vB.map((b,i) => b ^ kB[i % kB.length])))
+  await DB.prepare('INSERT INTO api_settings (key_name,key_value,is_active,description,updated_at) VALUES (?,?,1,?,CURRENT_TIMESTAMP) ON CONFLICT(key_name) DO UPDATE SET key_value=excluded.key_value,is_active=1,description=excluded.description,updated_at=CURRENT_TIMESTAMP')
+    .bind(key_name, enc, description ?? '').run()
+  return c.json({ success: true, message: `${key_name} 저장됨` })
+})
+
+// ============================================================
+// 메인 페이지
+// ============================================================
+app.get('/', (c) => {
+  const v = Date.now()
+  return c.html(`<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>마음풀 — 전문 심리검사 & AI 상담</title>
+  <meta name="description" content="PHQ-9·GAD-7·Big5 등 전문 심리검사 8종을 온라인에서. AI 상담으로 나의 결과를 깊이 이해하세요.">
+
+  <!-- PWA -->
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#2D6A4F">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="마음풀">
+  <link rel="apple-touch-icon" href="/static/icon-192.png">
+
+  <!-- Open Graph (SNS 공유) -->
+  <meta property="og:title" content="마음풀 — 전문 심리검사 & AI 상담">
+  <meta property="og:description" content="PHQ-9·Big5 등 8종 전문 심리검사. 가입 즉시 10 크레딧 무료 지급.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="/static/icon-512.png">
+
+  <!-- 폰트 프리로드 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/static/style.css?v=${v}">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel" src="/static/landing.jsx?v=${v}"></script>
+  <script type="text/babel" src="/static/counseling.jsx?v=${v}"></script>
+  <script type="text/babel" src="/static/counseling_admin.jsx?v=${v}"></script>
+  <script type="text/babel" src="/static/app.jsx?v=${v}"></script>
+  <script>
+    // Service Worker 등록 (PWA)
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+  </script>
+</body>
+</html>`)
+})
+
+// ============================================================
+// 상담센터 API — /api/counseling/*
+// ============================================================
+
+// ── 헬퍼: Jitsi 룸 ID 생성 ───────────────────────────────
+function genJitsiRoom(): string {
+  const adj  = ['calm','safe','warm','clear','bright','gentle','quiet','still']
+  const noun = ['forest','river','sky','garden','dawn','wave','leaf','path']
+  const a = adj[Math.floor(Math.random() * adj.length)]
+  const n = noun[Math.floor(Math.random() * noun.length)]
+  const r = Math.random().toString(36).slice(2, 7)
+  return `maumful-${a}-${n}-${r}`
+}
+
+// ── 예약 확정 이메일 ─────────────────────────────────────
+async function sendAppointmentEmail(
+  env: Bindings,
+  to: string,
+  nickname: string,
+  opts: {
+    counselorName: string
+    centerName: string
+    scheduledAt: string
+    durationMin: number
+    sessionType: string
+    feeAmount: number
+    videoUrl: string | null
+  }
+): Promise<void> {
+  const typeLabel: Record<string, string> = { video: '화상 상담', phone: '전화 상담', visit: '방문 상담' }
+  const feeStr = opts.feeAmount.toLocaleString('ko-KR') + '원'
+  const dt     = new Date(opts.scheduledAt).toLocaleString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit' })
+  const name   = nickname || to.split('@')[0]
+  const videoBlock = opts.videoUrl
+    ? `<a href="${opts.videoUrl}" style="display:inline-block;margin:12px 0;padding:12px 28px;background:#2D6A4F;color:#fff;border-radius:8px;text-decoration:none;font-weight:bold">📹 화상 상담 입장하기</a>`
+    : ''
+  await sendEmail(env, to, `🌿 마음풀 — ${opts.counselorName} 상담사 예약 확정`,
+    `<div style="font-family:'Noto Sans KR',sans-serif;max-width:520px;margin:0 auto;padding:32px;background:#FAFAF8">
+      <div style="background:#2D6A4F;color:white;border-radius:12px;padding:20px 24px;margin-bottom:24px">
+        <h2 style="margin:0 0 4px;font-size:20px">🌿 마음풀 상담 예약 확정</h2>
+        <p style="margin:0;opacity:.8;font-size:13px">아래 내용을 확인하세요</p>
+      </div>
+      <p>안녕하세요 <strong>${name}</strong>님,<br>상담 예약이 확정되었습니다.</p>
+      <div style="background:white;border-radius:12px;padding:20px;margin:16px 0;border:1px solid rgba(0,0,0,.08)">
+        <table style="width:100%;font-size:14px;border-collapse:collapse">
+          <tr><td style="padding:7px 0;color:#888">상담사</td><td style="font-weight:600">${opts.counselorName} · ${opts.centerName}</td></tr>
+          <tr><td style="padding:7px 0;color:#888;border-top:1px solid #f0f0f0">일시</td><td style="border-top:1px solid #f0f0f0;font-weight:600">${dt}</td></tr>
+          <tr><td style="padding:7px 0;color:#888;border-top:1px solid #f0f0f0">소요시간</td><td style="border-top:1px solid #f0f0f0">${opts.durationMin}분</td></tr>
+          <tr><td style="padding:7px 0;color:#888;border-top:1px solid #f0f0f0">유형</td><td style="border-top:1px solid #f0f0f0">${typeLabel[opts.sessionType] || opts.sessionType}</td></tr>
+          <tr><td style="padding:7px 0;color:#888;border-top:1px solid #f0f0f0">결제금액</td><td style="border-top:1px solid #f0f0f0;font-weight:700;color:#2D6A4F">${feeStr}</td></tr>
+        </table>
+      </div>
+      ${videoBlock}
+      <p style="color:#888;font-size:12px;margin-top:24px">취소·변경: 상담 24시간 전까지 전액 환불 가능 · 문의: support@maumful.kr</p>
+    </div>`
+  )
+}
+
+// ── GET /api/counseling/centers ───────────────────────────
+app.get('/api/counseling/centers', async (c) => {
+  const { DB } = c.env
+  const rows = await DB.prepare(
+    'SELECT id,name,logo_emoji,description,address,specialty_tags,status,contact_email,contact_phone,commission_rate FROM counseling_centers ORDER BY id'
+  ).all()
+  return c.json({ success: true, data: rows.results })
+})
+
+// ── GET /api/counseling/counselors ────────────────────────
+app.get('/api/counseling/counselors', async (c) => {
+  const { DB } = c.env
+  const centerId = c.req.query('centerId')
+  const q = centerId
+    ? 'SELECT co.*,ce.name as center_name FROM counselors co JOIN counseling_centers ce ON co.center_id=ce.id WHERE co.center_id=? AND co.status="active" ORDER BY co.avg_rating DESC'
+    : 'SELECT co.*,ce.name as center_name FROM counselors co JOIN counseling_centers ce ON co.center_id=ce.id WHERE co.status="active" ORDER BY co.avg_rating DESC'
+  const rows = centerId
+    ? await DB.prepare(q).bind(parseInt(centerId)).all()
+    : await DB.prepare(q).all()
+  return c.json({ success: true, data: rows.results })
+})
+
+// ── GET /api/counseling/counselors/:id/slots ──────────────
+app.get('/api/counseling/counselors/:id/slots', async (c) => {
+  const { DB } = c.env
+  const counselorId = parseInt(c.req.param('id'))
+  const dateStr = c.req.query('date') // YYYY-MM-DD
+
+  if (!dateStr) return c.json({ success: false, error: 'date 파라미터 필요' }, 400)
+
+  const date = new Date(dateStr)
+  const dow  = date.getDay()
+
+  // 해당 요일 스케줄
+  const schedule = await DB.prepare(
+    'SELECT start_time,end_time,slot_minutes FROM counselor_schedules WHERE counselor_id=? AND day_of_week=?'
+  ).bind(counselorId, dow).first<{ start_time: string; end_time: string; slot_minutes: number }>()
+
+  if (!schedule) return c.json({ success: true, data: [] })
+
+  // 해당 날짜 기존 예약
+  const booked = await DB.prepare(
+    'SELECT scheduled_at FROM appointments WHERE counselor_id=? AND DATE(scheduled_at)=? AND status NOT IN ("cancelled")'
+  ).bind(counselorId, dateStr).all()
+  const bookedTimes = new Set((booked.results as { scheduled_at: string }[]).map(r => r.scheduled_at.slice(11, 16)))
+
+  // 슬롯 생성
+  const slots: { time: string; available: boolean }[] = []
+  const [sh, sm] = schedule.start_time.split(':').map(Number)
+  const [eh, em] = schedule.end_time.split(':').map(Number)
+  const endMin = eh * 60 + em
+  const slotMin = schedule.slot_minutes || 50
+  for (let cur = sh * 60 + sm; cur + slotMin <= endMin; cur += slotMin) {
+    const h = String(Math.floor(cur / 60)).padStart(2, '0')
+    const m = String(cur % 60).padStart(2, '0')
+    const time = `${h}:${m}`
+    slots.push({ time, available: !bookedTimes.has(time) })
+  }
+  return c.json({ success: true, data: slots })
+})
+
+// ── POST /api/counseling/appointments/prepare ─────────────
+// 예약 DB 생성 + 토스 결제 파라미터 반환
+app.post('/api/counseling/appointments/prepare', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+
+  const body = await c.req.json() as {
+    counselorId: number
+    scheduledAt: string   // ISO 날짜+시간
+    sessionType: string
+    userMemo?: string
+  }
+  const { counselorId, scheduledAt, sessionType, userMemo } = body
+
+  const counselor = await DB.prepare(
+    'SELECT co.*,ce.name as center_name,ce.commission_rate FROM counselors co JOIN counseling_centers ce ON co.center_id=ce.id WHERE co.id=?'
+  ).bind(counselorId).first<{
+    id: number; center_id: number; name: string; center_name: string
+    fee_per_session: number; session_minutes: number; commission_rate: number
+  }>()
+  if (!counselor) return c.json({ success: false, error: '상담사 없음' }, 404)
+
+  const user = await DB.prepare('SELECT email,nickname FROM users WHERE id=?')
+    .bind(userId).first<{ email: string; nickname: string | null }>()
+  if (!user) return c.json({ success: false, error: '사용자 없음' }, 404)
+
+  // 중복 예약 확인
+  const conflict = await DB.prepare(
+    'SELECT id FROM appointments WHERE counselor_id=? AND scheduled_at=? AND status NOT IN ("cancelled")'
+  ).bind(counselorId, scheduledAt).first()
+  if (conflict) return c.json({ success: false, error: '이미 예약된 시간입니다' }, 409)
+
+  // Jitsi 룸 생성 (화상 상담만)
+  const videoRoomId  = sessionType === 'video' ? genJitsiRoom() : null
+  const videoRoomUrl = videoRoomId ? `https://meet.jit.si/${videoRoomId}` : null
+
+  // 예약 레코드 생성 (pending)
+  const r = await DB.prepare(`
+    INSERT INTO appointments (user_id,counselor_id,center_id,scheduled_at,duration_min,session_type,status,fee_amount,video_room_id,video_room_url,user_memo)
+    VALUES (?,?,?,?,?,?,'pending',?,?,?,?)
+  `).bind(userId, counselorId, counselor.center_id, scheduledAt, counselor.session_minutes, sessionType, counselor.fee_per_session, videoRoomId, videoRoomUrl, userMemo || null).run()
+
+  const appointmentId = r.meta.last_row_id as number
+  const orderId = `appt_${appointmentId}_${Date.now()}`
+  const serviceUrl = c.env.SERVICE_URL || 'http://localhost:3000'
+
+  // 토스 클라이언트 키 반환 (SDK 방식)
+  const tossClientKey = (c.env as unknown as Record<string,string>).TOSS_CLIENT_KEY || 'test_ck_OyL0qZ4G1VOgAKo3MaZVKX2m'
+
+  return c.json({
+    success: true,
+    data: {
+      appointmentId,
+      orderId,
+      amount:        counselor.fee_per_session,
+      orderName:     `${counselor.name} 상담사 ${sessionType === 'video' ? '화상' : sessionType === 'phone' ? '전화' : '방문'} 상담 (${counselor.session_minutes}분)`,
+      customerName:  user.nickname || user.email.split('@')[0],
+      customerEmail: user.email,
+      successUrl:    `${serviceUrl}/api/counseling/appointments/toss/success?appointmentId=${appointmentId}&orderId=${orderId}`,
+      failUrl:       `${serviceUrl}/api/counseling/appointments/toss/fail?appointmentId=${appointmentId}`,
+      tossClientKey,
+      videoRoomUrl,
+    },
+  })
+})
+
+// ── GET /api/counseling/appointments/toss/success ─────────
+app.get('/api/counseling/appointments/toss/success', async (c) => {
+  const { DB } = c.env
+  const { paymentKey, orderId, amount, appointmentId } = c.req.query() as Record<string, string>
+
+  const tossKey = c.env.TOSS_SECRET_KEY
+  if (!tossKey) return c.redirect('/?counseling=fail&msg=서버오류')
+
+  try {
+    const confirmRes = await fetch('https://api.tosspayments.com/v1/payments/confirm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Basic ' + btoa(tossKey + ':') },
+      body: JSON.stringify({ paymentKey, orderId, amount: parseInt(amount) }),
+    })
+    if (!confirmRes.ok) {
+      const err = await confirmRes.json() as { message: string }
+      await DB.prepare("UPDATE appointments SET status='cancelled' WHERE id=? AND status='pending'")
+        .bind(parseInt(appointmentId)).run()
+      return c.redirect(`/?counseling=fail&msg=${encodeURIComponent(err.message || '결제실패')}`)
+    }
+
+    // 예약 확정 처리
+    const appt = await DB.prepare(
+      'SELECT ap.*,co.name as counselor_name,co.session_minutes,ce.name as center_name FROM appointments ap JOIN counselors co ON ap.counselor_id=co.id JOIN counseling_centers ce ON ap.center_id=ce.id WHERE ap.id=?'
+    ).bind(parseInt(appointmentId)).first<{
+      user_id: number; counselor_name: string; center_name: string
+      scheduled_at: string; duration_min: number; session_type: string
+      fee_amount: number; video_room_url: string | null; session_minutes: number
+    }>()
+
+    if (appt) {
+      await DB.prepare("UPDATE appointments SET status='confirmed',pg_tid=?,paid_at=CURRENT_TIMESTAMP WHERE id=?")
+        .bind(paymentKey, parseInt(appointmentId)).run()
+
+      // 예약 확정 이메일 발송
+      const user = await DB.prepare('SELECT email,nickname FROM users WHERE id=?')
+        .bind(appt.user_id).first<{ email: string; nickname: string | null }>()
+      if (user) {
+        await sendAppointmentEmail(c.env, user.email, user.nickname || '', {
+          counselorName: appt.counselor_name,
+          centerName:    appt.center_name,
+          scheduledAt:   appt.scheduled_at,
+          durationMin:   appt.duration_min,
+          sessionType:   appt.session_type,
+          feeAmount:     appt.fee_amount,
+          videoUrl:      appt.video_room_url,
+        })
+      }
+    }
+
+    return c.redirect(`/?counseling=success&appointmentId=${appointmentId}`)
+  } catch (e) {
+    console.error('[Counseling Toss] 오류:', e)
+    return c.redirect('/?counseling=fail&msg=서버오류')
+  }
+})
+
+// ── GET /api/counseling/appointments/toss/fail ────────────
+app.get('/api/counseling/appointments/toss/fail', async (c) => {
+  const { DB } = c.env
+  const { appointmentId } = c.req.query() as Record<string, string>
+  if (appointmentId) {
+    await DB.prepare("UPDATE appointments SET status='cancelled' WHERE id=? AND status='pending'")
+      .bind(parseInt(appointmentId)).run()
+  }
+  return c.redirect('/?counseling=fail')
+})
+
+// ── GET /api/counseling/appointments ─────────────────────
+// 내 예약 목록
+app.get('/api/counseling/appointments', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+
+  const rows = await DB.prepare(`
+    SELECT ap.id,ap.scheduled_at,ap.duration_min,ap.session_type,ap.status,
+           ap.fee_amount,ap.video_room_url,ap.video_room_id,ap.user_memo,ap.pg_tid,ap.paid_at,
+           co.name as counselor_name,co.photo_emoji,co.title as counselor_title,
+           ce.name as center_name
+    FROM appointments ap
+    JOIN counselors co ON ap.counselor_id=co.id
+    JOIN counseling_centers ce ON ap.center_id=ce.id
+    WHERE ap.user_id=?
+    ORDER BY ap.scheduled_at DESC
+    LIMIT 50
+  `).bind(userId).all()
+
+  return c.json({ success: true, data: rows.results })
+})
+
+// ── PATCH /api/counseling/appointments/:id/cancel ─────────
+app.patch('/api/counseling/appointments/:id/cancel', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+
+  const apptId = parseInt(c.req.param('id'))
+  const appt = await DB.prepare(
+    'SELECT * FROM appointments WHERE id=? AND user_id=?'
+  ).bind(apptId, userId).first<{ status: string; scheduled_at: string; pg_tid: string | null; fee_amount: number }>()
+
+  if (!appt) return c.json({ success: false, error: '예약 없음' }, 404)
+  if (appt.status === 'cancelled') return c.json({ success: false, error: '이미 취소됨' }, 400)
+
+  // 24시간 전 체크
+  const scheduledMs = new Date(appt.scheduled_at).getTime()
+  const nowMs       = Date.now()
+  const canRefund   = scheduledMs - nowMs > 24 * 60 * 60 * 1000
+
+  await DB.prepare("UPDATE appointments SET status='cancelled',cancelled_at=CURRENT_TIMESTAMP WHERE id=?")
+    .bind(apptId).run()
+
+  return c.json({
+    success: true,
+    data: {
+      refundable: canRefund,
+      message: canRefund ? '환불 처리가 진행됩니다 (1~3 영업일)' : '24시간 이내 취소는 환불이 불가합니다',
+    },
+  })
+})
+
+// ── GET /api/counseling/appointments/:id ──────────────────
+app.get('/api/counseling/appointments/:id', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+  const apptId = parseInt(c.req.param('id'))
+  const row = await DB.prepare(`
+    SELECT ap.*,co.name as counselor_name,co.photo_emoji,co.title as counselor_title,ce.name as center_name
+    FROM appointments ap JOIN counselors co ON ap.counselor_id=co.id JOIN counseling_centers ce ON ap.center_id=ce.id
+    WHERE ap.id=? AND ap.user_id=?
+  `).bind(apptId, userId).first()
+  if (!row) return c.json({ success: false, error: '없음' }, 404)
+  return c.json({ success: true, data: row })
+})
+
+
+// ============================================================
+// 3단계 어드민 API — 상담 플랫폼 전용
+// ============================================================
+
+// ── 어드민 상담 통계 ─────────────────────────────────────
+app.get('/api/admin/counseling/stats', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  const today = new Date().toISOString().slice(0, 10)
+  const month1st = new Date().toISOString().slice(0, 7) + '-01'
+
+  const [centers, counselors, appts, revenue, reviews, onboarding] = await DB.batch([
+    DB.prepare('SELECT COUNT(*) AS total, SUM(CASE WHEN status="active" THEN 1 ELSE 0 END) AS active, SUM(CASE WHEN status="pending" THEN 1 ELSE 0 END) AS pending FROM counseling_centers'),
+    DB.prepare('SELECT COUNT(*) AS total, SUM(CASE WHEN status="active" THEN 1 ELSE 0 END) AS active FROM counselors'),
+    DB.prepare(`SELECT COUNT(*) AS total, SUM(CASE WHEN status='confirmed' THEN 1 ELSE 0 END) AS confirmed, SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END) AS completed, SUM(CASE WHEN DATE(created_at)=? THEN 1 ELSE 0 END) AS today FROM appointments`).bind(today),
+    DB.prepare(`SELECT COALESCE(SUM(fee_amount),0) AS total_revenue, COALESCE(SUM(CASE WHEN created_at>=? THEN fee_amount ELSE 0 END),0) AS month_revenue FROM appointments WHERE status IN ('confirmed','completed') AND paid_at IS NOT NULL`).bind(month1st),
+    DB.prepare('SELECT COUNT(*) AS total, AVG(rating) AS avg_rating FROM counseling_reviews WHERE admin_hidden=0'),
+    DB.prepare('SELECT COUNT(*) AS total, SUM(CASE WHEN status="pending" THEN 1 ELSE 0 END) AS pending FROM center_onboarding_requests'),
+  ])
+
+  return c.json({ success: true, data: {
+    centers: centers.results[0],
+    counselors: counselors.results[0],
+    appointments: appts.results[0],
+    revenue: revenue.results[0],
+    reviews: reviews.results[0],
+    onboarding: onboarding.results[0],
+  }})
+})
+
+// ── 어드민: 센터 목록 + 상태 변경 ─────────────────────────
+app.get('/api/admin/counseling/centers', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  const rows = await DB.prepare(`
+    SELECT cc.*, COUNT(DISTINCT co.id) AS counselor_count,
+           COUNT(DISTINCT ap.id) AS appt_count
+    FROM counseling_centers cc
+    LEFT JOIN counselors co ON co.center_id=cc.id AND co.status='active'
+    LEFT JOIN appointments ap ON ap.center_id=cc.id AND ap.status IN ('confirmed','completed')
+    GROUP BY cc.id ORDER BY cc.created_at DESC
+  `).all()
+  return c.json({ success: true, data: rows.results })
+})
+
+app.patch('/api/admin/counseling/centers/:id/status', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  const id = parseInt(c.req.param('id'))
+  const { status, rejected_reason } = await c.req.json() as { status: string; rejected_reason?: string }
+  if (!['pending','active','suspended'].includes(status)) return c.json({ success: false, error: '잘못된 상태' }, 400)
+
+  const approvedAt = status === 'active' ? 'CURRENT_TIMESTAMP' : 'NULL'
+  await DB.prepare(`UPDATE counseling_centers SET status=?,approved_at=${status==='active'?'CURRENT_TIMESTAMP':'NULL'},rejected_reason=? WHERE id=?`)
+    .bind(status, rejected_reason || null, id).run()
+  return c.json({ success: true })
+})
+
+// ── 어드민: 상담사 관리 ───────────────────────────────────
+app.get('/api/admin/counseling/counselors', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  const rows = await DB.prepare(`
+    SELECT co.*, ce.name AS center_name, ce.status AS center_status,
+           COUNT(DISTINCT ap.id) AS total_appts,
+           COALESCE(SUM(CASE WHEN ap.status='completed' THEN ap.fee_amount ELSE 0 END),0) AS total_earned
+    FROM counselors co
+    JOIN counseling_centers ce ON co.center_id=ce.id
+    LEFT JOIN appointments ap ON ap.counselor_id=co.id
+    GROUP BY co.id ORDER BY co.created_at DESC
+  `).all()
+  return c.json({ success: true, data: rows.results })
+})
+
+app.patch('/api/admin/counseling/counselors/:id', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  const id = parseInt(c.req.param('id'))
+  const body = await c.req.json() as Record<string, unknown>
+  const allowed = ['status','fee_per_session','session_minutes','title','bio','specialties','available_types']
+  const sets: string[] = []
+  const vals: unknown[] = []
+  for (const k of allowed) {
+    if (body[k] !== undefined) { sets.push(`${k}=?`); vals.push(body[k]); }
+  }
+  if (sets.length === 0) return c.json({ success: false, error: '변경 사항 없음' }, 400)
+  vals.push(id)
+  await DB.prepare(`UPDATE counselors SET ${sets.join(',')} WHERE id=?`).bind(...vals).run()
+  return c.json({ success: true })
+})
+
+// ── 어드민: 전체 예약 조회 ────────────────────────────────
+app.get('/api/admin/counseling/appointments', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  const status = c.req.query('status') || ''
+  const page   = parseInt(c.req.query('page') || '1')
+  const limit  = 20
+  const offset = (page - 1) * limit
+
+  const where = status ? `WHERE ap.status=?` : ''
+  const binds: unknown[] = status ? [status, limit, offset] : [limit, offset]
+
+  const rows = await DB.prepare(`
+    SELECT ap.id, ap.scheduled_at, ap.session_type, ap.status, ap.fee_amount, ap.paid_at,
+           ap.video_room_id, ap.earning_processed,
+           u.email AS user_email, u.nickname AS user_nickname,
+           co.name AS counselor_name, co.photo_emoji,
+           ce.name AS center_name
+    FROM appointments ap
+    JOIN users u ON ap.user_id=u.id
+    JOIN counselors co ON ap.counselor_id=co.id
+    JOIN counseling_centers ce ON ap.center_id=ce.id
+    ${where}
+    ORDER BY ap.created_at DESC LIMIT ? OFFSET ?
+  `).bind(...binds).all()
+
+  return c.json({ success: true, data: rows.results, page, limit })
+})
+
+app.patch('/api/admin/counseling/appointments/:id/complete', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  const id = parseInt(c.req.param('id'))
+  const appt = await DB.prepare(
+    'SELECT ap.*,co.commission_rate as cr_rate,ce.commission_rate as center_rate FROM appointments ap JOIN counselors co ON ap.counselor_id=co.id JOIN counseling_centers ce ON ap.center_id=ce.id WHERE ap.id=?'
+  ).bind(id).first<{ id:number; counselor_id:number; center_id:number; fee_amount:number; center_rate:number; status:string; earning_processed:number }>()
+
+  if (!appt) return c.json({ success: false, error: '예약 없음' }, 404)
+  if (appt.status === 'completed') return c.json({ success: false, error: '이미 완료됨' }, 400)
+
+  const commRate    = appt.center_rate || 10
+  const commAmt     = Math.round(appt.fee_amount * commRate / 100)
+  const netAmt      = appt.fee_amount - commAmt
+
+  await DB.batch([
+    DB.prepare("UPDATE appointments SET status='completed',completed_at=CURRENT_TIMESTAMP,earning_processed=1 WHERE id=?").bind(id),
+    DB.prepare('INSERT INTO counselor_earnings (counselor_id,appointment_id,gross_amount,commission_rate,commission_amt,net_amount) VALUES (?,?,?,?,?,?)').bind(appt.counselor_id, id, appt.fee_amount, commRate, commAmt, netAmt),
+    DB.prepare("UPDATE counselors SET avg_rating=(SELECT AVG(rating) FROM counseling_reviews WHERE counselor_id=?),review_count=(SELECT COUNT(*) FROM counseling_reviews WHERE counselor_id=? AND admin_hidden=0) WHERE id=?").bind(appt.counselor_id, appt.counselor_id, appt.counselor_id),
+  ])
+
+  return c.json({ success: true, data: { net_amount: netAmt, commission_amt: commAmt } })
+})
+
+// ── 어드민: 정산 관리 ─────────────────────────────────────
+app.get('/api/admin/counseling/settlements', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  const rows = await DB.prepare(`
+    SELECT s.*, cc.name AS center_name, cc.logo_emoji
+    FROM settlements s JOIN counseling_centers cc ON s.center_id=cc.id
+    ORDER BY s.created_at DESC LIMIT 50
+  `).all()
+  return c.json({ success: true, data: rows.results })
+})
+
+app.post('/api/admin/counseling/settlements', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  const { center_id, period_start, period_end } = await c.req.json() as Record<string,string>
+
+  // 해당 기간 완료 예약 집계
+  const center = await DB.prepare('SELECT commission_rate FROM counseling_centers WHERE id=?').bind(parseInt(center_id)).first<{ commission_rate:number }>()
+  if (!center) return c.json({ success: false, error: '센터 없음' }, 404)
+
+  const agg = await DB.prepare(`
+    SELECT COUNT(*) AS appt_count, COALESCE(SUM(fee_amount),0) AS total_revenue
+    FROM appointments
+    WHERE center_id=? AND status='completed' AND DATE(completed_at) BETWEEN ? AND ?
+      AND earning_processed=1
+  `).bind(parseInt(center_id), period_start, period_end).first<{ appt_count:number; total_revenue:number }>()
+
+  if (!agg || agg.appt_count === 0) return c.json({ success: false, error: '정산할 완료 예약 없음' }, 400)
+
+  const commRate  = center.commission_rate || 10
+  const commAmt   = Math.round(agg.total_revenue * commRate / 100)
+  const payoutAmt = agg.total_revenue - commAmt
+
+  const r = await DB.prepare(`
+    INSERT INTO settlements (center_id,period_start,period_end,total_revenue,commission_amt,payout_amt,appt_count)
+    VALUES (?,?,?,?,?,?,?)
+  `).bind(parseInt(center_id), period_start, period_end, agg.total_revenue, commAmt, payoutAmt, agg.appt_count).run()
+
+  return c.json({ success: true, data: { settlement_id: r.meta.last_row_id, payout_amt: payoutAmt, appt_count: agg.appt_count } })
+})
+
+app.patch('/api/admin/counseling/settlements/:id/process', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  const id = parseInt(c.req.param('id'))
+  const { note } = await c.req.json() as { note?: string }
+  await DB.prepare("UPDATE settlements SET status='completed',processed_at=CURRENT_TIMESTAMP,note=? WHERE id=?")
+    .bind(note || null, id).run()
+  return c.json({ success: true })
+})
+
+// ── 어드민: 온보딩 신청 관리 ─────────────────────────────
+app.get('/api/admin/counseling/onboarding', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  const rows = await DB.prepare('SELECT * FROM center_onboarding_requests ORDER BY created_at DESC LIMIT 50').all()
+  return c.json({ success: true, data: rows.results })
+})
+
+app.patch('/api/admin/counseling/onboarding/:id', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  const id = parseInt(c.req.param('id'))
+  const { status, admin_note } = await c.req.json() as { status: string; admin_note?: string }
+  if (!['reviewing','approved','rejected'].includes(status)) return c.json({ success: false, error: '잘못된 상태' }, 400)
+
+  await DB.prepare("UPDATE center_onboarding_requests SET status=?,admin_note=?,reviewed_at=CURRENT_TIMESTAMP WHERE id=?")
+    .bind(status, admin_note || null, id).run()
+
+  // 승인 시 실제 센터 자동 생성
+  if (status === 'approved') {
+    const req = await DB.prepare('SELECT * FROM center_onboarding_requests WHERE id=?')
+      .bind(id).first<{ center_name:string; contact_email:string; contact_phone:string; address:string; specialty_tags:string; description:string }>()
+    if (req) {
+      await DB.prepare(`
+        INSERT INTO counseling_centers (name,description,address,specialty_tags,status,contact_email,contact_phone,approved_at)
+        VALUES (?,?,?,?,'active',?,?,CURRENT_TIMESTAMP)
+      `).bind(req.center_name, req.description || '', req.address || '', req.specialty_tags || '[]', req.contact_email, req.contact_phone || '').run()
+    }
+  }
+  return c.json({ success: true })
+})
+
+
+// ══════════════════════════════════════════════════════════════
+// 어드민: 상담센터 CRUD
+// ══════════════════════════════════════════════════════════════
+
+// ── POST /api/admin/counseling/centers  (센터 신규 등록) ──────
+app.post('/api/admin/counseling/centers', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  const body = await c.req.json() as {
+    name: string; description?: string; address?: string
+    specialty_tags?: string; contact_email?: string; contact_phone?: string
+    logo_emoji?: string; commission_rate?: number; status?: string
+  }
+  if (!body.name?.trim()) return c.json({ success: false, error: '센터명은 필수입니다' }, 400)
+
+  const result = await DB.prepare(`
+    INSERT INTO counseling_centers
+      (name, description, address, specialty_tags, contact_email, contact_phone,
+       logo_emoji, commission_rate, status, approved_at)
+    VALUES (?,?,?,?,?,?,?,?,?,CASE WHEN ? = 'active' THEN CURRENT_TIMESTAMP ELSE NULL END)
+  `).bind(
+    body.name.trim(),
+    body.description || '',
+    body.address || '',
+    body.specialty_tags || '[]',
+    body.contact_email || '',
+    body.contact_phone || '',
+    body.logo_emoji || '🏥',
+    body.commission_rate ?? 10,
+    body.status || 'active',
+    body.status || 'active'
+  ).run()
+
+  return c.json({ success: true, data: { id: result.meta.last_row_id } })
+})
+
+// ── PUT /api/admin/counseling/centers/:id  (센터 수정) ────────
+app.put('/api/admin/counseling/centers/:id', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  const id = parseInt(c.req.param('id'))
+  const body = await c.req.json() as Record<string, unknown>
+  const allowed = ['name','description','address','specialty_tags','contact_email',
+                   'contact_phone','logo_emoji','commission_rate','status']
+  const sets: string[] = []
+  const vals: unknown[] = []
+
+  for (const k of allowed) {
+    if (body[k] !== undefined) {
+      sets.push(`${k}=?`)
+      vals.push(body[k])
+      // 상태를 active로 변경 시 approved_at 자동 설정
+      if (k === 'status' && body[k] === 'active') {
+        sets.push('approved_at=CURRENT_TIMESTAMP')
+      }
+    }
+  }
+  if (sets.length === 0) return c.json({ success: false, error: '변경 사항 없음' }, 400)
+
+  vals.push(id)
+  await DB.prepare(`UPDATE counseling_centers SET ${sets.join(',')} WHERE id=?`).bind(...vals).run()
+  return c.json({ success: true })
+})
+
+// ── DELETE /api/admin/counseling/centers/:id  (센터 삭제) ─────
+app.delete('/api/admin/counseling/centers/:id', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  const id = parseInt(c.req.param('id'))
+
+  // 소속 상담사 있으면 삭제 불가
+  const counselorCount = await DB.prepare(
+    'SELECT COUNT(*) AS cnt FROM counselors WHERE center_id=?'
+  ).bind(id).first<{ cnt: number }>()
+  if ((counselorCount?.cnt ?? 0) > 0)
+    return c.json({ success: false, error: '소속 상담사가 있어 삭제할 수 없습니다. 상담사를 먼저 이전하거나 삭제하세요.' }, 409)
+
+  await DB.prepare('DELETE FROM counseling_centers WHERE id=?').bind(id).run()
+  return c.json({ success: true })
+})
+
+// ══════════════════════════════════════════════════════════════
+// 어드민: 상담사 CRUD + 스케줄
+// ══════════════════════════════════════════════════════════════
+
+// ── POST /api/admin/counseling/counselors  (상담사 등록) ──────
+app.post('/api/admin/counseling/counselors', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  const body = await c.req.json() as {
+    center_id: number; name: string; title?: string; bio?: string
+    specialties?: string; available_types?: string
+    fee_per_session?: number; session_minutes?: number
+    photo_emoji?: string; status?: string; contact_email?: string
+  }
+  if (!body.center_id || !body.name?.trim())
+    return c.json({ success: false, error: '소속 센터와 이름은 필수입니다' }, 400)
+
+  // 센터 존재 확인
+  const center = await DB.prepare('SELECT id FROM counseling_centers WHERE id=?')
+    .bind(body.center_id).first()
+  if (!center) return c.json({ success: false, error: '존재하지 않는 센터입니다' }, 404)
+
+  const result = await DB.prepare(`
+    INSERT INTO counselors
+      (center_id, name, title, bio, specialties, available_types,
+       fee_per_session, session_minutes, photo_emoji, status, contact_email, avg_rating, review_count)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,0,0)
+  `).bind(
+    body.center_id,
+    body.name.trim(),
+    body.title || '',
+    body.bio || '',
+    body.specialties || '[]',
+    body.available_types || '["visit"]',
+    body.fee_per_session ?? 50000,
+    body.session_minutes ?? 50,
+    body.photo_emoji || '👤',
+    body.status || 'active',
+    body.contact_email || ''
+  ).run()
+
+  return c.json({ success: true, data: { id: result.meta.last_row_id } })
+})
+
+// ── PUT /api/admin/counseling/counselors/:id  (상담사 수정) ───
+app.put('/api/admin/counseling/counselors/:id', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  const id = parseInt(c.req.param('id'))
+  const body = await c.req.json() as Record<string, unknown>
+  const allowed = ['center_id','name','title','bio','specialties','available_types',
+                   'fee_per_session','session_minutes','photo_emoji','status','contact_email']
+  const sets: string[] = []
+  const vals: unknown[] = []
+
+  for (const k of allowed) {
+    if (body[k] !== undefined) { sets.push(`${k}=?`); vals.push(body[k]); }
+  }
+  if (sets.length === 0) return c.json({ success: false, error: '변경 사항 없음' }, 400)
+
+  vals.push(id)
+  await DB.prepare(`UPDATE counselors SET ${sets.join(',')} WHERE id=?`).bind(...vals).run()
+  return c.json({ success: true })
+})
+
+// ── DELETE /api/admin/counseling/counselors/:id  (상담사 삭제) ─
+app.delete('/api/admin/counseling/counselors/:id', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  const id = parseInt(c.req.param('id'))
+
+  // 확정된 예약이 있으면 삭제 불가
+  const activeAppts = await DB.prepare(
+    "SELECT COUNT(*) AS cnt FROM appointments WHERE counselor_id=? AND status IN ('pending','confirmed')"
+  ).bind(id).first<{ cnt: number }>()
+  if ((activeAppts?.cnt ?? 0) > 0)
+    return c.json({ success: false, error: '진행 중인 예약이 있어 삭제할 수 없습니다.' }, 409)
+
+  // 스케줄도 함께 삭제
+  await DB.prepare('DELETE FROM counselor_schedules WHERE counselor_id=?').bind(id).run()
+  await DB.prepare('DELETE FROM counselors WHERE id=?').bind(id).run()
+  return c.json({ success: true })
+})
+
+// ── GET /api/admin/counseling/counselors/:id/schedules  (스케줄 조회) ─
+app.get('/api/admin/counseling/counselors/:id/schedules', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  const id = parseInt(c.req.param('id'))
+  const rows = await DB.prepare(
+    'SELECT * FROM counselor_schedules WHERE counselor_id=? ORDER BY day_of_week'
+  ).bind(id).all()
+  return c.json({ success: true, data: rows.results })
+})
+
+// ── POST /api/admin/counseling/counselors/:id/schedules  (스케줄 저장) ─
+app.post('/api/admin/counseling/counselors/:id/schedules', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  const counselorId = parseInt(c.req.param('id'))
+  const { schedules } = await c.req.json() as {
+    schedules: Array<{ day_of_week: number; start_time: string; end_time: string; slot_minutes: number }>
+  }
+  if (!Array.isArray(schedules)) return c.json({ success: false, error: '스케줄 배열 필요' }, 400)
+
+  // 기존 스케줄 삭제 후 재삽입 (upsert 방식)
+  await DB.prepare('DELETE FROM counselor_schedules WHERE counselor_id=?').bind(counselorId).run()
+
+  for (const s of schedules) {
+    if (s.day_of_week < 0 || s.day_of_week > 6) continue
+    await DB.prepare(
+      'INSERT INTO counselor_schedules (counselor_id,day_of_week,start_time,end_time,slot_minutes) VALUES (?,?,?,?,?)'
+    ).bind(counselorId, s.day_of_week, s.start_time, s.end_time, s.slot_minutes || 50).run()
+  }
+  return c.json({ success: true })
+})
+
+// ── 리뷰 API (일반 사용자) ────────────────────────────────
+app.post('/api/counseling/reviews', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+
+  const { appointment_id, rating, content, is_anonymous } = await c.req.json() as {
+    appointment_id: number; rating: number; content?: string; is_anonymous?: boolean
+  }
+  if (rating < 1 || rating > 5) return c.json({ success: false, error: '평점은 1~5' }, 400)
+
+  const appt = await DB.prepare('SELECT * FROM appointments WHERE id=? AND user_id=? AND status="completed"')
+    .bind(appointment_id, userId).first<{ id:number; counselor_id:number }>()
+  if (!appt) return c.json({ success: false, error: '완료된 예약이 없거나 접근 불가' }, 404)
+
+  const existing = await DB.prepare('SELECT id FROM counseling_reviews WHERE appointment_id=?').bind(appointment_id).first()
+  if (existing) return c.json({ success: false, error: '이미 리뷰를 작성했습니다' }, 409)
+
+  await DB.prepare('INSERT INTO counseling_reviews (appointment_id,user_id,counselor_id,rating,content,is_anonymous) VALUES (?,?,?,?,?,?)')
+    .bind(appointment_id, userId, appt.counselor_id, rating, content || null, is_anonymous ? 1 : 0).run()
+
+  await DB.prepare("UPDATE counselors SET avg_rating=(SELECT AVG(rating) FROM counseling_reviews WHERE counselor_id=? AND admin_hidden=0),review_count=(SELECT COUNT(*) FROM counseling_reviews WHERE counselor_id=? AND admin_hidden=0) WHERE id=?")
+    .bind(appt.counselor_id, appt.counselor_id, appt.counselor_id).run()
+
+  return c.json({ success: true })
+})
+
+app.get('/api/counseling/reviews/:counselorId', async (c) => {
+  const { DB } = c.env
+  const counselorId = parseInt(c.req.param('counselorId'))
+  const page  = parseInt(c.req.query('page') || '1')
+  const limit = 10
+  const rows  = await DB.prepare(`
+    SELECT cr.id, cr.rating, cr.content, cr.is_anonymous, cr.counselor_reply, cr.created_at,
+           CASE WHEN cr.is_anonymous=1 THEN '익명' ELSE COALESCE(u.nickname, u.email) END AS reviewer_name
+    FROM counseling_reviews cr JOIN users u ON cr.user_id=u.id
+    WHERE cr.counselor_id=? AND cr.admin_hidden=0 AND cr.is_public=1
+    ORDER BY cr.created_at DESC LIMIT ? OFFSET ?
+  `).bind(counselorId, limit, (page - 1) * limit).all()
+  return c.json({ success: true, data: rows.results, page })
+})
+
+// ── 온보딩 신청 (일반 사용자) ─────────────────────────────
+app.post('/api/counseling/onboarding', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)  // 비회원도 허용
+
+  const body = await c.req.json() as Record<string, string | number>
+  const { center_name, contact_name, contact_email, contact_phone, address, specialty_tags, description, counselor_count, website_url, business_reg_num } = body
+
+  if (!center_name || !contact_name || !contact_email) return c.json({ success: false, error: '필수 항목 누락' }, 400)
+
+  const r = await DB.prepare(`
+    INSERT INTO center_onboarding_requests (user_id,center_name,contact_name,contact_email,contact_phone,address,specialty_tags,description,counselor_count,website_url,business_reg_num)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?)
+  `).bind(userId || null, center_name, contact_name, contact_email, contact_phone||null, address||null, specialty_tags||'[]', description||null, counselor_count||1, website_url||null, business_reg_num||null).run()
+
+  return c.json({ success: true, data: { request_id: r.meta.last_row_id } })
+})
+
+// ── PATCH /api/admin/counseling/appointments/:id/note ──────
+app.patch('/api/admin/counseling/appointments/:id/note', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  const id = parseInt(c.req.param('id'))
+  const { counselor_note } = await c.req.json() as { counselor_note: string }
+  await DB.prepare("UPDATE appointments SET counselor_note=?, updated_at=CURRENT_TIMESTAMP WHERE id=?")
+    .bind(counselor_note || null, id).run()
+  return c.json({ success: true })
+})
+
+
+// ════════════════════════════════════════════════════════════
+// Cloudflare Cron Trigger — 매월 1일 00:00 자동 구독 갱신
+// wrangler.toml 에 추가:
+//   [[triggers]]
+//   crons = ["0 0 1 * *"]
+// ════════════════════════════════════════════════════════════
+async function handleScheduled(env: Bindings) {
+  const DB = env.DB
+  const tossKey = env.TOSS_BILLING_KEY || env.TOSS_SECRET_KEY
+  if (!tossKey) { console.error('[Cron] TOSS_BILLING_KEY 미설정'); return }
+
+  // 오늘 갱신 대상 구독 조회
+  const today = new Date().toISOString().slice(0, 10)
+  const subs = await DB.prepare(
+    "SELECT * FROM user_subscriptions WHERE status='active' AND DATE(next_billing_date) <= ?"
+  ).bind(today).all()
+
+  const plans: Record<string, { name: string; monthlyCredits: number; price: number }> = {
+    basic:    { name:'베이직',   monthlyCredits:60,  price:3900  },
+    standard: { name:'스탠다드', monthlyCredits:150, price:8900  },
+    pro:      { name:'프로',     monthlyCredits:400, price:19900 },
+  }
+
+  for (const sub of (subs.results as Record<string, unknown>[]) ) {
+    const plan = plans[sub.plan_key as string]
+    if (!plan || !sub.billing_key) continue
+
+    try {
+      // 토스 자동 결제 요청
+      const res = await fetch('https://api.tosspayments.com/v1/billing/' + sub.billing_key, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Basic ' + btoa(tossKey + ':') },
+        body: JSON.stringify({
+          customerKey: sub.customer_key,
+          amount: plan.price,
+          orderId: `sub_${sub.user_id}_${Date.now()}`,
+          orderName: `마음풀 ${plan.name} 구독`,
+          customerEmail: '',
+        }),
+      })
+
+      const result = await res.json() as { paymentKey?: string; code?: string; message?: string }
+
+      if (res.ok && result.paymentKey) {
+        // 결제 성공 — 크레딧 지급 + 다음 결제일 갱신
+        const nextDate = new Date(); nextDate.setMonth(nextDate.getMonth() + 1)
+        await DB.batch([
+          DB.prepare("UPDATE users SET credits = credits + ? WHERE id=?").bind(plan.monthlyCredits, sub.user_id),
+          DB.prepare("INSERT INTO credit_transactions (user_id,type,amount,reason,balance_after) SELECT ?,?,?,?,credits FROM users WHERE id=?")
+            .bind(sub.user_id, 'gain', plan.monthlyCredits, `subscription_renewal_${sub.plan_key}`, sub.user_id),
+          DB.prepare("UPDATE user_subscriptions SET next_billing_date=?, current_period_start=CURRENT_TIMESTAMP WHERE id=?")
+            .bind(nextDate.toISOString(), sub.id),
+          DB.prepare("INSERT INTO subscription_invoices (user_id,subscription_id,plan_key,amount,status,pg_tid) VALUES (?,?,?,?,?,?)")
+            .bind(sub.user_id, sub.id, sub.plan_key, plan.price, 'paid', result.paymentKey),
+        ])
+        console.log(`[Cron] 구독 갱신 성공: user_id=${sub.user_id}, plan=${sub.plan_key}`)
+      } else {
+        // 결제 실패 — past_due 처리
+        await DB.prepare("UPDATE user_subscriptions SET status='past_due' WHERE id=?").bind(sub.id).run()
+        await DB.prepare("INSERT INTO subscription_invoices (user_id,subscription_id,plan_key,amount,status) VALUES (?,?,?,?,'failed')")
+          .bind(sub.user_id, sub.id, sub.plan_key, plan.price).run()
+        console.error(`[Cron] 구독 갱신 실패: user_id=${sub.user_id}, code=${result.code}`)
+      }
+    } catch (e) { console.error('[Cron] 오류:', e) }
+  }
+}
+
+// Cloudflare Workers scheduled export
+export { handleScheduled as scheduled }
+
+// ── POST /api/user/cookie-consent ─────────────────────────
+// 마케팅 쿠키 동의/거부를 KV에 저장 (LocalStorage 보완)
+app.post('/api/user/cookie-consent', async (c) => {
+  const { KV } = c.env
+  const { consent } = await c.req.json() as { consent: 'accepted' | 'rejected' }
+  // 비로그인 시 IP 기반 키 사용
+  const userId = await getAuthUserId(c.req.raw, KV)
+  const key = userId ? `cookie_consent:${userId}` : `cookie_consent:ip:${c.req.header('cf-connecting-ip') || 'unknown'}`
+  await KV.put(key, JSON.stringify({ consent, timestamp: new Date().toISOString() }), { expirationTtl: 365 * 86400 })
+  return c.json({ success: true })
+})
+
+app.get('/api/user/cookie-consent', async (c) => {
+  const { KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  const key = userId ? `cookie_consent:${userId}` : `cookie_consent:ip:${c.req.header('cf-connecting-ip') || 'unknown'}`
+  const val = await KV.get(key)
+  return c.json({ success: true, data: val ? JSON.parse(val) : null })
+})
+
+
+export default app
