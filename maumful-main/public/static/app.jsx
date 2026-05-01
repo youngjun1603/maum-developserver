@@ -151,6 +151,8 @@ function PsychologicalTestSystem() {
   const [view, setView] = useState('landing');
   const [initializing, setInitializing] = useState(true);
   const [returnToCouple, setReturnToCouple] = useState(() => !!sessionStorage.getItem('return_to_couple'));
+  const [partnerMode, setPartnerMode]       = useState(null);
+  // partnerMode: { sessionCode, testType, hostName, pendingTests: ['BIG5',...], completedResults: {} }
 
   // ── 크레딧 ────────────────────────────────────────────────
   const [credits, setCredits]             = useState(0);
@@ -1033,6 +1035,15 @@ function PsychologicalTestSystem() {
   const startTest = (...args) => {};
   const forgotPassword = (...args) => {};
 
+  // ── 파트너 모드: 비로그인 직접 검사 시작 (chargeForTest 불필요) ──
+  useEffect(() => {
+    if (!view.startsWith('partnerTest:')) return;
+    const key = view.split(':')[1];
+    if (key === 'BIG5') setView('big5Test');
+    else if (key === 'LOST') setView('lostTest');
+    else if (key === 'DSI') setView('dsiTest');
+  }, [view]);
+
   // ============================================================
   // ── 검사 소개 페이지에서 바로 검사 시작 처리 ────────────────
   useEffect(() => {
@@ -1276,6 +1287,26 @@ function PsychologicalTestSystem() {
       const startTest     = urlParams.get('start');
       const urlHash       = window.location.hash;
 
+      // 마음커플 → 비로그인 파트너 검사 링크 (?partner=SESSION_CODE) — 최우선 처리
+      const partnerCode = urlParams.get('partner');
+      if (partnerCode) {
+        window.history.replaceState({}, '', '/');
+        try {
+          const coupleBase = getCoupleBaseUrl();
+          const r = await fetch(`${coupleBase}/api/couple/partner-info/${partnerCode.toUpperCase()}`);
+          const d = await r.json();
+          if (d.success) {
+            const tests = d.data.test_type.split('+');
+            setPartnerMode({ sessionCode: partnerCode.toUpperCase(), testType: d.data.test_type, hostName: d.data.host_name, pendingTests: tests, completedResults: {} });
+            setView('partnerIntro');
+          } else {
+            setView('landing');
+          }
+        } catch { setView('landing'); }
+        setInitializing(false);
+        return;
+      }
+
       // 마음커플 → 특정 검사 direct link (?start=BIG5|LOST|DSI) — 최우선 처리
       if (startTest) {
         window.history.replaceState({}, '', '/');
@@ -1487,6 +1518,20 @@ function PsychologicalTestSystem() {
       headers: { 'Content-Type': 'application/json', ...api._authHeader() },
       body: JSON.stringify({ test_type: testType, result_json: resultJson }),
     }).catch(() => {});
+  }
+
+  async function submitPartnerResults(results) {
+    const coupleBase = getCoupleBaseUrl();
+    try {
+      const r = await fetch(`${coupleBase}/api/couple/partner-submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_code: partnerMode.sessionCode, results }),
+      });
+      const d = await r.json();
+      if (d.success) { setView('partnerComplete'); }
+      else { setSaveStatus('제출 실패: ' + (d.error || '다시 시도해주세요.')); }
+    } catch { setSaveStatus('네트워크 오류. 다시 시도해주세요.'); }
   }
 
   async function openMaumCouple(inviteCode = null) {
@@ -2123,6 +2168,43 @@ function PsychologicalTestSystem() {
   // ============================================================
   // 뷰: 랜딩 홈 페이지 (비로그인 기본 진입점)
   // ============================================================
+  if (view === 'partnerIntro') return (
+    <div style={{ minHeight: '100vh', background: '#FDF7F9', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div style={{ maxWidth: 400, width: '100%', background: 'white', borderRadius: 24, padding: 32, boxShadow: '0 8px 32px rgba(0,0,0,0.1)', textAlign: 'center' }}>
+        <div style={{ fontSize: 52, marginBottom: 16 }}>💕</div>
+        <div style={{ fontSize: 18, fontWeight: 700, color: '#2D2D2D', marginBottom: 8 }}>
+          {partnerMode?.hostName}님의 커플 분석 초대
+        </div>
+        <div style={{ fontSize: 13, color: '#888', marginBottom: 24, lineHeight: 1.8 }}>
+          함께 심리검사를 완료하면<br/>커플 궁합 리포트를 받아볼 수 있어요.
+        </div>
+        <div style={{ background: '#FFF0F4', borderRadius: 12, padding: '12px 16px', marginBottom: 24, fontSize: 13, color: '#C06080', fontWeight: 600 }}>
+          필요한 검사: {partnerMode?.testType.split('+').map((t, i, arr) => (
+            <span key={t}>{t === 'DSI' ? 'SDRI 자아분화' : t}{i < arr.length - 1 ? ' + ' : ''}</span>
+          ))}
+        </div>
+        <button
+          onClick={() => setView('partnerTest:' + partnerMode?.pendingTests[0])}
+          style={{ width: '100%', padding: 14, borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #E87090, #F5A0B5)', color: 'white', fontWeight: 700, fontSize: 15, fontFamily: "'Noto Sans KR', sans-serif" }}
+        >검사 시작하기</button>
+        <div style={{ fontSize: 11, color: '#BBB', marginTop: 12 }}>로그인 없이 참여 가능합니다</div>
+      </div>
+    </div>
+  );
+
+  if (view === 'partnerComplete') return (
+    <div style={{ minHeight: '100vh', background: '#FDF7F9', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div style={{ maxWidth: 400, width: '100%', background: 'white', borderRadius: 24, padding: 40, boxShadow: '0 8px 32px rgba(0,0,0,0.1)', textAlign: 'center' }}>
+        <div style={{ fontSize: 56, marginBottom: 16 }}>🎉</div>
+        <div style={{ fontSize: 18, fontWeight: 700, color: '#2D2D2D', marginBottom: 12 }}>검사 완료!</div>
+        <div style={{ fontSize: 13, color: '#888', lineHeight: 1.8 }}>
+          {partnerMode?.hostName}님이 이제<br/>커플 리포트를 확인할 수 있어요.<br/>
+          <span style={{ color: '#BBB', fontSize: 12 }}>창을 닫아도 됩니다.</span>
+        </div>
+      </div>
+    </div>
+  );
+
   if (view === 'landing') return (
     <>
       <GlobalNav
@@ -4763,6 +4845,16 @@ function PsychologicalTestSystem() {
       setSaveStatus("⚠️ " + (sdriLikertQ.length - likertFilled) + "개 문항이 남아있습니다.");
       return;
     }
+    if (partnerMode) {
+      const { scales, total } = calcSdri();
+      const result = { scales, total };
+      const newCompleted = { ...partnerMode.completedResults, dsi: result };
+      const remaining = partnerMode.pendingTests.filter(t => t !== 'DSI');
+      setPartnerMode(prev => ({ ...prev, completedResults: newCompleted, pendingTests: remaining }));
+      if (remaining.length === 0) { submitPartnerResults(newCompleted); }
+      else { setView('partnerTest:' + remaining[0]); }
+      return;
+    }
     const { scales, total } = calcSdri();
     saveCoupleResult('DSI', { scales, total });
     const data = {
@@ -4829,6 +4921,15 @@ function PsychologicalTestSystem() {
       setSaveStatus("⚠️ " + (50 - Object.keys(big5Responses).length) + "개 문항이 남아있습니다.");
       return;
     }
+    if (partnerMode) {
+      const result = calcBig5();
+      const newCompleted = { ...partnerMode.completedResults, big5: result };
+      const remaining = partnerMode.pendingTests.filter(t => t !== 'BIG5');
+      setPartnerMode(prev => ({ ...prev, completedResults: newCompleted, pendingTests: remaining }));
+      if (remaining.length === 0) { submitPartnerResults(newCompleted); }
+      else { setView('partnerTest:' + remaining[0]); }
+      return;
+    }
     const data = {
       sessionId, testType: "BIG5",
       responses: big5Responses,
@@ -4858,6 +4959,16 @@ function PsychologicalTestSystem() {
   function submitLost() {
     if (Object.keys(lostResponses).length < 60) {
       setSaveStatus("⚠️ " + (60 - Object.keys(lostResponses).length) + "개 문항이 남아있습니다.");
+      return;
+    }
+    if (partnerMode) {
+      const { axisAvg, typeCode, typeInfo, stressStyle, stabilityStyle } = calcLost();
+      const result = { axisAvg, typeCode, typeInfo, stressStyle, stabilityStyle };
+      const newCompleted = { ...partnerMode.completedResults, lost: result };
+      const remaining = partnerMode.pendingTests.filter(t => t !== 'LOST');
+      setPartnerMode(prev => ({ ...prev, completedResults: newCompleted, pendingTests: remaining }));
+      if (remaining.length === 0) { submitPartnerResults(newCompleted); }
+      else { setView('partnerTest:' + remaining[0]); }
       return;
     }
     const data = {

@@ -513,9 +513,15 @@ function SessionWaitingView({ session, myRole, onRefresh, onReport, onCancel }) 
   const code = session?.session_code || '';
 
   function copyCode() {
-    navigator.clipboard?.writeText(code).catch(() => {});
     const msg = `마음커플 초대코드: ${code}\n함께 심리 분석해봐요 💕\nhttps://couple.maumful.com/?code=${code}`;
     navigator.clipboard?.writeText(msg).catch(() => {});
+  }
+
+  function copyPartnerLink() {
+    const base = window.location.hostname.includes('workers.dev') || window.location.hostname.includes('-dev.')
+      ? 'https://maumful-dev.limyj007.workers.dev'
+      : 'https://maumful.com';
+    navigator.clipboard?.writeText(`${base}?partner=${code}`).catch(() => {});
   }
 
   // 폴링: 파트너 미참여 시 30초, 참여 후 10초 간격
@@ -545,7 +551,7 @@ function SessionWaitingView({ session, myRole, onRefresh, onReport, onCancel }) 
   }
 
   const isHostDone  = !!session?.host_result_json;
-  const isGuestDone = !!session?.guest_result_json && !!session?.guest_user_id;
+  const isGuestDone = !!session?.guest_result_json;
   const bothDone    = session?.status === 'both_done' || (isHostDone && isGuestDone);
 
   return (
@@ -563,7 +569,7 @@ function SessionWaitingView({ session, myRole, onRefresh, onReport, onCancel }) 
         <div style={{ fontSize: 13, color: C.muted, marginBottom: 20, lineHeight: 1.6 }}>
           {bothDone
             ? '이제 커플 분석 리포트를 생성할 수 있습니다.'
-            : '아래 초대코드를 파트너에게 공유하고, 파트너가 마음커플에 접속해 코드를 입력하면 분석이 시작됩니다.'}
+            : '파트너 링크를 공유하세요. 파트너는 로그인 없이 바로 검사에 참여할 수 있어요.'}
         </div>
 
         {/* 진행 상태 */}
@@ -594,12 +600,20 @@ function SessionWaitingView({ session, myRole, onRefresh, onReport, onCancel }) 
               fontSize: 32, fontWeight: 800, letterSpacing: 8,
               color: C.rose, fontFamily: 'monospace', textAlign: 'center', marginBottom: 12,
             }}>{code}</div>
-            <button onClick={copyCode} style={{
+            <button onClick={copyPartnerLink} style={{
               width: '100%', padding: '10px', borderRadius: 10, border: 'none', cursor: 'pointer',
               background: C.rose, color: 'white', fontWeight: 700, fontSize: 13,
               fontFamily: "'Noto Sans KR', sans-serif",
             }}>
-              📋 코드 + 링크 복사하기
+              🔗 파트너 검사 링크 복사 (로그인 불필요)
+            </button>
+            <button onClick={copyCode} style={{
+              width: '100%', padding: '8px', borderRadius: 10, marginTop: 8,
+              border: `1px solid ${C.rose}44`, cursor: 'pointer',
+              background: 'white', color: C.rose, fontWeight: 600, fontSize: 12,
+              fontFamily: "'Noto Sans KR', sans-serif",
+            }}>
+              📋 마음커플 코드 복사 (계정 있는 파트너)
             </button>
           </div>
         )}
