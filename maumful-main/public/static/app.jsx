@@ -1278,6 +1278,7 @@ function PsychologicalTestSystem() {
             setView('memberLogin');
           }
         }
+        setInitializing(false);
         return;
       }
 
