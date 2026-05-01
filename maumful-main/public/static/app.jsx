@@ -1177,8 +1177,25 @@ function PsychologicalTestSystem() {
     return () => clearInterval(intervalId);
   }, []); // 한 번만 실행
 
-
-
+  // 검사 결과 화면 진입 시 result_json 자동 저장 (마음커플 연동)
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    const saveMap = {
+      big5Result:  () => ({ test_type: 'BIG5',  result_json: calcBig5() }),
+      lostResult:  () => ({ test_type: 'LOST',  result_json: (() => { const { axisAvg, typeCode, typeInfo, stressStyle, stabilityStyle } = calcLost(); return { axisAvg, typeCode, typeInfo, stressStyle, stabilityStyle }; })() }),
+      dsiResult:   () => ({ test_type: 'DSI',   result_json: (() => { const { scales, total } = calcSdri(); return { scales, total }; })() }),
+    };
+    const fn = saveMap[view];
+    if (!fn) return;
+    try {
+      const payload = fn();
+      fetch('/api/test/save-result', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+        body: JSON.stringify(payload),
+      }).catch(() => {});
+    } catch { /* 결과 계산 실패 시 무시 */ }
+  }, [view, isLoggedIn]);
 
   // ── 하위 호환: 기존 검사 코드가 참조하는 변수들 ─────────
   // activeLinkData → 로그인 회원 정보로 대체
