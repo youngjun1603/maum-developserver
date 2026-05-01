@@ -1278,13 +1278,13 @@ function PsychologicalTestSystem() {
       if (startTest) {
         window.history.replaceState({}, '', '/');
         sessionStorage.setItem('return_to_couple', '1'); // 검사 완료 후 마음커플로 복귀
-        const testViewMap = { BIG5: 'big5Test', LOST: 'lostTest', DSI: 'dsiTest' };
-        const targetView = testViewMap[startTest.toUpperCase()];
-        if (targetView) {
+        const testKey = startTest.toUpperCase();
+        if (['BIG5', 'LOST', 'DSI'].includes(testKey)) {
+          const startView = 'startTest:' + testKey; // chargeForTest 경유로 test_history 행 생성
           if (isAuthenticated) {
-            setView(targetView);
+            setView(startView);
           } else {
-            sessionStorage.setItem('post_login_view', targetView);
+            sessionStorage.setItem('post_login_view', startView);
             setView('memberLogin');
           }
         }

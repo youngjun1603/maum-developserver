@@ -898,11 +898,19 @@ app.post('/api/test/save-result', async (c) => {
   if (!test_type || !result_json) return c.json({ error: '파라미터 부족' }, 400)
   if (!['BIG5', 'LOST', 'DSI'].includes(test_type)) return c.json({ error: '지원하지 않는 유형' }, 400)
 
-  await DB.prepare(
+  const resultStr = JSON.stringify(result_json)
+  const upd = await DB.prepare(
     `UPDATE test_history SET result_json=? WHERE id=(
        SELECT id FROM test_history WHERE user_id=? AND test_type=? ORDER BY performed_at DESC LIMIT 1
      )`
-  ).bind(JSON.stringify(result_json), userId, test_type).run()
+  ).bind(resultStr, userId, test_type).run()
+
+  // 기존 행이 없으면 (BIG5 무료 검사 등 startTest 미호출 케이스) 새 행 삽입
+  if (upd.meta.changes === 0) {
+    await DB.prepare(
+      `INSERT INTO test_history (user_id, test_type, lang, credits_spent, result_json) VALUES (?, ?, 'ko', 0, ?)`
+    ).bind(userId, test_type, resultStr).run()
+  }
 
   return c.json({ success: true })
 })
