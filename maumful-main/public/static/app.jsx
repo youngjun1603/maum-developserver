@@ -1407,22 +1407,28 @@ function PsychologicalTestSystem() {
   // ============================================================
   // 마음 게임 SSO 연동 (JWT 토큰 전달 → 별도 로그인 불필요)
   // ============================================================
+  function getCoupleBaseUrl() {
+    const h = window.location.hostname;
+    return (h.includes('workers.dev') || h.includes('-dev.'))
+      ? 'https://maumcouple-dev.limyj007.workers.dev'
+      : 'https://couple.maumful.com';
+  }
+
   async function openMaumCouple(inviteCode = null) {
     if (!isLoggedIn) {
       setView('memberLogin');
       return;
     }
+    const base = getCoupleBaseUrl();
     try {
       const res = await fetch('/api/couple-token', { headers: api._authHeader() });
       const data = await res.json();
       const token = data.success ? data.coupleToken : tokenStore.getAccess();
       const codeParam = inviteCode ? `&code=${encodeURIComponent(inviteCode)}` : '';
-      const coupleUrl = `https://couple.maumful.com${token ? '?t=' + encodeURIComponent(token) + codeParam : ''}`;
-      window.open(coupleUrl, '_blank', 'noopener noreferrer');
+      window.open(`${base}${token ? '?t=' + encodeURIComponent(token) + codeParam : ''}`, '_blank', 'noopener noreferrer');
     } catch {
       const token = tokenStore.getAccess();
-      const coupleUrl = `https://couple.maumful.com${token ? '?t=' + encodeURIComponent(token) : ''}`;
-      window.open(coupleUrl, '_blank', 'noopener noreferrer');
+      window.open(`${base}${token ? '?t=' + encodeURIComponent(token) : ''}`, '_blank', 'noopener noreferrer');
     }
   }
 
