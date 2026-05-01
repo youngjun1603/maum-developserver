@@ -1271,6 +1271,22 @@ function PsychologicalTestSystem() {
         window.__resetToken = resetToken;
       }
 
+      // 마음커플 → 상담 예약 deep link (#counseling?type=couple|bowen)
+      const urlHash = window.location.hash;
+      if (urlHash.startsWith('#counseling')) {
+        const hashParams = new URLSearchParams(urlHash.slice('#counseling'.length + 1));
+        const ctype = hashParams.get('type');
+        window.history.replaceState({}, '', '/');
+        if (isLoggedIn) {
+          setView('counseling');
+          if (ctype) {
+            try { localStorage.setItem('couple_counseling_type', ctype); } catch {}
+          }
+        } else {
+          setView('memberLogin');
+        }
+      }
+
       // 친구 초대 ?ref= 파라미터 처리
       // 로그인 전 접속이면 sessionStorage에 저장 → 회원가입 완료 후 자동 적용
       const refCode = urlParams.get('ref');
@@ -1391,6 +1407,25 @@ function PsychologicalTestSystem() {
   // ============================================================
   // 마음 게임 SSO 연동 (JWT 토큰 전달 → 별도 로그인 불필요)
   // ============================================================
+  async function openMaumCouple(inviteCode = null) {
+    if (!isLoggedIn) {
+      setView('memberLogin');
+      return;
+    }
+    try {
+      const res = await fetch('/api/couple-token', { headers: api._authHeader() });
+      const data = await res.json();
+      const token = data.success ? data.coupleToken : tokenStore.getAccess();
+      const codeParam = inviteCode ? `&code=${encodeURIComponent(inviteCode)}` : '';
+      const coupleUrl = `https://couple.maumful.com${token ? '?t=' + encodeURIComponent(token) + codeParam : ''}`;
+      window.open(coupleUrl, '_blank', 'noopener noreferrer');
+    } catch {
+      const token = tokenStore.getAccess();
+      const coupleUrl = `https://couple.maumful.com${token ? '?t=' + encodeURIComponent(token) : ''}`;
+      window.open(coupleUrl, '_blank', 'noopener noreferrer');
+    }
+  }
+
   async function openMaumGame(gameKey = null) {
     if (!isLoggedIn) {
       setView('memberLogin');
@@ -2620,6 +2655,12 @@ function PsychologicalTestSystem() {
                 title="마음 게임 — 별도 로그인 없이 바로 이동">
                 🎮 <span className="hidden sm:inline">마음 게임</span>
               </button>
+              {/* 마음커플 진입 — 마음게임과 동일한 JWT SSO 방식 */}
+              <button onClick={() => openMaumCouple()}
+                className="text-gray-500 hover:text-rose-600 text-sm px-2 py-1.5 rounded-lg hover:bg-rose-50 transition flex items-center gap-1"
+                title="마음커플 — 파트너와 심리 궁합 분석">
+                💕 <span className="hidden sm:inline">마음커플</span>
+              </button>
               <button onClick={() => setView('myPage')} className="text-gray-500 hover:text-gray-700 text-sm px-2 py-1.5 rounded-lg hover:bg-gray-100 transition">
                 👤 {currentUser?.nickname || '내 정보'}
               </button>
@@ -2813,6 +2854,11 @@ function PsychologicalTestSystem() {
               className="text-green-600 hover:text-green-800 text-sm px-2 py-1.5 rounded-lg hover:bg-green-50 transition"
               title="마음 게임">
               🎮
+            </button>
+            <button onClick={() => openMaumCouple()}
+              className="text-rose-500 hover:text-rose-700 text-sm px-2 py-1.5 rounded-lg hover:bg-rose-50 transition"
+              title="마음커플">
+              💕
             </button>
             <CreditBadge />
           </div>
