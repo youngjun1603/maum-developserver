@@ -149,6 +149,7 @@ function PsychologicalTestSystem() {
 
   // ── 뷰 라우터 ─────────────────────────────────────────────
   const [view, setView] = useState('landing');
+  const [initializing, setInitializing] = useState(true);
 
   // ── 크레딧 ────────────────────────────────────────────────
   const [credits, setCredits]             = useState(0);
@@ -1313,6 +1314,8 @@ function PsychologicalTestSystem() {
         sessionStorage.setItem('pending_ref_code', refCode.toUpperCase());
         window.history.replaceState({}, '', '/');
       }
+
+      setInitializing(false);
     })();
   }, []);
 
@@ -2060,6 +2063,13 @@ function PsychologicalTestSystem() {
           >필수만</button>
         </div>
       </div>
+    </div>
+  );
+
+  // 초기화 완료 전 — 빈 화면 (랜딩 플래시 방지)
+  if (initializing) return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}>
+      <div style={{ fontSize: 32 }}>🌿</div>
     </div>
   );
 
