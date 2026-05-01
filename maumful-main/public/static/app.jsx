@@ -149,6 +149,8 @@ function PsychologicalTestSystem() {
 
   // ── 뷰 라우터 ─────────────────────────────────────────────
   const [view, setView] = useState('landing');
+  const [initializing, setInitializing] = useState(true);
+  const [returnToCouple, setReturnToCouple] = useState(() => !!sessionStorage.getItem('return_to_couple'));
 
   // ── 크레딧 ────────────────────────────────────────────────
   const [credits, setCredits]             = useState(0);
@@ -1176,8 +1178,35 @@ function PsychologicalTestSystem() {
     return () => clearInterval(intervalId);
   }, []); // 한 번만 실행
 
+  // 검사 결과 화면 진입 시 result_json 자동 저장 + 마음커플 복귀
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    const saveMap = {
+      big5Result:  () => ({ test_type: 'BIG5',  result_json: calcBig5() }),
+      lostResult:  () => ({ test_type: 'LOST',  result_json: (() => { const { axisAvg, typeCode, typeInfo, stressStyle, stabilityStyle } = calcLost(); return { axisAvg, typeCode, typeInfo, stressStyle, stabilityStyle }; })() }),
+      dsiResult:   () => ({ test_type: 'DSI',   result_json: (() => { const { scales, total } = calcSdri(); return { scales, total }; })() }),
+    };
+    const fn = saveMap[view];
+    if (!fn) return;
+    try {
+      const payload = fn();
+      fetch('/api/test/save-result', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+        body: JSON.stringify(payload),
+      }).then(() => {
+        // 결과 저장 후 2.5초 뒤 자동 복귀 (버튼으로 수동 이동도 가능)
+        if (returnToCouple) setTimeout(() => goBackToCouple(), 2500);
+      }).catch(() => {});
+    } catch { /* 결과 계산 실패 시 무시 */ }
+  }, [view, isLoggedIn]);
 
-
+  // complete 뷰 + returnToCouple → 2.5초 후 자동 복귀
+  useEffect(() => {
+    if (view !== 'complete' || !returnToCouple) return;
+    const t = setTimeout(() => goBackToCouple(), 2500);
+    return () => clearTimeout(t);
+  }, [view, returnToCouple]);
 
   // ── 하위 호환: 기존 검사 코드가 참조하는 변수들 ─────────
   // activeLinkData → 로그인 회원 정보로 대체
@@ -1220,6 +1249,7 @@ function PsychologicalTestSystem() {
       // 저장된 토큰으로 자동 로그인 복원
       const savedUser = tokenStore.getUser();
       const accessToken = tokenStore.getAccess();
+      let isAuthenticated = false;
       if (savedUser && accessToken) {
         try {
           const result = await api.getMe();
@@ -1227,7 +1257,7 @@ function PsychologicalTestSystem() {
             setCurrentUser(result.data);
             setCredits(result.data.credits);
             setIsLoggedIn(true);
-            setView('memberDashboard');
+            isAuthenticated = true;
             loadTestHistory();
             checkAndCleanExpiredSessions();
           } else {
@@ -1239,22 +1269,44 @@ function PsychologicalTestSystem() {
       // 로컬 제출 목록 복원
       loadAllSubmitted();
 
-      // 결제 완료 후 URL 파라미터 처리 (?payment=success|fail|cancel)
+      // URL 파라미터 일괄 처리
       const urlParams = new URLSearchParams(window.location.search);
       const paymentStatus = urlParams.get('payment');
       const resetToken    = urlParams.get('reset_token');
+      const startTest     = urlParams.get('start');
+      const urlHash       = window.location.hash;
 
-      if (paymentStatus === 'success') {
-        // URL 파라미터 제거 (히스토리 교체)
+      // 마음커플 → 특정 검사 direct link (?start=BIG5|LOST|DSI) — 최우선 처리
+      if (startTest) {
         window.history.replaceState({}, '', '/');
-        // 크레딧 갱신 (Stripe Webhook 처리 딜레이 감안, 1.5초 후 조회)
+        sessionStorage.setItem('return_to_couple', '1');
+        setReturnToCouple(true); // 결과 화면에 마음커플 복귀 버튼 표시
+        const testKey = startTest.toUpperCase();
+        if (['BIG5', 'LOST', 'DSI'].includes(testKey)) {
+          const startView = 'startTest:' + testKey; // chargeForTest 경유로 test_history 행 생성
+          if (isAuthenticated) {
+            setView(startView);
+          } else {
+            sessionStorage.setItem('post_login_view', startView);
+            setView('memberLogin');
+          }
+        }
+        setInitializing(false);
+        return;
+      }
+
+      // 로그인 복원 후 기본 화면
+      if (isAuthenticated) setView('memberDashboard');
+
+      // 결제 완료 후 URL 파라미터 처리 (?payment=success|fail|cancel)
+      if (paymentStatus === 'success') {
+        window.history.replaceState({}, '', '/');
         setTimeout(async () => {
           try {
             const r = await fetch('/api/payment/stripe/verify', { headers: api._authHeader() });
             const d = await r.json();
             if (d.success) setCredits(d.data.credits);
           } catch { /* 무시 */ }
-          // 충전 성공 알림
           setLoginMsg({ type: 'success', text: '✦ 크레딧 충전이 완료되었습니다!' });
           setTimeout(() => setLoginMsg({ type: '', text: '' }), 4000);
         }, 1500);
@@ -1271,6 +1323,21 @@ function PsychologicalTestSystem() {
         window.__resetToken = resetToken;
       }
 
+      // 마음커플 → 상담 예약 deep link (#counseling?type=couple|bowen)
+      if (urlHash.startsWith('#counseling')) {
+        const hashParams = new URLSearchParams(urlHash.slice('#counseling'.length + 1));
+        const ctype = hashParams.get('type');
+        window.history.replaceState({}, '', '/');
+        if (isAuthenticated) {
+          setView('counseling');
+          if (ctype) {
+            try { localStorage.setItem('couple_counseling_type', ctype); } catch {}
+          }
+        } else {
+          setView('memberLogin');
+        }
+      }
+
       // 친구 초대 ?ref= 파라미터 처리
       // 로그인 전 접속이면 sessionStorage에 저장 → 회원가입 완료 후 자동 적용
       const refCode = urlParams.get('ref');
@@ -1278,6 +1345,8 @@ function PsychologicalTestSystem() {
         sessionStorage.setItem('pending_ref_code', refCode.toUpperCase());
         window.history.replaceState({}, '', '/');
       }
+
+      setInitializing(false);
     })();
   }, []);
 
@@ -1312,7 +1381,13 @@ function PsychologicalTestSystem() {
     setCredits(user.credits);
     setIsLoggedIn(true);
     setLoginMsg({ type: '', text: '' });
-    setView('memberDashboard');
+    const postLoginView = sessionStorage.getItem('post_login_view');
+    if (postLoginView) {
+      sessionStorage.removeItem('post_login_view');
+      setView(postLoginView);
+    } else {
+      setView('memberDashboard');
+    }
     loadTestHistory();
 
     // 초대 코드 자동 적용 (가입 전 ?ref= 링크로 접속한 경우)
@@ -1391,6 +1466,47 @@ function PsychologicalTestSystem() {
   // ============================================================
   // 마음 게임 SSO 연동 (JWT 토큰 전달 → 별도 로그인 불필요)
   // ============================================================
+  function getCoupleBaseUrl() {
+    const h = window.location.hostname;
+    return (h.includes('workers.dev') || h.includes('-dev.'))
+      ? 'https://maumcouple-dev.limyj007.workers.dev'
+      : 'https://couple.maumful.com';
+  }
+
+  function goBackToCouple() {
+    setReturnToCouple(false);
+    sessionStorage.removeItem('return_to_couple');
+    window.location.href = getCoupleBaseUrl();
+  }
+
+  // 검사 제출 시점에 result_json 저장 (complete 뷰로 이동 전 호출)
+  function saveCoupleResult(testType, resultJson) {
+    if (!isLoggedIn) return;
+    fetch('/api/test/save-result', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+      body: JSON.stringify({ test_type: testType, result_json: resultJson }),
+    }).catch(() => {});
+  }
+
+  async function openMaumCouple(inviteCode = null) {
+    if (!isLoggedIn) {
+      setView('memberLogin');
+      return;
+    }
+    const base = getCoupleBaseUrl();
+    try {
+      const res = await fetch('/api/couple-token', { headers: api._authHeader() });
+      const data = await res.json();
+      const token = data.success ? data.coupleToken : tokenStore.getAccess();
+      const codeParam = inviteCode ? `&code=${encodeURIComponent(inviteCode)}` : '';
+      window.open(`${base}${token ? '?t=' + encodeURIComponent(token) + codeParam : ''}`, '_blank', 'noopener noreferrer');
+    } catch {
+      const token = tokenStore.getAccess();
+      window.open(`${base}${token ? '?t=' + encodeURIComponent(token) : ''}`, '_blank', 'noopener noreferrer');
+    }
+  }
+
   async function openMaumGame(gameKey = null) {
     if (!isLoggedIn) {
       setView('memberLogin');
@@ -1994,6 +2110,13 @@ function PsychologicalTestSystem() {
           >필수만</button>
         </div>
       </div>
+    </div>
+  );
+
+  // 초기화 완료 전 — 빈 화면 (랜딩 플래시 방지)
+  if (initializing) return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}>
+      <div style={{ fontSize: 32 }}>🌿</div>
     </div>
   );
 
@@ -2620,6 +2743,12 @@ function PsychologicalTestSystem() {
                 title="마음 게임 — 별도 로그인 없이 바로 이동">
                 🎮 <span className="hidden sm:inline">마음 게임</span>
               </button>
+              {/* 마음커플 진입 — 마음게임과 동일한 JWT SSO 방식 */}
+              <button onClick={() => openMaumCouple()}
+                className="text-gray-500 hover:text-rose-600 text-sm px-2 py-1.5 rounded-lg hover:bg-rose-50 transition flex items-center gap-1"
+                title="마음커플 — 파트너와 심리 궁합 분석">
+                💕 <span className="hidden sm:inline">마음커플</span>
+              </button>
               <button onClick={() => setView('myPage')} className="text-gray-500 hover:text-gray-700 text-sm px-2 py-1.5 rounded-lg hover:bg-gray-100 transition">
                 👤 {currentUser?.nickname || '내 정보'}
               </button>
@@ -2813,6 +2942,11 @@ function PsychologicalTestSystem() {
               className="text-green-600 hover:text-green-800 text-sm px-2 py-1.5 rounded-lg hover:bg-green-50 transition"
               title="마음 게임">
               🎮
+            </button>
+            <button onClick={() => openMaumCouple()}
+              className="text-rose-500 hover:text-rose-700 text-sm px-2 py-1.5 rounded-lg hover:bg-rose-50 transition"
+              title="마음커플">
+              💕
             </button>
             <CreditBadge />
           </div>
@@ -4630,6 +4764,7 @@ function PsychologicalTestSystem() {
       return;
     }
     const { scales, total } = calcSdri();
+    saveCoupleResult('DSI', { scales, total });
     const data = {
       sessionId, testType: "DSI",
       responses: { scales, total, answers: sdriResponses },
@@ -4700,6 +4835,7 @@ function PsychologicalTestSystem() {
       createdAt: new Date().toISOString(),
       userPhone: userInfo.phone || "미확인", linkId: activeLinkId || null
     };
+    saveCoupleResult('BIG5', calcBig5());
     console.log('📝 Big5 검사 제출:', sessionId);
     advanceToNextTest("BIG5", data);
   }
@@ -4730,6 +4866,8 @@ function PsychologicalTestSystem() {
       createdAt: new Date().toISOString(),
       userPhone: userInfo.phone || "미확인", linkId: activeLinkId || null
     };
+    const { axisAvg, typeCode, typeInfo, stressStyle, stabilityStyle } = calcLost();
+    saveCoupleResult('LOST', { axisAvg, typeCode, typeInfo, stressStyle, stabilityStyle });
     console.log('📝 LOST 검사 제출:', sessionId);
     advanceToNextTest("LOST", data);
   }
@@ -6263,6 +6401,12 @@ function PsychologicalTestSystem() {
             </div>
           )}
 
+          {returnToCouple && (
+            <button onClick={goBackToCouple}
+              className="w-full bg-pink-500 text-white py-2.5 rounded-xl font-bold text-sm hover:bg-pink-600 transition mb-2">
+              💕 마음커플로 돌아가기
+            </button>
+          )}
           <button
             onClick={() => { if (isLoggedIn) { setView('memberDashboard'); } else { setView('landing'); } }}
             className="w-full bg-gray-100 text-gray-600 py-2.5 rounded-xl font-semibold text-sm hover:bg-gray-200 transition">
@@ -6433,6 +6577,12 @@ function PsychologicalTestSystem() {
             "정서적 단절 경향을 어떻게 이해하면 좋을까요?",
             "융합·관계의존이 높을 때 어떻게 경계를 설정하나요?",
           ]} />
+          {returnToCouple && (
+            <button onClick={goBackToCouple}
+              className="w-full mt-4 bg-pink-500 text-white py-3 rounded-xl font-bold text-sm hover:bg-pink-600 transition">
+              💕 마음커플로 돌아가기
+            </button>
+          )}
         </div>
       </div>
     );
@@ -6985,6 +7135,12 @@ function PsychologicalTestSystem() {
             "성격 강점을 발견하고 개발하는 방법은?",
             "성격 특성 간의 상호작용이 삶에 어떤 영향을 미치나요?"
           ]} />
+          {returnToCouple && (
+            <button onClick={goBackToCouple}
+              className="w-full mt-4 bg-pink-500 text-white py-3 rounded-xl font-bold text-sm hover:bg-pink-600 transition">
+              💕 마음커플로 돌아가기
+            </button>
+          )}
         </div>
       </div>
     );
@@ -7198,6 +7354,12 @@ function PsychologicalTestSystem() {
               "이 내담자에게 가장 적합한 상담 접근법은?"
             ]} />
           </div>
+          {returnToCouple && (
+            <button onClick={goBackToCouple}
+              className="w-full bg-pink-500 text-white py-3 rounded-xl font-bold text-sm hover:bg-pink-600 transition">
+              💕 마음커플로 돌아가기
+            </button>
+          )}
         </div>
       </div>
     );

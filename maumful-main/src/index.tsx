@@ -871,6 +871,50 @@ app.get('/api/game-token', async (c) => {
   return c.json({ success: true, gameToken })
 })
 
+// ── 커플 전용 7일 토큰 발급 ────────────────────────────────
+app.get('/api/couple-token', async (c) => {
+  const { KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ error: '로그인이 필요합니다.' }, 401)
+
+  const secret = await getJwtSecret(KV)
+  const now    = Math.floor(Date.now() / 1000)
+  const coupleToken = await signJwt(
+    { sub: userId, type: 'couple', iat: now, exp: now + 7 * 86400 },
+    secret
+  )
+  return c.json({ success: true, coupleToken })
+})
+
+// ── BIG5/LOST/DSI 결과 저장 (마음커플 연동용) ─────────────
+app.post('/api/test/save-result', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ error: '로그인이 필요합니다.' }, 401)
+
+  const { test_type, result_json } = await c.req.json().catch(() => ({})) as {
+    test_type?: string; result_json?: Record<string, unknown>
+  }
+  if (!test_type || !result_json) return c.json({ error: '파라미터 부족' }, 400)
+  if (!['BIG5', 'LOST', 'DSI'].includes(test_type)) return c.json({ error: '지원하지 않는 유형' }, 400)
+
+  const resultStr = JSON.stringify(result_json)
+  const upd = await DB.prepare(
+    `UPDATE test_history SET result_json=? WHERE id=(
+       SELECT id FROM test_history WHERE user_id=? AND test_type=? ORDER BY performed_at DESC LIMIT 1
+     )`
+  ).bind(resultStr, userId, test_type).run()
+
+  // 기존 행이 없으면 (BIG5 무료 검사 등 startTest 미호출 케이스) 새 행 삽입
+  if (upd.meta.changes === 0) {
+    await DB.prepare(
+      `INSERT INTO test_history (user_id, test_type, lang, credits_spent, result_json) VALUES (?, ?, 'ko', 0, ?)`
+    ).bind(userId, test_type, resultStr).run()
+  }
+
+  return c.json({ success: true })
+})
+
 app.post('/api/ai-chat', async (c) => {
   const { DB, KV } = c.env
   const userId = await getAuthUserId(c.req.raw, KV)

@@ -540,6 +540,18 @@ function CounselingPage({setView,isLoggedIn,currentUser}){
       .then(([cr,co])=>{if(cr.success)setCenters(cr.data);else setCenters(FALLBACK_CENTERS);if(co.success)setCounselors(co.data);else setCounselors(FALLBACK_COUNSELORS);})
       .catch(()=>{setCenters(FALLBACK_CENTERS);setCounselors(FALLBACK_COUNSELORS);})
       .finally(()=>setDataLoading(false));
+
+    // ── 마음커플 deep link 처리 ──────────────────────────
+    try {
+      const ctype = localStorage.getItem('couple_counseling_type');
+      if (ctype) {
+        localStorage.removeItem('couple_counseling_type');
+        if (ctype === 'couple' || ctype === 'bowen') {
+          setFilterTag('부부');
+          setShowDemoNotice(false);
+        }
+      }
+    } catch {}
   },[]);
 
   if(videoRoom)return<VideoRoom roomId={videoRoom.roomId} counselorName={videoRoom.counselorName} onLeave={()=>setVideoRoom(null)}/>;
@@ -677,6 +689,24 @@ function CounselingPage({setView,isLoggedIn,currentUser}){
             ))}
           </div>
         </div>
+        {/* ── 마음커플 연동 배너 (부부 필터 자동 적용 시) ── */}
+        {filterTag === '부부' && (
+          <div style={{
+            marginBottom: 14, padding: '12px 16px', borderRadius: 12,
+            background: 'linear-gradient(135deg, #FFF0F3, #F0EEF8)',
+            border: '1px solid #D4849A33',
+            display: 'flex', alignItems: 'center', gap: 10,
+          }}>
+            <span style={{ fontSize: 22 }}>💕</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#2C2020' }}>마음커플 분석 결과 연동</div>
+              <div style={{ fontSize: 11, color: '#8A8A7A', marginTop: 2 }}>커플 분석 리포트를 바탕으로 부부·가족 전문 상담사를 추천해 드립니다.</div>
+            </div>
+            <button onClick={() => setFilterTag(null)} style={{
+              background: 'none', border: 'none', color: '#8A8A7A', fontSize: 16, cursor: 'pointer',
+            }}>✕</button>
+          </div>
+        )}
         {/* 태그 */}
         <div style={{display:'flex',gap:4,flexWrap:'wrap',marginBottom:18}}>
           <button onClick={()=>setFilterTag(null)} style={{padding:'3px 10px',borderRadius:100,border:'1px solid',borderColor:!filterTag?'#2D6A4F':'rgba(0,0,0,.10)',background:!filterTag?'#2D6A4F':'white',color:!filterTag?'white':'#5A5A5A',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:"'Noto Sans KR',sans-serif"}}>전체</button>

@@ -26,6 +26,7 @@ const TOKEN_KEY   = 'couple_token';
 const MAUMFUL_URL = (() => {
   const h = window.location.hostname;
   if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000';
+  if (h.includes('maumcouple-dev') || h.includes('-dev.')) return 'https://maumful-dev.limyj007.workers.dev';
   return 'https://maumful.com';
 })();
 
@@ -880,10 +881,20 @@ useEffect(() => {
           <div style={{ fontSize: 14, fontWeight: 700, color: C.dark, marginBottom: 14 }}>
             📋 내 검사 결과
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-            <TestResultBadge type="BIG5" result={testResults?.big5} date={testResults?.big5?.performed_at}/>
-            <TestResultBadge type="LOST" result={testResults?.lost} date={testResults?.lost?.performed_at}/>
-            <TestResultBadge type="DSI"  result={testResults?.dsi}  date={testResults?.dsi?.performed_at}/>
+          {/* 커플 탐색 그룹 */}
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.rose, marginBottom: 6 }}>💑 커플 탐색</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <TestResultBadge type="BIG5" result={testResults?.big5} date={testResults?.big5?.performed_at}/>
+              <TestResultBadge type="LOST" result={testResults?.lost} date={testResults?.lost?.performed_at}/>
+            </div>
+          </div>
+          {/* 관계 심층 분석 그룹 */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#5A8A7A', marginBottom: 6 }}>👨‍👩‍👧 관계 심층 분석</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <TestResultBadge type="DSI"  result={testResults?.dsi}  date={testResults?.dsi?.performed_at}/>
+            </div>
           </div>
           {!hasAny ? (
             <div style={{
@@ -892,12 +903,12 @@ useEffect(() => {
             }}>
               <div style={{ fontWeight: 700, marginBottom: 8 }}>💡 검사를 먼저 완료해주세요</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: C.rose, marginBottom: 2 }}>💑 커플 탐색</div>
                 {[
                   { key: 'BIG5', emoji: '🧬', label: 'BIG5 성격검사', desc: '성격 5요인 — 커플 궁합 핵심' },
                   { key: 'LOST', emoji: '⚙️', label: 'LOST 행동유형', desc: '의사결정·에너지 스타일 비교' },
-                  { key: 'DSI',  emoji: '🪞', label: 'SDRI 자아분화',  desc: '부부상담 핵심 — Bowen 이론 기반' },
                 ].map(t => (
-                  <a key={t.key} href={MAUMFUL_URL} style={{
+                  <a key={t.key} href={`${MAUMFUL_URL}?start=${t.key}`} style={{
                     display: 'flex', alignItems: 'center', gap: 10,
                     padding: '10px 12px', borderRadius: 10,
                     background: 'white', border: '1px solid #FFD8A0',
@@ -909,6 +920,24 @@ useEffect(() => {
                       <div style={{ fontSize: 11, color: C.muted }}>{t.desc}</div>
                     </div>
                     <span style={{ color: C.rose, fontSize: 12, fontWeight: 700 }}>시작 →</span>
+                  </a>
+                ))}
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#5A8A7A', marginTop: 8, marginBottom: 2 }}>👨‍👩‍👧 관계 심층 분석</div>
+                {[
+                  { key: 'DSI', emoji: '🪞', label: 'SDRI 자아분화', desc: '부부·가족 관계 어려움 — Bowen 이론 기반' },
+                ].map(t => (
+                  <a key={t.key} href={`${MAUMFUL_URL}?start=${t.key}`} style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '10px 12px', borderRadius: 10,
+                    background: 'white', border: '1px solid #B8D8D0',
+                    textDecoration: 'none', color: C.dark,
+                  }}>
+                    <span style={{ fontSize: 20 }}>{t.emoji}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700 }}>{t.label}</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>{t.desc}</div>
+                    </div>
+                    <span style={{ color: '#5A8A7A', fontSize: 12, fontWeight: 700 }}>시작 →</span>
                   </a>
                 ))}
               </div>
@@ -927,9 +956,12 @@ useEffect(() => {
                   background: '#FFFBF0', border: '1px solid #FFE8A0',
                   fontSize: 12, color: '#9A7030',
                 }}>
-                  💡 <a href={MAUMFUL_URL} style={{ color: C.rose, fontWeight: 700, textDecoration: 'none' }}>
-                    {['BIG5','LOST','DSI'].filter(t => !{BIG5:testResults?.big5,LOST:testResults?.lost,DSI:testResults?.dsi}[t]).join(' + ')} 검사도 완료하면 더 정밀한 분석이 가능해요 →
-                  </a>
+                  💡 {['BIG5','LOST','DSI'].filter(t => !{BIG5:testResults?.big5,LOST:testResults?.lost,DSI:testResults?.dsi}[t]).map((t, i, arr) => (
+                    <React.Fragment key={t}>
+                      <a href={`${MAUMFUL_URL}?start=${t}`} style={{ color: C.rose, fontWeight: 700, textDecoration: 'none' }}>{t}</a>
+                      {i < arr.length - 1 && ' + '}
+                    </React.Fragment>
+                  ))} 검사도 완료하면 더 정밀한 분석이 가능해요 →
                 </div>
               )}
             </div>
@@ -959,36 +991,42 @@ useEffect(() => {
 
             {/* 검사 조합 선택 */}
             {hasAny && (() => {
-              const options = [
-                ...(testResults?.big5 && testResults?.lost && testResults?.dsi ? [
-                  { key: 'BIG5+LOST+DSI', label: 'BIG5 + LOST + 자아분화', badge: '추천', cost: COST_FULL,
-                    desc: '성격·행동유형·자아분화 통합 분석 (부부상담 최적)', color: C.rose }
-                ] : []),
-                ...(testResults?.big5 && testResults?.dsi ? [
-                  { key: 'BIG5+DSI', label: 'BIG5 + 자아분화', badge: null, cost: COST_TWO,
-                    desc: '성격 특성과 분화 수준 비교', color: '#5A8A7A' }
-                ] : []),
-                ...(testResults?.lost && testResults?.dsi ? [
-                  { key: 'LOST+DSI', label: 'LOST + 자아분화', badge: null, cost: COST_TWO,
-                    desc: '행동유형과 분화 수준 비교', color: C.lavender }
-                ] : []),
+              const coupleOptions = [
                 ...(testResults?.big5 && testResults?.lost ? [
-                  { key: 'BIG5+LOST', label: 'BIG5 + LOST', badge: null, cost: COST_TWO,
-                    desc: '성격·행동유형 비교 분석', color: C.rose }
+                  { key: 'BIG5+LOST', label: 'BIG5 + LOST', badge: '추천', cost: COST_TWO,
+                    desc: '성격·행동유형 비교 — 커플 어울림 핵심', color: C.rose }
                 ] : []),
-                ...(testResults?.dsi ? [
-                  { key: 'DSI', label: 'SDRI 자아분화만', badge: null, cost: COST_ONE,
-                    desc: '관계 분화 수준 집중 분석', color: '#5A8A7A' }
-                ] : []),
-                ...(testResults?.big5 ? [
+                ...(testResults?.big5 && !testResults?.lost ? [
                   { key: 'BIG5', label: 'BIG5만', badge: null, cost: COST_ONE,
                     desc: '성격 5요인 비교', color: C.rose }
                 ] : []),
-              ].slice(0, 4); // 최대 4개 표시
+                ...(!testResults?.big5 && testResults?.lost ? [
+                  { key: 'LOST', label: 'LOST만', badge: null, cost: COST_ONE,
+                    desc: '의사결정·에너지 스타일 비교', color: C.lavender }
+                ] : []),
+              ];
+              const deepOptions = !testResults?.dsi ? [] : [
+                ...(testResults?.big5 && testResults?.lost ? [
+                  { key: 'BIG5+LOST+DSI', label: 'BIG5 + LOST + 자아분화', badge: '추천', cost: COST_FULL,
+                    desc: '성격·행동유형·자아분화 통합 분석 (부부상담 최적)', color: '#5A8A7A' }
+                ] : []),
+                ...(testResults?.big5 && !testResults?.lost ? [
+                  { key: 'BIG5+DSI', label: 'BIG5 + 자아분화', badge: '추천', cost: COST_TWO,
+                    desc: '성격 특성과 분화 수준 비교', color: '#5A8A7A' }
+                ] : []),
+                ...(!testResults?.big5 && testResults?.lost ? [
+                  { key: 'LOST+DSI', label: 'LOST + 자아분화', badge: '추천', cost: COST_TWO,
+                    desc: '행동유형과 분화 수준 비교', color: '#5A8A7A' }
+                ] : []),
+                ...(!testResults?.big5 && !testResults?.lost ? [
+                  { key: 'DSI', label: 'SDRI 자아분화만', badge: null, cost: COST_ONE,
+                    desc: '관계 분화 수준 집중 분석', color: '#5A8A7A' }
+                ] : []),
+              ];
 
-              return (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-                  {options.map(opt => (
+              const renderOptions = (opts) => (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {opts.map(opt => (
                     <button key={opt.key}
                       onClick={() => handleCreateSession(opt.key)}
                       disabled={creating}
@@ -1016,6 +1054,25 @@ useEffect(() => {
                       </div>
                     </button>
                   ))}
+                </div>
+              );
+
+              return (
+                <div style={{ marginBottom: 16 }}>
+                  {coupleOptions.length > 0 && (
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: C.rose, marginBottom: 2 }}>💑 커플 탐색</div>
+                      <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>성격·행동유형으로 서로를 알아가는 가벼운 분석</div>
+                      {renderOptions(coupleOptions)}
+                    </div>
+                  )}
+                  {deepOptions.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#5A8A7A', marginBottom: 2 }}>👨‍👩‍👧 관계 심층 분석</div>
+                      <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>자아분화 기반 · 부부·가족 관계 어려움 탐색</div>
+                      {renderOptions(deepOptions)}
+                    </div>
+                  )}
                 </div>
               );
             })()}
