@@ -127,6 +127,7 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView }) {
     { label: 'AI 상담',   view: 'aiCounsel',       requireLogin: true },
     { label: '상담 예약',  view: 'counseling' },
     { label: '마음 게임',  view: 'gameIntro', isGame: true },
+    { label: '마음커플',   view: 'couple',    isCouple: true },
   ];
 
   const handleNavClick = (item) => {
@@ -137,6 +138,23 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView }) {
       const token = localStorage.getItem('access_token') || '';
       const gameUrl = `https://game.maumful.com${token ? '?t=' + encodeURIComponent(token) : ''}`;
       window.open(gameUrl, '_blank', 'noopener noreferrer');
+      return;
+    }
+    // 마음커플: 로그인 상태면 couple-token SSO, 미로그인이면 로그인 화면
+    if (item.isCouple) {
+      if (!isLoggedIn) { setView('memberLogin'); return; }
+      fetch('/api/couple-token', {
+        headers: { Authorization: 'Bearer ' + (localStorage.getItem('access_token') || '') }
+      })
+        .then(r => r.json())
+        .then(data => {
+          const token = data.success ? data.coupleToken : (localStorage.getItem('access_token') || '');
+          window.open(`https://couple.maumful.com?t=${encodeURIComponent(token)}`, '_blank', 'noopener noreferrer');
+        })
+        .catch(() => {
+          const token = localStorage.getItem('access_token') || '';
+          window.open(`https://couple.maumful.com${token ? '?t=' + encodeURIComponent(token) : ''}`, '_blank', 'noopener noreferrer');
+        });
       return;
     }
     if (item.requireLogin && !isLoggedIn) {
