@@ -1201,6 +1201,13 @@ function PsychologicalTestSystem() {
     } catch { /* 결과 계산 실패 시 무시 */ }
   }, [view, isLoggedIn]);
 
+  // complete 뷰 + returnToCouple → 2.5초 후 자동 복귀
+  useEffect(() => {
+    if (view !== 'complete' || !returnToCouple) return;
+    const t = setTimeout(() => goBackToCouple(), 2500);
+    return () => clearTimeout(t);
+  }, [view, returnToCouple]);
+
   // ── 하위 호환: 기존 검사 코드가 참조하는 변수들 ─────────
   // activeLinkData → 로그인 회원 정보로 대체
   const activeLinkData = currentUser ? {
@@ -1470,6 +1477,16 @@ function PsychologicalTestSystem() {
     setReturnToCouple(false);
     sessionStorage.removeItem('return_to_couple');
     window.location.href = getCoupleBaseUrl();
+  }
+
+  // 검사 제출 시점에 result_json 저장 (complete 뷰로 이동 전 호출)
+  function saveCoupleResult(testType, resultJson) {
+    if (!isLoggedIn) return;
+    fetch('/api/test/save-result', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+      body: JSON.stringify({ test_type: testType, result_json: resultJson }),
+    }).catch(() => {});
   }
 
   async function openMaumCouple(inviteCode = null) {
@@ -4747,6 +4764,7 @@ function PsychologicalTestSystem() {
       return;
     }
     const { scales, total } = calcSdri();
+    saveCoupleResult('DSI', { scales, total });
     const data = {
       sessionId, testType: "DSI",
       responses: { scales, total, answers: sdriResponses },
@@ -4817,6 +4835,7 @@ function PsychologicalTestSystem() {
       createdAt: new Date().toISOString(),
       userPhone: userInfo.phone || "미확인", linkId: activeLinkId || null
     };
+    saveCoupleResult('BIG5', calcBig5());
     console.log('📝 Big5 검사 제출:', sessionId);
     advanceToNextTest("BIG5", data);
   }
@@ -4847,6 +4866,8 @@ function PsychologicalTestSystem() {
       createdAt: new Date().toISOString(),
       userPhone: userInfo.phone || "미확인", linkId: activeLinkId || null
     };
+    const { axisAvg, typeCode, typeInfo, stressStyle, stabilityStyle } = calcLost();
+    saveCoupleResult('LOST', { axisAvg, typeCode, typeInfo, stressStyle, stabilityStyle });
     console.log('📝 LOST 검사 제출:', sessionId);
     advanceToNextTest("LOST", data);
   }
