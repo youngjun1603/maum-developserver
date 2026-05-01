@@ -1271,6 +1271,22 @@ function PsychologicalTestSystem() {
         window.__resetToken = resetToken;
       }
 
+      // 마음커플 → 특정 검사 direct link (?start=BIG5|LOST|DSI)
+      const startTest = urlParams.get('start');
+      if (startTest) {
+        window.history.replaceState({}, '', '/');
+        const testViewMap = { BIG5: 'big5Test', LOST: 'lostTest', DSI: 'dsiTest' };
+        const targetView = testViewMap[startTest.toUpperCase()];
+        if (targetView) {
+          if (isLoggedIn) {
+            setView(targetView);
+          } else {
+            sessionStorage.setItem('post_login_view', targetView);
+            setView('memberLogin');
+          }
+        }
+      }
+
       // 마음커플 → 상담 예약 deep link (#counseling?type=couple|bowen)
       const urlHash = window.location.hash;
       if (urlHash.startsWith('#counseling')) {
@@ -1328,7 +1344,13 @@ function PsychologicalTestSystem() {
     setCredits(user.credits);
     setIsLoggedIn(true);
     setLoginMsg({ type: '', text: '' });
-    setView('memberDashboard');
+    const postLoginView = sessionStorage.getItem('post_login_view');
+    if (postLoginView) {
+      sessionStorage.removeItem('post_login_view');
+      setView(postLoginView);
+    } else {
+      setView('memberDashboard');
+    }
     loadTestHistory();
 
     // 초대 코드 자동 적용 (가입 전 ?ref= 링크로 접속한 경우)

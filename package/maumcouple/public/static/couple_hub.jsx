@@ -26,6 +26,7 @@ const TOKEN_KEY   = 'couple_token';
 const MAUMFUL_URL = (() => {
   const h = window.location.hostname;
   if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000';
+  if (h.includes('maumcouple-dev') || h.includes('-dev.')) return 'https://maumful-dev.limyj007.workers.dev';
   return 'https://maumful.com';
 })();
 
@@ -897,7 +898,7 @@ useEffect(() => {
                   { key: 'LOST', emoji: '⚙️', label: 'LOST 행동유형', desc: '의사결정·에너지 스타일 비교' },
                   { key: 'DSI',  emoji: '🪞', label: 'SDRI 자아분화',  desc: '부부상담 핵심 — Bowen 이론 기반' },
                 ].map(t => (
-                  <a key={t.key} href={MAUMFUL_URL} style={{
+                  <a key={t.key} href={`${MAUMFUL_URL}?start=${t.key}`} style={{
                     display: 'flex', alignItems: 'center', gap: 10,
                     padding: '10px 12px', borderRadius: 10,
                     background: 'white', border: '1px solid #FFD8A0',
@@ -927,9 +928,12 @@ useEffect(() => {
                   background: '#FFFBF0', border: '1px solid #FFE8A0',
                   fontSize: 12, color: '#9A7030',
                 }}>
-                  💡 <a href={MAUMFUL_URL} style={{ color: C.rose, fontWeight: 700, textDecoration: 'none' }}>
-                    {['BIG5','LOST','DSI'].filter(t => !{BIG5:testResults?.big5,LOST:testResults?.lost,DSI:testResults?.dsi}[t]).join(' + ')} 검사도 완료하면 더 정밀한 분석이 가능해요 →
-                  </a>
+                  💡 {['BIG5','LOST','DSI'].filter(t => !{BIG5:testResults?.big5,LOST:testResults?.lost,DSI:testResults?.dsi}[t]).map((t, i, arr) => (
+                    <React.Fragment key={t}>
+                      <a href={`${MAUMFUL_URL}?start=${t}`} style={{ color: C.rose, fontWeight: 700, textDecoration: 'none' }}>{t}</a>
+                      {i < arr.length - 1 && ' + '}
+                    </React.Fragment>
+                  ))} 검사도 완료하면 더 정밀한 분석이 가능해요 →
                 </div>
               )}
             </div>
