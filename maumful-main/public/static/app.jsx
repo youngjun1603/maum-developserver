@@ -150,6 +150,7 @@ function PsychologicalTestSystem() {
   // ── 뷰 라우터 ─────────────────────────────────────────────
   const [view, setView] = useState('landing');
   const [initializing, setInitializing] = useState(true);
+  const [returnToCouple, setReturnToCouple] = useState(() => !!sessionStorage.getItem('return_to_couple'));
 
   // ── 크레딧 ────────────────────────────────────────────────
   const [credits, setCredits]             = useState(0);
@@ -1194,14 +1195,8 @@ function PsychologicalTestSystem() {
         headers: { 'Content-Type': 'application/json', ...api._authHeader() },
         body: JSON.stringify(payload),
       }).then(() => {
-        if (sessionStorage.getItem('return_to_couple')) {
-          sessionStorage.removeItem('return_to_couple');
-          const h = window.location.hostname;
-          const coupleUrl = (h.includes('workers.dev') || h.includes('-dev.'))
-            ? 'https://maumcouple-dev.limyj007.workers.dev'
-            : 'https://couple.maumful.com';
-          setTimeout(() => { window.location.href = coupleUrl; }, 2500);
-        }
+        // 결과 저장 후 2.5초 뒤 자동 복귀 (버튼으로 수동 이동도 가능)
+        if (returnToCouple) setTimeout(() => goBackToCouple(), 2500);
       }).catch(() => {});
     } catch { /* 결과 계산 실패 시 무시 */ }
   }, [view, isLoggedIn]);
@@ -1277,7 +1272,8 @@ function PsychologicalTestSystem() {
       // 마음커플 → 특정 검사 direct link (?start=BIG5|LOST|DSI) — 최우선 처리
       if (startTest) {
         window.history.replaceState({}, '', '/');
-        sessionStorage.setItem('return_to_couple', '1'); // 검사 완료 후 마음커플로 복귀
+        sessionStorage.setItem('return_to_couple', '1');
+        setReturnToCouple(true); // 결과 화면에 마음커플 복귀 버튼 표시
         const testKey = startTest.toUpperCase();
         if (['BIG5', 'LOST', 'DSI'].includes(testKey)) {
           const startView = 'startTest:' + testKey; // chargeForTest 경유로 test_history 행 생성
@@ -1468,6 +1464,12 @@ function PsychologicalTestSystem() {
     return (h.includes('workers.dev') || h.includes('-dev.'))
       ? 'https://maumcouple-dev.limyj007.workers.dev'
       : 'https://couple.maumful.com';
+  }
+
+  function goBackToCouple() {
+    setReturnToCouple(false);
+    sessionStorage.removeItem('return_to_couple');
+    window.location.href = getCoupleBaseUrl();
   }
 
   async function openMaumCouple(inviteCode = null) {
@@ -6378,6 +6380,12 @@ function PsychologicalTestSystem() {
             </div>
           )}
 
+          {returnToCouple && (
+            <button onClick={goBackToCouple}
+              className="w-full bg-pink-500 text-white py-2.5 rounded-xl font-bold text-sm hover:bg-pink-600 transition mb-2">
+              💕 마음커플로 돌아가기
+            </button>
+          )}
           <button
             onClick={() => { if (isLoggedIn) { setView('memberDashboard'); } else { setView('landing'); } }}
             className="w-full bg-gray-100 text-gray-600 py-2.5 rounded-xl font-semibold text-sm hover:bg-gray-200 transition">
@@ -6548,6 +6556,12 @@ function PsychologicalTestSystem() {
             "정서적 단절 경향을 어떻게 이해하면 좋을까요?",
             "융합·관계의존이 높을 때 어떻게 경계를 설정하나요?",
           ]} />
+          {returnToCouple && (
+            <button onClick={goBackToCouple}
+              className="w-full mt-4 bg-pink-500 text-white py-3 rounded-xl font-bold text-sm hover:bg-pink-600 transition">
+              💕 마음커플로 돌아가기
+            </button>
+          )}
         </div>
       </div>
     );
@@ -7100,6 +7114,12 @@ function PsychologicalTestSystem() {
             "성격 강점을 발견하고 개발하는 방법은?",
             "성격 특성 간의 상호작용이 삶에 어떤 영향을 미치나요?"
           ]} />
+          {returnToCouple && (
+            <button onClick={goBackToCouple}
+              className="w-full mt-4 bg-pink-500 text-white py-3 rounded-xl font-bold text-sm hover:bg-pink-600 transition">
+              💕 마음커플로 돌아가기
+            </button>
+          )}
         </div>
       </div>
     );
@@ -7313,6 +7333,12 @@ function PsychologicalTestSystem() {
               "이 내담자에게 가장 적합한 상담 접근법은?"
             ]} />
           </div>
+          {returnToCouple && (
+            <button onClick={goBackToCouple}
+              className="w-full bg-pink-500 text-white py-3 rounded-xl font-bold text-sm hover:bg-pink-600 transition">
+              💕 마음커플로 돌아가기
+            </button>
+          )}
         </div>
       </div>
     );
