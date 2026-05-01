@@ -1177,7 +1177,7 @@ function PsychologicalTestSystem() {
     return () => clearInterval(intervalId);
   }, []); // 한 번만 실행
 
-  // 검사 결과 화면 진입 시 result_json 자동 저장 (마음커플 연동)
+  // 검사 결과 화면 진입 시 result_json 자동 저장 + 마음커플 복귀
   useEffect(() => {
     if (!isLoggedIn) return;
     const saveMap = {
@@ -1193,6 +1193,15 @@ function PsychologicalTestSystem() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...api._authHeader() },
         body: JSON.stringify(payload),
+      }).then(() => {
+        if (sessionStorage.getItem('return_to_couple')) {
+          sessionStorage.removeItem('return_to_couple');
+          const h = window.location.hostname;
+          const coupleUrl = (h.includes('workers.dev') || h.includes('-dev.'))
+            ? 'https://maumcouple-dev.limyj007.workers.dev'
+            : 'https://couple.maumful.com';
+          setTimeout(() => { window.location.href = coupleUrl; }, 2500);
+        }
       }).catch(() => {});
     } catch { /* 결과 계산 실패 시 무시 */ }
   }, [view, isLoggedIn]);
@@ -1268,6 +1277,7 @@ function PsychologicalTestSystem() {
       // 마음커플 → 특정 검사 direct link (?start=BIG5|LOST|DSI) — 최우선 처리
       if (startTest) {
         window.history.replaceState({}, '', '/');
+        sessionStorage.setItem('return_to_couple', '1'); // 검사 완료 후 마음커플로 복귀
         const testViewMap = { BIG5: 'big5Test', LOST: 'lostTest', DSI: 'dsiTest' };
         const targetView = testViewMap[startTest.toUpperCase()];
         if (targetView) {
