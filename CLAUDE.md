@@ -372,3 +372,137 @@ const MODEL_FALLBACKS = [
 
 `limyj007@gmail.com` — 3개 서비스 모두 하드코딩됨.  
 크레딧 무제한, 모든 기능 해금, 관리자 통계 접근 가능.
+
+---
+
+## maumful UX 개선 이력 (2026-05-02)
+
+### maumful-main/public/static/app.jsx
+
+| 항목 | 내용 |
+|---|---|
+| 대시보드 biblical mode 배지 | 인사말 옆에 `✝️ 기독교 상담` 배지 인라인 표시 (`counselingMode === 'biblical'` 시) |
+| 닉네임 placeholder | `"닉네임 (선택)"` → `"닉네임 (AI 상담에서 이름으로 불려요)"` |
+| 신규 가입자 가이드 배너 | `maumful_guide_dismissed` localStorage 플래그로 표시/숨김 제어 |
+| `initializing` state | 첫 렌더 플래시 방지 — 로그인 상태 복원 전 🌿 로딩 화면으로 차단 |
+
+### maumful-main/src/index.tsx — AI 채팅 일일 제한 KST 수정
+
+```typescript
+// Before (UTC 기준 → 자정~09:00 KST 구간에서 전날 카운터 이월 버그)
+const today = new Date().toISOString().slice(0, 10)
+
+// After (KST 기준)
+const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10)
+```
+
+KV 키 패턴: `ai_guest:${ip}:${today}` / `ai_daily:${userId}:${today}` — 둘 다 동일 수정.
+
+---
+
+## 마음커플 콘텐츠 강화 — 1단계 (2026-05-02)
+
+### package/maumcouple/public/static/couple_hub.jsx
+
+#### 추가된 데이터 상수
+
+| 상수 | 설명 |
+|---|---|
+| `DAILY_QUESTIONS` | 60개 커플 대화 질문 배열 (날짜 기반 순환) |
+| `MINI_QUESTIONS` | 7문항 연애 유형 테스트 문항 |
+| `LOVE_TYPES` | 4가지 유형: S(안정신뢰) / R(낭만감성) / P(열정성장) / F(자유여유) |
+| `calcLoveType(answers)` | 답변 배열 → 최다 선택 유형 반환 |
+| `getPersonalityLabel(big5Data)` | BIG5 데이터 → 주도 특성 배지 (⚡활력/🤝친화/🎨탐구/📋계획/🌊감수) |
+| `getCoupleChemType(myBig5, partnerBig5)` | 두 BIG5 → 커플 케미 유형 5종 |
+
+#### 추가된 컴포넌트
+
+| 컴포넌트 | 기능 | 비용 |
+|---|---|---|
+| `DailyQuestionCard` | 날짜 기반 대화 질문 카드, "다음 질문" + 파트너 공유 | 무료 |
+| `MiniLoveTestView` | 7문항 연애 유형 테스트, 결과 공유 | 무료 |
+| `SoloAnalysisView` | AI 이상형 성향 분석 (강점/파트너유형/성장포인트) | 5cr |
+
+#### CoupleHubApp 변경
+
+- `view` 상태에 `'miniTest'` / `'soloAnalysis'` 추가
+- 인사 카드: BIG5 기반 내 성격 유형 배지 인라인 표시
+- 빠른 액션 버튼 2개 (연애유형테스트 무료 / 이상형분석 5cr)
+- 이전 리포트 섹션: 점수 변화 미니 바 차트 + "📈 +N점 향상" 메시지
+
+### package/maumcouple/src/index.tsx
+
+```typescript
+// POST /api/couple/solo-analysis (5cr)
+// BIG5/LOST/DSI 결과 기반 AI 분석: 연애 강점 / 잘 맞는 파트너 유형 / 성장 포인트
+// AI Gateway 경유, claude-haiku-4-5-20251001
+```
+
+---
+
+## 마음커플 콘텐츠 강화 — 2단계 (2026-05-02)
+
+### DB 마이그레이션
+
+```
+package/maumcouple/migrations/0002_relationship_checkins.sql
+→ relationship_checkins 테이블 생성 (user_id, total_score, answers_json, created_at)
+→ idx_checkins_user 인덱스
+→ 프로덕션 적용 완료
+```
+
+### package/maumcouple/public/static/couple_hub.jsx
+
+#### 추가된 데이터 상수
+
+| 상수 | 설명 |
+|---|---|
+| `CHECKIN_QUESTIONS` | 10개 관계 건강도 문항 (소통/이해/갈등/시간/미래/솔직함/지지/영향/배려/만족) |
+| `SCORE_LABELS` | 1~5점 척도 레이블 (매우 아니다 ~ 매우 그렇다) |
+| `checkinScoreInfo(score, max)` | 점수 → 색상/레이블 매핑 (💚💛🧡❤️‍🩹) |
+| `DATE_REGIONS` | 데이트 지역 8곳 |
+| `DATE_MOODS` | 분위기 4종 (🌹로맨틱/⚡활동적/🌿힐링/🎨문화예술) |
+| `DATE_DURATIONS` | 소요시간 3종 |
+| `DATE_BUDGETS` | 예산 3단계 |
+
+#### 추가된 컴포넌트
+
+| 컴포넌트 | 기능 | 비용 |
+|---|---|---|
+| `RelationshipCheckinView` | 월 1회 관계 만족도 체크인, 기록 누적, 전월 대비 비교 | 무료 |
+| `DateCourseView` | 지역/분위기/시간/예산 선택 → AI 맞춤 데이트 코스 | 3cr |
+
+#### CoupleHubApp 변경
+
+- `view` 상태에 `'checkin'` / `'dateCourse'` 추가
+- 인사 카드 빠른 액션: **2×2 그리드** (연애유형테스트/데이트코스추천/관계성장체크인/이상형성향분석)
+
+### package/maumcouple/src/index.tsx
+
+```typescript
+// GET  /api/couple/checkins        — 체크인 기록 최근 6개 + 이번달 완료 여부
+// POST /api/couple/checkin         — 체크인 저장 (무료, 월 1회 제한 — KST 기준)
+// POST /api/couple/date-course     — AI 데이트 코스 추천 (3cr)
+//   BIG5 외향성/개방성 데이터 반영 → 개인화 추천
+//   AI Gateway 경유, claude-haiku-4-5-20251001
+```
+
+### 마음커플 전체 API 엔드포인트 목록 (현재)
+
+| 메서드 | 경로 | 설명 | 인증 | 비용 |
+|---|---|---|---|---|
+| GET | `/api/couple/me` | 유저+검사결과+활성세션+리포트 | ✓ | 무료 |
+| GET | `/api/couple/credits` | 크레딧 잔액 | ✓ | 무료 |
+| GET | `/api/couple/session/:code` | 세션 상태 폴링 | ✓ | 무료 |
+| GET | `/api/couple/checkins` | 체크인 기록 조회 | ✓ | 무료 |
+| GET | `/api/couple/partner-info/:code` | 파트너 링크 정보 | ✗ | 무료 |
+| GET | `/api/couple/admin/stats` | 관리자 통계 | ✓ (마스터) | 무료 |
+| POST | `/api/couple/session` | 세션 생성 (host) | ✓ | 20~45cr |
+| POST | `/api/couple/join` | 코드로 세션 참여 (guest) | ✓ | 무료 |
+| POST | `/api/couple/report` | AI 커플 리포트 생성 | ✓ | 세션 생성 시 포함 |
+| POST | `/api/couple/save-result` | 검사 결과 저장 | ✓ | 무료 |
+| POST | `/api/couple/partner-submit` | 파트너 결과 제출 | ✗ | 무료 |
+| POST | `/api/couple/checkin` | 관계 체크인 저장 | ✓ | 무료 (월 1회) |
+| POST | `/api/couple/date-course` | AI 데이트 코스 추천 | ✓ | 3cr |
+| POST | `/api/couple/solo-analysis` | AI 이상형 성향 분석 | ✓ | 5cr |
+| PATCH | `/api/couple/session/:code/cancel` | 세션 취소 | ✓ (host) | 무료 |
