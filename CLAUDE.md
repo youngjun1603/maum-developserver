@@ -670,3 +670,103 @@ package/maumcouple/migrations/0002_relationship_checkins.sql
   - 채움 영역(gradient fill) + 라인 + 점(dot) + 날짜 레이블
   - 최신 점수 강조 텍스트
 - 기존 리스트 뷰 + 전월 대비 비교 메시지는 유지
+
+---
+
+## 단기 기능 개발 (A~E) + 기술부채 (M, N) (2026-05-02)
+
+### A: 마음커플 초대 이메일
+
+**package/maumcouple/src/index.tsx**
+
+```typescript
+// POST /api/couple/invite-email
+// 세션 소유자 확인 → Resend API로 HTML 초대 이메일 발송
+// from: '마음커플 <noreply@maumful.com>'
+// subject: `💕 ${myName}님이 마음커플에 초대했어요`
+```
+
+**package/maumcouple/public/static/couple_hub.jsx — SessionWaitingView**
+
+- `emailInput`, `emailSending`, `emailResult` state 추가
+- `sendInviteEmail()` 함수 추가
+- 초대 코드 섹션에 이메일 입력란 + 📨 전송 버튼 추가
+- **등록 필요**: `cd package/maumcouple && npx wrangler secret put RESEND_API_KEY`
+
+### B: 마음게임 번아웃 트렌드 차트
+
+**maumgame-main/src/index.tsx**
+
+```typescript
+// GET /api/game/burnout-history — 최근 10회 번아웃 세션 (date/score/burnout_score/city_level)
+```
+
+**maumgame-main/public/static/game_engine.jsx**
+
+- `getBurnoutHistory()` 메서드 추가
+
+**maumgame-main/public/static/game_hub.jsx**
+
+- `BURNOUT_LEVELS` 상수 + `getBurnoutLevel()` 헬퍼 추가
+- `BurnoutTrendSection` 컴포넌트: SVG 라인 차트 (danger zone 배경, 60점 가이드라인, 전회 대비 비교)
+- `userTestScores.BURNOUT` 있을 때만 렌더링 (EmotionWeeklyReport 위)
+
+### C: 크레딧 내역 reason 레이블/아이콘 보강
+
+**maumful-main/public/static/app.jsx**
+
+- `reasonLabel` 맵에 `couple`, `couple_session`, `solo_analysis`, `date_course`, `coach`, `counseling`, `ai_refund`, `bonus` 추가
+- `reasonIcon(t)` 함수 신설 (기존 인라인 emoji → 함수로 통합)
+
+### D: Google Sign-In (GSI)
+
+**maumful-main/src/index.tsx**
+
+- `Bindings`에 `GOOGLE_CLIENT_ID?: string` 추가
+- HTML 템플릿에 `window.GOOGLE_CLIENT_ID` 주입 + GSI 스크립트 조건부 로드
+
+**maumful-main/public/static/app.jsx**
+
+- `handleGoogleLogin(credential)` 추가 (POST `/api/auth/google`)
+- 로그인/회원가입 폼에 Google 버튼 (GSI `renderButton`) 삽입 — `window.GOOGLE_CLIENT_ID` 있을 때만
+- **등록 필요**: `cd maumful-main && npx wrangler secret put GOOGLE_CLIENT_ID`
+
+### E: 스테이징 DB 마이그레이션 재적용
+
+```
+0012_add_score_to_test_history.sql → maumful-db-dev 적용 완료
+(이전 세션에서 wrangler OAuth 만료로 실패했던 항목)
+```
+
+### M: AI KST 일관성 확인 (기술부채)
+
+모든 서비스의 AI 일일 제한 KV 키에 이미 `new Date(Date.now() + 9 * 3600 * 1000)` 적용 확인:
+- maumful (index.tsx line 977)
+- maumgame (lines 792, 929)
+- maumcouple (lines 680, 773, 791)
+→ **코드 변경 없음**
+
+### N: 에러 모니터링 (기술부채)
+
+#### DB 마이그레이션
+
+```
+maumful-main/migrations/0013_error_logs.sql
+→ error_logs 테이블 + idx_error_logs_created 인덱스
+→ 프로덕션(maumful-db) + 스테이징(maumful-db-dev) 모두 적용 완료
+```
+
+#### maumful-main/src/index.tsx
+
+```typescript
+// logError(DB, service, req, err, userId?) — D1 INSERT + 500건 초과 시 오래된 항목 삭제
+// app.onError() — 모든 미처리 에러 자동 로깅 + 500 JSON 반환
+// GET  /api/admin/error-logs?service=&limit=  — 최근 에러 조회 (limit max 100)
+// DELETE /api/admin/error-logs               — 전체 삭제
+```
+
+#### maumful-main/public/static/counseling_admin.jsx
+
+- `aApi.errorLogs(service, limit)` / `aApi.clearErrorLogs()` 메서드 추가
+- `AdminErrorLogs` 컴포넌트: 서비스 필터, 건수 선택, 상태코드 배지, 스택 트레이스 접기/펼치기, 전체 삭제
+- 어드민 사이드바에 `'🔴 오류 로그'` 탭 추가
