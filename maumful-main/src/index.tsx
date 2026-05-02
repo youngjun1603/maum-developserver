@@ -290,16 +290,16 @@ app.get('/api/config/region', (c) => {
       : { label: 'Crisis Lifeline', number: '988' },
     creditPrices: isKorea
       ? {
-          starter:  { credits: 30,  amount: 2000  },
-          standard: { credits: 60,  amount: 3500  },
-          premium:  { credits: 150, amount: 8000  },
-          pro:      { credits: 350, amount: 17000 },
+          starter:  { credits: 50,  amount: 2900  },
+          standard: { credits: 120, amount: 5900  },
+          premium:  { credits: 300, amount: 12900 },
+          pro:      { credits: 700, amount: 24900 },
         }
       : {
-          starter:  { credits: 30,  amount: 299   },
-          standard: { credits: 60,  amount: 499   },
-          premium:  { credits: 150, amount: 1099  },
-          pro:      { credits: 350, amount: 2299  },
+          starter:  { credits: 50,  amount: 299   },
+          standard: { credits: 120, amount: 599   },
+          premium:  { credits: 300, amount: 1299  },
+          pro:      { credits: 700, amount: 2499  },
         },
   })
 })
@@ -331,17 +331,17 @@ app.post('/api/auth/register', async (c) => {
   const passwordHash = await hashPassword(password)
   const country      = (c.req.header('cf-ipcountry') ?? 'KR').toUpperCase()
 
-  // 가입 보너스: 10 크레딧
+  // 가입 보너스: 20 크레딧
   const result = await DB.prepare(`
     INSERT INTO users (email, password_hash, nickname, locale, country_code, credits, is_email_verified)
-    VALUES (?, ?, ?, ?, ?, 10, 0)
+    VALUES (?, ?, ?, ?, ?, 20, 0)
   `).bind(email.toLowerCase(), passwordHash, nickname ?? email.split('@')[0], locale, country).run()
 
   const userId = result.meta.last_row_id as number
 
   await DB.batch([
     DB.prepare('INSERT INTO credit_transactions (user_id,type,amount,reason,balance_after) VALUES (?,?,?,?,?)')
-      .bind(userId, 'gain', 10, 'signup_bonus', 10),
+      .bind(userId, 'gain', 20, 'signup_bonus', 20),
   ])
 
   // 이메일 인증 생략 (추후 활성화 예정)
@@ -356,7 +356,7 @@ app.post('/api/auth/register', async (c) => {
   return c.json({
     success: true,
     message: '가입 완료! 이메일로 발송된 인증 링크를 확인해주세요. (6시간 이내)',
-    data: { userId, email: email.toLowerCase(), credits: 10, requiresVerification: true },
+    data: { userId, email: email.toLowerCase(), credits: 20, requiresVerification: true },
   }, 201)
 })
 
@@ -514,11 +514,11 @@ app.post('/api/auth/google', async (c) => {
     } else {
       const country = (c.req.header('cf-ipcountry') ?? 'KR').toUpperCase()
       const r = await DB.prepare(
-        'INSERT INTO users (email,social_provider,social_id,nickname,locale,country_code,is_email_verified,credits) VALUES (?,?,?,?,?,?,1,10)'
+        'INSERT INTO users (email,social_provider,social_id,nickname,locale,country_code,is_email_verified,credits) VALUES (?,?,?,?,?,?,1,20)'
       ).bind(info.email.toLowerCase(), 'google', info.sub, info.name ?? info.email.split('@')[0], 'ko', country).run()
       const newId = r.meta.last_row_id as number
       await DB.batch([
-        DB.prepare('INSERT INTO credit_transactions (user_id,type,amount,reason,balance_after) VALUES (?,?,?,?,?)').bind(newId,'gain',10,'signup_bonus',10),
+        DB.prepare('INSERT INTO credit_transactions (user_id,type,amount,reason,balance_after) VALUES (?,?,?,?,?)').bind(newId,'gain',20,'signup_bonus',20),
       ])
       user = await DB.prepare('SELECT * FROM users WHERE id = ?').bind(newId).first<User>() as User
     }
@@ -1189,14 +1189,14 @@ ${summary ?? '검사 결과 없음 — 일반적인 마음 돌봄 상담으로 �
 // ── 패키지 정의 (credits: 지급량, amount: 결제금액, currency 단위에 맞게)
 // KRW: 원 단위 / USD: 센트 단위 (Stripe 기준)
 const PACKAGES: Record<string, { credits: number; amount: number; label: string }> = {
-  starter_kr:  { credits: 30,  amount: 2000,  label: '스타터' },
-  standard_kr: { credits: 60,  amount: 3500,  label: '표준'   },
-  premium_kr:  { credits: 150, amount: 8000,  label: '프리미엄' },
-  pro_kr:      { credits: 350, amount: 17000, label: '대용량' },
-  starter_g:   { credits: 30,  amount: 299,   label: 'Starter'  },
-  standard_g:  { credits: 60,  amount: 499,   label: 'Standard' },
-  premium_g:   { credits: 150, amount: 1099,  label: 'Premium'  },
-  pro_g:       { credits: 350, amount: 2299,  label: 'Pro'      },
+  starter_kr:  { credits: 50,  amount: 2900,  label: '스타터' },
+  standard_kr: { credits: 120, amount: 5900,  label: '표준'   },
+  premium_kr:  { credits: 300, amount: 12900, label: '프리미엄' },
+  pro_kr:      { credits: 700, amount: 24900, label: '대용량' },
+  starter_g:   { credits: 50,  amount: 299,   label: 'Starter'  },
+  standard_g:  { credits: 120, amount: 599,   label: 'Standard' },
+  premium_g:   { credits: 300, amount: 1299,  label: 'Premium'  },
+  pro_g:       { credits: 700, amount: 2499,  label: 'Pro'      },
 }
 
 // ── 구독 플랜 정의 ─────────────────────────────────────────
@@ -1732,6 +1732,21 @@ async function sendReceiptEmail(env: Bindings, to: string, nickname: string, cre
 // ── 이미 register/forgot-password API가 위에 구현되어 있으므로
 //    이메일 함수는 해당 핸들러 내에서 직접 호출
 // ============================================================
+
+// 멤버십 플랜 오픈 알림 신청 (KV 저장)
+app.post('/api/credits/notify-plan', async (c) => {
+  const { KV } = c.env
+  try {
+    const { plan, email } = await c.req.json()
+    if (!plan || !email) return c.json({ success: false }, 400)
+    const key = `plan_notify:${email.toLowerCase()}`
+    const existing = await KV.get(key)
+    const list: string[] = existing ? JSON.parse(existing) : []
+    if (!list.includes(plan)) list.push(plan)
+    await KV.put(key, JSON.stringify(list), { expirationTtl: 90 * 86400 })
+    return c.json({ success: true })
+  } catch { return c.json({ success: false }) }
+})
 
 // prepare-charge (기존 → 금액 포함으로 업그레이드)
 app.post('/api/credits/prepare-charge', async (c) => {

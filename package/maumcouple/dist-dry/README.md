@@ -1,0 +1,1 @@
+This folder contains the built output assets for the worker "maumcouple" generated at 2026-05-02T09:27:46.741Z.

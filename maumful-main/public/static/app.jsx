@@ -143,6 +143,23 @@ const storage = {
   remove: (key) => { try { localStorage.removeItem(key); return true; } catch { return false; } },
 };
 
+// Google Sign-In 버튼 컴포넌트 (App 외부에 정의해야 Hook 규칙 준수)
+function GoogleSignInBtn({ onLogin, btnText = 'signin_with' }) {
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    if (!window.google?.accounts?.id || !ref.current) return;
+    window.google.accounts.id.initialize({
+      client_id: window.GOOGLE_CLIENT_ID,
+      callback: (response) => onLogin(response.credential),
+    });
+    window.google.accounts.id.renderButton(ref.current, {
+      type: 'standard', theme: 'outline', size: 'large',
+      text: btnText, shape: 'rectangular', width: ref.current.offsetWidth || 340,
+    });
+  }, []);
+  return <div ref={ref} className="w-full" style={{ minHeight: 44 }} />;
+}
+
 // ============================================================
 // 메인 컴포넌트
 // ============================================================
@@ -2435,22 +2452,11 @@ function PsychologicalTestSystem() {
           className="w-full bg-green-700 text-white py-3 rounded-xl font-bold hover:bg-green-800 transition mb-4 text-base">
           로그인
         </button>
-        {window.GOOGLE_CLIENT_ID && React.createElement((() => {
-          // Google GSI 버튼 컴포넌트 (인라인 IIFE로 정의)
-          const ref = React.useRef(null);
-          React.useEffect(() => {
-            if (!window.google?.accounts?.id || !ref.current) return;
-            window.google.accounts.id.initialize({
-              client_id: window.GOOGLE_CLIENT_ID,
-              callback: (response) => handleGoogleLogin(response.credential),
-            });
-            window.google.accounts.id.renderButton(ref.current, {
-              type: 'standard', theme: 'outline', size: 'large',
-              text: 'signin_with', shape: 'rectangular', width: ref.current.offsetWidth || 340,
-            });
-          }, []);
-          return React.createElement('div', { ref, className: 'w-full mb-4', style: { minHeight: 44 } });
-        })())}
+        {window.GOOGLE_CLIENT_ID && (
+          <div className="mb-4">
+            <GoogleSignInBtn onLogin={handleGoogleLogin} btnText="signin_with" />
+          </div>
+        )}
         <div className="relative mb-4">
           <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"/></div>
           <div className="relative flex justify-center"><span className="px-3 bg-white text-gray-400 text-xs">또는</span></div>
@@ -2500,11 +2506,12 @@ function PsychologicalTestSystem() {
         <div className="text-center mb-6">
           <div className="text-4xl mb-2">✨</div>
           <h2 className="text-2xl font-bold text-gray-800">회원가입</h2>
-          <p className="text-sm text-gray-400 mt-1">가입 시 <span className="text-green-700 font-semibold">10 크레딧</span> 즉시 지급</p>
+          <p className="text-sm text-gray-400 mt-1">가입 시 <span className="text-green-700 font-semibold">20 크레딧</span> 즉시 지급</p>
         </div>
         <div className="bg-green-50 rounded-xl p-3 mb-5 text-sm text-green-800 space-y-0.5">
-          <p>✦ 기본 20 크레딧 (검사 2회)</p>
-          <p>✦ AI 채팅 보너스 25 크레딧 (채팅 5회)</p>
+          <p>✦ 가입 보너스 20 크레딧 (검사 2회)</p>
+          <p>✦ PHQ9·GAD7 심리검사 무료 제공</p>
+          <p>✦ AI 채팅 하루 5회 무료</p>
         </div>
         <Msg msg={formMsg} />
         <div className="space-y-3 mb-5">
@@ -2563,21 +2570,7 @@ function PsychologicalTestSystem() {
               <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"/></div>
               <div className="relative flex justify-center"><span className="px-3 bg-white text-gray-400 text-xs">또는 소셜 계정으로 시작</span></div>
             </div>
-            {React.createElement((() => {
-              const ref = React.useRef(null);
-              React.useEffect(() => {
-                if (!window.google?.accounts?.id || !ref.current) return;
-                window.google.accounts.id.initialize({
-                  client_id: window.GOOGLE_CLIENT_ID,
-                  callback: (response) => handleGoogleLogin(response.credential),
-                });
-                window.google.accounts.id.renderButton(ref.current, {
-                  type: 'standard', theme: 'outline', size: 'large',
-                  text: 'signup_with', shape: 'rectangular', width: ref.current.offsetWidth || 340,
-                });
-              }, []);
-              return React.createElement('div', { ref, style: { minHeight: 44 } });
-            })())}
+            <GoogleSignInBtn onLogin={handleGoogleLogin} btnText="signup_with" />
           </>
         )}
       </div>
@@ -3783,7 +3776,7 @@ function PsychologicalTestSystem() {
                 <h4 className="font-bold text-amber-800 mb-1">📧 이메일 미인증</h4>
                 <p className="text-xs text-amber-700 mb-3">이메일 인증을 완료하면 계정을 안전하게 보호할 수 있어요</p>
                 <button onClick={async () => {
-                  const r = await fetch('/api/auth/resend-verify', { method:'POST', headers:{ 'Content-Type':'application/json', ...api._authHeader() } }).then(r=>r.json());
+                  const r = await fetch('/api/auth/resend-verify', { method:'POST', headers:{ 'Content-Type':'application/json', ...api._authHeader() }, body: JSON.stringify({ email: currentUser.email }) }).then(r=>r.json());
                   alert(r.success ? '인증 이메일을 발송했어요!' : r.error || '발송 실패');
                 }} className="w-full bg-amber-500 text-white py-2.5 rounded-xl text-sm font-bold hover:bg-amber-600 transition">
                   📧 인증 이메일 재발송
@@ -3861,20 +3854,21 @@ function PsychologicalTestSystem() {
     const currency  = isKorea ? 'KRW' : 'USD';
 
     const PACKAGES_KR = [
-      { key:'starter_kr',  credits:30,  amount:2000,  label:'스타터',   badge:null },
-      { key:'standard_kr', credits:60,  amount:3500,  label:'표준',     badge:'인기' },
-      { key:'premium_kr',  credits:150, amount:8000,  label:'프리미엄', badge:'추천' },
-      { key:'pro_kr',      credits:350, amount:17000, label:'대용량',   badge:null },
+      { key:'starter_kr',  credits:50,  amount:2900,  label:'스타터',   badge:null },
+      { key:'standard_kr', credits:120, amount:5900,  label:'표준',     badge:'인기' },
+      { key:'premium_kr',  credits:300, amount:12900, label:'프리미엄', badge:'추천' },
+      { key:'pro_kr',      credits:700, amount:24900, label:'대용량',   badge:null },
     ];
     const PACKAGES_GLOBAL = [
-      { key:'starter_g',  credits:30,  amount:2.99,  label:'Starter',  badge:null },
-      { key:'standard_g', credits:60,  amount:4.99,  label:'Standard', badge:'Popular' },
-      { key:'premium_g',  credits:150, amount:10.99, label:'Premium',  badge:'Best' },
-      { key:'pro_g',      credits:350, amount:22.99, label:'Pro',      badge:null },
+      { key:'starter_g',  credits:50,  amount:2.99,  label:'Starter',  badge:null },
+      { key:'standard_g', credits:120, amount:5.99,  label:'Standard', badge:'Popular' },
+      { key:'premium_g',  credits:300, amount:12.99, label:'Premium',  badge:'Best' },
+      { key:'pro_g',      credits:700, amount:24.99, label:'Pro',      badge:null },
     ];
     const pkgs = isKorea ? PACKAGES_KR : PACKAGES_GLOBAL;
     const fmt  = (amt) => isKorea ? amt.toLocaleString('ko-KR') + '원' : '$' + amt.toFixed(2);
 
+    const [activeTab, setActiveTab]  = useS('credits');    // 'credits' | 'plans'
     const [selected, setSelected]   = useS(pkgs[1].key); // 표준 기본선택
     const [loading,  setLoading]    = useS(false);
     const [errMsg,   setErrMsg]     = useS('');
@@ -3948,75 +3942,143 @@ function PsychologicalTestSystem() {
             </div>
           </div>
 
-          <div style={{ padding:'20px 24px 24px' }}>
-            {/* 패키지 선택 */}
-            <div style={{ fontSize:13, fontWeight:700, color:'#374151', marginBottom:12 }}>패키지 선택</div>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:9, marginBottom:18 }}>
-              {pkgs.map(pkg => {
-                const isSel = selected === pkg.key;
-                const perCredit = isKorea
-                  ? Math.round(pkg.amount / pkg.credits) + '원/크레딧'
-                  : ('$' + (pkg.amount / pkg.credits).toFixed(2) + '/cr');
-                return (
-                  <button key={pkg.key} onClick={() => setSelected(pkg.key)}
-                    style={{ position:'relative', padding:'12px', border:'2px solid',
-                      borderColor: isSel ? '#2D6A4F' : 'rgba(0,0,0,0.1)',
-                      borderRadius:13, cursor:'pointer', background: isSel ? '#F0FAF4' : 'white',
-                      textAlign:'left', transition:'all 0.15s', fontFamily:F }}>
-                    {pkg.badge && (
-                      <div style={{ position:'absolute', top:-8, right:8,
-                        background: isSel ? '#2D6A4F' : '#F59E0B',
-                        color:'white', fontSize:9, fontWeight:800,
-                        padding:'2px 7px', borderRadius:20 }}>{pkg.badge}</div>
-                    )}
-                    <div style={{ fontSize:12, fontWeight:700, color: isSel ? '#2D6A4F' : '#374151',
-                      marginBottom:3 }}>{pkg.label}</div>
-                    <div style={{ fontSize:20, fontWeight:800,
-                      color: isSel ? '#2D6A4F' : '#111' }}>✦ {pkg.credits}</div>
-                    <div style={{ fontSize:11, color:'#6B7280', marginTop:1 }}>{perCredit}</div>
-                    <div style={{ fontSize:14, fontWeight:700, color: isSel ? '#2D6A4F' : '#374151',
-                      marginTop:5 }}>{fmt(pkg.amount)}</div>
-                  </button>
-                );
-              })}
-            </div>
+          {/* 탭 */}
+          <div style={{ display:'flex', borderBottom:'1px solid #E5E7EB' }}>
+            {[['credits','✦ 크레딧 충전'],['plans','💎 멤버십 플랜']].map(([tab, label]) => (
+              <button key={tab} onClick={() => setActiveTab(tab)}
+                style={{
+                  flex:1, padding:'12px', border:'none', cursor:'pointer', fontFamily:F,
+                  fontSize:13, fontWeight:700, background:'white',
+                  color: activeTab===tab ? '#2D6A4F' : '#9CA3AF',
+                  borderBottom: activeTab===tab ? '2px solid #2D6A4F' : '2px solid transparent',
+                  transition:'all 0.15s',
+                }}>{label}</button>
+            ))}
+          </div>
 
-            {/* 결제 요약 */}
-            {selPkg && (
-              <div style={{ background:'#F9FAFB', borderRadius:12, padding:'12px 16px',
-                marginBottom:16, border:'1px solid rgba(0,0,0,0.07)' }}>
-                <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'#6B7280' }}>
-                  <span>{selPkg.label} · ✦ {selPkg.credits} 크레딧</span>
-                  <span style={{ fontWeight:700, color:'#111', fontSize:15 }}>{fmt(selPkg.amount)}</span>
-                </div>
-                <div style={{ marginTop:6, fontSize:11, color:'#9CA3AF' }}>
-                  충전 후 잔액: ✦ {credits + selPkg.credits} 크레딧
-                  · 검사 {Math.floor((credits + selPkg.credits) / 10)}회 가능
-                </div>
+          <div style={{ padding:'20px 24px 24px', maxHeight:'65vh', overflowY:'auto' }}>
+
+            {/* ── 크레딧 충전 탭 ── */}
+            {activeTab === 'credits' && (<>
+              <div style={{ fontSize:13, fontWeight:700, color:'#374151', marginBottom:12 }}>패키지 선택</div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:9, marginBottom:18 }}>
+                {pkgs.map(pkg => {
+                  const isSel = selected === pkg.key;
+                  const perCredit = isKorea
+                    ? Math.round(pkg.amount / pkg.credits) + '원/cr'
+                    : ('$' + (pkg.amount / pkg.credits).toFixed(2) + '/cr');
+                  return (
+                    <button key={pkg.key} onClick={() => setSelected(pkg.key)}
+                      style={{ position:'relative', padding:'12px', border:'2px solid',
+                        borderColor: isSel ? '#2D6A4F' : 'rgba(0,0,0,0.1)',
+                        borderRadius:13, cursor:'pointer', background: isSel ? '#F0FAF4' : 'white',
+                        textAlign:'left', transition:'all 0.15s', fontFamily:F }}>
+                      {pkg.badge && (
+                        <div style={{ position:'absolute', top:-8, right:8,
+                          background: isSel ? '#2D6A4F' : '#F59E0B',
+                          color:'white', fontSize:9, fontWeight:800,
+                          padding:'2px 7px', borderRadius:20 }}>{pkg.badge}</div>
+                      )}
+                      <div style={{ fontSize:12, fontWeight:700, color: isSel ? '#2D6A4F' : '#374151',
+                        marginBottom:3 }}>{pkg.label}</div>
+                      <div style={{ fontSize:20, fontWeight:800,
+                        color: isSel ? '#2D6A4F' : '#111' }}>✦ {pkg.credits}</div>
+                      <div style={{ fontSize:11, color:'#6B7280', marginTop:1 }}>{perCredit}</div>
+                      <div style={{ fontSize:14, fontWeight:700, color: isSel ? '#2D6A4F' : '#374151',
+                        marginTop:5 }}>{fmt(pkg.amount)}</div>
+                    </button>
+                  );
+                })}
               </div>
-            )}
-
-            {/* 오류 메시지 */}
-            {errMsg && (
-              <div style={{ background:'#FEF2F2', border:'1px solid #FCA5A5', borderRadius:9,
-                padding:'8px 12px', fontSize:12, color:'#991B1B', marginBottom:12 }}>
-                {errMsg}
+              {selPkg && (
+                <div style={{ background:'#F9FAFB', borderRadius:12, padding:'12px 16px',
+                  marginBottom:16, border:'1px solid rgba(0,0,0,0.07)' }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'#6B7280' }}>
+                    <span>{selPkg.label} · ✦ {selPkg.credits} 크레딧</span>
+                    <span style={{ fontWeight:700, color:'#111', fontSize:15 }}>{fmt(selPkg.amount)}</span>
+                  </div>
+                  <div style={{ marginTop:6, fontSize:11, color:'#9CA3AF' }}>
+                    충전 후 잔액: ✦ {credits + selPkg.credits} 크레딧
+                    · 검사 {Math.floor((credits + selPkg.credits) / 10)}회 가능
+                  </div>
+                </div>
+              )}
+              {errMsg && (
+                <div style={{ background:'#FEF2F2', border:'1px solid #FCA5A5', borderRadius:9,
+                  padding:'8px 12px', fontSize:12, color:'#991B1B', marginBottom:12 }}>
+                  {errMsg}
+                </div>
+              )}
+              <button onClick={handlePay} disabled={loading}
+                style={{ width:'100%', padding:'15px', background: loading ? '#9CA3AF' : '#2D6A4F',
+                  color:'white', border:'none', borderRadius:14, fontSize:16, fontWeight:700,
+                  cursor: loading ? 'not-allowed' : 'pointer', transition:'background 0.2s', fontFamily:F }}>
+                {loading ? '결제 준비 중...' : (isKorea ? '토스페이먼츠로 결제 ' : 'Pay with Card ') + (selPkg ? fmt(selPkg.amount) : '')}
+              </button>
+              <div style={{ textAlign:'center', marginTop:10, fontSize:11, color:'#9CA3AF' }}>
+                {isKorea ? '카드 · 카카오페이 · 네이버페이 · 토스페이 지원' : 'Visa · Mastercard · American Express'}
               </div>
-            )}
+            </>)}
 
-            {/* 결제 버튼 */}
-            <button onClick={handlePay} disabled={loading}
-              style={{ width:'100%', padding:'15px', background: loading ? '#9CA3AF' : '#2D6A4F',
-                color:'white', border:'none', borderRadius:14, fontSize:16, fontWeight:700,
-                cursor: loading ? 'not-allowed' : 'pointer', transition:'background 0.2s', fontFamily:F }}>
-              {loading ? '결제 준비 중...' : (isKorea ? '토스페이먼츠로 결제 ' : 'Pay with Card ') + (selPkg ? fmt(selPkg.amount) : '')}
-            </button>
-
-            <div style={{ textAlign:'center', marginTop:10, fontSize:11, color:'#9CA3AF' }}>
-              {isKorea
-                ? '카드 · 카카오페이 · 네이버페이 · 토스페이 지원'
-                : 'Visa · Mastercard · American Express'}
-            </div>
+            {/* ── 멤버십 플랜 탭 ── */}
+            {activeTab === 'plans' && (<>
+              <div style={{ background:'#FFF8E7', borderRadius:12, padding:'10px 14px',
+                marginBottom:16, border:'1px solid #FDE68A', fontSize:12, color:'#92400E' }}>
+                🚀 사업자 등록 완료 후 정식 오픈 예정입니다. 관심 등록하시면 오픈 시 알려드려요!
+              </div>
+              {[
+                {
+                  name: '마음풀 Plus', price: isKorea ? '월 5,900원' : '$5.99/mo',
+                  color: '#2D6A4F', colorL: '#F0FAF4', emoji: '🧠',
+                  features: ['월 100 크레딧 지급', 'AI 채팅 무제한', '검사 이력 무제한 보관', '우선 고객 지원'],
+                },
+                {
+                  name: '마음커플 Plus', price: isKorea ? '월 9,900원' : '$9.99/mo',
+                  color: '#B5556A', colorL: '#FCF0F3', emoji: '💕',
+                  features: ['월 150 크레딧 지급', '월 1회 커플 리포트 포함', 'AI 관계 코치 무제한', '데이트 코스 무제한'],
+                },
+              ].map(plan => (
+                <div key={plan.name} style={{
+                  borderRadius:16, border:`2px solid ${plan.color}22`,
+                  marginBottom:14, overflow:'hidden', fontFamily:F,
+                }}>
+                  <div style={{ background:`linear-gradient(135deg, ${plan.color}, ${plan.color}CC)`,
+                    padding:'14px 18px', color:'white', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                    <div>
+                      <div style={{ fontSize:11, opacity:0.85, marginBottom:2 }}>{plan.emoji} 구독 플랜</div>
+                      <div style={{ fontSize:17, fontWeight:800 }}>{plan.name}</div>
+                    </div>
+                    <div style={{ textAlign:'right' }}>
+                      <div style={{ fontSize:18, fontWeight:800 }}>{plan.price}</div>
+                      <div style={{ fontSize:10, opacity:0.8, marginTop:2 }}>월 자동 결제</div>
+                    </div>
+                  </div>
+                  <div style={{ background:plan.colorL, padding:'12px 18px' }}>
+                    {plan.features.map(f => (
+                      <div key={f} style={{ fontSize:13, color:'#374151', marginBottom:5, display:'flex', alignItems:'center', gap:6 }}>
+                        <span style={{ color:plan.color, fontWeight:700 }}>✓</span> {f}
+                      </div>
+                    ))}
+                    <button onClick={async () => {
+                      const email = currentUser?.email || '';
+                      if (!email) { alert('로그인 후 관심 등록이 가능합니다.'); return; }
+                      await api._fetch('/api/credits/notify-plan', { method:'POST',
+                        body: JSON.stringify({ plan: plan.name, email }) });
+                      alert(`${plan.name} 오픈 알림을 신청했습니다! 준비되면 이메일로 알려드릴게요 🎉`);
+                    }} style={{
+                      marginTop:10, width:'100%', padding:'10px', borderRadius:10,
+                      background:plan.color, color:'white', border:'none', cursor:'pointer',
+                      fontSize:13, fontWeight:700, fontFamily:F,
+                    }}>
+                      🔔 오픈 알림 신청
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <div style={{ textAlign:'center', fontSize:11, color:'#9CA3AF', marginTop:4 }}>
+                * 구독 플랜은 사업자 등록 후 정식 출시됩니다
+              </div>
+            </>)}
           </div>
         </div>
       </div>
