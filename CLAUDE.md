@@ -867,3 +867,62 @@ maumful-main/migrations/0013_error_logs.sql
 - `aApi.errorLogs(service, limit)` / `aApi.clearErrorLogs()` 메서드 추가
 - `AdminErrorLogs` 컴포넌트: 서비스 필터, 건수 선택, 상태코드 배지, 스택 트레이스 접기/펼치기, 전체 삭제
 - 어드민 사이드바에 `'🔴 오류 로그'` 탭 추가
+
+---
+
+## 장기 과제 J~K (2026-05-02)
+
+### J: 마음풀 대시보드 추천 검사 + 검사 이력 SVG 차트
+
+**maumful-main/public/static/app.jsx**
+
+#### 추천 검사 카드 (memberDashboard)
+- 크레딧 카드와 검사 목록 사이에 `✨ 추천 검사` 섹션 삽입
+- 검사 이력 기반 개인화 로직:
+  - PHQ9/GAD7: 미수행 또는 30일+ 경과 → 무료 재검사 권장
+  - BIG5: 미수행 또는 90일+ 경과 → 성격 검사 권장
+  - BURNOUT: PHQ9 수행 완료 + BURNOUT 미수행 → 번아웃 권장
+- 최대 2개 추천, 검사 이력이 없으면 표시 안 함
+
+#### SVG 라인 차트 (마이페이지 → 검사 이력 탭)
+- 트렌드 요약 카드와 전체 이력 목록 사이에 삽입
+- PHQ9(인디고)/GAD7(로즈)/BURNOUT(오렌지)/DSI(에메랄드) 4가지 색상
+- 데이터 2개 이상인 검사만 라인 표시
+- 격자선 (25/50/75/100%), X축 날짜 레이블, 점(dot) + 연결선
+
+### K: 마음커플 주간 인사이트 이메일
+
+**package/maumcouple/src/index.tsx**
+
+```typescript
+// sendCoupleInsightEmail(env, to, name, { checkinScore, prevScore, partnerName }) — Resend API HTML 이메일
+```
+
+**Cron 트리거 추가** (`wrangler.toml` + `wrangler.dev.toml`):
+
+```
+"0 23 * * 0"  →  일요일 23:00 UTC = 월요일 08:00 KST
+```
+
+**Scheduled 핸들러 로직**:
+- `event.cron === '0 23 * * 0'` → 주간 이메일 분기
+- 최근 30일 내 활성 커플 세션(waiting/both_done/reported) 사용자 최대 200명 조회
+- 사용자별: 이번 달/지난달 체크인 점수 + 파트너 이름 조회 → 이메일 발송
+- `RESEND_API_KEY` 미설정 시 건너뜀
+- 발송 간격: 건당 100ms sleep (과도한 API 호출 방지)
+
+**이메일 내용**:
+- 그라디언트 헤더 (💕 마음커플)
+- 파트너 연결 상태
+- 이번 달 관계 건강도 점수 + 지난달 대비 변화
+- 이번 주 대화 질문 (고정)
+- CTA 버튼 → `https://couple.maumful.com`
+
+### 버그 수정 (중기 검증 후)
+
+**🔴 maumful Bindings — VAPID 키 누락**
+- `maumful-main/src/index.tsx` Bindings에 `VAPID_PUBLIC_KEY?: string`, `VAPID_PRIVATE_KEY?: string` 추가
+
+**🔴 리뷰 버튼 조건 오류**
+- `maumful-main/public/static/counseling.jsx` line 334: `{(canVideo||canCancel)&&(` → `{(canVideo||canCancel||canReview)&&(}`
+- `completed` 상태 예약에서 리뷰 버튼이 전혀 표시되지 않던 버그 수정
