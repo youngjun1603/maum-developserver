@@ -1017,6 +1017,78 @@ function BurnoutTrendSection({ userTestScores }) {
   );
 }
 
+// ──────────────────────────────────────────────────────────
+// AIDiarySection — 오늘의 AI 마음 일기 (일 1회 생성)
+// ──────────────────────────────────────────────────────────
+function AIDiarySection() {
+  const [diary, setDiary] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [checked, setChecked] = useState(false);
+  const [noData, setNoData] = useState(false);
+
+  async function loadDiary() {
+    setLoading(true);
+    try {
+      const r = await GameEngine.apiFetch('/api/game/ai-diary');
+      const d = await r.json();
+      if (d.success) {
+        setDiary(d.data.diary);
+        setNoData(!!d.data.noData);
+      }
+    } catch { /**/ }
+    setLoading(false);
+    setChecked(true);
+  }
+
+  function share() {
+    if (!diary) return;
+    const text = `📔 오늘의 마음 일기\n${diary}\n\n마음게임에서 기록했어요 🌿 https://game.maumful.com`;
+    if (navigator.share) { navigator.share({ title: '마음 일기', text }).catch(() => {}); }
+    else { navigator.clipboard?.writeText(text).then(() => alert('복사됐어요!')); }
+  }
+
+  if (!checked && !diary) {
+    return (
+      <div style={{background:'white',borderRadius:16,padding:'16px 18px',marginBottom:12,border:'1px solid rgba(0,0,0,.08)'}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
+            <span style={{fontSize:18}}>📔</span>
+            <span style={{fontSize:14,fontWeight:700,color:'#2D6A4F'}}>오늘의 마음 일기</span>
+          </div>
+          <button onClick={loadDiary} disabled={loading}
+            style={{fontSize:12,background:'#2D6A4F',color:'white',border:'none',borderRadius:20,padding:'5px 14px',cursor:'pointer',fontFamily:"'Noto Sans KR',sans-serif"}}>
+            {loading ? '생성 중...' : '✍️ 일기 생성'}
+          </button>
+        </div>
+        <p style={{fontSize:12,color:'#9A9A9A',margin:0}}>오늘의 감정 기록을 바탕으로 AI가 마음 일기를 작성해 드려요.</p>
+      </div>
+    );
+  }
+
+  if (noData) return null;
+  if (!diary) return null;
+
+  const todayStr = new Date().toLocaleDateString('ko-KR', { month:'long', day:'numeric', weekday:'short' });
+  return (
+    <div style={{background:'linear-gradient(135deg,#f0fdf4,#dcfce7)',borderRadius:16,padding:'16px 18px',marginBottom:12,border:'1px solid #bbf7d0'}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <span style={{fontSize:18}}>📔</span>
+          <div>
+            <span style={{fontSize:14,fontWeight:700,color:'#15803d'}}>오늘의 마음 일기</span>
+            <span style={{fontSize:11,color:'#86efac',marginLeft:8}}>{todayStr}</span>
+          </div>
+        </div>
+        <button onClick={share}
+          style={{fontSize:11,background:'transparent',color:'#16a34a',border:'1px solid #86efac',borderRadius:20,padding:'4px 10px',cursor:'pointer',fontFamily:"'Noto Sans KR',sans-serif"}}>
+          공유 🔗
+        </button>
+      </div>
+      <p style={{fontSize:14,color:'#166534',lineHeight:1.7,margin:0,fontStyle:'italic'}}>{diary}</p>
+    </div>
+  );
+}
+
 // EmotionWeeklyReport — AI 감정 주간 분석 (접기/펼치기)
 // ──────────────────────────────────────────────────────────
 const EMOTION_DISPLAY = {
@@ -1706,6 +1778,9 @@ function GameHubApp() {
 
         {/* ── 번아웃 트렌드 ── */}
         <BurnoutTrendSection userTestScores={data?.userTestScores} />
+
+        {/* ── 오늘의 AI 마음 일기 ── */}
+        <AIDiarySection />
 
         {/* ── 감정 AI 주간 리포트 ── */}
         <EmotionWeeklyReport />

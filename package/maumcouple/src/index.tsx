@@ -1115,6 +1115,78 @@ app.get('/api/couple/partner-moments', async (c) => {
 
 // ── GET /api/couple/admin/stats ────────────────────────────
 // 관리자 통계 (마스터 계정 전용)
+// ── GET /api/couple/timeline ──────────────────────────────
+// 관계 활동 타임라인 (체크인 + 커플 세션 + AI 리포트 + 데이트 코스)
+app.get('/api/couple/timeline', async (c) => {
+  const { DB } = c.env
+  const userId = await getCoupleUserId(c.req.raw, c.env)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+
+  const [sessions, checkins] = await Promise.all([
+    DB.prepare(`
+      SELECT cs.code, cs.status, cs.compatibility_score, cs.created_at, cs.test_types,
+             CASE WHEN cs.host_user_id=? THEN u2.nickname ELSE u1.nickname END AS partner_name
+      FROM couple_sessions cs
+      LEFT JOIN users u1 ON u1.id = cs.host_user_id
+      LEFT JOIN users u2 ON u2.id = cs.guest_user_id
+      WHERE (cs.host_user_id=? OR cs.guest_user_id=?)
+        AND cs.status IN ('both_done','reported','expired')
+      ORDER BY cs.created_at DESC LIMIT 20
+    `).bind(userId, userId, userId).all<{
+      code: string; status: string; compatibility_score: number | null;
+      created_at: string; test_types: string | null; partner_name: string | null
+    }>(),
+    DB.prepare(`
+      SELECT total_score, answers_json, created_at
+      FROM relationship_checkins WHERE user_id=?
+      ORDER BY created_at DESC LIMIT 10
+    `).bind(userId).all<{ total_score: number; created_at: string }>(),
+  ])
+
+  type TimelineItem = {
+    type: string; date: string; title: string; subtitle: string; score?: number | null; emoji: string
+  }
+  const items: TimelineItem[] = []
+
+  for (const s of sessions.results) {
+    if (s.status === 'reported' && s.compatibility_score != null) {
+      items.push({
+        type: 'report',
+        date: s.created_at,
+        title: '커플 궁합 리포트',
+        subtitle: s.partner_name ? `${s.partner_name}님과의 분석` : '파트너와의 분석',
+        score: s.compatibility_score,
+        emoji: '💕',
+      })
+    } else if (s.status === 'both_done' || s.status === 'expired') {
+      items.push({
+        type: 'session',
+        date: s.created_at,
+        title: '커플 검사 완료',
+        subtitle: s.partner_name ? `${s.partner_name}님과 함께` : '검사 완료',
+        emoji: '🧪',
+      })
+    }
+  }
+
+  for (const ch of checkins.results) {
+    const pct = Math.round((ch.total_score / 50) * 100)
+    const label = pct >= 80 ? '매우 건강해요' : pct >= 60 ? '건강해요' : pct >= 40 ? '보통이에요' : '개선이 필요해요'
+    items.push({
+      type: 'checkin',
+      date: ch.created_at,
+      title: '관계 성장 체크인',
+      subtitle: `${ch.total_score}/50점 — ${label}`,
+      score: ch.total_score,
+      emoji: '📊',
+    })
+  }
+
+  items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+
+  return c.json({ success: true, data: items })
+})
+
 // ── POST /api/couple/invite-email ─────────────────────────
 // 파트너 이메일로 세션 초대 링크 발송
 app.post('/api/couple/invite-email', async (c) => {

@@ -5684,6 +5684,26 @@ function PsychologicalTestSystem() {
     }
   }
 
+  // 결과 공유 버튼 컴포넌트 (Web Share API / clipboard fallback)
+  function ShareResultButton({ text }) {
+    return (
+      <div className="mt-3 flex justify-end">
+        <button
+          onClick={() => {
+            if (navigator.share) {
+              navigator.share({ title: '마음풀 검사 결과', text }).catch(() => {});
+            } else {
+              navigator.clipboard?.writeText(text).then(() => alert('클립보드에 복사됐어요!')).catch(() => {});
+            }
+          }}
+          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-emerald-700 px-3 py-1.5 rounded-lg hover:bg-emerald-50 transition border border-gray-200 hover:border-emerald-300"
+        >
+          🔗 결과 공유
+        </button>
+      </div>
+    );
+  }
+
   // AI 분석 결과 박스 컴포넌트 (인라인)
   function AiAnalysisBox({ aiKey, onRun }) {
     const text = aiAnalysis[aiKey] || "";
@@ -7162,6 +7182,7 @@ function PsychologicalTestSystem() {
               runAiAnalysis("DSI", "DSI", { scales, total });
             }}
           />
+          <ShareResultButton text={`🪞 SDRI 자기분화 검사 결과\n총점: ${calcSdri().total}점\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #심리검사`} />
           <RecoveryCard testType="DSI" score={0} level="low" />
           <ExpertCTA testType="DSI" score={0} level="low"
             onContinueAI={() => { setChatOpen(true); window.scrollTo(0,document.body.scrollHeight); }} />
@@ -7227,8 +7248,9 @@ function PsychologicalTestSystem() {
               });
             }}
           />
+          {(() => { const r = calcPhq9(); return <ShareResultButton text={`😔 PHQ-9 우울 검사 결과\n총점: ${r.total}/27 (${r.level})\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #심리검사`} />; })()}
 
-          
+
           {/* 🤝 전문가 상담 CTA */}
           {(() => {
             const r = calcPhq9();
@@ -7306,8 +7328,9 @@ function PsychologicalTestSystem() {
               });
             }}
           />
+          {(() => { const r = calcGad7(); return <ShareResultButton text={`😰 GAD-7 불안 검사 결과\n총점: ${r.total}/21 (${r.level})\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #심리검사`} />; })()}
 
-          
+
           {/* 🤝 전문가 상담 CTA */}
           {(() => {
             const r = calcGad7();
@@ -7624,8 +7647,9 @@ function PsychologicalTestSystem() {
               });
             }}
           />
+          {(() => { const r = calcBurnout(); return <ShareResultButton text={`🔥 K-MBI+ 번아웃 검사 결과\n${r.level} (${r.percentage}%)\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #번아웃`} />; })()}
 
-          
+
           {/* 🤝 전문가 상담 CTA */}
           {(() => {
             const r = calcBurnout();
@@ -7716,8 +7740,13 @@ function PsychologicalTestSystem() {
               runAiAnalysis("BIG5", "BIG5", { factors: r });
             }}
           />
+          {(() => {
+            const r = calcBig5();
+            const top = Object.entries(r).sort(([,a],[,b]) => b-a)[0];
+            return <ShareResultButton text={`🌟 Big5 성격검사 결과\n가장 높은 특성: ${top?.[0]} (${top?.[1]}/5)\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #성격검사`} />;
+          })()}
 
-          
+
           {/* 🤝 전문가 상담 CTA */}
           <RecoveryCard testType="BIG5" score={0} level="low" />
           <ExpertCTA testType="BIG5" score={0} level="low"
@@ -7927,8 +7956,9 @@ function PsychologicalTestSystem() {
               }}
             />
           </div>
+          {(() => { const r = calcLost(); return <ShareResultButton text={`🧭 LOST 행동 유형 검사 결과\n유형: ${r.typeCode} ${r.typeInfo.name}\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #LOST`} />; })()}
 
-          
+
           {/* 🤝 전문가 상담 CTA */}
           {(() => {
             const r = calcLost();

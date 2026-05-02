@@ -1195,6 +1195,96 @@ function AnniversaryView({ onBack }) {
   );
 }
 
+// ── RelationshipTimelineView ──────────────────────────────
+function RelationshipTimelineView({ onBack }) {
+  const [items, setItems] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  React.useEffect(() => {
+    fetch('/api/couple/timeline', { headers: { 'Authorization': `Bearer ${localStorage.getItem('couple_token')}` } })
+      .then(r => r.json())
+      .then(d => { if (d.success) setItems(d.data); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const fmtDate = d => new Date(d).toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric' });
+  const typeStyle = {
+    report:  { bg:'#fdf2f8', border:'#f9a8d4', accent:C.rose,    label:'AI 리포트' },
+    session: { bg:'#f0f9ff', border:'#bae6fd', accent:'#0ea5e9', label:'커플 검사' },
+    checkin: { bg:'#f0fdf4', border:'#bbf7d0', accent:'#16a34a', label:'관계 체크인' },
+  };
+
+  return (
+    <div style={{ minHeight:'100vh', background:`linear-gradient(160deg, ${C.rosePale}, ${C.cream})` }}>
+      <nav style={{ position:'sticky', top:0, zIndex:100, background:'rgba(253,252,247,0.88)', backdropFilter:'blur(16px)', borderBottom:`1px solid rgba(181,85,106,0.12)`, padding:'0 20px', height:56, display:'flex', alignItems:'center' }}>
+        <button onClick={onBack} style={{ background:'none', border:'none', fontSize:20, cursor:'pointer', color:C.dark, display:'flex', alignItems:'center', gap:6 }}>
+          ← <span style={{ fontSize:14, fontWeight:600 }}>관계 타임라인</span>
+        </button>
+      </nav>
+
+      <div style={{ maxWidth:480, margin:'0 auto', padding:'28px 20px 60px' }}>
+        <div style={{ textAlign:'center', marginBottom:24 }}>
+          <div style={{ fontSize:48, marginBottom:8 }}>🗂️</div>
+          <h2 style={{ fontSize:20, fontWeight:800, color:C.dark, margin:'0 0 6px' }}>관계 타임라인</h2>
+          <p style={{ fontSize:13, color:C.muted, margin:0 }}>우리의 관계 기록을 한눈에 볼 수 있어요</p>
+        </div>
+
+        {loading && <div style={{ textAlign:'center', padding:'40px 0', color:C.muted }}>불러오는 중...</div>}
+
+        {!loading && (!items || items.length === 0) && (
+          <div style={{ background:'white', borderRadius:20, padding:28, textAlign:'center', boxShadow:'0 4px 16px rgba(0,0,0,0.06)' }}>
+            <div style={{ fontSize:40, marginBottom:12 }}>🌱</div>
+            <p style={{ fontSize:14, color:C.muted }}>아직 기록이 없어요.<br/>커플 검사나 관계 체크인을 시작해 보세요!</p>
+          </div>
+        )}
+
+        {!loading && items && items.length > 0 && (
+          <div style={{ position:'relative' }}>
+            <div style={{ position:'absolute', left:20, top:0, bottom:0, width:2, background:`linear-gradient(to bottom, ${C.rose}, transparent)`, borderRadius:2 }} />
+            <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+              {items.map((item, i) => {
+                const s = typeStyle[item.type] || typeStyle.session;
+                return (
+                  <div key={i} style={{ display:'flex', gap:16, paddingLeft:8 }}>
+                    <div style={{ width:24, height:24, borderRadius:'50%', background:s.accent, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, flexShrink:0, marginTop:12, zIndex:1, boxShadow:`0 0 0 3px ${s.bg}` }}>
+                      {item.emoji}
+                    </div>
+                    <div style={{ flex:1, background:'white', borderRadius:16, padding:'14px 16px', border:`1px solid ${s.border}`, boxShadow:'0 2px 8px rgba(0,0,0,0.04)' }}>
+                      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:4 }}>
+                        <span style={{ fontSize:11, fontWeight:700, color:s.accent, background:s.bg, padding:'2px 8px', borderRadius:20 }}>{s.label}</span>
+                        <span style={{ fontSize:11, color:C.muted }}>{fmtDate(item.date)}</span>
+                      </div>
+                      <div style={{ fontSize:14, fontWeight:700, color:C.dark, marginBottom:2 }}>{item.title}</div>
+                      <div style={{ fontSize:13, color:C.muted }}>{item.subtitle}</div>
+                      {item.score != null && item.type === 'report' && (
+                        <div style={{ marginTop:8, display:'flex', alignItems:'center', gap:6 }}>
+                          <div style={{ height:6, flex:1, background:'#f0f0f0', borderRadius:3, overflow:'hidden' }}>
+                            <div style={{ width:`${item.score}%`, height:'100%', background:`linear-gradient(90deg,${C.rose},#f472b6)`, borderRadius:3 }} />
+                          </div>
+                          <span style={{ fontSize:12, fontWeight:700, color:C.rose }}>{item.score}점</span>
+                        </div>
+                      )}
+                      {item.score != null && item.type === 'checkin' && (
+                        <div style={{ marginTop:8, display:'flex', alignItems:'center', gap:6 }}>
+                          <div style={{ height:6, flex:1, background:'#f0f0f0', borderRadius:3, overflow:'hidden' }}>
+                            <div style={{ width:`${Math.round(item.score/50*100)}%`, height:'100%', background:'linear-gradient(90deg,#16a34a,#4ade80)', borderRadius:3 }} />
+                          </div>
+                          <span style={{ fontSize:12, fontWeight:700, color:'#16a34a' }}>{item.score}/50</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── RelationshipCheckinView ───────────────────────────────
 const CHECKIN_QUESTIONS = [
   "최근 파트너와 충분한 대화를 나누고 있다",
@@ -2712,6 +2802,11 @@ useEffect(() => {
     return <AnniversaryView onBack={() => setView('hub')} />;
   }
 
+  // 관계 타임라인
+  if (view === 'timeline') {
+    return <RelationshipTimelineView onBack={() => setView('hub')} />;
+  }
+
   // 리포트 뷰
   if (view === 'report' && sessionData) {
     return (
@@ -2835,7 +2930,7 @@ useEffect(() => {
                 }}>🔮 이상형 성향 분석<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>5cr</span></button>
               </div>
               {/* 3단계 기능 버튼 행 */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginTop: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
                 <button onClick={() => setView('coach')} style={{
                   padding: '10px 6px', borderRadius: 12, border: `1px solid ${C.amberL}55`, cursor: 'pointer',
                   background: `linear-gradient(135deg, #FFF8EE, #FEF3E2)`, color: C.amber, fontWeight: 700, fontSize: 11,
@@ -2851,6 +2946,11 @@ useEffect(() => {
                   background: `linear-gradient(135deg, ${C.rosePale}, #FFF5F8)`, color: C.rose, fontWeight: 700, fontSize: 11,
                   fontFamily: "'Noto Sans KR', sans-serif", lineHeight: 1.4, textAlign: 'center',
                 }}>🗓️ 기념일 계산기<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>무료</span></button>
+                <button onClick={() => setView('timeline')} style={{
+                  padding: '10px 6px', borderRadius: 12, border: '1px solid #e0e7ff55', cursor: 'pointer',
+                  background: 'linear-gradient(135deg, #eef2ff, #e0e7ff)', color: '#4f46e5', fontWeight: 700, fontSize: 11,
+                  fontFamily: "'Noto Sans KR', sans-serif", lineHeight: 1.4, textAlign: 'center',
+                }}>🗂️ 관계 타임라인<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>무료</span></button>
               </div>
             </div>
           );

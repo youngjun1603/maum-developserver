@@ -846,6 +846,94 @@ app.get('/api/game/emotion-report', async (c) => {
   }
 })
 
+// ── GET /api/game/ai-diary ────────────────────────────────
+// 오늘의 감정+감사 기록 기반 AI 마음 일기 (일 1회 생성, KST 기준)
+app.get('/api/game/ai-diary', async (c) => {
+  const { DB } = c.env
+  const userId = await getGameUserId(c.req.raw, c.env)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+
+  const todayKST = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10)
+  const cacheKey = `diary_${todayKST}`
+
+  const cached = await DB.prepare(
+    `SELECT result_text FROM game_ai_cache WHERE user_id=? AND source_text=? AND game_id='diary' LIMIT 1`
+  ).bind(userId, cacheKey).first<{ result_text: string }>().catch(() => null)
+  if (cached) return c.json({ success: true, data: { diary: cached.result_text, date: todayKST, cached: true } })
+
+  const apiKey = c.env.ANTHROPIC_API_KEY
+  if (!apiKey) return c.json({ success: false, error: 'AI 키 미설정' }, 500)
+
+  // 오늘 감정 기록
+  const moodRow = await DB.prepare(`
+    SELECT metadata FROM game_session_logs
+    WHERE user_id=? AND game_id='mood' AND module_type='checkin'
+      AND date(created_at, '+9 hours') = ?
+    ORDER BY created_at DESC LIMIT 1
+  `).bind(userId, todayKST).first<{ metadata: string | null }>().catch(() => null)
+
+  // 최근 3개 감사 일기
+  const gratRows = await DB.prepare(`
+    SELECT metadata FROM game_session_logs
+    WHERE user_id=? AND game_id='gratitude'
+    ORDER BY created_at DESC LIMIT 3
+  `).bind(userId).all<{ metadata: string | null }>().catch(() => ({ results: [] }))
+
+  const emoLabel: Record<string, string> = {
+    happy:'행복', calm:'평온', tired:'피곤', anxious:'불안', sad:'슬픔', angry:'화남'
+  }
+  let context = ''
+  if (moodRow?.metadata) {
+    try {
+      const m = JSON.parse(moodRow.metadata) as Record<string, unknown>
+      const emo = emoLabel[(m.emotion as string) || ''] || (m.emotion as string) || '평온'
+      const intensity = m.intensity as number || 3
+      const memo = m.memo as string || ''
+      context += `오늘 감정: ${emo} (강도 ${intensity}/5)${memo ? `, 메모: "${memo}"` : ''}. `
+    } catch { /**/ }
+  }
+  if (gratRows.results.length > 0) {
+    const thanks: string[] = []
+    for (const row of gratRows.results) {
+      try {
+        const m = JSON.parse(row.metadata || '{}') as Record<string, unknown>
+        const answers = m.answers as Record<string, string> | undefined
+        if (answers) {
+          const vals = Object.values(answers).filter(Boolean).slice(0, 2)
+          if (vals.length) thanks.push(...vals)
+        }
+      } catch { /**/ }
+    }
+    if (thanks.length) context += `감사한 것: ${thanks.slice(0, 3).join(', ')}.`
+  }
+
+  if (!context.trim()) {
+    return c.json({ success: true, data: { diary: null, date: todayKST, noData: true } })
+  }
+
+  try {
+    const res = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 120,
+        system: `당신은 사용자의 감정 기록을 보고 따뜻한 1인칭 마음 일기를 2-3문장으로 작성합니다. "오늘 나는..."으로 시작하며, 공감적이고 치유적인 언어를 사용하세요. 100자 이내로 작성.`,
+        messages: [{ role: 'user', content: context }],
+      }),
+    })
+    if (!res.ok) return c.json({ success: false, error: `AI 오류 (${res.status})` }, 502)
+    const d = await res.json() as { content: { text: string }[] }
+    const diary = d.content?.[0]?.text?.trim() || ''
+    await DB.prepare(
+      `INSERT INTO game_ai_cache (user_id, source_text, result_text, game_id) VALUES (?,?,?,?)`
+    ).bind(userId, cacheKey, diary, 'diary').run().catch(() => {})
+    return c.json({ success: true, data: { diary, date: todayKST, cached: false } })
+  } catch (e: unknown) {
+    return c.json({ success: false, error: (e as Error)?.message || '실패' }, 500)
+  }
+})
+
 // ── 주간 이메일 발송 헬퍼 ────────────────────────────────────
 async function sendWeeklySummaryEmail(
   env: Bindings,
