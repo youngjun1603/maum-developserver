@@ -22,6 +22,8 @@ type Bindings = {
   SERVICE_URL?: string            // 서비스 도메인 (예: https://maumful.kr)
   COUNSELING_NOTIFY_EMAIL?: string // 상담 알림 수신 이메일
   GOOGLE_CLIENT_ID?: string       // Google OAuth 클라이언트 ID
+  GA_MEASUREMENT_ID?: string      // Google Analytics 4 측정 ID (G-XXXXXXXXXX)
+  NAVER_SITE_KEY?: string         // 네이버 서치어드바이저 인증 코드
   VAPID_PUBLIC_KEY?: string
   VAPID_PRIVATE_KEY?: string
 }
@@ -2287,14 +2289,20 @@ app.get('/api/admin/test-ai', async (c) => {
 app.get('/', (c) => {
   const v = Date.now()
   const googleClientId = c.env.GOOGLE_CLIENT_ID || ''
+  const gaId           = c.env.GA_MEASUREMENT_ID || ''
+  const naverKey       = c.env.NAVER_SITE_KEY || ''
+  const siteUrl        = 'https://maumful.com'
   const res = c.html(`<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>마음풀 — 전문 심리검사 & AI 상담</title>
-  <meta name="description" content="PHQ-9·GAD-7·Big5 등 전문 심리검사 8종을 온라인에서. AI 상담으로 나의 결과를 깊이 이해하세요.">
-  <meta name="robots" content="noai, noimageai">
+  <title>마음풀 — 온라인 심리검사 & AI 마음 상담</title>
+  <meta name="description" content="PHQ-9·GAD-7·Big5 등 8종 심리검사를 무료로 시작하세요. AI 상담으로 내 마음을 더 깊이 이해하고, 제휴 상담사와 직접 연결됩니다.">
+  <meta name="keywords" content="심리검사,PHQ-9,GAD-7,BIG5,우울자가진단,불안검사,번아웃,온라인심리상담,AI상담,마음건강">
+  <meta name="robots" content="index, follow, noai, noimageai">
+  <link rel="canonical" href="${siteUrl}/">
+  ${naverKey ? `<meta name="naver-site-verification" content="${naverKey}">` : ''}
 
   <!-- PWA -->
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
@@ -2307,10 +2315,55 @@ app.get('/', (c) => {
   <link rel="apple-touch-icon" href="/static/icon-192.png">
 
   <!-- Open Graph (SNS 공유) -->
-  <meta property="og:title" content="마음풀 — 전문 심리검사 & AI 상담">
-  <meta property="og:description" content="PHQ-9·Big5 등 8종 전문 심리검사. 가입 즉시 10 크레딧 무료 지급.">
+  <meta property="og:title" content="마음풀 — 온라인 심리검사 & AI 마음 상담">
+  <meta property="og:description" content="PHQ-9·Big5 등 8종 심리검사 무료 시작. 가입 즉시 20 크레딧 지급 · AI 상담 · 제휴 상담사 연결.">
   <meta property="og:type" content="website">
-  <meta property="og:image" content="/static/icon-512.png">
+  <meta property="og:url" content="${siteUrl}/">
+  <meta property="og:image" content="${siteUrl}/static/icon-512.png">
+  <meta property="og:image:width" content="512">
+  <meta property="og:image:height" content="512">
+  <meta property="og:image:alt" content="마음풀 로고">
+  <meta property="og:locale" content="ko_KR">
+  <meta property="og:site_name" content="마음풀">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="마음풀 — 온라인 심리검사 & AI 마음 상담">
+  <meta name="twitter:description" content="PHQ-9·Big5 등 8종 심리검사. 가입 즉시 20 크레딧 무료.">
+  <meta name="twitter:image" content="${siteUrl}/static/icon-512.png">
+
+  <!-- JSON-LD 구조화 데이터 -->
+  <script type="application/ld+json">{
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "name": "마음풀",
+        "url": "${siteUrl}",
+        "logo": "${siteUrl}/static/icon-512.png",
+        "description": "온라인 심리검사와 AI 마음 상담 서비스",
+        "contactPoint": { "@type": "ContactPoint", "email": "support@maumful.com", "contactType": "customer support" }
+      },
+      {
+        "@type": "WebApplication",
+        "name": "마음풀",
+        "url": "${siteUrl}",
+        "applicationCategory": "HealthApplication",
+        "operatingSystem": "Web",
+        "description": "PHQ-9·GAD-7·Big5 등 8종 심리검사와 AI 상담 서비스",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW", "description": "가입 즉시 20 크레딧 무료 지급" },
+        "featureList": ["PHQ-9 우울 자가점검","GAD-7 불안 검사","BIG5 성격검사","DASS-21","번아웃 검사","AI 상담","제휴 상담사 연결"]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          { "@type": "Question", "name": "심리검사 비용은 얼마인가요?", "acceptedAnswer": { "@type": "Answer", "text": "가입 즉시 20 크레딧이 무료 지급되며, PHQ-9·GAD-7·DASS-21은 무료로 이용할 수 있습니다." } },
+          { "@type": "Question", "name": "검사 결과는 의료적 진단인가요?", "acceptedAnswer": { "@type": "Answer", "text": "검사 결과는 자기이해를 위한 참고 자료이며 의료적 진단을 대체하지 않습니다." } },
+          { "@type": "Question", "name": "개인정보는 안전하게 보호되나요?", "acceptedAnswer": { "@type": "Answer", "text": "검사 데이터는 암호화하여 저장되며 제3자에게 제공하지 않습니다." } }
+        ]
+      }
+    ]
+  }</script>
 
   <!-- 폰트 프리로드 -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2327,6 +2380,10 @@ app.get('/', (c) => {
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   ${googleClientId ? `<script src="https://accounts.google.com/gsi/client" async defer></script>` : ''}
   <script>window.GOOGLE_CLIENT_ID = ${JSON.stringify(googleClientId)};</script>
+  ${gaId ? `
+  <!-- Google Analytics 4 -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=${gaId}"></script>
+  <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${gaId}',{anonymize_ip:true});</script>` : ''}
 </head>
 <body>
   <div id="root"></div>

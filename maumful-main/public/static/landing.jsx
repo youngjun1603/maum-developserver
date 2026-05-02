@@ -844,7 +844,7 @@ function LandingPage({ setView, isLoggedIn }) {
             }} />
 
             {[
-              { step: '01', icon: '📋', title: '회원가입', desc: '이메일로 30초 만에 가입. 즉시 10 크레딧 지급됩니다.', note: '검사 2회 + AI채팅 5회 무료' },
+              { step: '01', icon: '📋', title: '회원가입', desc: '이메일로 30초 만에 가입. 즉시 20 크레딧 지급됩니다.', note: '검사 4회 + AI채팅 5회 무료' },
               { step: '02', icon: '🔍', title: '검사 선택 & 수행', desc: '8가지 검사 중 원하는 것을 선택. 질문에 솔직하게 답하세요.', note: '최소 5분이면 완료' },
               { step: '03', icon: '💬', title: 'AI와 결과 상담', desc: '검사 완료 즉시 AI 상담사와 대화로 결과를 분석합니다.', note: '내 언어로 쉽게 이해' },
             ].map((s, i) => (
@@ -900,7 +900,7 @@ function LandingPage({ setView, isLoggedIn }) {
           지금 바로 시작하세요
         </h2>
         <p style={{ fontSize: 17, color: '#5A5A5A', marginBottom: 36 }}>
-          가입 즉시 10 크레딧 지급 — 심리검사 4회 + AI 상담 5회 무료
+          가입 즉시 20 크레딧 지급 — 심리검사 4회 + AI 상담 5회 무료
         </p>
         <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
           <button
@@ -1114,7 +1114,7 @@ function LandingPage({ setView, isLoggedIn }) {
         <span>
           <strong>본 서비스는 자기이해 및 정보 제공 목적의 콘텐츠 서비스입니다.</strong>
           {' '}심리검사 결과와 AI 상담은 의료적 진단·치료를 대체하지 않습니다.
-          {' '}증상이 지속되면 전문의 상담을 권장합니다.
+          {' '}마음이 힘드실 땐 상담 연결을 이용해 보세요.
         </span>
       </div>
 
@@ -1126,9 +1126,11 @@ function LandingPage({ setView, isLoggedIn }) {
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap',
       }}>
         <span>🆘</span>
-        <strong>자살예방상담전화 1393</strong>
+        <strong>자살예방상담전화 109</strong>
+        <span>·</span>
+        <strong>정신건강위기상담전화 1577-0199</strong>
         <span>—</span>
-        <span>위기 상황이라면 전문가와 상담하세요 · 24시간 무료</span>
+        <span>24시간 무료 · 보건복지부</span>
       </div>
 
       {/* ── FOOTER ──────────────────────────────────────── */}
@@ -1181,7 +1183,7 @@ function LandingPage({ setView, isLoggedIn }) {
             color: 'rgba(255,255,255,0.35)', lineHeight: 1.9,
           }}>
             <p style={{ marginBottom: 6 }}>
-              본 서비스는 자기이해 및 정보 제공 목적의 콘텐츠 서비스입니다. 심리검사 결과 및 AI 상담은 의료적 진단·치료를 대체하지 않습니다. 증상이 지속되면 정신건강의학과 전문의 상담을 권장합니다.
+              본 서비스는 자기이해 및 정보 제공 목적의 콘텐츠 서비스입니다. 심리검사 결과 및 AI 상담은 의료적 진단·치료를 대체하지 않습니다. 마음이 많이 힘드실 땐 아래 무료 상담을 이용해 보세요. 자살예방상담전화 109 · 정신건강위기상담전화 1577-0199 (24시간)
             </p>
             <p style={{ marginBottom: 6 }}>
               개인정보 처리 문의: support@maumful.com · 개인정보 침해신고: 개인정보보호위원회 182
