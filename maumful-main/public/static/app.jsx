@@ -3121,7 +3121,7 @@ function PsychologicalTestSystem() {
             return (
               <div className="mb-6">
                 <h3 className="font-bold text-gray-700 mb-3">✨ 추천 검사</h3>
-                <div className={`grid grid-cols-${top.length > 1 ? 2 : 1} gap-3`}>
+                <div className={top.length > 1 ? 'grid grid-cols-2 gap-3' : 'grid grid-cols-1 gap-3'}>
                   {top.map(r => (
                     <button key={r.type} onClick={() => startSelectedTest(r.type)}
                       className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-4 text-left border-2 border-emerald-100 hover:border-emerald-400 hover:shadow-md transition group">
