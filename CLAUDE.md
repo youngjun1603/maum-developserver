@@ -926,3 +926,57 @@ maumful-main/migrations/0013_error_logs.sql
 **🔴 리뷰 버튼 조건 오류**
 - `maumful-main/public/static/counseling.jsx` line 334: `{(canVideo||canCancel)&&(` → `{(canVideo||canCancel||canReview)&&(}`
 - `completed` 상태 예약에서 리뷰 버튼이 전혀 표시되지 않던 버그 수정
+
+---
+
+## 장기 과제 L~N (2026-05-02)
+
+### L: 검사 결과 공유 버튼
+
+**maumful-main/public/static/app.jsx**
+
+- `ShareResultButton({ text })` 컴포넌트 추가 (AiAnalysisBox 정의 바로 위)
+  - Web Share API 우선 (`navigator.share`), fallback: clipboard 복사
+- 6개 결과 뷰에 추가: PHQ9 / GAD7 / BURNOUT / BIG5 / LOST / DSI
+  - 각 뷰의 `<AiAnalysisBox />` 바로 뒤, ExpertCTA 앞에 삽입
+  - 검사 유형별 맞춤 공유 텍스트 (점수/레벨/유형 포함)
+
+### M: 마음게임 AI 마음 일기
+
+**maumgame-main/src/index.tsx**
+
+```typescript
+// GET /api/game/ai-diary
+// 오늘 감정 기록(mood game) + 최근 감사 일기(gratitude) 기반 1인칭 마음 일기
+// "오늘 나는..."으로 시작, 2-3문장, 100자 이내
+// game_ai_cache(game_id='diary') KST 일 단위 캐시
+// 감정/감사 데이터 없으면 noData:true 반환
+```
+
+**maumgame-main/public/static/game_hub.jsx**
+
+- `AIDiarySection` 컴포넌트 추가 (EmotionWeeklyReport 위에 삽입):
+  - 초기 상태: "✍️ 일기 생성" 버튼 표시
+  - 생성 후: 초록 그라디언트 배경에 일기 텍스트 + 공유 버튼
+  - `noData` 시 컴포넌트 숨김 (감정/감사 기록이 없는 경우)
+
+### N: 마음커플 관계 타임라인
+
+**package/maumcouple/src/index.tsx**
+
+```typescript
+// GET /api/couple/timeline
+// 커플 세션(reported/both_done/expired) + 관계 체크인 통합 → 날짜 내림차순 정렬
+// 아이템 타입: 'report' / 'session' / 'checkin'
+// 각 항목: type, date, title, subtitle, score(optional), emoji
+```
+
+**package/maumcouple/public/static/couple_hub.jsx**
+
+- `RelationshipTimelineView` 컴포넌트 추가:
+  - 수직 타임라인 레이아웃 (왼쪽 라인 + 원형 아이콘)
+  - 타입별 색상 구분: report(로즈) / session(스카이) / checkin(그린)
+  - AI 리포트는 궁합 점수 프로그레스 바 표시
+  - 관계 체크인은 xx/50점 프로그레스 바 표시
+- `CoupleHubApp`에 `'timeline'` 뷰 라우팅 추가
+- 허브 빠른 액션 그리드: 3열 → 2×2 변경 + 🗂️ 관계 타임라인 버튼 추가
