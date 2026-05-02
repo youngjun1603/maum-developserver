@@ -22,6 +22,8 @@ type Bindings = {
   SERVICE_URL?: string            // 서비스 도메인 (예: https://maumful.kr)
   COUNSELING_NOTIFY_EMAIL?: string // 상담 알림 수신 이메일
   GOOGLE_CLIENT_ID?: string       // Google OAuth 클라이언트 ID
+  VAPID_PUBLIC_KEY?: string
+  VAPID_PRIVATE_KEY?: string
 }
 
 type User = {

@@ -331,7 +331,7 @@ function MyAppointments({setView}){
             <div style={{fontSize:12,color:'#9A9A9A',marginTop:1}}>{SESSION_TYPES[a.session_type]?.icon} {SESSION_TYPES[a.session_type]?.label} · {fmt(a.fee_amount)}</div>
           </div>
         </div>
-        {(canVideo||canCancel)&&(
+        {(canVideo||canCancel||canReview)&&(
           <div style={{display:'flex',gap:7,marginTop:12,paddingTop:10,borderTop:'1px solid rgba(0,0,0,.06)'}}>
             {canVideo&&<button onClick={()=>setVideoRoom({roomId:a.video_room_id,counselorName:a.counselor_name})} style={{flex:1,padding:'9px 0',background:'#2D6A4F',color:'white',border:'none',borderRadius:8,fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:"'Noto Sans KR',sans-serif"}}>📹 화상 상담 입장</button>}
             {canCancel&&<button onClick={()=>handleCancel(a.id)} disabled={cancelling===a.id} style={{flex:1,padding:'9px 0',background:'white',color:'#9A9A9A',border:'1px solid rgba(0,0,0,.12)',borderRadius:8,fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:"'Noto Sans KR',sans-serif"}}>{cancelling===a.id?'취소 중...':'예약 취소'}</button>}

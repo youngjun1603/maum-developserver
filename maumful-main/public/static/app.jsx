@@ -3087,6 +3087,59 @@ function PsychologicalTestSystem() {
             <div className="text-xs opacity-70 mt-1">검사 {Math.floor(credits / 10)}회 · AI 채팅 {Math.floor(credits / 5)}회 가능</div>
           </div>
 
+          {/* 추천 검사 카드 — 이력 기반 개인화 */}
+          {(() => {
+            if (testHistory.length === 0) return null;
+            const now = new Date();
+            const doneTypes = new Set(testHistory.map(h => h.test_type));
+            const lastDoneMap = {};
+            testHistory.forEach(h => { if (!lastDoneMap[h.test_type]) lastDoneMap[h.test_type] = new Date(h.performed_at); });
+            const daysSince = t => Math.floor((now - (lastDoneMap[t] || now)) / 86400000);
+            const recs = [];
+
+            // 우선순위별 추천 로직
+            if (!doneTypes.has('PHQ9'))
+              recs.push({ type:'PHQ9', emoji:'😔', reason:'우울 상태를 아직 확인하지 않았어요', free: true });
+            else if (daysSince('PHQ9') >= 30)
+              recs.push({ type:'PHQ9', emoji:'😔', reason:`마지막 우울 검사가 ${daysSince('PHQ9')}일 전이에요`, free: true });
+
+            if (!doneTypes.has('GAD7'))
+              recs.push({ type:'GAD7', emoji:'😰', reason:'불안 검사를 아직 받지 않았어요', free: true });
+            else if (daysSince('GAD7') >= 30)
+              recs.push({ type:'GAD7', emoji:'😰', reason:`마지막 불안 검사가 ${daysSince('GAD7')}일 전이에요`, free: true });
+
+            if (!doneTypes.has('BIG5'))
+              recs.push({ type:'BIG5', emoji:'🌟', reason:'성격 5요인으로 자신을 더 깊이 이해해 보세요', free: false });
+            else if (daysSince('BIG5') >= 90)
+              recs.push({ type:'BIG5', emoji:'🌟', reason:`성격 검사 이후 ${daysSince('BIG5')}일이 지났어요`, free: false });
+
+            if (!doneTypes.has('BURNOUT') && doneTypes.has('PHQ9'))
+              recs.push({ type:'BURNOUT', emoji:'🔥', reason:'번아웃 위험도를 함께 확인해 보세요', free: false });
+
+            const top = recs.slice(0, 2);
+            if (top.length === 0) return null;
+            return (
+              <div className="mb-6">
+                <h3 className="font-bold text-gray-700 mb-3">✨ 추천 검사</h3>
+                <div className={`grid grid-cols-${top.length > 1 ? 2 : 1} gap-3`}>
+                  {top.map(r => (
+                    <button key={r.type} onClick={() => startSelectedTest(r.type)}
+                      className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-4 text-left border-2 border-emerald-100 hover:border-emerald-400 hover:shadow-md transition group">
+                      <div className="text-2xl mb-1">{r.emoji}</div>
+                      <div className="font-bold text-gray-800 text-sm">{testMeta[r.type]?.label}</div>
+                      <div className="text-xs text-gray-500 mt-1 leading-tight">{r.reason}</div>
+                      <div className="mt-2">
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${r.free ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                          {r.free ? '✓ 무료' : '10 크레딧'}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* 검사 목록 */}
           <h3 className="font-bold text-gray-700 mb-3">심리검사 선택</h3>
           <div className="grid grid-cols-2 gap-3 mb-6">
@@ -3422,6 +3475,77 @@ function PsychologicalTestSystem() {
                 </div>
               );
             })()}
+            {/* SVG 라인 차트 — 시계열 추이 */}
+            {(() => {
+              const scored = ['PHQ9','GAD7','BURNOUT','DSI'];
+              const scoreMax = { PHQ9: 27, GAD7: 21, BURNOUT: 240, DSI: 125 };
+              const colors   = { PHQ9:'#6366f1', GAD7:'#f43f5e', BURNOUT:'#f97316', DSI:'#10b981' };
+              const labels   = { PHQ9:'PHQ-9', GAD7:'GAD-7', BURNOUT:'번아웃', DSI:'자아분화' };
+              const series = scored.map(type => {
+                const rows = testHistory
+                  .filter(h => h.test_type === type && h.score != null)
+                  .slice().sort((a,b) => new Date(a.performed_at) - new Date(b.performed_at));
+                return rows.length >= 2 ? { type, rows } : null;
+              }).filter(Boolean);
+              if (series.length === 0) return null;
+
+              const W = 320, H = 110, PAD = { top:10, bottom:30, left:28, right:10 };
+              const innerW = W - PAD.left - PAD.right;
+              const innerH = H - PAD.top - PAD.bottom;
+
+              const allDates = [...new Set(series.flatMap(s => s.rows.map(r => r.performed_at)))].sort();
+              const xScale = idx => allDates.length < 2 ? PAD.left + innerW/2 : PAD.left + (idx / (allDates.length - 1)) * innerW;
+              const yScale = (score, max) => PAD.top + innerH - (score / max) * innerH;
+              const dateLabel = d => { const dt = new Date(d); return `${dt.getMonth()+1}/${dt.getDate()}`; };
+
+              return (
+                <div className="mb-4 p-4 bg-white rounded-2xl border border-gray-100">
+                  <div className="text-xs font-bold text-gray-600 mb-2">📉 점수 시계열 차트</div>
+                  <div className="flex flex-wrap gap-3 mb-2">
+                    {series.map(s => (
+                      <div key={s.type} className="flex items-center gap-1">
+                        <div className="w-3 h-1.5 rounded-full" style={{background:colors[s.type]}}/>
+                        <span className="text-xs text-gray-500">{labels[s.type]}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',height:'auto',overflow:'visible'}}>
+                    {/* 격자선 */}
+                    {[25,50,75,100].map(pct => {
+                      const y = PAD.top + innerH - (pct/100)*innerH;
+                      return (
+                        <g key={pct}>
+                          <line x1={PAD.left} y1={y} x2={W-PAD.right} y2={y} stroke="#f0f0f0" strokeWidth="1"/>
+                          <text x={PAD.left-4} y={y+3} textAnchor="end" fontSize="7" fill="#ccc">{pct}</text>
+                        </g>
+                      );
+                    })}
+                    {/* X축 날짜 레이블 */}
+                    {allDates.filter((_, i) => allDates.length <= 6 || i % Math.ceil(allDates.length/5) === 0 || i === allDates.length-1).map((d,i,arr) => (
+                      <text key={d} x={xScale(allDates.indexOf(d))} y={H-2} textAnchor="middle" fontSize="7" fill="#aaa">{dateLabel(d)}</text>
+                    ))}
+                    {/* 라인 + 점 */}
+                    {series.map(s => {
+                      const max = scoreMax[s.type] || 100;
+                      const pts = s.rows.map(r => {
+                        const xi = allDates.indexOf(r.performed_at);
+                        return [xScale(xi), yScale(r.score, max)];
+                      });
+                      const d = 'M ' + pts.map(p => p.join(',')).join(' L ');
+                      return (
+                        <g key={s.type}>
+                          <path d={d} fill="none" stroke={colors[s.type]} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          {pts.map(([x,y],i) => (
+                            <circle key={i} cx={x} cy={y} r="3" fill={colors[s.type]}/>
+                          ))}
+                        </g>
+                      );
+                    })}
+                  </svg>
+                </div>
+              );
+            })()}
+
             {/* 전체 이력 목록 */}
             <div className="space-y-2">
               {testHistory.map((h, i) => {

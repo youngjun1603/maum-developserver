@@ -1227,17 +1227,131 @@ app.get('/api/couple/admin/stats', async (c) => {
   })
 })
 
+// ── 주간 커플 인사이트 이메일 ──────────────────────────────
+async function sendCoupleInsightEmail(
+  env: Bindings,
+  to: string,
+  name: string,
+  data: { checkinScore: number | null; prevScore: number | null; partnerName: string | null; sessionStatus: string }
+): Promise<void> {
+  if (!env.RESEND_API_KEY) return
+  const { checkinScore, prevScore, partnerName, sessionStatus } = data
+  const displayName = name || '회원'
+
+  const scoreLine = checkinScore != null
+    ? `<p style="font-size:15px;color:#333;margin:0 0 8px">📊 이번 달 관계 건강도: <strong style="color:#E05A8A">${checkinScore}점</strong>${prevScore != null ? ` (지난달 대비 ${checkinScore >= prevScore ? `+${checkinScore - prevScore}` : checkinScore - prevScore}점)` : ''}</p>`
+    : `<p style="font-size:14px;color:#888;margin:0 0 8px">💡 이번 달 관계 성장 체크인을 아직 하지 않았어요.</p>`
+
+  const partnerLine = partnerName
+    ? `<p style="font-size:14px;color:#555;margin:0 0 8px">💕 파트너 <strong>${partnerName}</strong>님과 함께하고 있어요</p>`
+    : `<p style="font-size:14px;color:#888;margin:0 0 8px">아직 파트너가 연결되지 않았어요. 코드를 공유해 보세요!</p>`
+
+  const html = `<!DOCTYPE html><html><body style="font-family:sans-serif;background:#fdf2f8;margin:0;padding:20px">
+<div style="max-width:480px;margin:0 auto;background:white;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.06)">
+  <div style="background:linear-gradient(135deg,#E05A8A,#f472b6);padding:28px 24px;text-align:center">
+    <div style="font-size:32px;margin-bottom:8px">💕</div>
+    <h1 style="margin:0;font-size:20px;color:white;font-weight:700">이번 주 마음커플 인사이트</h1>
+    <p style="margin:6px 0 0;color:rgba(255,255,255,.85);font-size:13px">${displayName}님을 위한 관계 요약</p>
+  </div>
+  <div style="padding:24px">
+    ${partnerLine}
+    ${scoreLine}
+    <div style="background:#fdf2f8;border-radius:12px;padding:16px;margin:16px 0">
+      <p style="font-size:13px;color:#9d4f7c;font-weight:700;margin:0 0 8px">💬 이번 주 대화 질문</p>
+      <p style="font-size:14px;color:#555;margin:0;line-height:1.6">파트너에게 물어보세요: <em>"요즘 당신에게 가장 고마운 순간은 언제였나요?"</em></p>
+    </div>
+    <div style="text-align:center;margin-top:20px">
+      <a href="https://couple.maumful.com" style="display:inline-block;background:linear-gradient(135deg,#E05A8A,#f472b6);color:white;padding:12px 28px;border-radius:24px;text-decoration:none;font-weight:700;font-size:14px">마음커플 열기 →</a>
+    </div>
+  </div>
+  <div style="padding:16px 24px;border-top:1px solid #f0f0f0;text-align:center">
+    <p style="font-size:11px;color:#bbb;margin:0">마음커플 · <a href="https://couple.maumful.com" style="color:#E05A8A">수신 거부</a></p>
+  </div>
+</div>
+</body></html>`
+
+  await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from: '마음커플 <noreply@maumful.com>',
+      to,
+      subject: `💕 ${displayName}님의 이번 주 관계 인사이트`,
+      html,
+    }),
+  }).catch(e => console.error('[Email] 발송 실패', e))
+}
+
 // ── BUG-6 FIX: export default 단일 객체로 통합 (Hono + Cron 핸들러)
 // Cron WHERE 조건 정리: reported 상태는 IN 목록에 없으므로 AND 조건 불필요
 export default {
   fetch: app.fetch,
-  async scheduled(_event: ScheduledEvent, env: Bindings, _ctx: ExecutionContext) {
-    const result = await env.DB.prepare(
-      `UPDATE couple_sessions
-          SET status = 'expired', updated_at = CURRENT_TIMESTAMP
-        WHERE status IN ('waiting', 'both_done')
-          AND expires_at < datetime('now')`
-    ).run()
-    console.log(`[Cron] 만료 세션 정리: ${result.meta.changes}건`)
+  async scheduled(event: ScheduledEvent, env: Bindings, _ctx: ExecutionContext) {
+    // 매월 1일 — 만료 세션 정리
+    if (event.cron === '0 3 1 * *') {
+      const result = await env.DB.prepare(
+        `UPDATE couple_sessions
+            SET status = 'expired', updated_at = CURRENT_TIMESTAMP
+          WHERE status IN ('waiting', 'both_done')
+            AND expires_at < datetime('now')`
+      ).run()
+      console.log(`[Cron] 만료 세션 정리: ${result.meta.changes}건`)
+      return
+    }
+
+    // 매주 월요일 08:00 KST (일요일 23:00 UTC) — 주간 인사이트 이메일
+    if (event.cron === '0 23 * * 0') {
+      if (!env.RESEND_API_KEY) { console.log('[Cron] RESEND_API_KEY 미설정 — 이메일 발송 건너뜀'); return }
+
+      // 활성 커플 세션 또는 최근 체크인 기록이 있는 사용자 조회
+      const users = await env.DB.prepare(`
+        SELECT DISTINCT u.id, u.email, u.nickname
+        FROM users u
+        WHERE u.id IN (
+          SELECT DISTINCT host_user_id FROM couple_sessions WHERE status IN ('waiting','both_done','reported') AND created_at > datetime('now','-30 days')
+          UNION
+          SELECT DISTINCT guest_user_id FROM couple_sessions WHERE guest_user_id IS NOT NULL AND status IN ('both_done','reported') AND created_at > datetime('now','-30 days')
+        )
+        AND u.email IS NOT NULL
+        LIMIT 200
+      `).all<{ id: number; email: string; nickname: string | null }>()
+
+      let sent = 0
+      for (const u of users.results) {
+        try {
+          // 이번 달 + 지난달 체크인 조회
+          const checkins = await env.DB.prepare(
+            `SELECT total_score, created_at FROM relationship_checkins WHERE user_id=? ORDER BY created_at DESC LIMIT 2`
+          ).bind(u.id).all<{ total_score: number; created_at: string }>()
+
+          // 가장 최근 커플 세션 파트너 이름 조회
+          const session = await env.DB.prepare(
+            `SELECT host_user_id, guest_user_id FROM couple_sessions WHERE (host_user_id=? OR guest_user_id=?) AND status IN ('both_done','reported') ORDER BY created_at DESC LIMIT 1`
+          ).bind(u.id, u.id).first<{ host_user_id: number; guest_user_id: number | null }>()
+
+          let partnerName: string | null = null
+          if (session) {
+            const partnerId = session.host_user_id === u.id ? session.guest_user_id : session.host_user_id
+            if (partnerId) {
+              const partner = await env.DB.prepare('SELECT nickname FROM users WHERE id=?').bind(partnerId).first<{ nickname: string | null }>()
+              partnerName = partner?.nickname || null
+            }
+          }
+
+          await sendCoupleInsightEmail(env, u.email, u.nickname || '회원', {
+            checkinScore: checkins.results[0]?.total_score ?? null,
+            prevScore:    checkins.results[1]?.total_score ?? null,
+            partnerName,
+            sessionStatus: 'active',
+          })
+          sent++
+          // 과도한 API 호출 방지
+          await new Promise(r => setTimeout(r, 100))
+        } catch (e) {
+          console.error(`[Cron] 이메일 발송 실패 uid=${u.id}`, e)
+        }
+      }
+      console.log(`[Cron] 주간 인사이트 이메일 발송: ${sent}건`)
+    }
   },
 }
