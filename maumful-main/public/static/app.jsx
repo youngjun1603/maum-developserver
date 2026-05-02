@@ -2421,7 +2421,7 @@ function PsychologicalTestSystem() {
           <input type="email" placeholder="이메일" value={signupForm.email}
             onChange={e => setSignupForm(p => ({ ...p, email: e.target.value }))}
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm" />
-          <input type="text" placeholder="닉네임 (선택)" value={signupForm.nickname}
+          <input type="text" placeholder="닉네임 (AI 상담에서 이름으로 불려요)" value={signupForm.nickname}
             onChange={e => setSignupForm(p => ({ ...p, nickname: e.target.value }))}
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm" />
           <input type="password" placeholder="비밀번호 (8자 이상)" value={signupForm.password}
@@ -2974,9 +2974,40 @@ function PsychologicalTestSystem() {
             return null;
           })()}
 
+          {/* 신규 회원 시작 가이드 */}
+          {testHistory.length === 0 && !localStorage.getItem('maumful_guide_dismissed') && (
+            <div className="bg-gradient-to-br from-green-50 to-teal-50 border border-green-200 rounded-2xl p-5 mb-5">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-bold text-green-800">🌿 마음풀 시작하기</p>
+                <button onClick={() => { localStorage.setItem('maumful_guide_dismissed', '1'); setView('memberDashboard'); }}
+                  className="text-xs text-green-400 hover:text-green-600">✕ 닫기</button>
+              </div>
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                {[
+                  { step: '1', icon: '📋', title: '검사 선택', desc: '아래에서 원하는 심리검사를 선택하세요' },
+                  { step: '2', icon: '🧠', title: 'AI 분석', desc: '검사 완료 후 AI가 결과를 해석해 드려요' },
+                  { step: '3', icon: '💬', title: 'AI 상담', desc: '궁금한 점을 AI 상담사에게 물어보세요' },
+                ].map(({ step, icon, title, desc }) => (
+                  <div key={step} className="bg-white rounded-xl p-3 text-center border border-green-100">
+                    <div className="text-xl mb-1">{icon}</div>
+                    <div className="text-xs font-bold text-green-800">STEP {step}</div>
+                    <div className="text-xs font-semibold text-gray-700 mt-0.5">{title}</div>
+                    <div className="text-xs text-gray-400 mt-0.5 leading-tight">{desc}</div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-green-600 text-center">아래 검사 카드를 눌러 지금 바로 시작해 보세요 👇</p>
+            </div>
+          )}
+
           {/* 인사말 */}
           <div className="mb-6">
-            <h2 className="text-xl font-bold text-gray-800">안녕하세요, {currentUser?.nickname || '회원'}님 👋</h2>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-xl font-bold text-gray-800">안녕하세요, {currentUser?.nickname || '회원'}님 👋</h2>
+              {counselingMode === 'biblical' && (
+                <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">✝️ 기독교 상담</span>
+              )}
+            </div>
             <p className="text-gray-500 text-sm mt-1">검사 1회에 10 크레딧이 차감됩니다</p>
           </div>
 
