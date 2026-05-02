@@ -655,6 +655,150 @@ app.post('/api/couple/partner-submit', async (c) => {
   return c.json({ success: true, data: { status: newStatus } })
 })
 
+// ── GET /api/couple/checkins ──────────────────────────────
+// 관계 성장 체크인 기록 조회 (최근 6개)
+app.get('/api/couple/checkins', async (c) => {
+  const { DB } = c.env
+  const userId = await getCoupleUserId(c.req.raw, c.env)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+
+  const rows = await DB.prepare(
+    `SELECT id, total_score, answers_json, created_at
+     FROM relationship_checkins WHERE user_id=?
+     ORDER BY created_at DESC LIMIT 6`
+  ).bind(userId).all<{ id: number; total_score: number; answers_json: string; created_at: string }>()
+
+  // 이번 달 체크인 여부
+  const now = new Date(Date.now() + 9 * 3600 * 1000)
+  const thisMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`
+  const donThisMonth = rows.results.some(r => r.created_at.startsWith(thisMonth))
+
+  return c.json({ success: true, data: { checkins: rows.results, doneThisMonth: donThisMonth } })
+})
+
+// ── POST /api/couple/checkin ───────────────────────────────
+// 관계 성장 체크인 저장 (무료, 월 1회 제한)
+app.post('/api/couple/checkin', async (c) => {
+  const { DB } = c.env
+  const userId = await getCoupleUserId(c.req.raw, c.env)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+
+  const { answers } = await c.req.json().catch(() => ({})) as { answers?: Record<string, number> }
+  if (!answers || typeof answers !== 'object') return c.json({ success: false, error: '답변 데이터 필요' }, 400)
+
+  // 이번 달 체크인 중복 방지 (KST 기준)
+  const now = new Date(Date.now() + 9 * 3600 * 1000)
+  const thisMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`
+  const existing = await DB.prepare(
+    `SELECT id FROM relationship_checkins WHERE user_id=? AND created_at >= ? AND created_at < ?`
+  ).bind(userId, `${thisMonth}-01`, `${thisMonth}-32`).first()
+  if (existing) return c.json({ success: false, error: '이번 달 체크인은 이미 완료했습니다.', doneThisMonth: true }, 409)
+
+  const values = Object.values(answers).map(Number).filter(v => v >= 1 && v <= 5)
+  if (values.length < 5) return c.json({ success: false, error: '충분한 답변이 필요합니다.' }, 400)
+  const totalScore = values.reduce((a, b) => a + b, 0)
+
+  await DB.prepare(
+    `INSERT INTO relationship_checkins (user_id, total_score, answers_json) VALUES (?,?,?)`
+  ).bind(userId, totalScore, JSON.stringify(answers)).run()
+
+  return c.json({ success: true, data: { totalScore, maxScore: values.length * 5 } })
+})
+
+// ── POST /api/couple/date-course ──────────────────────────
+// AI 데이트 코스 추천 (3cr)
+app.post('/api/couple/date-course', async (c) => {
+  const { DB } = c.env
+  const userId = await getCoupleUserId(c.req.raw, c.env)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+
+  const user = await DB.prepare('SELECT email, credits, nickname FROM users WHERE id=?')
+    .bind(userId).first<{ email: string; credits: number; nickname: string | null }>()
+  if (!user) return c.json({ success: false, error: '사용자 없음' }, 404)
+
+  const { region, mood, duration, budget } = await c.req.json().catch(() => ({})) as {
+    region?: string; mood?: string; duration?: string; budget?: string
+  }
+  if (!region || !mood || !duration || !budget) {
+    return c.json({ success: false, error: '지역, 분위기, 시간, 예산을 모두 선택해주세요.' }, 400)
+  }
+
+  const isMaster = isMasterAccount(user.email)
+  const COST = 3
+  if (!isMaster && user.credits < COST) {
+    return c.json({ success: false, error: `크레딧 부족 (보유: ${user.credits}, 필요: ${COST})`, needsCharge: true }, 402)
+  }
+
+  // 커플 BIG5/LOST 데이터 가져오기 (개인화 추천)
+  const [big5Row, lostRow] = await Promise.all([
+    DB.prepare(`SELECT result_json FROM test_history WHERE user_id=? AND test_type='BIG5' AND result_json IS NOT NULL ORDER BY performed_at DESC LIMIT 1`).bind(userId).first<{ result_json: string }>(),
+    DB.prepare(`SELECT result_json FROM test_history WHERE user_id=? AND test_type='LOST' AND result_json IS NOT NULL ORDER BY performed_at DESC LIMIT 1`).bind(userId).first<{ result_json: string }>(),
+  ])
+
+  const name = user.nickname || user.email.split('@')[0]
+  let personalityCtx = ''
+  try {
+    if (big5Row) {
+      const b = JSON.parse(big5Row.result_json) as Record<string, number>
+      const isExtrovert = (b.E || 50) > 55
+      const isOpenMinded = (b.O || 50) > 55
+      personalityCtx = `\n[성격 참고] ${name}은(는) ${isExtrovert ? '외향적' : '내향적'}이고 ${isOpenMinded ? '새로운 경험을 좋아함' : '익숙한 환경을 선호함'}.`
+    }
+    if (lostRow) {
+      const l = JSON.parse(lostRow.result_json) as Record<string, string>
+      if (l.typeCode) personalityCtx += ` LOST 유형: ${l.typeCode}.`
+    }
+  } catch {}
+
+  const prompt = `당신은 커플 데이트 플래너입니다. 아래 조건에 맞는 데이트 코스를 추천해주세요.${personalityCtx}
+
+[조건]
+- 지역: ${region}
+- 분위기: ${mood}
+- 소요 시간: ${duration}
+- 예산: ${budget}
+
+[작성 형식 — 반드시 이 형식으로만 작성]
+📍 추천 장소
+1. [장소명] — 한줄 설명 (소요시간)
+2. [장소명] — 한줄 설명 (소요시간)
+3. [장소명] — 한줄 설명 (소요시간)
+
+🗺️ 추천 동선
+장소1 → 장소2 → 장소3 흐름 설명 (2줄 이내)
+
+✨ 오늘의 데이트 포인트
+이 코스의 특별한 점 한 가지 (2줄 이내)
+
+💬 함께 나눌 대화 주제
+대화 제안 한 가지
+
+전체 300자 이내로 간결하게 작성하세요.`
+
+  const apiKey = await getAnthropicKey(c.env)
+  if (!apiKey) return c.json({ error: 'API 키 미설정' }, 500)
+
+  const res = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 800, stream: false, messages: [{ role: 'user', content: prompt }] }),
+  })
+
+  if (!res.ok) {
+    const errText = await res.text()
+    return c.json({ error: 'AI 오류', detail: errText }, 502)
+  }
+
+  const aiData = await res.json() as { content: Array<{ type: string; text: string }> }
+  const courseText = aiData.content?.find(b => b.type === 'text')?.text ?? ''
+
+  if (COST > 0 && !isMaster) {
+    await spendCredits(DB, userId, COST, 'date-course')
+  }
+
+  return c.json({ success: true, data: { course: courseText, region, mood, duration, budget } })
+})
+
 // ── POST /api/couple/solo-analysis ────────────────────────
 // 나 혼자 심리검사 결과 기반 AI 이상형 성향 분석 (5cr)
 app.post('/api/couple/solo-analysis', async (c) => {

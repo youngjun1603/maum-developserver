@@ -629,6 +629,487 @@ function MiniLoveTestView({ onBack }) {
   );
 }
 
+// ── RelationshipCheckinView ───────────────────────────────
+const CHECKIN_QUESTIONS = [
+  "최근 파트너와 충분한 대화를 나누고 있다",
+  "파트너가 나를 잘 이해해준다고 느낀다",
+  "갈등이 생겼을 때 건강하게 해결할 수 있다",
+  "파트너와 함께하는 시간이 충분하다",
+  "서로의 미래를 함께 그릴 수 있다",
+  "파트너에게 나의 감정을 솔직하게 말할 수 있다",
+  "서로를 충분히 지지하고 응원한다고 느낀다",
+  "파트너와의 관계가 내 삶에 긍정적인 영향을 준다",
+  "파트너의 노력과 배려가 느껴진다",
+  "전반적으로 우리 관계에 만족한다",
+];
+
+const SCORE_LABELS = ['매우 아니다', '아니다', '보통', '그렇다', '매우 그렇다'];
+
+function checkinScoreInfo(score, maxScore) {
+  const pct = Math.round(score / maxScore * 100);
+  if (pct >= 80) return { emoji: '💚', label: '매우 건강한 관계', color: '#4A9A5A', pale: '#EAF5EC' };
+  if (pct >= 60) return { emoji: '💛', label: '좋은 관계 (성장 중)', color: '#C4954A', pale: '#FEF8EC' };
+  if (pct >= 40) return { emoji: '🧡', label: '함께 노력이 필요해요', color: '#D4634A', pale: '#FEF0EC' };
+  return { emoji: '❤️‍🩹', label: '더 많은 관심이 필요한 시기', color: C.rose, pale: C.rosePale };
+}
+
+function RelationshipCheckinView({ onBack, onDone }) {
+  const [step, setStep]       = useState(-1); // -1=인트로, 0..9=문항, 10=완료
+  const [answers, setAnswers] = useState({});
+  const [history, setHistory] = useState(null);
+  const [doneThisMonth, setDoneThisMonth] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [result, setResult]   = useState(null);
+  const [error, setError]     = useState('');
+
+  useEffect(() => {
+    api.get('/api/couple/checkins').then(res => {
+      if (res.success) {
+        setHistory(res.data.checkins);
+        setDoneThisMonth(res.data.doneThisMonth);
+      }
+    });
+  }, []);
+
+  async function handleSubmit() {
+    setSubmitting(true); setError('');
+    try {
+      const res = await api.post('/api/couple/checkin', { answers });
+      if (res.success) {
+        setResult(res.data);
+        setStep(10);
+        if (onDone) onDone();
+      } else {
+        setError(res.error || '저장 실패');
+      }
+    } catch { setError('서버 오류'); }
+    finally { setSubmitting(false); }
+  }
+
+  const progress = step >= 0 && step < 10 ? (step / CHECKIN_QUESTIONS.length * 100) : 0;
+  const curQ = CHECKIN_QUESTIONS[step];
+
+  // 기록 뷰
+  function HistorySection() {
+    if (!history?.length) return null;
+    const MAX = 10 * 5; // 50점 만점
+    return (
+      <div style={{ marginTop: 20 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 10 }}>📈 체크인 기록</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {history.map((h, i) => {
+            const info = checkinScoreInfo(h.total_score, MAX);
+            const pct = Math.round(h.total_score / MAX * 100);
+            return (
+              <div key={h.id} style={{
+                padding: '12px 14px', borderRadius: 12,
+                background: i === 0 ? info.pale : '#F8F8F8',
+                border: `1px solid ${i === 0 ? info.color + '33' : '#E8E8E8'}`,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: info.color }}>
+                    {info.emoji} {info.label}
+                  </div>
+                  <div style={{ fontSize: 11, color: C.muted }}>{fmtDate(h.created_at)}</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ flex: 1, height: 6, borderRadius: 100, background: '#E8E0E4', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${pct}%`, borderRadius: 100, background: info.color, transition: 'width 1s ease' }}/>
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: info.color, minWidth: 36 }}>{pct}점</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {history.length >= 2 && (() => {
+          const latestPct = Math.round(history[0].total_score / MAX * 100);
+          const prevPct   = Math.round(history[1].total_score / MAX * 100);
+          const diff = latestPct - prevPct;
+          return (
+            <div style={{
+              marginTop: 10, padding: '10px 14px', borderRadius: 12,
+              background: diff >= 0 ? '#EAF5EC' : '#FEF0EC',
+              fontSize: 12, color: diff >= 0 ? '#4A9A5A' : '#D4634A', fontWeight: 600,
+            }}>
+              {diff >= 0 ? `📈 지난 달 대비 +${diff}점 향상됐어요! 🎉` : `📉 지난 달보다 ${Math.abs(diff)}점 낮아요. 함께 노력해봐요 💪`}
+            </div>
+          );
+        })()}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', background: `linear-gradient(160deg, ${C.rosePale}, ${C.cream})` }}>
+      <nav style={{
+        position: 'sticky', top: 0, zIndex: 100,
+        background: 'rgba(253,252,247,0.88)', backdropFilter: 'blur(16px)',
+        borderBottom: '1px solid rgba(181,85,106,0.12)',
+        padding: '0 20px', height: 56,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <button onClick={step === -1 || step === 10 ? onBack : () => setStep(s => s - 1)} style={{
+          background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: C.dark,
+          display: 'flex', alignItems: 'center', gap: 6,
+        }}>← <span style={{ fontSize: 14, fontWeight: 600 }}>관계 성장 체크인</span></button>
+        {step >= 0 && step < 10 && (
+          <span style={{ fontSize: 12, color: C.muted }}>{step + 1} / {CHECKIN_QUESTIONS.length}</span>
+        )}
+      </nav>
+
+      <div style={{ maxWidth: 480, margin: '0 auto', padding: '28px 20px 60px' }}>
+
+        {/* 인트로 */}
+        {step === -1 && (
+          <div>
+            <div style={{ textAlign: 'center', marginBottom: 24 }}>
+              <div style={{ fontSize: 64, marginBottom: 12 }}>🌱</div>
+              <h2 style={{ fontSize: 20, fontWeight: 700, color: C.dark, marginBottom: 8, fontFamily: "'Noto Serif KR', serif" }}>
+                이번 달 관계 성장 체크인
+              </h2>
+              <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.8 }}>
+                10가지 질문으로 지금 우리 관계의 건강도를 점검해보세요.<br/>
+                매달 기록하면 성장 과정을 볼 수 있어요.
+              </p>
+            </div>
+
+            {doneThisMonth ? (
+              <div style={{
+                padding: '16px', borderRadius: 14, background: '#EAF5EC',
+                border: '1px solid #4A9A5A33', textAlign: 'center', marginBottom: 20,
+              }}>
+                <div style={{ fontSize: 20, marginBottom: 6 }}>✅</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#4A9A5A' }}>이번 달 체크인 완료!</div>
+                <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>다음 체크인은 다음 달에 할 수 있어요.</div>
+              </div>
+            ) : (
+              <button onClick={() => setStep(0)} style={{
+                width: '100%', padding: '14px', borderRadius: 14, border: 'none', cursor: 'pointer',
+                background: `linear-gradient(135deg, #4A9A5A, #7ABAA8)`,
+                color: 'white', fontWeight: 700, fontSize: 15, marginBottom: 16,
+                fontFamily: "'Noto Sans KR', sans-serif",
+                boxShadow: '0 8px 24px #4A9A5A44',
+              }}>🌱 이번 달 체크인 시작하기</button>
+            )}
+            <HistorySection />
+          </div>
+        )}
+
+        {/* 문항 */}
+        {step >= 0 && step < 10 && (
+          <div>
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ height: 6, borderRadius: 100, background: '#F0E0E8', overflow: 'hidden', marginBottom: 8 }}>
+                <div style={{ height: '100%', borderRadius: 100, width: `${progress}%`, background: 'linear-gradient(90deg, #7ABAA8, #4A9A5A)', transition: 'width 0.4s ease' }}/>
+              </div>
+              <div style={{ fontSize: 11, color: C.muted, textAlign: 'right' }}>{step + 1}/{CHECKIN_QUESTIONS.length}</div>
+            </div>
+
+            <div style={{
+              fontSize: 17, fontWeight: 700, color: C.dark, lineHeight: 1.6,
+              marginBottom: 28, textAlign: 'center', fontFamily: "'Noto Serif KR', serif",
+            }}>
+              Q{step + 1}. {curQ}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {SCORE_LABELS.map((label, idx) => {
+                const val = idx + 1;
+                const isSelected = answers[`q${step}`] === val;
+                const colors = ['#E05C5C', '#E09A5C', '#D4B84A', '#7ABAA8', '#4A9A5A'];
+                return (
+                  <button key={val} onClick={() => {
+                    setAnswers(prev => ({ ...prev, [`q${step}`]: val }));
+                    setTimeout(() => setStep(s => s + 1), 200);
+                  }} style={{
+                    padding: '14px 20px', borderRadius: 14, border: 'none', cursor: 'pointer',
+                    background: isSelected ? colors[idx] + '22' : 'white',
+                    border: `1.5px solid ${isSelected ? colors[idx] : '#E8D0D8'}`,
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    fontFamily: "'Noto Sans KR', sans-serif",
+                    transition: 'all 0.15s',
+                  }}>
+                    <div style={{
+                      width: 28, height: 28, borderRadius: 100,
+                      background: isSelected ? colors[idx] : '#F0E0E8',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 13, fontWeight: 700, color: isSelected ? 'white' : C.muted,
+                      flexShrink: 0,
+                    }}>{val}</div>
+                    <span style={{ fontSize: 14, fontWeight: isSelected ? 700 : 500, color: isSelected ? C.dark : C.muted }}>
+                      {label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {step === 9 && answers[`q${step}`] && (
+              <button onClick={handleSubmit} disabled={submitting} style={{
+                width: '100%', padding: '14px', borderRadius: 14, border: 'none', cursor: 'pointer',
+                background: 'linear-gradient(135deg, #4A9A5A, #7ABAA8)',
+                color: 'white', fontWeight: 700, fontSize: 15, marginTop: 16,
+                fontFamily: "'Noto Sans KR', sans-serif",
+                opacity: submitting ? 0.7 : 1,
+              }}>{submitting ? '저장 중...' : '✅ 체크인 완료하기'}</button>
+            )}
+            {error && <div style={{ fontSize: 12, color: '#D05555', textAlign: 'center', marginTop: 10 }}>{error}</div>}
+          </div>
+        )}
+
+        {/* 결과 */}
+        {step === 10 && result && (() => {
+          const MAX = CHECKIN_QUESTIONS.length * 5;
+          const info = checkinScoreInfo(result.totalScore, MAX);
+          const pct = Math.round(result.totalScore / MAX * 100);
+          return (
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 64, marginBottom: 12, animation: 'heartbeat 1s ease-in-out 3' }}>{info.emoji}</div>
+              <div style={{ fontSize: 12, color: info.color, fontWeight: 700, marginBottom: 4 }}>이번 달 관계 건강도</div>
+              <div style={{ fontSize: 48, fontWeight: 800, color: info.color, marginBottom: 4 }}>{pct}<span style={{ fontSize: 20 }}>점</span></div>
+              <div style={{
+                display: 'inline-block', marginBottom: 24,
+                padding: '5px 16px', borderRadius: 100,
+                background: info.color + '18', color: info.color, fontWeight: 700, fontSize: 13,
+              }}>{info.label}</div>
+              <div style={{ width: '80%', margin: '0 auto 24px', height: 10, borderRadius: 100, background: '#F0E0E8', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${pct}%`, borderRadius: 100, background: info.color, transition: 'width 1.2s ease' }}/>
+              </div>
+              <div style={{
+                padding: '16px', borderRadius: 16, marginBottom: 16,
+                background: info.pale, border: `1px solid ${info.color}33`,
+                fontSize: 13, color: C.dark, lineHeight: 1.7,
+              }}>
+                {pct >= 80 && '두 사람의 관계가 매우 건강하게 유지되고 있어요! 지금의 모습을 계속 이어가 보세요. 💕'}
+                {pct >= 60 && pct < 80 && '전반적으로 좋은 관계를 유지하고 있어요. 조금 더 신경 쓰고 싶은 부분을 함께 이야기해보세요. 🌱'}
+                {pct >= 40 && pct < 60 && '개선이 필요한 부분이 보여요. 파트너와 솔직하게 대화해보는 시간을 가져보세요. 💬'}
+                {pct < 40 && '지금은 관계에 더 많은 관심이 필요한 시기예요. 전문 상담사와 함께 점검해보는 것도 좋아요. 💆'}
+              </div>
+              <button onClick={onBack} style={{
+                width: '100%', padding: '12px', borderRadius: 12,
+                border: '1px solid #E0D0D8', cursor: 'pointer',
+                background: 'white', color: C.muted, fontSize: 12,
+                fontFamily: "'Noto Sans KR', sans-serif",
+              }}>← 홈으로 돌아가기</button>
+            </div>
+          );
+        })()}
+      </div>
+    </div>
+  );
+}
+
+// ── DateCourseView ────────────────────────────────────────
+const DATE_REGIONS   = ['서울', '부산', '대구', '인천', '광주', '제주', '경기', '강원'];
+const DATE_MOODS     = [
+  { key: '🌹 로맨틱', desc: '분위기 있는 레스토랑, 야경, 와인' },
+  { key: '⚡ 활동적', desc: '스포츠, 액티비티, 게임' },
+  { key: '🌿 힐링', desc: '자연, 카페, 산책, 온천' },
+  { key: '🎨 문화예술', desc: '전시, 공연, 영화, 미술관' },
+];
+const DATE_DURATIONS = ['반나절 (3~4시간)', '하루 (6~8시간)', '1박 2일'];
+const DATE_BUDGETS   = ['알뜰 (5만원 이하)', '보통 (5~15만원)', '특별 (15만원 이상)'];
+
+function DateCourseView({ credits, isMaster, onBack }) {
+  const [region, setRegion]     = useState('');
+  const [mood, setMood]         = useState('');
+  const [duration, setDuration] = useState('');
+  const [budget, setBudget]     = useState('');
+  const [loading, setLoading]   = useState(false);
+  const [course, setCourse]     = useState('');
+  const [error, setError]       = useState('');
+  const COST = 3;
+  const canAfford = isMaster || (credits >= COST);
+  const allSelected = region && mood && duration && budget;
+
+  async function generate() {
+    setLoading(true); setError('');
+    try {
+      const res = await api.post('/api/couple/date-course', { region, mood, duration, budget });
+      if (res.success) {
+        setCourse(res.data.course);
+      } else if (res.needsCharge) {
+        setError(`크레딧이 부족합니다. (필요: ${COST}cr)`);
+      } else {
+        setError(res.error || '생성 실패');
+      }
+    } catch { setError('서버 오류가 발생했습니다.'); }
+    finally { setLoading(false); }
+  }
+
+  function shareCourse() {
+    const text = `💕 오늘의 데이트 코스 추천 (${region}, ${mood})\n\n${course}\n\nhttps://couple.maumful.com`;
+    navigator.share ? navigator.share({ title: '데이트 코스 추천', text }).catch(() => {})
+                    : navigator.clipboard?.writeText(text).catch(() => {});
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', background: `linear-gradient(160deg, ${C.rosePale}, ${C.cream})` }}>
+      <nav style={{
+        position: 'sticky', top: 0, zIndex: 100,
+        background: 'rgba(253,252,247,0.88)', backdropFilter: 'blur(16px)',
+        borderBottom: '1px solid rgba(181,85,106,0.12)',
+        padding: '0 20px', height: 56,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <button onClick={course ? () => setCourse('') : onBack} style={{
+          background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: C.dark,
+          display: 'flex', alignItems: 'center', gap: 6,
+        }}>← <span style={{ fontSize: 14, fontWeight: 600 }}>AI 데이트 코스 추천</span></button>
+        {!isMaster && <span style={{ fontSize: 12, color: C.rose, fontWeight: 700 }}>{COST}cr</span>}
+      </nav>
+
+      <div style={{ maxWidth: 480, margin: '0 auto', padding: '28px 20px 60px' }}>
+        {!course ? (
+          <div>
+            <div style={{ textAlign: 'center', marginBottom: 24 }}>
+              <div style={{ fontSize: 56, marginBottom: 10 }}>🗺️</div>
+              <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.8 }}>
+                조건을 선택하면 AI가 딱 맞는<br/>데이트 코스를 추천해드려요!
+              </p>
+            </div>
+
+            {/* 지역 */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 10 }}>📍 어디서?</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {DATE_REGIONS.map(r => (
+                  <button key={r} onClick={() => setRegion(r)} style={{
+                    padding: '8px 16px', borderRadius: 100, border: 'none', cursor: 'pointer',
+                    background: region === r ? C.rose : '#F5EFE0',
+                    color: region === r ? 'white' : C.dark,
+                    fontWeight: region === r ? 700 : 500, fontSize: 13,
+                    fontFamily: "'Noto Sans KR', sans-serif",
+                  }}>{r}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* 분위기 */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 10 }}>✨ 어떤 분위기?</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {DATE_MOODS.map(m => (
+                  <button key={m.key} onClick={() => setMood(m.key)} style={{
+                    padding: '12px 16px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                    background: mood === m.key ? C.rosePale : 'white',
+                    border: `1.5px solid ${mood === m.key ? C.roseL : '#E8D8E0'}`,
+                    display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left',
+                    fontFamily: "'Noto Sans KR', sans-serif",
+                  }}>
+                    <span style={{ fontSize: 22 }}>{m.key.split(' ')[0]}</span>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: C.dark }}>{m.key.split(' ')[1]}</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>{m.desc}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 시간 */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 10 }}>⏰ 얼마나?</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {DATE_DURATIONS.map(d => (
+                  <button key={d} onClick={() => setDuration(d)} style={{
+                    padding: '11px 16px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                    background: duration === d ? C.lavPale : 'white',
+                    border: `1.5px solid ${duration === d ? C.lavL : '#E8D8E0'}`,
+                    fontSize: 13, fontWeight: duration === d ? 700 : 500, color: C.dark,
+                    fontFamily: "'Noto Sans KR', sans-serif",
+                    textAlign: 'left',
+                  }}>{d}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* 예산 */}
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 10 }}>💰 예산은?</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {DATE_BUDGETS.map(b => (
+                  <button key={b} onClick={() => setBudget(b)} style={{
+                    flex: 1, padding: '10px 8px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                    background: budget === b ? C.lavPale : 'white',
+                    border: `1.5px solid ${budget === b ? C.lavL : '#E8D8E0'}`,
+                    fontSize: 11, fontWeight: budget === b ? 700 : 500, color: C.dark,
+                    fontFamily: "'Noto Sans KR', sans-serif",
+                    lineHeight: 1.4, textAlign: 'center',
+                  }}>{b}</button>
+                ))}
+              </div>
+            </div>
+
+            {!canAfford && (
+              <div style={{ padding: '12px', borderRadius: 12, background: '#FFF0F0', border: '1px solid #FFD0D0', fontSize: 12, color: '#D05555', marginBottom: 12 }}>
+                💸 크레딧이 부족합니다. (필요: {COST}cr / 보유: {credits}cr)
+              </div>
+            )}
+
+            <button
+              onClick={generate}
+              disabled={!allSelected || !canAfford || loading}
+              style={{
+                width: '100%', padding: '14px', borderRadius: 14, border: 'none',
+                cursor: allSelected && canAfford ? 'pointer' : 'not-allowed',
+                background: allSelected && canAfford
+                  ? `linear-gradient(135deg, ${C.rose}, ${C.lavender})`
+                  : '#E0D0D8',
+                color: 'white', fontWeight: 700, fontSize: 15,
+                fontFamily: "'Noto Sans KR', sans-serif",
+                boxShadow: allSelected && canAfford ? `0 8px 24px ${C.rose}33` : 'none',
+                opacity: loading ? 0.7 : 1,
+              }}
+            >
+              {loading ? '🗺️ AI가 코스 만드는 중...' : `🗺️ 데이트 코스 추천받기 ${isMaster ? '(무료)' : `(${COST}cr)`}`}
+            </button>
+            {error && <div style={{ fontSize: 12, color: '#D05555', textAlign: 'center', marginTop: 10 }}>{error}</div>}
+          </div>
+        ) : (
+          <div>
+            <div style={{ textAlign: 'center', marginBottom: 20 }}>
+              <div style={{ fontSize: 48, marginBottom: 8 }}>🗺️</div>
+              <div style={{ fontSize: 13, color: C.muted }}>
+                {region} · {mood.split(' ')[1]} · {duration.split(' ')[0]}
+              </div>
+            </div>
+            <div style={{
+              background: 'white', borderRadius: 20, padding: '24px 20px',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.06)', marginBottom: 16,
+            }}>
+              <div style={{ fontSize: 13, color: C.dark, lineHeight: 2.1, whiteSpace: 'pre-wrap', wordBreak: 'keep-all' }}>
+                {course}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={shareCourse} style={{
+                flex: 1, padding: '12px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                background: `linear-gradient(135deg, ${C.rose}, ${C.roseL})`,
+                color: 'white', fontWeight: 700, fontSize: 13,
+                fontFamily: "'Noto Sans KR', sans-serif",
+              }}>📤 파트너와 공유</button>
+              <button onClick={() => setCourse('')} style={{
+                flex: 1, padding: '12px', borderRadius: 12,
+                border: `1px solid ${C.roseL}44`, cursor: 'pointer',
+                background: 'white', color: C.rose, fontWeight: 700, fontSize: 13,
+                fontFamily: "'Noto Sans KR', sans-serif",
+              }}>🔄 다시 추천받기</button>
+            </div>
+            <button onClick={onBack} style={{
+              width: '100%', marginTop: 8, padding: '10px', borderRadius: 12,
+              border: '1px solid #E0D0D8', cursor: 'pointer',
+              background: 'white', color: C.muted, fontSize: 12,
+              fontFamily: "'Noto Sans KR', sans-serif",
+            }}>← 홈으로</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── SoloAnalysisView ──────────────────────────────────────
 function SoloAnalysisView({ testResults, userName, credits, isMaster, onBack }) {
   const [report, setReport]   = useState('');
@@ -1214,7 +1695,7 @@ function CoupleHubApp() {
   const [loading, setLoading]     = useState(true);
   const [data, setData]           = useState(null);
   const [error, setError]         = useState('');
-  const [view, setView]           = useState('hub');  // 'hub' | 'report' | 'miniTest' | 'soloAnalysis'
+  const [view, setView]           = useState('hub');  // 'hub' | 'report' | 'miniTest' | 'soloAnalysis' | 'checkin' | 'dateCourse'
   const [sessionData, setSession] = useState(null);
   const [partnerName, setPartner] = useState('파트너');
   const [myRole, setMyRole]       = useState('host');
@@ -1363,6 +1844,27 @@ useEffect(() => {
     return <MiniLoveTestView onBack={() => setView('hub')} />;
   }
 
+  // 관계 성장 체크인
+  if (view === 'checkin') {
+    return (
+      <RelationshipCheckinView
+        onBack={() => setView('hub')}
+        onDone={() => loadMe()}
+      />
+    );
+  }
+
+  // AI 데이트 코스 추천
+  if (view === 'dateCourse') {
+    return (
+      <DateCourseView
+        credits={data?.user?.credits ?? 0}
+        isMaster={data?.isMaster}
+        onBack={() => setView('hub')}
+      />
+    );
+  }
+
   // 솔로 이상형 분석
   if (view === 'soloAnalysis') {
     return (
@@ -1475,26 +1977,28 @@ useEffect(() => {
               <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.6, marginBottom: 14 }}>
                 심리검사 결과로 파트너와의 관계 패턴을 함께 탐색해보세요.
               </div>
-              {/* 빠른 액션 버튼 */}
-              <div style={{ display: 'flex', gap: 8 }}>
+              {/* 빠른 액션 버튼 — 2×2 그리드 */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                 <button onClick={() => setView('miniTest')} style={{
-                  flex: 1, padding: '10px', borderRadius: 12, border: 'none', cursor: 'pointer',
-                  background: `linear-gradient(135deg, ${C.rosePale}, ${C.lavPale})`,
-                  color: C.rose, fontWeight: 700, fontSize: 12,
-                  fontFamily: "'Noto Sans KR', sans-serif",
-                  border: `1px solid ${C.roseL}33`,
-                }}>
-                  💝 연애 유형 테스트 <span style={{ fontWeight: 400, color: C.muted }}>무료</span>
-                </button>
+                  padding: '10px 8px', borderRadius: 12, border: `1px solid ${C.roseL}33`, cursor: 'pointer',
+                  background: C.rosePale, color: C.rose, fontWeight: 700, fontSize: 12,
+                  fontFamily: "'Noto Sans KR', sans-serif", lineHeight: 1.4, textAlign: 'center',
+                }}>💝 연애 유형 테스트<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>무료</span></button>
+                <button onClick={() => setView('dateCourse')} style={{
+                  padding: '10px 8px', borderRadius: 12, border: `1px solid ${C.roseL}33`, cursor: 'pointer',
+                  background: `linear-gradient(135deg, ${C.rosePale}, ${C.lavPale})`, color: C.rose, fontWeight: 700, fontSize: 12,
+                  fontFamily: "'Noto Sans KR', sans-serif", lineHeight: 1.4, textAlign: 'center',
+                }}>🗺️ 데이트 코스 추천<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>3cr</span></button>
+                <button onClick={() => setView('checkin')} style={{
+                  padding: '10px 8px', borderRadius: 12, border: '1px solid #4A9A5A33', cursor: 'pointer',
+                  background: '#EAF5EC', color: '#4A9A5A', fontWeight: 700, fontSize: 12,
+                  fontFamily: "'Noto Sans KR', sans-serif", lineHeight: 1.4, textAlign: 'center',
+                }}>🌱 관계 성장 체크인<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>무료 · 월 1회</span></button>
                 <button onClick={() => setView('soloAnalysis')} style={{
-                  flex: 1, padding: '10px', borderRadius: 12, border: 'none', cursor: 'pointer',
-                  background: C.lavPale,
-                  color: C.lavender, fontWeight: 700, fontSize: 12,
-                  fontFamily: "'Noto Sans KR', sans-serif",
-                  border: `1px solid ${C.lavL}33`,
-                }}>
-                  🔮 이상형 분석 <span style={{ fontWeight: 400, color: C.muted }}>5cr</span>
-                </button>
+                  padding: '10px 8px', borderRadius: 12, border: `1px solid ${C.lavL}33`, cursor: 'pointer',
+                  background: C.lavPale, color: C.lavender, fontWeight: 700, fontSize: 12,
+                  fontFamily: "'Noto Sans KR', sans-serif", lineHeight: 1.4, textAlign: 'center',
+                }}>🔮 이상형 성향 분석<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>5cr</span></button>
               </div>
             </div>
           );
