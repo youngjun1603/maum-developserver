@@ -22,6 +22,8 @@ const aApi = {
   async testStats()  { return (await fetch('/api/admin/stats/tests',{headers:this._h()})).json(); },
   async users(page=1,search='') { return (await fetch(`/api/admin/users?page=${page}&limit=20&search=${encodeURIComponent(search)}`,{headers:this._h()})).json(); },
   async grantCredits(id,amount,reason) { return (await fetch(`/api/admin/users/${id}/credits`,{method:'POST',headers:this._h(),body:JSON.stringify({amount,reason})})).json(); },
+  async errorLogs(service='',limit=50) { return (await fetch(`/api/admin/error-logs?service=${encodeURIComponent(service)}&limit=${limit}`,{headers:this._h()})).json(); },
+  async clearErrorLogs() { return (await fetch('/api/admin/error-logs',{method:'DELETE',headers:this._h()})).json(); },
 
   // ── 센터 CRUD ───────────────────────────────────────────────
   async createCenter(body)     { return (await fetch('/api/admin/counseling/centers',{method:'POST',headers:this._h(),body:JSON.stringify(body)})).json(); },
@@ -1017,6 +1019,95 @@ function AdminSettlements(){
   );
 }
 
+// ── 탭: 오류 로그 ───────────────────────────────────────────
+function AdminErrorLogs(){
+  const {useState:useS,useEffect:useE}=React;
+  const [logs,setLogs]=useS([]);
+  const [service,setService]=useS('');
+  const [limit,setLimit]=useS(50);
+  const [loading,setLoading]=useS(true);
+  const [clearing,setClearing]=useS(false);
+
+  const load=()=>{
+    setLoading(true);
+    aApi.errorLogs(service,limit).then(r=>{if(r.success)setLogs(r.data||[]);}).finally(()=>setLoading(false));
+  };
+  useE(()=>load(),[service,limit]);
+
+  const handleClear=async()=>{
+    if(!confirm('모든 오류 로그를 삭제할까요?'))return;
+    setClearing(true);
+    await aApi.clearErrorLogs();
+    setClearing(false);
+    setLogs([]);
+  };
+
+  const statusColor=code=>{
+    if(!code)return'gray';
+    if(code>=500)return'red';
+    if(code>=400)return'amber';
+    return'blue';
+  };
+
+  return(
+    <div>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16,flexWrap:'wrap',gap:10}}>
+        <div style={{fontSize:15,fontWeight:700}}>🔴 오류 로그 ({logs.length}건)</div>
+        <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+          <select value={service} onChange={e=>{setService(e.target.value);}}
+            style={{padding:'7px 10px',border:'1px solid rgba(0,0,0,.12)',borderRadius:8,fontSize:13,fontFamily:"'Noto Sans KR',sans-serif",outline:'none',background:'white'}}>
+            <option value="">전체 서비스</option>
+            <option value="maumful">maumful</option>
+            <option value="maumgame">maumgame</option>
+            <option value="maumcouple">maumcouple</option>
+          </select>
+          <select value={limit} onChange={e=>setLimit(Number(e.target.value))}
+            style={{padding:'7px 10px',border:'1px solid rgba(0,0,0,.12)',borderRadius:8,fontSize:13,fontFamily:"'Noto Sans KR',sans-serif",outline:'none',background:'white'}}>
+            <option value={20}>최근 20건</option>
+            <option value={50}>최근 50건</option>
+            <option value={100}>최근 100건</option>
+          </select>
+          <button onClick={load} style={{padding:'7px 14px',borderRadius:8,border:'none',background:'#2D6A4F',color:'white',fontWeight:600,fontSize:13,cursor:'pointer',fontFamily:"'Noto Sans KR',sans-serif"}}>새로고침</button>
+          <button onClick={handleClear} disabled={clearing||logs.length===0}
+            style={{padding:'7px 14px',borderRadius:8,border:'1px solid #E24B4A',background:'white',color:'#E24B4A',fontWeight:600,fontSize:13,cursor:clearing||logs.length===0?'not-allowed':'pointer',fontFamily:"'Noto Sans KR',sans-serif"}}>
+            {clearing?'삭제 중...':'전체 삭제'}
+          </button>
+        </div>
+      </div>
+
+      {loading?<div style={{textAlign:'center',padding:'32px',color:'#9A9A9A'}}>로딩 중...</div>:(
+        logs.length===0
+          ?<div style={{textAlign:'center',padding:'48px',color:'#9A9A9A',background:'white',borderRadius:12,border:'1px solid rgba(0,0,0,.08)'}}>
+            ✅ 오류 로그가 없습니다
+           </div>
+          :<div style={{display:'flex',flexDirection:'column',gap:8}}>
+            {logs.map((log,i)=>(
+              <div key={log.id||i} style={{background:'white',border:'1px solid rgba(0,0,0,.08)',borderRadius:10,padding:'14px 18px'}}>
+                <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:10,flexWrap:'wrap',marginBottom:6}}>
+                  <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+                    <Chip label={log.status_code||'ERR'} color={statusColor(log.status_code)}/>
+                    <Chip label={log.service||'unknown'} color='blue'/>
+                    {log.method&&<span style={{fontSize:11,fontWeight:700,color:'#5B21B6',background:'#EEF0FF',padding:'2px 7px',borderRadius:5}}>{log.method}</span>}
+                    {log.path&&<code style={{fontSize:12,color:'#1A1A1A',background:'#F5F5F0',padding:'2px 8px',borderRadius:5,wordBreak:'break-all'}}>{log.path}</code>}
+                  </div>
+                  <span style={{fontSize:11,color:'#9A9A9A',whiteSpace:'nowrap'}}>{fmtDt(log.created_at)}</span>
+                </div>
+                {log.message&&<div style={{fontSize:13,color:'#E24B4A',fontWeight:500,marginBottom:log.stack?6:0}}>{log.message}</div>}
+                {log.stack&&(
+                  <details>
+                    <summary style={{fontSize:11,color:'#9A9A9A',cursor:'pointer',userSelect:'none'}}>스택 트레이스 보기</summary>
+                    <pre style={{fontSize:11,color:'#5A5A5A',background:'#F9F9F7',borderRadius:6,padding:'10px',marginTop:6,overflowX:'auto',whiteSpace:'pre-wrap',wordBreak:'break-word',maxHeight:200,overflow:'auto'}}>{log.stack}</pre>
+                  </details>
+                )}
+                {log.user_id&&<div style={{fontSize:11,color:'#9A9A9A',marginTop:4}}>user_id: {log.user_id}</div>}
+              </div>
+            ))}
+          </div>
+      )}
+    </div>
+  );
+}
+
 // ============================================================
 // CounselingAdminPage — 어드민 진입점
 // ============================================================
@@ -1041,6 +1132,7 @@ function CounselingAdminPage({setView}){
     ['overview','📊 대시보드'],['users','👤 사용자 관리'],['onboarding','📨 온보딩 신청'],
     ['centers','🏥 센터 관리'],['counselors','👥 상담사 관리'],
     ['appointments','📅 예약 관리'],['settlements','💰 정산 관리'],
+    ['errorlogs','🔴 오류 로그'],
   ];
 
   if(!authed)return(
@@ -1100,6 +1192,7 @@ function CounselingAdminPage({setView}){
           {tab==='counselors'  &&<AdminCounselors/>}
           {tab==='appointments'&&<AdminAppointments/>}
           {tab==='settlements' &&<AdminSettlements/>}
+          {tab==='errorlogs'   &&<AdminErrorLogs/>}
         </div>
       </div>
     </div>

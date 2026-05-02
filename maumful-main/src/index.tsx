@@ -40,6 +40,44 @@ type User = {
 const app = new Hono<{ Bindings: Bindings }>()
 
 app.use('/api/*', cors())
+
+// ── 전역 에러 핸들러 + 에러 로그 저장 ──────────────────────
+async function logError(db: D1Database, opts: {
+  service?: string; status?: number; method?: string; path?: string
+  message: string; stack?: string; userId?: number
+}) {
+  try {
+    // 최근 500개 초과 시 오래된 항목 자동 정리
+    await db.prepare(
+      `INSERT INTO error_logs (service,status_code,method,path,message,stack,user_id)
+       VALUES (?,?,?,?,?,?,?)`
+    ).bind(
+      opts.service || 'maumful', opts.status ?? null,
+      opts.method ?? null, opts.path ?? null,
+      opts.message.slice(0, 500), (opts.stack ?? '').slice(0, 1000),
+      opts.userId ?? null
+    ).run()
+    // 오래된 로그 정리 (최근 500개만 유지)
+    await db.prepare(
+      `DELETE FROM error_logs WHERE id NOT IN (SELECT id FROM error_logs ORDER BY created_at DESC LIMIT 500)`
+    ).run()
+  } catch { /* 로그 저장 실패는 무시 */ }
+}
+
+app.onError(async (err, c) => {
+  const db = c.env?.DB
+  if (db) {
+    await logError(db, {
+      status: 500,
+      method: c.req.method,
+      path: new URL(c.req.url).pathname,
+      message: err.message || String(err),
+      stack: err.stack,
+    }).catch(() => {})
+  }
+  console.error('[UnhandledError]', c.req.method, new URL(c.req.url).pathname, err.message)
+  return c.json({ success: false, error: '서버 오류가 발생했습니다.' }, 500)
+})
 // 정적 파일은 Cloudflare Assets가 자동 처리 ([assets] 설정)
 
 // ============================================================
@@ -2151,6 +2189,32 @@ app.post('/api/admin/api-settings', async (c) => {
 })
 
 // GET /api/admin/test-ai?secret=XXXX — Anthropic 모델 진단 (브라우저 직접 접근용)
+// GET /api/admin/error-logs — 최근 에러 로그 조회
+app.get('/api/admin/error-logs', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  const limit  = Math.min(100, parseInt(c.req.query('limit') || '50', 10))
+  const service = c.req.query('service') // 필터: maumful | maumgame | maumcouple
+  const rows = await DB.prepare(
+    service
+      ? `SELECT * FROM error_logs WHERE service=? ORDER BY created_at DESC LIMIT ?`
+      : `SELECT * FROM error_logs ORDER BY created_at DESC LIMIT ?`
+  ).bind(...(service ? [service, limit] : [limit])).all()
+
+  return c.json({ success: true, data: rows.results })
+})
+
+// DELETE /api/admin/error-logs — 에러 로그 전체 삭제
+app.delete('/api/admin/error-logs', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+  await DB.prepare('DELETE FROM error_logs').run()
+  return c.json({ success: true })
+})
+
 app.get('/api/admin/test-ai', async (c) => {
   const { DB } = c.env
   const adminSecret = c.env.ADMIN_SECRET ?? 'psy_system_secret_2026'
