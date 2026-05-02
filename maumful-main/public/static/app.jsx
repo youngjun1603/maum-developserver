@@ -5331,9 +5331,9 @@ function PsychologicalTestSystem() {
             {/* 🏥 전문가 상담 연결 버튼 */}
             <div className="px-4 py-3 border-t border-gray-100 bg-gray-50">
               <button
-                onClick={() => window.open('https://pro.maumful.com', '_blank', 'noopener noreferrer')}
+                onClick={() => { window.location.hash = 'counseling'; window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                 className="w-full py-2.5 bg-white border border-indigo-200 text-indigo-700 rounded-xl text-sm font-semibold hover:bg-indigo-50 hover:border-indigo-400 transition flex items-center justify-center gap-2 group">
-                <span>🏥</span>
+                <span>🏠</span>
                 <span>전문 상담사와 직접 상담하기</span>
                 <span className="text-indigo-300 group-hover:text-indigo-500 transition">→</span>
               </button>
@@ -7318,7 +7318,7 @@ function PsychologicalTestSystem() {
           {!isLoggedIn && (
             <div className="bg-gradient-to-r from-green-50 to-teal-50 border border-green-200 rounded-xl p-4 mb-4">
               <div className="text-sm font-bold text-green-800 mb-1">🌱 결과를 저장하고 싶으신가요?</div>
-              <div className="text-xs text-green-700 mb-3">무료 가입하면 검사 이력 저장 + 10 크레딧이 지급됩니다</div>
+              <div className="text-xs text-green-700 mb-3">무료 가입하면 검사 이력 저장 + 20 크레딧이 지급됩니다</div>
               <button onClick={() => setView('memberSignup')}
                 className="w-full bg-green-600 text-white py-2.5 rounded-xl font-bold text-sm hover:bg-green-700 transition">
                 무료로 가입하기 →
@@ -7575,7 +7575,7 @@ function PsychologicalTestSystem() {
               <div className="mt-4 p-4 bg-gradient-to-r from-green-50 to-teal-50 border border-green-200 rounded-2xl text-center">
                 <div className="text-2xl mb-2">🌱</div>
                 <div className="font-bold text-green-800 mb-1">결과를 저장하고 싶으신가요?</div>
-                <div className="text-sm text-green-700 mb-3">무료 가입하면 검사 이력 저장 + 10 크레딧이 지급됩니다</div>
+                <div className="text-sm text-green-700 mb-3">무료 가입하면 검사 이력 저장 + 20 크레딧이 지급됩니다</div>
                 <button onClick={() => setView('memberSignup')}
                   className="bg-green-600 text-white px-6 py-2 rounded-xl font-bold text-sm hover:bg-green-700 transition"
                   style={{fontFamily:"'Noto Sans KR',sans-serif"}}>
@@ -7656,7 +7656,7 @@ function PsychologicalTestSystem() {
               <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl text-center">
                 <div className="text-2xl mb-2">💙</div>
                 <div className="font-bold text-blue-800 mb-1">결과를 저장하고 싶으신가요?</div>
-                <div className="text-sm text-blue-700 mb-3">무료 가입하면 검사 이력 저장 + 10 크레딧이 지급됩니다</div>
+                <div className="text-sm text-blue-700 mb-3">무료 가입하면 검사 이력 저장 + 20 크레딧이 지급됩니다</div>
                 <button onClick={() => setView('memberSignup')}
                   className="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold text-sm hover:bg-blue-700 transition"
                   style={{fontFamily:"'Noto Sans KR',sans-serif"}}>
