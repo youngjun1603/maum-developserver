@@ -4292,11 +4292,46 @@ function PsychologicalTestSystem() {
   }
 
   // 채팅창 컴포넌트
+  // 채팅 메시지 마크다운 렌더러 (bold, bullet)
+  function renderMdText(text) {
+    const parseBold = (str) => str.split(/(\*\*[^*]+\*\*)/).map((p, j) =>
+      /^\*\*[^*]+\*\*$/.test(p)
+        ? <strong key={j} className="font-semibold text-gray-900">{p.slice(2, -2)}</strong>
+        : p
+    );
+    return text.split('\n').map((line, i) => {
+      if (!line.trim()) return <div key={i} className="h-2" />;
+      if (/^[-•]\s/.test(line)) return (
+        <div key={i} className="flex gap-1.5 items-start mt-1">
+          <span className="text-green-500 font-bold shrink-0 leading-5">•</span>
+          <span className="leading-5">{parseBold(line.replace(/^[-•]\s/, ''))}</span>
+        </div>
+      );
+      return <div key={i} className="leading-5">{parseBold(line)}</div>;
+    });
+  }
+
   function ChatBox({ testType, initialPrompts }) {
     const messagesEndRef = React.useRef(null);
+    const chatContainerRef = React.useRef(null);
     const inputRef = React.useRef(null);
+    const prevMsgCountRef = React.useRef(0);
+
     React.useEffect(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      const container = chatContainerRef.current;
+      if (!container) return;
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+      if (!isNearBottom) return; // 사용자가 위로 스크롤 중이면 강제 이동 안 함
+      const isNewMessage = chatMessages.length !== prevMsgCountRef.current;
+      prevMsgCountRef.current = chatMessages.length;
+      if (isNewMessage) {
+        // 새 메시지 추가 시: smooth
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      } else {
+        // 스트리밍 토큰 업데이트 시: instant (애니메이션 충돌 방지)
+        container.scrollTop = container.scrollHeight;
+      }
     }, [chatMessages]);
 
     return (
@@ -4431,7 +4466,7 @@ function PsychologicalTestSystem() {
             )}
 
             {/* 메시지 목록 */}
-            <div className="h-80 overflow-y-auto p-4 space-y-3 bg-gray-50">
+            <div ref={chatContainerRef} className="h-80 overflow-y-auto p-4 space-y-3 bg-gray-50">
               {chatMessages.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-full text-center">
                   <p className="text-4xl mb-3">🤝</p>
@@ -4455,7 +4490,7 @@ function PsychologicalTestSystem() {
                       : 'bg-white border border-gray-200 text-gray-800 rounded-tl-sm shadow-sm'
                   }`}>
                     {msg.content
-                      ? <p className="whitespace-pre-wrap">{msg.content}{msg.streaming && <span className="inline-block w-1.5 h-4 bg-blue-400 animate-pulse ml-0.5 align-middle rounded"></span>}</p>
+                      ? <div className="text-sm space-y-0.5">{renderMdText(msg.content)}{msg.streaming && <span className="inline-block w-1.5 h-4 bg-blue-400 animate-pulse ml-0.5 align-middle rounded"></span>}</div>
                       : <div className="flex gap-1 items-center py-1">
                           <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay:'0ms'}}></div>
                           <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay:'150ms'}}></div>
