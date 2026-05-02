@@ -449,6 +449,7 @@ package/maumcouple/migrations/0002_relationship_checkins.sql
 → relationship_checkins 테이블 생성 (user_id, total_score, answers_json, created_at)
 → idx_checkins_user 인덱스
 → 프로덕션 적용 완료
+→ 스테이징(maumful-db-dev) 적용 완료
 ```
 
 ### package/maumcouple/public/static/couple_hub.jsx
@@ -505,4 +506,52 @@ package/maumcouple/migrations/0002_relationship_checkins.sql
 | POST | `/api/couple/checkin` | 관계 체크인 저장 | ✓ | 무료 (월 1회) |
 | POST | `/api/couple/date-course` | AI 데이트 코스 추천 | ✓ | 3cr |
 | POST | `/api/couple/solo-analysis` | AI 이상형 성향 분석 | ✓ | 5cr |
+| POST | `/api/couple/coach` | AI 관계 코치 채팅 | ✓ | 3회/일 무료·이후 2cr |
 | PATCH | `/api/couple/session/:code/cancel` | 세션 취소 | ✓ (host) | 무료 |
+
+---
+
+## 마음커플 콘텐츠 강화 — 3단계 (2026-05-02)
+
+### package/maumcouple/public/static/couple_hub.jsx
+
+#### 추가된 컴포넌트
+
+| 컴포넌트 | 기능 | 비용 |
+|---|---|---|
+| `RelationshipCoachView` | AI 관계 코치 채팅 (하루 3회 무료, 이후 2cr) | 3회 무료·이후 2cr |
+| `CoupleQuizView` | 10문항 커플 스타일 퀴즈 → A/B/C/D 유형 + 공유 | 무료 |
+| `AnniversaryView` | D+N 기념일 계산기, 100/200/365/1000일 마일스톤 알림 | 무료 |
+
+#### 데이터 상수
+
+| 상수 | 설명 |
+|---|---|
+| `QUIZ_QUESTIONS` | 10문항 커플 스타일 퀴즈 (각 4지선다) |
+| `QUIZ_TYPES` | A:안정공존형 / B:깊은유대형 / C:성장동반형 / D:자유균형형 |
+| `ANNIVERSARY_KEY` | `'couple_first_date'` localStorage 키 |
+
+#### CoupleHubApp 변경
+
+- `view` 상태에 `'coach'` / `'quiz'` / `'anniversary'` 추가
+- 인사 카드 빠른 액션: 기존 **2×2 그리드** 아래 **1×3 그리드** 추가 (코치/퀴즈/기념일)
+
+### package/maumcouple/src/index.tsx
+
+```typescript
+// POST /api/couple/coach (하루 3회 무료, 이후 2cr)
+// KV 키: couple_coach:${userId}:${today(KST)}
+// BIG5 성격 데이터 system prompt 주입, 최근 10개 messages 전달 (stateless)
+// AI Gateway 경유, claude-haiku-4-5-20251001
+// Returns: { reply, usedToday, freeLimit:3, isPaid, creditsSpent }
+```
+
+### 버그 수정 (2026-05-02)
+
+**🔴 관계 성장 체크인 저장 안 됨**
+
+**원인**: 마지막(10번째) 문항 선택 시 `setTimeout(() => setStep(s => s + 1), 200)`이 실행되어
+제출 버튼이 표시되기 전에 step이 10으로 이동 → `handleSubmit` 미호출.
+
+**수정**: `step < CHECKIN_QUESTIONS.length - 1` 조건 추가 — 마지막 문항에서는 자동 진행 않고
+사용자가 "✅ 체크인 완료하기" 버튼을 직접 눌러 제출하도록 변경.
