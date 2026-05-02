@@ -223,6 +223,202 @@ function getCoupleChemType(myBig5, partnerBig5) {
   return { emoji: '💕', name: '특별한 우리형', desc: '둘만의 독특하고 소중한 케미를 가지고 있어요.', color: C.rose };
 }
 
+// ── BIG5 비교 뷰 ─────────────────────────────────────────
+function Big5CompareView({ myBig5, partnerBig5, myName, partnerName, onBack }) {
+  const traits = [
+    { key: 'O', label: '개방성', emoji: '🎨', desc: '창의성·호기심' },
+    { key: 'C', label: '성실성', emoji: '📋', desc: '책임감·계획성' },
+    { key: 'E', label: '외향성', emoji: '⚡', desc: '사교성·활동성' },
+    { key: 'A', label: '친화성', emoji: '🤝', desc: '배려·협력' },
+    { key: 'N', label: '신경성', emoji: '🌊', desc: '감정 민감도' },
+  ];
+  const chem = getCoupleChemType(myBig5, partnerBig5);
+
+  // Radar chart geometry
+  const cx = 130, cy = 130, r = 95;
+  function pt(i, val) {
+    const angle = (2 * Math.PI * i / 5) - Math.PI / 2;
+    const v = (Math.max(0, Math.min(100, val)) / 100) * r;
+    return `${(cx + v * Math.cos(angle)).toFixed(1)},${(cy + v * Math.sin(angle)).toFixed(1)}`;
+  }
+  function gridPt(i, pct) {
+    const angle = (2 * Math.PI * i / 5) - Math.PI / 2;
+    const v = pct * r;
+    return `${(cx + v * Math.cos(angle)).toFixed(1)},${(cy + v * Math.sin(angle)).toFixed(1)}`;
+  }
+  function labelPt(i) {
+    const angle = (2 * Math.PI * i / 5) - Math.PI / 2;
+    const v = r + 22;
+    return { x: cx + v * Math.cos(angle), y: cy + v * Math.sin(angle) };
+  }
+  const myPts      = traits.map((t, i) => pt(i, myBig5?.[t.key] ?? 50)).join(' ');
+  const partnerPts = traits.map((t, i) => pt(i, partnerBig5?.[t.key] ?? 50)).join(' ');
+  const gridLevels = [0.25, 0.5, 0.75, 1];
+
+  function shareResult() {
+    const lines = traits.map(t => `${t.emoji}${t.label}: ${myBig5?.[t.key] ?? 50} vs ${partnerBig5?.[t.key] ?? 50}`);
+    const text = `💕 BIG5 커플 비교\n${myName} vs ${partnerName}\n${lines.join('\n')}\n${chem ? `케미: ${chem.emoji} ${chem.name}` : ''}\nhttps://couple.maumful.com #마음커플`;
+    if (navigator.share) navigator.share({ title: 'BIG5 커플 비교', text }).catch(() => {});
+    else navigator.clipboard?.writeText(text).then(() => alert('클립보드에 복사됐어요!')).catch(() => {});
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', background: `linear-gradient(160deg, ${C.rosePale} 0%, ${C.cream} 40%, ${C.lavPale} 100%)` }}>
+      <nav style={{
+        position: 'sticky', top: 0, zIndex: 100,
+        background: 'rgba(253,252,247,0.88)', backdropFilter: 'blur(16px)',
+        borderBottom: '1px solid rgba(181,85,106,0.12)',
+        padding: '0 20px', height: 56,
+        display: 'flex', alignItems: 'center', gap: 12,
+      }}>
+        <button onClick={onBack} style={{
+          background: 'none', border: 'none', cursor: 'pointer',
+          fontSize: 20, color: C.rose, padding: '4px 8px',
+        }}>←</button>
+        <span style={{ fontSize: 16, fontWeight: 700, color: C.dark, fontFamily: "'Noto Serif KR', serif" }}>
+          🧬 BIG5 성격 비교
+        </span>
+      </nav>
+
+      <div style={{ maxWidth: 640, margin: '0 auto', padding: '24px 20px 40px' }}>
+
+        {/* 범례 */}
+        <div style={{
+          borderRadius: 20, padding: '16px 20px', marginBottom: 20,
+          background: 'white', boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
+          display: 'flex', justifyContent: 'center', gap: 28,
+        }}>
+          {[
+            { name: myName + ' (나)', color: C.rose },
+            { name: partnerName, color: C.lavender },
+          ].map(({ name, color }) => (
+            <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 14, height: 14, borderRadius: 4, background: color }}/>
+              <span style={{ fontSize: 13, fontWeight: 600, color: C.dark }}>{name}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* 레이더 차트 */}
+        <div style={{
+          borderRadius: 20, padding: '20px', marginBottom: 20,
+          background: 'white', boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
+        }}>
+          <svg viewBox="0 0 260 260" style={{ width: '100%', maxWidth: 300, display: 'block', margin: '0 auto' }}>
+            {/* 격자 */}
+            {gridLevels.map(lvl => (
+              <polygon key={lvl}
+                points={traits.map((_, i) => gridPt(i, lvl)).join(' ')}
+                fill="none" stroke="#e8e0e8" strokeWidth="1"
+              />
+            ))}
+            {/* 방사형 축선 */}
+            {traits.map((_, i) => (
+              <line key={i}
+                x1={cx} y1={cy}
+                x2={gridPt(i, 1).split(',')[0]} y2={gridPt(i, 1).split(',')[1]}
+                stroke="#e8e0e8" strokeWidth="1"
+              />
+            ))}
+            {/* 파트너 영역 */}
+            <polygon points={partnerPts}
+              fill={C.lavender + '30'} stroke={C.lavender} strokeWidth="2" strokeLinejoin="round"
+            />
+            {/* 내 영역 */}
+            <polygon points={myPts}
+              fill={C.rose + '28'} stroke={C.rose} strokeWidth="2" strokeLinejoin="round"
+            />
+            {/* 내 점 */}
+            {traits.map((t, i) => {
+              const [x, y] = pt(i, myBig5?.[t.key] ?? 50).split(',');
+              return <circle key={t.key} cx={x} cy={y} r="4" fill={C.rose}/>;
+            })}
+            {/* 파트너 점 */}
+            {traits.map((t, i) => {
+              const [x, y] = pt(i, partnerBig5?.[t.key] ?? 50).split(',');
+              return <circle key={t.key} cx={x} cy={y} r="4" fill={C.lavender}/>;
+            })}
+            {/* 라벨 */}
+            {traits.map((t, i) => {
+              const lp = labelPt(i);
+              return (
+                <text key={t.key} x={lp.x} y={lp.y}
+                  textAnchor="middle" dominantBaseline="middle"
+                  fontSize="11" fontWeight="600" fill={C.dark}
+                  fontFamily="'Noto Sans KR', sans-serif">
+                  {t.emoji} {t.label}
+                </text>
+              );
+            })}
+          </svg>
+        </div>
+
+        {/* 상세 바 차트 */}
+        <div style={{
+          borderRadius: 20, padding: '20px', marginBottom: 20,
+          background: 'white', boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
+        }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: C.dark, marginBottom: 16 }}>📊 항목별 비교</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {traits.map(({ key, label, emoji, desc }) => {
+              const myVal      = myBig5?.[key] ?? 50;
+              const partnerVal = partnerBig5?.[key] ?? 50;
+              const diff = Math.abs(myVal - partnerVal);
+              return (
+                <div key={key}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: C.dark }}>{emoji} {label}</span>
+                    <span style={{ fontSize: 11, color: C.muted }}>{desc} · 차이 {diff}점</span>
+                  </div>
+                  {[
+                    { name: myName + ' (나)', val: myVal, color: C.rose },
+                    { name: partnerName, val: partnerVal, color: C.lavender },
+                  ].map(({ name, val, color }) => (
+                    <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <span style={{ fontSize: 11, color: C.muted, width: 64, flexShrink: 0, textAlign: 'right' }}>{name}</span>
+                      <div style={{ flex: 1, background: '#f3f0f5', borderRadius: 6, height: 10, overflow: 'hidden' }}>
+                        <div style={{
+                          width: val + '%', height: '100%', borderRadius: 6,
+                          background: color, transition: 'width 0.5s ease',
+                        }}/>
+                      </div>
+                      <span style={{ fontSize: 12, fontWeight: 700, color, width: 30, textAlign: 'right' }}>{val}</span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 케미 타입 */}
+        {chem && (
+          <div style={{
+            borderRadius: 20, padding: '20px', marginBottom: 20,
+            background: 'white', boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
+            borderLeft: `4px solid ${chem.color}`,
+          }}>
+            <div style={{ fontSize: 22, marginBottom: 8 }}>{chem.emoji}</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: chem.color, marginBottom: 6 }}>{chem.name}</div>
+            <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.7 }}>{chem.desc}</div>
+          </div>
+        )}
+
+        {/* 공유 버튼 */}
+        <button onClick={shareResult} style={{
+          width: '100%', padding: '14px', borderRadius: 14,
+          background: `linear-gradient(135deg, ${C.rose}, ${C.lavender})`,
+          color: 'white', fontWeight: 700, fontSize: 14,
+          border: 'none', cursor: 'pointer',
+          fontFamily: "'Noto Sans KR', sans-serif",
+        }}>
+          🔗 결과 공유하기
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── HeartSVG 일러스트 ─────────────────────────────────────
 function HeartIllust({ score = 75, style = {} }) {
   const fill = scoreColor(score);
@@ -2807,6 +3003,26 @@ useEffect(() => {
     return <RelationshipTimelineView onBack={() => setView('hub')} />;
   }
 
+  // BIG5 비교
+  if (view === 'big5Compare') {
+    const { testResults } = data || {};
+    const myBig5 = testResults?.big5?.data;
+    let partnerBig5 = null;
+    try {
+      const raw = myRole === 'host' ? sessionData?.guest_result_json : sessionData?.host_result_json;
+      if (raw) partnerBig5 = JSON.parse(raw).big5;
+    } catch {}
+    return (
+      <Big5CompareView
+        myBig5={myBig5}
+        partnerBig5={partnerBig5}
+        myName={displayName(data?.user)}
+        partnerName={partnerName}
+        onBack={() => setView('hub')}
+      />
+    );
+  }
+
   // 리포트 뷰
   if (view === 'report' && sessionData) {
     return (
@@ -2952,6 +3168,39 @@ useEffect(() => {
                   fontFamily: "'Noto Sans KR', sans-serif", lineHeight: 1.4, textAlign: 'center',
                 }}>🗂️ 관계 타임라인<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>무료</span></button>
               </div>
+              {/* BIG5 비교 — 내 BIG5 + 파트너 BIG5 있을 때 강조 표시 */}
+              {(() => {
+                let hasPartnerBig5 = false;
+                try {
+                  const raw = myRole === 'host' ? sessionData?.guest_result_json : sessionData?.host_result_json;
+                  if (raw) hasPartnerBig5 = !!JSON.parse(raw).big5;
+                } catch {}
+                const canCompare = !!(testResults?.big5) && hasPartnerBig5;
+                return (
+                  <button onClick={() => {
+                    if (!testResults?.big5) { alert('마음풀에서 BIG5 검사를 먼저 완료해 주세요.'); return; }
+                    if (!hasPartnerBig5) { alert('파트너도 BIG5 검사를 완료해야 비교할 수 있어요.'); return; }
+                    setView('big5Compare');
+                  }} style={{
+                    width: '100%', padding: '11px', borderRadius: 12, cursor: 'pointer',
+                    border: canCompare ? `1.5px solid ${C.rose}55` : '1px solid #e0e0e0',
+                    background: canCompare
+                      ? `linear-gradient(135deg, ${C.rosePale}, ${C.lavPale})`
+                      : '#f8f8f8',
+                    color: canCompare ? C.rose : C.muted,
+                    fontWeight: 700, fontSize: 12,
+                    fontFamily: "'Noto Sans KR', sans-serif",
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    marginTop: 8,
+                  }}>
+                    🧬 BIG5 커플 비교
+                    {canCompare
+                      ? <span style={{ fontSize: 10, fontWeight: 400 }}>결과 준비 완료 ✓</span>
+                      : <span style={{ fontSize: 10, fontWeight: 400 }}>파트너 결과 필요</span>
+                    }
+                  </button>
+                );
+              })()}
             </div>
           );
         })()}

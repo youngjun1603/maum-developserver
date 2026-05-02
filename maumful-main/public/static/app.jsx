@@ -244,6 +244,7 @@ function PsychologicalTestSystem() {
   const [testHistory, setTestHistory] = useState([]);
   const [myPageTab, setMyPageTab]     = useState('credits'); // 'credits' | 'history' | 'settings' | 'appointments'
   const [changePwMsg, setChangePwMsg] = useState({ type: '', text: '' });
+  const [pushStatus, setPushStatus]   = useState('unknown'); // 'unknown'|'unsupported'|'denied'|'subscribed'|'idle'
   const [creditSubTab, setCreditSubTab] = useState('usage');   // 'usage' | 'charge'
   const [selectedTests, setSelectedTests] = useState(['PHQ9']); // 대시보드에서 선택한 검사
 
@@ -1634,6 +1635,52 @@ function PsychologicalTestSystem() {
       const r = await api.getTestHistory();
       if (r.success) setTestHistory(r.data);
     } catch { /* 무시 */ }
+  }
+
+  // ============================================================
+  // Web Push 구독
+  // ============================================================
+  async function checkPushStatus() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      setPushStatus('unsupported'); return;
+    }
+    if (Notification.permission === 'denied') { setPushStatus('denied'); return; }
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      setPushStatus(sub ? 'subscribed' : 'idle');
+    } catch { setPushStatus('idle'); }
+  }
+
+  async function subscribePush() {
+    try {
+      const { key } = await fetch('/api/push/vapid-key').then(r => r.json());
+      if (!key) { alert('알림 서비스가 준비 중이에요. 잠시 후 다시 시도해 주세요.'); return; }
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: key,
+      });
+      const { endpoint, keys } = sub.toJSON();
+      await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+        body: JSON.stringify({ endpoint, p256dh: keys?.p256dh, auth: keys?.auth, service: 'maumful' }),
+      });
+      setPushStatus('subscribed');
+    } catch (e) {
+      if (e.name === 'NotAllowedError') { setPushStatus('denied'); }
+      else { alert('알림 구독 중 오류가 발생했어요: ' + e.message); }
+    }
+  }
+
+  async function unsubscribePush() {
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) await sub.unsubscribe();
+      setPushStatus('idle');
+    } catch {}
   }
 
   // ============================================================
@@ -3274,7 +3321,7 @@ function PsychologicalTestSystem() {
         {/* 탭 */}
         <div className="flex gap-2 mb-5">
           {[['credits','크레딧 내역'],['history','검사 이력'],['appointments','상담 예약'],['referral','친구 초대'],['settings','설정']].map(([tab, label]) => (
-            <button key={tab} onClick={() => { setMyPageTab(tab); if (tab === 'credits') refreshCredits(); if (tab === 'history') loadTestHistory(); if (tab === 'referral') loadReferralData(); }}
+            <button key={tab} onClick={() => { setMyPageTab(tab); if (tab === 'credits') refreshCredits(); if (tab === 'history') loadTestHistory(); if (tab === 'referral') loadReferralData(); if (tab === 'settings') checkPushStatus(); }}
               className={`px-4 py-2 rounded-full text-sm font-semibold transition ${myPageTab === tab ? 'bg-green-700 text-white' : 'bg-white text-gray-500 border border-gray-200 hover:border-green-300'}`}>
               {label}
             </button>
@@ -3710,6 +3757,39 @@ function PsychologicalTestSystem() {
                 </p>
               )}
             </div>
+
+            {/* 🔔 Web Push 알림 */}
+            {pushStatus !== 'unsupported' && (
+              <div className="bg-white rounded-2xl p-5 border border-gray-100">
+                <h4 className="font-bold text-gray-700 mb-1">🔔 푸시 알림</h4>
+                <p className="text-xs text-gray-400 mb-3">검사 결과 업데이트, 상담 알림을 바로 받아보세요</p>
+                {pushStatus === 'denied' ? (
+                  <p className="text-xs text-red-500 bg-red-50 rounded-xl p-3">브라우저 알림이 차단되어 있어요. 주소 표시줄의 잠금 아이콘에서 알림 권한을 허용해 주세요.</p>
+                ) : pushStatus === 'subscribed' ? (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-green-700 font-semibold">✅ 알림 켜져 있음</span>
+                    <button onClick={unsubscribePush} className="text-xs text-gray-400 hover:text-gray-600 underline">끄기</button>
+                  </div>
+                ) : (
+                  <button onClick={subscribePush} className="w-full bg-green-700 text-white py-2.5 rounded-xl text-sm font-bold hover:bg-green-800 transition">
+                    🔔 알림 켜기
+                  </button>
+                )}
+              </div>
+            )}
+
+            {currentUser?.email && !currentUser?.social_provider && !currentUser?.is_email_verified && (
+              <div className="bg-amber-50 rounded-2xl p-4 border border-amber-200">
+                <h4 className="font-bold text-amber-800 mb-1">📧 이메일 미인증</h4>
+                <p className="text-xs text-amber-700 mb-3">이메일 인증을 완료하면 계정을 안전하게 보호할 수 있어요</p>
+                <button onClick={async () => {
+                  const r = await fetch('/api/auth/resend-verify', { method:'POST', headers:{ 'Content-Type':'application/json', ...api._authHeader() } }).then(r=>r.json());
+                  alert(r.success ? '인증 이메일을 발송했어요!' : r.error || '발송 실패');
+                }} className="w-full bg-amber-500 text-white py-2.5 rounded-xl text-sm font-bold hover:bg-amber-600 transition">
+                  📧 인증 이메일 재발송
+                </button>
+              </div>
+            )}
 
             {currentUser?.email && !currentUser?.social_provider && (
               <div className="bg-white rounded-2xl p-5 border border-gray-100">
@@ -7095,6 +7175,7 @@ function PsychologicalTestSystem() {
               runAiAnalysis("SCT", "SCT", { completionSample: sample });
             }}
           />
+          <ShareResultButton text={`✍️ SRCI 자기반응완성 검사 결과\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #심리검사`} />
           <RecoveryCard testType="SCT" score={0} level="low" />
           <ExpertCTA testType="SCT" score={0} level="low"
             onContinueAI={() => { setChatOpen(true); window.scrollTo(0,document.body.scrollHeight); }} />
@@ -7418,8 +7499,9 @@ function PsychologicalTestSystem() {
               });
             }}
           />
+          {(() => { const r = calcDass21(); return <ShareResultButton text={`📊 DASS-21 결과\n우울: ${r.depression.score}점 / 불안: ${r.anxiety.score}점 / 스트레스: ${r.stress.score}점\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #심리검사`} />; })()}
 
-          
+
           {/* 🤝 전문가 상담 CTA */}
           {(() => {
             const r = calcDass21();
