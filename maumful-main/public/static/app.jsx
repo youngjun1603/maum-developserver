@@ -237,6 +237,7 @@ function PsychologicalTestSystem() {
   });
   const [testHistory, setTestHistory] = useState([]);
   const [myPageTab, setMyPageTab]     = useState('credits'); // 'credits' | 'history' | 'settings' | 'appointments'
+  const [changePwMsg, setChangePwMsg] = useState({ type: '', text: '' });
   const [creditSubTab, setCreditSubTab] = useState('usage');   // 'usage' | 'charge'
   const [selectedTests, setSelectedTests] = useState(['PHQ9']); // 대시보드에서 선택한 검사
 
@@ -1450,10 +1451,35 @@ function PsychologicalTestSystem() {
     const result = await api.register(email, password, nickname || email.split('@')[0]);
     if (!result.success) { setFormMsg({ type: 'error', text: result.error || '가입에 실패했습니다.' }); return; }
 
-    setFormMsg({ type: 'success', text: '가입 완료! 바로 로그인하세요.' });
-    // 초대 코드가 있으면 가입 완료 후 자동 적용 (이메일 인증 후 로그인 시 처리)
-    // sessionStorage에 저장만 해두고 로그인 성공 시 적용
-    setTimeout(() => { setView('memberLogin'); setFormMsg({ type: '', text: '' }); }, 2000);
+    // 가입 성공 → 자동 로그인
+    setFormMsg({ type: 'loading', text: '잠시만요...' });
+    const loginResult = await api.login(email, password);
+    if (!loginResult.success) {
+      setFormMsg({ type: 'success', text: '가입 완료! 아래에서 로그인해주세요.' });
+      setTimeout(() => { setView('memberLogin'); setFormMsg({ type: '', text: '' }); }, 1500);
+      return;
+    }
+    const { accessToken, refreshToken, user } = loginResult.data;
+    tokenStore.setTokens(accessToken, refreshToken);
+    tokenStore.setUser(user);
+    setCurrentUser(user);
+    setCredits(user.credits);
+    setIsLoggedIn(true);
+    setFormMsg({ type: '', text: '' });
+    setSignupForm({ email: '', password: '', pwConfirm: '', nickname: '' });
+
+    // 초대 코드 자동 적용
+    const pendingRef = sessionStorage.getItem('pending_ref_code');
+    if (pendingRef) {
+      sessionStorage.removeItem('pending_ref_code');
+      fetch('/api/referral/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+        body: JSON.stringify({ code: pendingRef }),
+      }).then(r => r.json()).then(r => { if (r.success) setCredits(r.data.balance); }).catch(() => {});
+    }
+
+    setView('memberOnboarding');
   }
 
   async function handleLogout() {
@@ -2446,6 +2472,55 @@ function PsychologicalTestSystem() {
   );
 
   // ============================================================
+  // 뷰: 신규 회원 온보딩 (가입 직후 자동 이동)
+  // ============================================================
+  if (isLoggedIn && view === 'memberOnboarding') return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-green-100 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+        <div className="text-center mb-7">
+          <div className="text-5xl mb-3">🌿</div>
+          <h2 className="text-2xl font-bold text-gray-800">환영합니다, {currentUser?.nickname || '회원'}님!</h2>
+          <p className="text-sm text-gray-400 mt-2">마음풀을 시작하기 전에<br/>AI 상담 해석 방식을 선택해주세요</p>
+        </div>
+
+        <p className="text-xs text-gray-400 text-center mb-3">검사 결과를 어떤 관점으로 해석할까요?</p>
+        <div className="grid gap-3 mb-6">
+          {[
+            { mode: 'psychological', icon: '🧠', label: '심리상담 (기본)',
+              desc: '심리학 이론과 과학적 근거를 바탕으로 해석합니다',
+              activeClass: 'border-green-500 bg-green-50', checkClass: 'text-green-600' },
+            { mode: 'biblical', icon: '✝️', label: '기독교 상담',
+              desc: '성경 말씀과 기독교 신앙을 기반으로 해석합니다',
+              activeClass: 'border-purple-400 bg-purple-50', checkClass: 'text-purple-600' },
+          ].map(({ mode, icon, label, desc, activeClass, checkClass }) => (
+            <button key={mode} onClick={() => updateCounselingMode(mode)}
+              className={`flex items-start gap-3 p-4 rounded-xl border-2 text-left transition w-full
+                ${counselingMode === mode ? activeClass : 'border-gray-100 hover:border-gray-300'}`}>
+              <span className="text-2xl mt-0.5">{icon}</span>
+              <div className="flex-1">
+                <div className={`font-semibold text-sm ${counselingMode === mode ? checkClass : 'text-gray-700'}`}>{label}</div>
+                <div className="text-xs text-gray-400 mt-1">{desc}</div>
+              </div>
+              {counselingMode === mode && <span className={`${checkClass} font-bold text-lg`}>✓</span>}
+            </button>
+          ))}
+        </div>
+
+        <div className="bg-green-50 rounded-xl p-4 mb-6">
+          <p className="text-sm font-semibold text-green-800">✦ 가입 보너스 10 크레딧 지급 완료!</p>
+          <p className="text-xs text-green-600 mt-1">심리검사 1회 + AI 채팅 2회를 무료로 이용할 수 있어요</p>
+        </div>
+
+        <button onClick={() => { loadTestHistory(); setView('memberDashboard'); }}
+          className="w-full bg-green-700 text-white py-3 rounded-xl font-bold hover:bg-green-800 transition text-base">
+          심리검사 시작하기 →
+        </button>
+        <p className="text-xs text-gray-300 text-center mt-3">마이페이지 → 설정에서 언제든 변경할 수 있어요</p>
+      </div>
+    </div>
+  );
+
+  // ============================================================
   // 뷰: 비밀번호 찾기
   // ============================================================
   if (!isLoggedIn && view === 'forgotPassword') return (
@@ -3314,6 +3389,49 @@ function PsychologicalTestSystem() {
                 </p>
               )}
             </div>
+
+            {currentUser?.email && !currentUser?.social_provider && (
+              <div className="bg-white rounded-2xl p-5 border border-gray-100">
+                <h4 className="font-bold text-gray-700 mb-3">비밀번호 변경</h4>
+                <div className="space-y-2 mb-3">
+                  <input id="cp-current" type="password" placeholder="현재 비밀번호"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm" />
+                  <input id="cp-new" type="password" placeholder="새 비밀번호 (8자 이상)"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm" />
+                  <input id="cp-confirm" type="password" placeholder="새 비밀번호 확인"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm" />
+                </div>
+                {changePwMsg.text && (
+                  <p className={`text-xs mb-3 px-3 py-2 rounded-lg ${changePwMsg.type === 'success' ? 'bg-green-50 text-green-700' : changePwMsg.type === 'error' ? 'bg-red-50 text-red-600' : 'bg-gray-50 text-gray-500'}`}>
+                    {changePwMsg.text}
+                  </p>
+                )}
+                <button onClick={async () => {
+                  const cur  = document.getElementById('cp-current')?.value || '';
+                  const nw   = document.getElementById('cp-new')?.value || '';
+                  const conf = document.getElementById('cp-confirm')?.value || '';
+                  if (!cur || !nw || !conf) { setChangePwMsg({ type: 'error', text: '모든 항목을 입력해주세요.' }); return; }
+                  if (nw.length < 8) { setChangePwMsg({ type: 'error', text: '비밀번호는 8자 이상이어야 합니다.' }); return; }
+                  if (nw !== conf) { setChangePwMsg({ type: 'error', text: '새 비밀번호가 일치하지 않습니다.' }); return; }
+                  setChangePwMsg({ type: 'loading', text: '변경 중...' });
+                  const r = await fetch('/api/auth/change-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+                    body: JSON.stringify({ currentPassword: cur, newPassword: nw }),
+                  }).then(r => r.json());
+                  if (r.success) {
+                    setChangePwMsg({ type: 'success', text: '비밀번호가 변경되었습니다.' });
+                    document.getElementById('cp-current').value = '';
+                    document.getElementById('cp-new').value = '';
+                    document.getElementById('cp-confirm').value = '';
+                  } else {
+                    setChangePwMsg({ type: 'error', text: r.error || '변경 실패' });
+                  }
+                }} className="w-full bg-green-700 text-white py-3 rounded-xl text-sm font-bold hover:bg-green-800 transition">
+                  비밀번호 변경
+                </button>
+              </div>
+            )}
 
             <button onClick={async () => { if (window.confirm('정말 탈퇴하시겠습니까?')) { await api.deleteMe(); handleLogout(); } }}
               className="w-full bg-red-50 text-red-500 border border-red-200 py-3 rounded-xl text-sm font-semibold hover:bg-red-100 transition">

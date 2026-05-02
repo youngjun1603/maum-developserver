@@ -7,7 +7,7 @@ maum/
 ├── maumful-main/      → maumful.com (메인, 운영중) / maumful-dev.limyj007.workers.dev (스테이징)
 ├── maumgame-main/     → game.maumful.com (운영중)
 └── package/
-    ├── maumcouple/    → couple.maumful.com (배포 예정) / maumcouple-dev.limyj007.workers.dev (스테이징)
+    ├── maumcouple/    → couple.maumful.com (운영중) / maumcouple-dev.limyj007.workers.dev (스테이징)
     ├── maumful/       → 참고용 (이미 maumful-main에 선택적 병합 완료)
     └── D1_SQL_실행순서.sql
 ```
@@ -232,8 +232,7 @@ npx wrangler d1 execute maumful-db --remote --yes --file=./migrations/0011_add_r
 
 ### maumcouple 커스텀 도메인
 
-`couple.maumful.com` DNS 및 Cloudflare Workers 커스텀 도메인 설정 필요.  
-현재 스테이징만 가능 (`maumcouple-dev.limyj007.workers.dev`).
+`couple.maumful.com` — Cloudflare Workers 커스텀 도메인 설정 완료 (운영중).
 
 ### package/maumful 버전의 수정 필요 사항
 
@@ -278,15 +277,96 @@ if (!adminSecret) return 'ADMIN_SECRET_NOT_SET'
 | 키 | 위치 | 설명 |
 |---|---|---|
 | `JWT_SECRET` | KV에 저장 | 3개 서비스 공유 시크릿 |
-| `ANTHROPIC_API_KEY` | DB에 저장 | AI 분석 / 채팅 |
+| `ANTHROPIC_API_KEY` | wrangler secret | AI 분석 / 채팅 |
 | `TOSS_SECRET_KEY` | wrangler secret | 결제 |
 | `TOSS_CLIENT_KEY` | wrangler secret | 클라이언트 결제 UI |
 | `ADMIN_SECRET` | wrangler secret | 관리자 API 인증 |
 | `RESEND_API_KEY` | wrangler secret | 이메일 발송 |
 
 ### maumgame / maumcouple
-- 별도 `ANTHROPIC_API_KEY` 환경변수 필요
+- `ANTHROPIC_API_KEY` — wrangler secret으로 별도 등록 필요 (각 서비스마다)
 - `JWT_SECRET`은 maumful KV와 동일한 KV 바인딩으로 자동 공유
+
+### ANTHROPIC_API_KEY 등록 명령 (3개 서비스 모두)
+
+```powershell
+cd maumful-main      && npx wrangler secret put ANTHROPIC_API_KEY
+cd maumgame-main     && npx wrangler secret put ANTHROPIC_API_KEY
+cd package/maumcouple && npx wrangler secret put ANTHROPIC_API_KEY
+```
+
+키는 console.anthropic.com → API Keys 탭에서 확인. 세 서비스에 동일한 키 사용.
+
+---
+
+## AI 호출 인프라 — Cloudflare AI Gateway
+
+### 🔴 Workers → Anthropic 직접 호출 불가 (WAF 차단)
+
+**원인**: Cloudflare Workers의 발신 IP가 Cloudflare 네트워크 대역이고, `api.anthropic.com`도 Cloudflare 프록시 뒤에 있음. Anthropic WAF가 Cloudflare Worker IP에서 오는 요청을 `403 Request not allowed`로 차단.
+
+**해결**: 3개 서비스 모두 **Cloudflare AI Gateway**를 경유하도록 변경 (2026-05-02 적용).
+
+### Gateway 설정
+
+| 항목 | 값 |
+|---|---|
+| Gateway 이름 | `maumful` |
+| 계정 ID | `313b6305037d45af37c09a60dad1ac2b` |
+| 인증 | **비활성화** (Public gateway) |
+
+### Anthropic 호출 URL (3개 서비스 공통)
+
+```typescript
+// ❌ 사용 금지 — Workers에서 WAF 차단됨
+fetch('https://api.anthropic.com/v1/messages', ...)
+
+// ✅ 현재 사용 중 — AI Gateway 경유
+fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', ...)
+```
+
+헤더는 동일하게 유지: `x-api-key`, `anthropic-version: 2023-06-01`
+
+### 🔴 Gateway 인증 관련 주의
+
+- Gateway 인증을 **활성화하면** 모든 AI 기능이 `2009 Unauthorized`로 즉시 실패
+- Cloudflare Dashboard → AI → AI Gateway → `maumful` → Settings → Authentication **OFF** 유지
+- Gateway 인증 활성화 시 Workers에 `cf-aig-authorization: Bearer <token>` 헤더 추가 필요
+
+---
+
+## AI 모델 설정
+
+### 서비스별 사용 모델 (2026-05-01 기준)
+
+| 서비스 | 기본 모델 | 폴백 | 비고 |
+|---|---|---|---|
+| **maumful** | `claude-sonnet-4-6` | `claude-haiku-4-5-20251001` | `AI_MODEL` 환경변수로 변경 가능 |
+| **maumgame** | `claude-haiku-4-5-20251001` | 없음 | 하드코딩 |
+| **maumcouple** | `claude-haiku-4-5-20251001` | 없음 | 하드코딩 |
+
+### 🔴 AI 모델 에러 재발 방지
+
+**원인**: Claude 3 계열 모델(`claude-3-haiku-20240307`, `claude-3-5-sonnet-20241022` 등)이 2026년 이후 deprecated 처리되어 **전부 403 반환**.  
+폴백 목록에 Claude 3 모델이 있으면 순서대로 모두 실패하여 최종 403 에러 발생.
+
+**규칙**:
+- 폴백 목록에 **Claude 3 계열 모델 절대 추가 금지**
+- 새 모델 추가 시 `claude-haiku-4-5-20251001` 이상만 사용
+- 모델 접근 진단: `https://maumful.com/api/admin/test-ai?secret=<ADMIN_SECRET>`
+
+### maumful AI 엔드포인트 폴백 구성
+
+```typescript
+// /api/ai-analyze 및 /api/ai-chat 공통
+const MODEL_FALLBACKS = [
+  getAiModel(c.env),           // env.AI_MODEL ?? 'claude-sonnet-4-6'
+  'claude-haiku-4-5-20251001',
+  'claude-sonnet-4-6',
+]
+```
+
+---
 
 ## 마스터 계정
 

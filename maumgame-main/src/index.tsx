@@ -418,7 +418,7 @@ app.post('/api/game/ai-transform', async (c) => {
   if (!apiKey) return c.json({ success: false, error: 'ANTHROPIC_API_KEY 미설정 — Cloudflare 환경변수 등록 필요' }, 500)
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
@@ -599,7 +599,7 @@ app.post('/api/game/daily-tip', async (c) => {
   ].filter(Boolean)
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
@@ -609,7 +609,11 @@ app.post('/api/game/daily-tip', async (c) => {
         messages: [{ role: 'user', content: `사용자 상태: ${parts.join(' / ')}` }],
       }),
     })
-    if (!res.ok) return c.json({ success: false, error: 'AI 호출 실패' }, 502)
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => '')
+      console.error('[daily-tip] Anthropic error:', res.status, errBody.slice(0, 200))
+      return c.json({ success: false, error: `AI 호출 실패 (${res.status})`, detail: errBody.slice(0, 200) }, 502)
+    }
     const d = await res.json() as { content: { text: string }[] }
     const message = d.content?.[0]?.text?.trim() || ''
 

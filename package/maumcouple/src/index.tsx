@@ -532,13 +532,17 @@ app.post('/api/couple/report', async (c) => {
   const apiKey = await getAnthropicKey(c.env)
   if (!apiKey) return c.json({ error: 'API 키 미설정' }, 500)
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1500, stream: false, messages: [{ role: 'user', content: prompt }] }),
   })
 
-  if (!res.ok) return c.json({ error: 'AI 오류' }, 502)
+  if (!res.ok) {
+    const errText = await res.text()
+    console.error('[Couple Report] Anthropic error:', res.status, errText)
+    return c.json({ error: 'AI 오류', detail: errText, httpStatus: res.status }, 502)
+  }
 
   const aiData = await res.json() as { content: Array<{ type: string; text: string }> }
   const reportText = aiData.content?.find(b => b.type === 'text')?.text ?? ''

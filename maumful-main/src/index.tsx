@@ -8,7 +8,7 @@ type Bindings = {
   DB: D1Database
   KV: KVNamespace
   ANTHROPIC_API_KEY?: string
-  AI_MODEL?: string                 // AI 모델 ID (기본값: claude-3-haiku-20240307)
+  AI_MODEL?: string                 // AI 모델 ID (기본값: claude-sonnet-4-6)
   TOSS_SECRET_KEY?: string        // 토스페이먼츠 결제 요청 시크릿
   TOSS_BILLING_KEY?: string       // 토스페이먼츠 빌링키 발급용 시크릿 (구독 결제)
   TOSS_CLIENT_KEY?: string        // 토스페이먼츠 클라이언트 키 (브라우저용)
@@ -549,6 +549,38 @@ app.post('/api/auth/reset-password', async (c) => {
   return c.json({ success: true, message: '비밀번호가 변경되었습니다. 다시 로그인해주세요.' })
 })
 
+// POST /api/auth/change-password — 로그인 상태에서 비밀번호 변경
+app.post('/api/auth/change-password', async (c) => {
+  const { DB, KV } = c.env
+  const ip = c.req.header('cf-connecting-ip') || 'unknown'
+  const rl = await checkRateLimit(KV, `change-pw:${ip}`, 5, 3600)
+  if (!rl.allowed) return c.json({ success: false, error: '잠시 후 다시 시도해주세요.' }, 429)
+
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false, error: '로그인이 필요합니다.' }, 401)
+
+  const { currentPassword, newPassword } = await c.req.json().catch(() => ({})) as { currentPassword?: string; newPassword?: string }
+  if (!currentPassword || !newPassword)
+    return c.json({ success: false, error: '현재 비밀번호와 새 비밀번호를 입력해주세요.' }, 400)
+  if (newPassword.length < 8)
+    return c.json({ success: false, error: '비밀번호는 8자 이상이어야 합니다.' }, 400)
+
+  const user = await DB.prepare('SELECT password_hash FROM users WHERE id = ?')
+    .bind(userId).first<{ password_hash: string | null }>()
+  if (!user?.password_hash)
+    return c.json({ success: false, error: '소셜 로그인 계정은 비밀번호를 변경할 수 없습니다.' }, 400)
+
+  const valid = await verifyPassword(currentPassword, user.password_hash)
+  if (!valid)
+    return c.json({ success: false, error: '현재 비밀번호가 올바르지 않습니다.' }, 401)
+
+  const newHash = await hashPassword(newPassword)
+  await DB.prepare('UPDATE users SET password_hash=?,updated_at=CURRENT_TIMESTAMP WHERE id=?')
+    .bind(newHash, userId).run()
+
+  return c.json({ success: true, message: '비밀번호가 변경되었습니다.' })
+})
+
 // ============================================================
 // 내 계정 API
 // ============================================================
@@ -558,7 +590,7 @@ app.get('/api/user/me', async (c) => {
   if (!userId) return c.json({ success: false, error: '로그인이 필요합니다.' }, 401)
 
   const user = await DB.prepare(
-    'SELECT id,email,nickname,locale,country_code,credits,is_email_verified,created_at FROM users WHERE id=?'
+    'SELECT id,email,nickname,locale,country_code,credits,is_email_verified,social_provider,created_at FROM users WHERE id=?'
   ).bind(userId).first()
   if (!user) return c.json({ success: false, error: '사용자 없음' }, 404)
   return c.json({ success: true, data: user })
@@ -819,14 +851,13 @@ app.post('/api/ai-analyze', async (c) => {
   const prompt = buildAnalysisPrompt(body)
   const ANALYZE_FALLBACKS = [
     getAiModel(c.env),
-    'claude-3-5-sonnet-20241022',
-    'claude-3-5-haiku-20241022',
-    'claude-3-haiku-20240307',
+    'claude-haiku-4-5-20251001',
+    'claude-sonnet-4-6',
   ]
   let upstream!: Response
   let analyzedModel = ANALYZE_FALLBACKS[0]
   for (const model of [...new Set(ANALYZE_FALLBACKS)]) {
-    upstream = await fetch('https://api.anthropic.com/v1/messages', {
+    upstream = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({ model, max_tokens: 1500, stream: true, messages: [{ role: 'user', content: prompt }] }),
@@ -1038,16 +1069,15 @@ ${summary ?? '검사 결과 없음 — 일반적인 마음 돌봄 상담으로 �
   // 모델 폴백: 환경변수 모델이 404/403이면 순서대로 재시도
   const MODEL_FALLBACKS = [
     getAiModel(c.env),
-    'claude-3-5-sonnet-20241022',
-    'claude-3-5-haiku-20241022',
-    'claude-3-haiku-20240307',
+    'claude-haiku-4-5-20251001',
+    'claude-sonnet-4-6',
   ]
   const reqBody = { max_tokens: 1500, stream: true, system: lang === 'ko' ? systemKo : systemEn, messages }
 
   let res!: Response
   let usedModel = MODEL_FALLBACKS[0]
   for (const model of [...new Set(MODEL_FALLBACKS)]) {
-    res = await fetch('https://api.anthropic.com/v1/messages', {
+    res = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({ model, ...reqBody }),
@@ -2117,7 +2147,7 @@ app.get('/api/admin/test-ai', async (c) => {
     let status = ''
     let color = ''
     try {
-      const r = await fetch('https://api.anthropic.com/v1/messages', {
+      const r = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
         body: JSON.stringify({ model, max_tokens: 5, messages: [{ role: 'user', content: 'hi' }] }),
