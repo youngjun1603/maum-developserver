@@ -881,6 +881,142 @@ function AchievementToast({ achievements = [], onDismiss }) {
 }
 
 // ──────────────────────────────────────────────────────────
+// BurnoutTrendSection — 번아웃 점수 이력 차트
+// ──────────────────────────────────────────────────────────
+const BURNOUT_LEVELS = [
+  { max:  39, label:'낮음',   color:'#52B788', bg:'#D8F3DC' },
+  { max:  59, label:'보통',   color:'#F59E0B', bg:'#FEF3C7' },
+  { max:  79, label:'높음',   color:'#F97316', bg:'#FFEDD5' },
+  { max: 100, label:'심각',   color:'#EF4444', bg:'#FEF2F2' },
+];
+function getBurnoutLevel(score) {
+  return BURNOUT_LEVELS.find(l => score <= l.max) || BURNOUT_LEVELS[BURNOUT_LEVELS.length - 1];
+}
+
+function BurnoutTrendSection({ userTestScores }) {
+  const [history, setHistory] = React.useState(null);
+  const [loading, setLoading] = React.useState(false);
+  const [expanded, setExpanded] = React.useState(false);
+
+  const handleToggle = () => {
+    if (!expanded && !history) {
+      setLoading(true);
+      GameEngine.getBurnoutHistory()
+        .then(res => { if (res.success) setHistory(res.data); })
+        .finally(() => setLoading(false));
+    }
+    setExpanded(v => !v);
+  };
+
+  // 번아웃 게임 경험 없으면 렌더 안 함
+  const burnoutScore = userTestScores?.BURNOUT;
+  if (burnoutScore === undefined) return null;
+
+  const level = getBurnoutLevel(burnoutScore);
+  const entries = (history || []).slice().reverse(); // 오래된→최신
+
+  // SVG 라인 차트 설정
+  const W = 280, H = 70, PAD = 12;
+  const plotW = W - PAD * 2, plotH = H - PAD;
+  const maxY = 100, minY = 0;
+  const toX = i => PAD + (entries.length > 1 ? i * (plotW / (entries.length - 1)) : plotW / 2);
+  const toY = v => PAD + plotH - (v / (maxY - minY)) * plotH;
+  const pts = entries.map((e, i) => ({ x: toX(i), y: toY(e.burnout_score ?? e.score), val: e.burnout_score ?? e.score, date: e.date }));
+  const pathD = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+
+  return (
+    <div style={{
+      background:'rgba(255,255,255,0.7)', backdropFilter:'blur(8px)',
+      borderRadius:20, padding:'16px 20px', marginBottom:24,
+      border:'1px solid rgba(255,255,255,0.6)',
+    }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:7 }}>
+          <span style={{ fontSize:16 }}>🔥</span>
+          <span style={{ fontSize:13, fontWeight:700, color:C.dark }}>번아웃 지수 추이</span>
+          <span style={{
+            fontSize:11, fontWeight:700,
+            background: level.bg, color: level.color,
+            borderRadius:100, padding:'2px 8px',
+          }}>현재 {burnoutScore}점 · {level.label}</span>
+        </div>
+        <button onClick={handleToggle} style={{
+          background:'none', border:'none', cursor:'pointer',
+          fontSize:12, color:C.muted, fontWeight:600,
+          fontFamily:"'Noto Sans KR',sans-serif",
+        }}>{expanded ? '접기 ▲' : '펼치기 ▼'}</button>
+      </div>
+
+      {expanded && (
+        <div style={{ marginTop:14, animation:'fadeUp 0.3s ease' }}>
+          {loading && <div style={{ textAlign:'center', padding:16, color:C.muted, fontSize:12 }}>불러오는 중...</div>}
+          {!loading && history && entries.length === 0 && (
+            <div style={{ textAlign:'center', padding:16, color:C.muted, fontSize:12 }}>
+              아직 번아웃 게임 기록이 없어요.<br/>게임을 플레이하면 점수 변화를 확인할 수 있어요!
+            </div>
+          )}
+          {!loading && entries.length >= 2 && (
+            <div style={{
+              background:'white', borderRadius:14, padding:'14px 16px', marginBottom:12,
+              border:`1px solid ${level.color}22`,
+            }}>
+              <div style={{ fontSize:11, color:C.muted, marginBottom:8 }}>번아웃 점수 이력 (낮을수록 건강)</div>
+              <svg viewBox={`0 0 ${W} ${H}`} style={{ width:'100%', height:'auto', display:'block' }}>
+                {/* 위험 구간 배경 */}
+                <rect x={PAD} y={PAD} width={plotW} height={toY(60) - PAD} fill="#FEF3C7" opacity="0.4" rx="2"/>
+                <rect x={PAD} y={toY(60)} width={plotW} height={toY(40) - toY(60)} fill="#FFEDD5" opacity="0.3" rx="2"/>
+                {/* 기준선 60점 */}
+                <line x1={PAD} y1={toY(60)} x2={W-PAD} y2={toY(60)} stroke="#F59E0B" strokeWidth="1" strokeDasharray="3 2"/>
+                <text x={W-PAD+2} y={toY(60)+3} fontSize="7" fill="#F59E0B">60</text>
+                {/* 채움 */}
+                <path d={`${pathD} L ${pts[pts.length-1].x} ${PAD+plotH} L ${pts[0].x} ${PAD+plotH} Z`}
+                  fill={`${level.color}18`} stroke="none"/>
+                {/* 라인 */}
+                <path d={pathD} fill="none" stroke={level.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                {/* 점 + 날짜 */}
+                {pts.map((p, i) => (
+                  <g key={i}>
+                    <circle cx={p.x} cy={p.y} r="3.5" fill="white" stroke={level.color} strokeWidth="2"/>
+                    <text x={p.x} y={H-1} textAnchor="middle" fontSize="7" fill="#C0C0C0">
+                      {new Date(p.date+'T00:00:00').toLocaleDateString('ko-KR',{month:'numeric',day:'numeric'})}
+                    </text>
+                  </g>
+                ))}
+                {/* 최신 값 강조 */}
+                <text x={pts[pts.length-1].x} y={pts[pts.length-1].y-6}
+                  textAnchor="middle" fontSize="9" fontWeight="bold" fill={level.color}>
+                  {pts[pts.length-1].val}
+                </text>
+              </svg>
+              {/* 전회 대비 */}
+              {pts.length >= 2 && (() => {
+                const diff = pts[pts.length-1].val - pts[pts.length-2].val;
+                return (
+                  <div style={{
+                    marginTop:8, fontSize:12, fontWeight:600, textAlign:'center',
+                    color: diff <= 0 ? '#52B788' : '#EF4444',
+                  }}>
+                    {diff <= 0 ? `✅ 지난 회 대비 ${Math.abs(diff)}점 개선됐어요!` : `⚠️ 지난 회 대비 ${diff}점 높아졌어요. 쉬어가세요.`}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+          {/* 레벨 가이드 */}
+          <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+            {BURNOUT_LEVELS.map(l => (
+              <div key={l.label} style={{
+                fontSize:10, padding:'3px 8px', borderRadius:100,
+                background:l.bg, color:l.color, fontWeight:600,
+              }}>{l.label} ~{l.max}점</div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // EmotionWeeklyReport — AI 감정 주간 분석 (접기/펼치기)
 // ──────────────────────────────────────────────────────────
 const EMOTION_DISPLAY = {
@@ -1548,6 +1684,9 @@ function GameHubApp() {
         }}>
           <TestBadgeRow completedTests={completedTests || []} />
         </div>
+
+        {/* ── 번아웃 트렌드 ── */}
+        <BurnoutTrendSection userTestScores={data?.userTestScores} />
 
         {/* ── 감정 AI 주간 리포트 ── */}
         <EmotionWeeklyReport />

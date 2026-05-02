@@ -699,6 +699,36 @@ app.get('/api/game/mood-history', async (c) => {
   return c.json({ success: true, data: entries, todayDone: entries.some(e => e.date === today) })
 })
 
+// ── GET /api/game/burnout-history ────────────────────────
+// 번아웃 게임 플레이 점수 이력 (최근 10회)
+app.get('/api/game/burnout-history', async (c) => {
+  const { DB } = c.env
+  const userId = await getGameUserId(c.req.raw, c.env)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+
+  const rows = await DB.prepare(`
+    SELECT date(created_at) as date, score, metadata, created_at
+    FROM game_session_logs
+    WHERE user_id=? AND game_id='burnout'
+    ORDER BY created_at DESC
+    LIMIT 10
+  `).bind(userId).all()
+
+  const entries = (rows.results as { date: string; score: number; metadata: string | null; created_at: string }[])
+    .map(row => {
+      let meta: Record<string, unknown> = {}
+      try { meta = row.metadata ? JSON.parse(row.metadata) : {} } catch { /* ignore */ }
+      return {
+        date:          row.date,
+        score:         row.score,
+        burnout_score: (meta.burnout_score as number) ?? null,
+        city_level:    (meta.city_level as string) ?? null,
+      }
+    })
+
+  return c.json({ success: true, data: entries })
+})
+
 // ── 번아웃 회복 미션 API ──────────────────────────────────
 app.post('/api/recovery/missions', async (c) => {
   const { burnoutScore = 50 } = await c.req.json().catch(() => ({}))

@@ -209,10 +209,16 @@ const GameEngine = (() => {
     return res.json();
   }
 
+  // ── 번아웃 히스토리 조회 ─────────────────────────────────
+  async function getBurnoutHistory() {
+    const res = await fetch('/api/game/burnout-history', { headers: authHeader() });
+    return res.json();
+  }
+
   return {
     getMe, saveSession, transformSentence, updateVisual,
     getCredits, spendCredit, saveScore,
-    getLeaderboard, getDailyTip, getMoodHistory, getEmotionReport, getGameStats,
+    getLeaderboard, getDailyTip, getMoodHistory, getEmotionReport, getGameStats, getBurnoutHistory,
     getLevelInfo, getGardenTheme, getAchievementInfo,
     formatDuration, formatRelativeTime,
     LEVELS,
