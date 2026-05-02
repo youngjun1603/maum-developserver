@@ -197,10 +197,16 @@ const GameEngine = (() => {
     return res.json();
   }
 
+  // ── 감정 AI 주간 리포트 ──────────────────────────────────
+  async function getEmotionReport() {
+    const res = await fetch('/api/game/emotion-report', { headers: authHeader() });
+    return res.json();
+  }
+
   return {
     getMe, saveSession, transformSentence, updateVisual,
     getCredits, spendCredit, saveScore,
-    getLeaderboard, getDailyTip, getMoodHistory,
+    getLeaderboard, getDailyTip, getMoodHistory, getEmotionReport,
     getLevelInfo, getGardenTheme, getAchievementInfo,
     formatDuration, formatRelativeTime,
     LEVELS,

@@ -690,4 +690,131 @@ app.get('/api/recovery/weekly-report/:userId', async (c) => {
   })
 })
 
-export default app
+// ── GET /api/game/emotion-report ─────────────────────────
+// 최근 7일 감정 기록 → AI 주간 패턴 분석 (주 1회 캐시)
+app.get('/api/game/emotion-report', async (c) => {
+  const { DB } = c.env
+  const userId = await getGameUserId(c.req.raw, c.env)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+
+  // 최근 7일 감정 기록
+  const rows = await DB.prepare(`
+    SELECT date(created_at) as date, score, metadata
+    FROM game_session_logs
+    WHERE user_id=? AND game_id='mood' AND module_type='checkin'
+      AND created_at >= date('now', '-6 days')
+    ORDER BY created_at ASC
+  `).bind(userId).all<{ date: string; score: number; metadata: string | null }>()
+
+  const seen = new Set<string>()
+  const entries: { date: string; emotion: string; intensity: number }[] = []
+  for (const row of rows.results) {
+    if (seen.has(row.date)) continue
+    seen.add(row.date)
+    let meta: Record<string, unknown> = {}
+    try { meta = row.metadata ? JSON.parse(row.metadata) : {} } catch { /**/ }
+    entries.push({
+      date:      row.date,
+      emotion:   (meta.emotion as string) || 'calm',
+      intensity: (meta.intensity as number) || 3,
+    })
+  }
+
+  if (entries.length < 3) {
+    return c.json({ success: true, data: { report: null, entries, insufficient: true } })
+  }
+
+  // 이번 주 월요일 기준 캐시 키 (KST)
+  const now = new Date(Date.now() + 9 * 3600 * 1000)
+  const dayOfWeek = now.getUTCDay() === 0 ? 6 : now.getUTCDay() - 1 // 0=Mon
+  const mondayKST = new Date(now)
+  mondayKST.setUTCDate(now.getUTCDate() - dayOfWeek)
+  const cacheKey = `emotion_report_${mondayKST.toISOString().slice(0, 10)}`
+
+  try {
+    const cached = await DB.prepare('SELECT result_text FROM game_ai_cache WHERE user_id=? AND source_text=? LIMIT 1')
+      .bind(userId, cacheKey).first<{ result_text: string }>()
+    if (cached) return c.json({ success: true, data: { report: cached.result_text, entries, cached: true } })
+  } catch { /**/ }
+
+  const apiKey = c.env.ANTHROPIC_API_KEY
+  if (!apiKey) return c.json({ success: false, error: 'AI 키 미설정' }, 500)
+
+  const emoLabel: Record<string, string> = {
+    happy:'행복', calm:'평온', tired:'피곤', anxious:'불안', sad:'슬픔', angry:'화남'
+  }
+  const summary = entries.map(e =>
+    `${e.date}: ${emoLabel[e.emotion] || e.emotion} (강도 ${e.intensity}/5)`
+  ).join(', ')
+
+  try {
+    const res = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 160,
+        system: `당신은 감정 흐름 분석 전문가입니다. 사용자의 최근 감정 기록을 보고 따뜻하고 통찰력 있는 주간 감정 패턴 분석을 3문장으로 작성하세요. 한국어로, 공감적으로, 위로가 되도록.`,
+        messages: [{ role: 'user', content: `최근 감정 기록: ${summary}` }],
+      }),
+    })
+    if (!res.ok) return c.json({ success: false, error: `AI 오류 (${res.status})` }, 502)
+    const d = await res.json() as { content: { text: string }[] }
+    const report = d.content?.[0]?.text?.trim() || ''
+    try {
+      await DB.prepare('INSERT INTO game_ai_cache (user_id, source_text, result_text) VALUES (?,?,?)')
+        .bind(userId, cacheKey, report).run()
+    } catch { /**/ }
+    return c.json({ success: true, data: { report, entries, cached: false } })
+  } catch (e: unknown) {
+    return c.json({ success: false, error: (e as Error)?.message || '실패' }, 500)
+  }
+})
+
+// ── 번아웃 주간 리포트 자동 생성 (Cron) ─────────────────────
+async function handleScheduled(env: Bindings) {
+  const { DB } = env
+  // 지난 7일간 번아웃 게임을 플레이한 사용자
+  const activeUsers = await DB.prepare(`
+    SELECT DISTINCT user_id FROM game_session_logs
+    WHERE game_id='burnout' AND created_at >= date('now', '-7 days')
+  `).all<{ user_id: number }>()
+
+  const now = new Date(Date.now() + 9 * 3600 * 1000)
+  const dayOfWeek = now.getUTCDay() === 0 ? 6 : now.getUTCDay() - 1
+  const weekStart = new Date(now)
+  weekStart.setUTCDate(now.getUTCDate() - dayOfWeek)
+  const weekStartStr = weekStart.toISOString().slice(0, 10)
+
+  for (const u of activeUsers.results) {
+    const sessions = await DB.prepare(`
+      SELECT metadata FROM game_session_logs
+      WHERE user_id=? AND game_id='burnout' AND created_at >= date('now', '-7 days')
+    `).bind(u.user_id).all<{ metadata: string | null }>()
+
+    let totalEnergy = 0, energyCount = 0, missionCount = 0
+    for (const s of sessions.results) {
+      try {
+        const meta = s.metadata ? JSON.parse(s.metadata) : {}
+        if (typeof meta.energy === 'number') { totalEnergy += meta.energy; energyCount++ }
+        if (typeof meta.completedMissions === 'number') missionCount += meta.completedMissions
+      } catch { /**/ }
+    }
+
+    const avgEnergy = energyCount > 0 ? Math.round(totalEnergy / energyCount) : 50
+
+    // 같은 주 기존 레코드 교체
+    await DB.prepare('DELETE FROM weekly_reports WHERE user_id=? AND week_start=?')
+      .bind(u.user_id, weekStartStr).run()
+    await DB.prepare(
+      'INSERT INTO weekly_reports (user_id, avg_energy, completed_missions, burnout_delta, week_start) VALUES (?,?,?,?,?)'
+    ).bind(u.user_id, avgEnergy, missionCount, '0%', weekStartStr).run().catch(() => { /**/ })
+  }
+}
+
+export default {
+  fetch: app.fetch.bind(app),
+  async scheduled(_event: ScheduledEvent, env: Bindings) {
+    await handleScheduled(env)
+  },
+}

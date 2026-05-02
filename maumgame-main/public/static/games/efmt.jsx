@@ -200,9 +200,12 @@ function EFMTGame({ onExit }) {
   const [roundStartTime, setRoundStartTime] = useState(null);
   const [totalTargets, setTotalTargets] = useState(0);
   const [finished, setFinished]  = useState(false);
+  const [comboDisplay, setComboDisplay] = useState(0); // UI 표시용
 
   const timerRef     = useRef(null);
   const sessionRef   = useRef(Date.now());
+  const comboRef     = useRef(0); // 현재 연속 정답 수
+  const maxComboRef  = useRef(0); // 이번 라운드 최대 콤보
 
   const cfg = DIFFICULTY_CONFIG[difficulty];
 
@@ -216,6 +219,8 @@ function EFMTGame({ onExit }) {
     setTimeLeft(c.roundSec);
     setCorrect(0); setIncorrect(0); setReactionTimes([]);
     setRoundStartTime(Date.now());
+    comboRef.current = 0; maxComboRef.current = 0;
+    setComboDisplay(0);
     setRound(r);
     setScreen('round');
   }, [difficulty]);
@@ -247,6 +252,7 @@ function EFMTGame({ onExit }) {
           ? Math.round(reactionTimes.reduce((a,b)=>a+b,0) / reactionTimes.length)
           : 0,
         missedTargets: Math.max(0, totalTargets - correct),
+        maxCombo: maxComboRef.current,
       };
       const next = [...prev, stat];
       if (round >= cfg.rounds) {
@@ -275,6 +281,10 @@ function EFMTGame({ onExit }) {
     if (isTarget) {
       setCorrect(n => n + 1);
       setReactionTimes(prev => [...prev, rt]);
+      // 콤보 업데이트
+      comboRef.current += 1;
+      if (comboRef.current > maxComboRef.current) maxComboRef.current = comboRef.current;
+      setComboDisplay(comboRef.current);
       // 잠시 후 꽃 숨기기
       setTimeout(() => {
         setCells(prev => prev.map(c =>
@@ -283,6 +293,9 @@ function EFMTGame({ onExit }) {
       }, 400);
     } else {
       setIncorrect(n => n + 1);
+      // 콤보 초기화
+      comboRef.current = 0;
+      setComboDisplay(0);
       setTimeout(() => {
         setCells(prev => prev.map(c =>
           c.id === cellId ? { ...c, state: 'idle' } : c
@@ -298,7 +311,9 @@ function EFMTGame({ onExit }) {
     const totalTarget    = roundStats.reduce((a,s) => a + s.totalTargets, 0);
     const avgRT          = roundStats.filter(s=>s.avgReaction>0).reduce((a,s,_,arr) => a + s.avgReaction/arr.length, 0);
     const accuracy       = totalTarget > 0 ? Math.round(totalCorrect / totalTarget * 100) : 0;
-    const score          = Math.max(0, totalCorrect * 20 - totalIncorrect * 5 + Math.max(0, 50 - Math.round(avgRT/100)));
+    const bestCombo      = Math.max(...roundStats.map(s => s.maxCombo || 0), 0);
+    const comboBonus     = bestCombo >= 5 ? bestCombo * 8 : bestCombo >= 3 ? bestCombo * 5 : 0;
+    const score          = Math.max(0, totalCorrect * 20 - totalIncorrect * 5 + Math.max(0, 50 - Math.round(avgRT/100)) + comboBonus);
 
     try {
       const res = await GameEngine.saveSession({
@@ -434,8 +449,19 @@ function EFMTGame({ onExit }) {
           borderBottom:'1px solid rgba(0,0,0,0.06)',
         }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
-            <div style={{ fontSize:13, fontWeight:700, color:GE.dark }}>
-              라운드 {round} / {cfg.rounds}
+            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+              <div style={{ fontSize:13, fontWeight:700, color:GE.dark }}>
+                라운드 {round} / {cfg.rounds}
+              </div>
+              {comboDisplay >= 3 && (
+                <div style={{
+                  fontSize:12, fontWeight:800, color:GE.amber,
+                  background: GE.amber + '18', borderRadius:100, padding:'2px 9px',
+                  animation:'pulse 0.4s ease',
+                }}>
+                  🔥 {comboDisplay} 콤보
+                </div>
+              )}
             </div>
             <div style={{ display:'flex', gap:14, fontSize:13 }}>
               <span style={{ color:GE.sage, fontWeight:700 }}>✓ {correct}</span>
@@ -536,11 +562,12 @@ function EFMTGame({ onExit }) {
 
   // ── 최종 완료 ─────────────────────────────────────────────
   if (screen === 'done') {
-    const totalC = roundStats.reduce((a,s)=>a+s.correct,0);
-    const totalT = roundStats.reduce((a,s)=>a+s.totalTargets,0);
-    const totalW = roundStats.reduce((a,s)=>a+s.incorrect,0);
-    const avgAcc = totalT > 0 ? Math.round(totalC/totalT*100) : 0;
-    const avgRT  = roundStats.filter(s=>s.avgReaction>0).reduce((a,s,_,arr)=>a+s.avgReaction/arr.length,0);
+    const totalC    = roundStats.reduce((a,s)=>a+s.correct,0);
+    const totalT    = roundStats.reduce((a,s)=>a+s.totalTargets,0);
+    const totalW    = roundStats.reduce((a,s)=>a+s.incorrect,0);
+    const avgAcc    = totalT > 0 ? Math.round(totalC/totalT*100) : 0;
+    const avgRT     = roundStats.filter(s=>s.avgReaction>0).reduce((a,s,_,arr)=>a+s.avgReaction/arr.length,0);
+    const bestCombo = Math.max(...roundStats.map(s => s.maxCombo || 0), 0);
 
     return (
       <div style={{
@@ -569,7 +596,7 @@ function EFMTGame({ onExit }) {
               { label:'기쁜 꽃 발견', val:`${totalC}개`, color:GE.sage },
               { label:'전체 정확도', val:`${avgAcc}%`, color:GE.amber },
               { label:'오클릭', val:`${totalW}회`, color:GE.warn },
-              { label:'평균 반응속도', val:`${(avgRT/1000).toFixed(2)}s`, color:GE.dusty },
+              { label:'최대 콤보', val:`${bestCombo}연속`, color:GE.amber },
             ].map(({label,val,color})=>(
               <div key={label}>
                 <div style={{ fontSize:11, color:GE.muted, marginBottom:3 }}>{label}</div>

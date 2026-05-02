@@ -769,6 +769,190 @@ function AchievementToast({ achievements = [], onDismiss }) {
 }
 
 // ──────────────────────────────────────────────────────────
+// EmotionWeeklyReport — AI 감정 주간 분석 (접기/펼치기)
+// ──────────────────────────────────────────────────────────
+const EMOTION_DISPLAY = {
+  happy:   { emoji:'😊', label:'행복', color:'#F59E0B' },
+  calm:    { emoji:'😌', label:'평온', color:'#7BA88A' },
+  tired:   { emoji:'😴', label:'피곤', color:'#9BA8B0' },
+  anxious: { emoji:'😰', label:'불안', color:'#C4B5FD' },
+  sad:     { emoji:'😢', label:'슬픔', color:'#93C5FD' },
+  angry:   { emoji:'😤', label:'화남', color:'#FCA5A5' },
+};
+
+function EmotionWeeklyReport() {
+  const [reportData, setReportData] = useState(null);
+  const [loading, setLoading]       = useState(true);
+  const [expanded, setExpanded]     = useState(false);
+
+  useEffect(() => {
+    GameEngine.getEmotionReport()
+      .then(res => { if (res.success) setReportData(res.data); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading || !reportData?.report) return null;
+
+  const entries = reportData.entries || [];
+
+  return (
+    <div style={{
+      background:'rgba(255,255,255,0.7)', backdropFilter:'blur(8px)',
+      borderRadius:20, padding:'16px 20px', marginBottom:24,
+      border:'1px solid rgba(255,255,255,0.6)',
+    }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:7 }}>
+          <span style={{ fontSize:16 }}>📊</span>
+          <span style={{ fontSize:13, fontWeight:700, color:C.dark }}>이번 주 감정 흐름</span>
+          {entries.length > 0 && (
+            <span style={{
+              fontSize:11, fontWeight:600,
+              background:C.sagePale, color:C.sage,
+              borderRadius:100, padding:'2px 8px',
+            }}>{entries.length}일 기록</span>
+          )}
+        </div>
+        <button onClick={() => setExpanded(v => !v)} style={{
+          background:'none', border:'none', cursor:'pointer',
+          fontSize:12, color:C.muted, fontWeight:600,
+          fontFamily:"'Noto Sans KR',sans-serif",
+        }}>{expanded ? '접기 ▲' : '펼치기 ▼'}</button>
+      </div>
+
+      {expanded && (
+        <div style={{ marginTop:14, animation:'fadeUp 0.3s ease' }}>
+          {/* 감정 타임라인 */}
+          {entries.length > 0 && (
+            <div style={{
+              display:'flex', gap:8, overflowX:'auto',
+              paddingBottom:8, marginBottom:14,
+            }}>
+              {entries.map(e => {
+                const em = EMOTION_DISPLAY[e.emotion] || { emoji:'😶', label:e.emotion, color:C.muted };
+                return (
+                  <div key={e.date} style={{
+                    display:'flex', flexDirection:'column', alignItems:'center', gap:3,
+                    minWidth:44, flexShrink:0,
+                  }}>
+                    <div style={{
+                      width:38, height:38, borderRadius:100,
+                      background: em.color + '22', border:`2px solid ${em.color}44`,
+                      display:'flex', alignItems:'center', justifyContent:'center', fontSize:18,
+                    }}>{em.emoji}</div>
+                    <div style={{ fontSize:9, color:C.muted, textAlign:'center' }}>
+                      {new Date(e.date + 'T00:00:00').toLocaleDateString('ko-KR', { month:'numeric', day:'numeric' })}
+                    </div>
+                    {/* 강도 점 */}
+                    <div style={{
+                      width: 4 + e.intensity * 1.5, height: 4 + e.intensity * 1.5,
+                      borderRadius:100, background:em.color,
+                      opacity: 0.3 + e.intensity * 0.14,
+                    }}/>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* AI 분석 */}
+          <div style={{
+            background:`linear-gradient(135deg, ${C.sagePale}, rgba(255,255,255,0.92))`,
+            borderRadius:14, padding:'14px 16px',
+            border:`1px solid ${C.sage}22`,
+          }}>
+            <div style={{ fontSize:10, fontWeight:700, color:C.sage, marginBottom:6, letterSpacing:'0.5px' }}>
+              🤖 AI 감정 패턴 분석
+            </div>
+            <div style={{ fontSize:13, color:C.dark, lineHeight:1.75,
+              fontFamily:"'Noto Sans KR',sans-serif" }}>
+              {reportData.report}
+            </div>
+            {reportData.cached && (
+              <div style={{ fontSize:10, color:C.muted, marginTop:6 }}>
+                이번 주 분석 · 매주 월요일 갱신
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────
+// TodayRecommendCard — 오늘의 게임 추천 (클라이언트 사이드)
+// ──────────────────────────────────────────────────────────
+const GAME_META = {
+  garden:    { name:'마음의 정원',      emoji:'🌿' },
+  mood:      { name:'감정 수채화',      emoji:'🎨' },
+  efmt:      { name:'감정꽃 찾기',      emoji:'🌸' },
+  gratitude: { name:'별빛 감사 일기',   emoji:'⭐' },
+  tree:      { name:'내면의 나무',      emoji:'🌳' },
+  burnout:   { name:'번아웃 회복',      emoji:'⚡' },
+};
+
+function TodayRecommendCard({ hubData, onPlay }) {
+  if (!hubData) return null;
+  const { userTestScores = {}, gameStatus, recentSessions = [], isMaster } = hubData;
+  const levelInfo = GameEngine.getLevelInfo(gameStatus?.total_exp || 0);
+  const level     = isMaster ? 6 : levelInfo.level;
+  const recentIds = recentSessions.slice(0, 5).map(s => s.game_id);
+  const phq9      = userTestScores.PHQ9;
+  const burnout   = userTestScores.BURNOUT;
+
+  let rec = null;
+
+  if (phq9 !== undefined && phq9 >= 10) {
+    rec = { gameId:'garden', reason:`PHQ-9 ${phq9}점 — 지금 호흡 훈련이 마음을 안정시켜줘요`, color:C.dusty };
+  } else if (burnout !== undefined && burnout >= 60 && level >= 2) {
+    rec = { gameId:'burnout', reason:`번아웃 지수 ${burnout}점 — 오늘 회복 미션을 시작해보세요`, color:C.amber };
+  } else if (!recentIds.includes('mood')) {
+    rec = { gameId:'mood', reason:'오늘 감정 기록을 아직 안 했어요 ✍️', color:C.sage };
+  } else if (level >= 2 && !recentIds.includes('efmt')) {
+    rec = { gameId:'efmt', reason:'감정꽃 찾기로 감정 인식력을 키워보세요 🌸', color:'#C97B8A' };
+  } else if (level >= 2 && !recentIds.includes('gratitude')) {
+    rec = { gameId:'gratitude', reason:'오늘의 감사 일기를 써볼까요? ⭐', color:C.amber };
+  } else {
+    rec = { gameId:'garden', reason:'잠깐 호흡을 가다듬고 정원을 가꿔볼까요? 🌿', color:C.sage };
+  }
+
+  const game = GAME_META[rec.gameId];
+
+  return (
+    <div style={{
+      background:`linear-gradient(135deg, ${rec.color}12, rgba(255,255,255,0.82))`,
+      backdropFilter:'blur(8px)',
+      borderRadius:20, padding:'16px 20px', marginBottom:24,
+      border:`1px solid ${rec.color}28`,
+    }}>
+      <div style={{ fontSize:10, fontWeight:700, color:rec.color, marginBottom:10, letterSpacing:'0.5px' }}>
+        ✨ 오늘의 추천
+      </div>
+      <div style={{ display:'flex', alignItems:'center', gap:14 }}>
+        <div style={{
+          width:52, height:52, borderRadius:16, flexShrink:0,
+          background:`linear-gradient(135deg, ${rec.color}22, ${rec.color}10)`,
+          border:`1.5px solid ${rec.color}33`,
+          display:'flex', alignItems:'center', justifyContent:'center', fontSize:26,
+        }}>{game.emoji}</div>
+        <div style={{ flex:1, minWidth:0 }}>
+          <div style={{ fontSize:14, fontWeight:700, color:C.dark, marginBottom:3 }}>{game.name}</div>
+          <div style={{ fontSize:12, color:C.muted, lineHeight:1.5 }}>{rec.reason}</div>
+        </div>
+        <button onClick={() => onPlay?.(rec.gameId)} style={{
+          fontFamily:"'Noto Sans KR',sans-serif",
+          background:`linear-gradient(135deg, ${rec.color}, ${rec.color}BB)`,
+          color:'white', border:'none', borderRadius:12,
+          padding:'9px 16px', fontSize:12, fontWeight:700, cursor:'pointer', flexShrink:0,
+        }}>시작 →</button>
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────
 // DailyQuestCard — 데일리 퀘스트 (날짜 시드 기반)
 // ──────────────────────────────────────────────────────────
 const QUEST_POOL = [
@@ -1252,6 +1436,12 @@ function GameHubApp() {
         }}>
           <TestBadgeRow completedTests={completedTests || []} />
         </div>
+
+        {/* ── 감정 AI 주간 리포트 ── */}
+        <EmotionWeeklyReport />
+
+        {/* ── 오늘의 추천 게임 ── */}
+        <TodayRecommendCard hubData={data} onPlay={handlePlay} />
 
         {/* ── 데일리 퀘스트 ── */}
         <DailyQuestCard
