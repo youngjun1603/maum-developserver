@@ -1248,7 +1248,9 @@ function RelationshipCheckinView({ onBack, onDone }) {
                 return (
                   <button key={val} onClick={() => {
                     setAnswers(prev => ({ ...prev, [`q${step}`]: val }));
-                    setTimeout(() => setStep(s => s + 1), 200);
+                    if (step < CHECKIN_QUESTIONS.length - 1) {
+                      setTimeout(() => setStep(s => s + 1), 200);
+                    }
                   }} style={{
                     padding: '14px 20px', borderRadius: 14, border: 'none', cursor: 'pointer',
                     background: isSelected ? colors[idx] + '22' : 'white',
