@@ -861,12 +861,12 @@ function PsychologicalTestSystem() {
         const r = phq9Responses[q.num];
         if (r) total += r;
       });
-      let level = "정상";
+      let level = "안정";
       let color = "green";
-      if (total >= 20) { level = "높은 우울 신호"; color = "red"; }
-      else if (total >= 15) { level = "중등도 우울 신호"; color = "orange"; }
-      else if (total >= 10) { level = "중간 우울"; color = "orange"; }
-      else if (total >= 5) { level = "가벼운 우울"; color = "yellow"; }
+      if (total >= 20) { level = "전문 지원 필요"; color = "red"; }
+      else if (total >= 15) { level = "적극적 지원 필요"; color = "orange"; }
+      else if (total >= 10) { level = "지원 필요"; color = "orange"; }
+      else if (total >= 5) { level = "주의 필요"; color = "yellow"; }
       return { total, level, color };
     }
 
@@ -876,11 +876,11 @@ function PsychologicalTestSystem() {
         const r = gad7Responses[q.num];
         if (r) total += r;
       });
-      let level = "정상";
+      let level = "안정";
       let color = "green";
-      if (total >= 15) { level = "높은 불안 신호"; color = "red"; }
-      else if (total >= 10) { level = "중간 불안"; color = "orange"; }
-      else if (total >= 5) { level = "가벼운 불안"; color = "yellow"; }
+      if (total >= 15) { level = "전문 지원 필요"; color = "red"; }
+      else if (total >= 10) { level = "지원 필요"; color = "orange"; }
+      else if (total >= 5) { level = "주의 필요"; color = "yellow"; }
       return { total, level, color };
     }
 
@@ -902,23 +902,23 @@ function PsychologicalTestSystem() {
 
       const getLevel = (score, type) => {
         if (type === "우울") {
-          if (score >= 28) return { level: "극도로 심함", color: "red" };
-          if (score >= 21) return { level: "심함", color: "orange" };
-          if (score >= 14) return { level: "중간", color: "yellow" };
-          if (score >= 10) return { level: "가벼움", color: "blue" };
-          return { level: "정상", color: "green" };
+          if (score >= 28) return { level: "적극적 지원 필요", color: "red" };
+          if (score >= 21) return { level: "지원 필요", color: "orange" };
+          if (score >= 14) return { level: "관리 필요", color: "yellow" };
+          if (score >= 10) return { level: "주의", color: "blue" };
+          return { level: "안정", color: "green" };
         } else if (type === "불안") {
-          if (score >= 20) return { level: "극도로 심함", color: "red" };
-          if (score >= 15) return { level: "심함", color: "orange" };
-          if (score >= 10) return { level: "중간", color: "yellow" };
-          if (score >= 8) return { level: "가벼움", color: "blue" };
-          return { level: "정상", color: "green" };
+          if (score >= 20) return { level: "적극적 지원 필요", color: "red" };
+          if (score >= 15) return { level: "지원 필요", color: "orange" };
+          if (score >= 10) return { level: "관리 필요", color: "yellow" };
+          if (score >= 8) return { level: "주의", color: "blue" };
+          return { level: "안정", color: "green" };
         } else { // 스트레스
-          if (score >= 34) return { level: "극도로 심함", color: "red" };
-          if (score >= 26) return { level: "심함", color: "orange" };
-          if (score >= 19) return { level: "중간", color: "yellow" };
-          if (score >= 15) return { level: "가벼움", color: "blue" };
-          return { level: "정상", color: "green" };
+          if (score >= 34) return { level: "적극적 지원 필요", color: "red" };
+          if (score >= 26) return { level: "지원 필요", color: "orange" };
+          if (score >= 19) return { level: "관리 필요", color: "yellow" };
+          if (score >= 15) return { level: "주의", color: "blue" };
+          return { level: "안정", color: "green" };
         }
       };
 
@@ -2312,55 +2312,76 @@ function PsychologicalTestSystem() {
     );
   }
 
-  // ── 전문가 상담 연결 CTA (결과 화면 하단 공통) ──────────────
+  // ── 상담 연결 CTA (결과 화면 하단 공통) ──────────────────────
   function ExpertCTA({ testType, score, level, onContinueAI }) {
-    const isHighRisk = level === 'high';
     const limit = isLoggedIn && credits > 0 ? AI_LIMIT_PAID : AI_LIMIT_FREE;
     return (
-      <div className={`rounded-2xl border-2 p-5 mt-4 ${isHighRisk ? 'border-red-200 bg-red-50' : 'border-indigo-100 bg-indigo-50'}`}>
-        <div className="flex items-start gap-3 mb-4">
-          <span className="text-2xl">{isHighRisk ? '🆘' : '🤝'}</span>
+      <div className="rounded-2xl border-2 border-teal-100 bg-gradient-to-br from-teal-50 to-green-50 p-5 mt-4">
+        {/* 헤더 */}
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-2xl">🤝</span>
           <div>
-            <h3 className={`font-bold text-base mb-1 ${isHighRisk ? 'text-red-800' : 'text-indigo-800'}`}>
-              {isHighRisk ? '전문가 상담을 강력히 권장합니다' : '다음 단계를 선택하세요'}
-            </h3>
-            <p className="text-sm text-gray-600 leading-relaxed">
-              {isHighRisk
-                ? 'AI 상담은 참고용이며 실제 치료를 대체할 수 없습니다. 전문가의 도움이 필요한 수준입니다.'
-                : 'AI와 더 이야기하거나, 전문 상담사와 연결할 수 있습니다.'}
-            </p>
+            <h3 className="font-bold text-teal-800 text-base">더 깊은 이야기, 함께해요</h3>
+            <p className="text-xs text-gray-500">검사 결과는 자기이해를 위한 참고 자료입니다. 의학적 진단이 아닙니다.</p>
           </div>
         </div>
 
-        {/* 면책 고지 */}
-        <div className="bg-white/70 rounded-xl p-3 mb-4 text-xs text-gray-500 border border-gray-200 leading-relaxed">
-          ⚠️ <strong>참고 안내:</strong> 이 검사 결과와 AI 분석은 자기 이해를 위한 참고 자료입니다. 의학적 진단이나 치료를 대체하지 않으며, 확정적 결론이 아닙니다. 심리적 어려움이 지속된다면 반드시 전문가와 상담하세요.
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-2">
+        {/* AI 상담 + 제휴 상담사 버튼 */}
+        <div className="flex flex-col sm:flex-row gap-2 mb-4">
           {onContinueAI && (
             <button onClick={isAiChatExhausted() ? () => setShowAiLimitModal(true) : onContinueAI}
               className={`flex-1 py-3 px-4 rounded-xl font-semibold text-sm transition
                 ${isAiChatExhausted()
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50'}`}>
+                  : 'bg-white border border-teal-200 text-teal-700 hover:bg-teal-50'}`}>
               {isAiChatExhausted()
                 ? `💬 AI 상담 ${aiChatUsed}/${limit}회 완료`
-                : `💬 AI와 상담 계속 (${aiChatUsed}/${limit}회)`}
+                : `💬 AI와 더 이야기하기 (${aiChatUsed}/${limit}회)`}
             </button>
           )}
-          <button onClick={() => window.open('https://pro.maumful.com', '_blank', 'noopener noreferrer')}
-            className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition text-white
-              ${isHighRisk ? 'bg-red-600 hover:bg-red-700' : 'bg-indigo-600 hover:bg-indigo-700'}`}>
-            🏥 전문 상담사 연결하기
+          <button
+            onClick={() => { window.location.hash = 'counseling'; window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+            className="flex-1 py-3 px-4 rounded-xl font-bold text-sm transition text-white bg-teal-600 hover:bg-teal-700">
+            🏠 상담사 찾기
           </button>
         </div>
 
-        {isHighRisk && (
-          <div className="mt-3 text-center text-xs text-red-600 font-semibold">
-            즉각적인 위기 상황이라면 자살예방상담전화 📞 1393 (24시간 무료)
+        {/* 공공 무료 상담 기관 */}
+        <div className="bg-white/80 rounded-xl p-4 border border-teal-100">
+          <p className="text-xs font-bold text-gray-500 mb-3">📞 언제든 이용할 수 있는 무료 상담</p>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-gray-800">자살예방상담전화</p>
+                <p className="text-xs text-gray-400">24시간 무료 · 보건복지부</p>
+              </div>
+              <a href="tel:109"
+                className="bg-rose-50 text-rose-600 font-bold text-xl px-4 py-2 rounded-xl border border-rose-100 hover:bg-rose-100 transition">
+                109
+              </a>
+            </div>
+            <div className="h-px bg-gray-100" />
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-gray-800">정신건강위기상담전화</p>
+                <p className="text-xs text-gray-400">24시간 무료 · 전국 연결</p>
+              </div>
+              <a href="tel:15770199"
+                className="bg-blue-50 text-blue-600 font-bold text-sm px-3 py-2 rounded-xl border border-blue-100 hover:bg-blue-100 transition whitespace-nowrap">
+                1577-0199
+              </a>
+            </div>
+            <div className="h-px bg-gray-100" />
+            <a href="https://blutouch.net/facility/center" target="_blank" rel="noopener noreferrer"
+              className="flex items-center justify-between p-1 rounded-lg hover:bg-teal-50 transition group">
+              <div>
+                <p className="text-sm font-semibold text-gray-800">지역 정신건강복지센터 찾기</p>
+                <p className="text-xs text-gray-400">전국 시·군·구 무료 방문 상담 · 블루터치</p>
+              </div>
+              <span className="text-teal-500 text-sm font-bold group-hover:translate-x-0.5 transition-transform">→</span>
+            </a>
           </div>
-        )}
+        </div>
       </div>
     );
   }
@@ -3016,7 +3037,7 @@ function PsychologicalTestSystem() {
         <li>검사 결과를 의학적 판단의 근거로 사용하지 마십시오.</li>
         <li>AI는 의료인이 아니며, AI 답변은 참고용 정보입니다.</li>
         <li>심리적 어려움이 지속되면 반드시 정신건강의학과 전문의 또는 공인 심리상담사의 도움을 받으십시오.</li>
-        <li>응급 상황 시: 자살예방상담전화 1393, 정신건강위기상담전화 1577-0199</li>
+        <li>위기 상황 시: 자살예방상담전화 109 (24시간), 정신건강위기상담전화 1577-0199 (24시간)</li>
       </ul>
 
       <h3>제3조 (이용 자격)</h3>
@@ -7516,11 +7537,11 @@ function PsychologicalTestSystem() {
           <div className={`p-4 rounded-lg mb-6 ${result.color === 'green' ? 'bg-green-50 border border-green-200' : result.color === 'yellow' ? 'bg-yellow-50 border border-yellow-200' : result.color === 'orange' ? 'bg-orange-50 border border-orange-200' : 'bg-red-50 border border-red-200'}`}>
             <h3 className="font-bold mb-2">해석</h3>
             <p className="text-sm">
-              {result.total < 5 && "우울증 증상이 거의 없습니다."}
-              {result.total >= 5 && result.total < 10 && "가벼운 우울 증상이 있습니다. 필요시 전문가 상담을 고려하세요."}
-              {result.total >= 10 && result.total < 15 && "중간 정도의 우울 증상이 있습니다. 전문가 상담을 권장합니다."}
-              {result.total >= 15 && result.total < 20 && "정서적 피로가 상당한 수준입니다. 전문가와 이야기 나눠보시길 권합니다."}
-              {result.total >= 20 && "마음의 부담이 매우 높게 나타났습니다. 신뢰할 수 있는 전문가의 도움을 받아보세요."}
+              {result.total < 5 && "지금 마음이 비교적 안정적입니다."}
+              {result.total >= 5 && result.total < 10 && "마음이 조금 무거운 편입니다. 가벼운 자기돌봄이 도움이 될 수 있어요."}
+              {result.total >= 10 && result.total < 15 && "요즘 마음이 꽤 힘드신 것 같아요. 믿을 수 있는 누군가와 이야기 나눠보세요."}
+              {result.total >= 15 && result.total < 20 && "많이 지치셨군요. 아래 상담 연결을 통해 이야기 나눠보시는 것도 좋아요."}
+              {result.total >= 20 && "지금 많이 힘드신 것 같아요. 혼자 감당하지 않아도 됩니다. 아래 상담 연결을 이용해 보세요."}
             </p>
           </div>
           <div className="space-y-2">
@@ -7598,10 +7619,10 @@ function PsychologicalTestSystem() {
           <div className={`p-4 rounded-lg mb-6 ${result.color === 'green' ? 'bg-green-50 border border-green-200' : result.color === 'yellow' ? 'bg-yellow-50 border border-yellow-200' : result.color === 'orange' ? 'bg-orange-50 border border-orange-200' : 'bg-red-50 border border-red-200'}`}>
             <h3 className="font-bold mb-2">해석</h3>
             <p className="text-sm">
-              {result.total < 5 && "불안 증상이 거의 없습니다."}
-              {result.total >= 5 && result.total < 10 && "가벼운 불안 증상이 있습니다. 필요시 전문가 상담을 고려하세요."}
-              {result.total >= 10 && result.total < 15 && "중간 정도의 불안 증상이 있습니다. 전문가 상담을 권장합니다."}
-              {result.total >= 15 && "불안 신호가 높게 나타났습니다. 전문가와 이야기 나눠보시길 권합니다."}
+              {result.total < 5 && "지금 마음이 비교적 안정적입니다."}
+              {result.total >= 5 && result.total < 10 && "마음이 조금 조여드는 편입니다. 충분히 쉬어가는 것이 도움이 될 수 있어요."}
+              {result.total >= 10 && result.total < 15 && "많이 긴장하고 걱정이 많으신 것 같아요. 부담을 나눌 수 있는 공간을 찾아보세요."}
+              {result.total >= 15 && "요즘 마음이 많이 불안하신 것 같아요. 아래 상담 연결을 통해 도움을 받아보세요."}
             </p>
           </div>
           <div className="space-y-2">
@@ -7825,16 +7846,16 @@ function PsychologicalTestSystem() {
           
           {/* 위기 경고 배너 */}
           {crisis && (
-            <div className="mb-6 bg-red-50 border-2 border-red-400 rounded-lg p-4">
+            <div className="mb-6 bg-orange-50 border-2 border-orange-300 rounded-lg p-4">
               <div className="flex items-start gap-3">
-                <span className="text-3xl">⚠️</span>
+                <span className="text-3xl">🔴</span>
                 <div>
-                  <h3 className="text-lg font-bold text-red-700 mb-2">🚨 심각한 번아웃 상태</h3>
-                  <p className="text-sm text-red-600 mb-2">
-                    전반적인 번아웃 수준이 매우 높거나, 하나 이상의 영역에서 위기 수준의 점수가 나타났습니다.
+                  <h3 className="text-lg font-bold text-orange-700 mb-2">소진 신호가 높아요</h3>
+                  <p className="text-sm text-orange-700 mb-2">
+                    번아웃 신호가 전반적으로 높게 나타났습니다.
                   </p>
-                  <p className="text-sm text-red-700 font-semibold">
-                    즉각적인 전문가 상담과 휴식이 필요합니다.
+                  <p className="text-sm text-orange-700 font-semibold">
+                    지금 잠시 멈추고, 충분히 쉬어가는 시간이 필요합니다. 혼자 감당하지 않아도 돼요.
                   </p>
                 </div>
               </div>
