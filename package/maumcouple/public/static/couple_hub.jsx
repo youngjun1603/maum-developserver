@@ -75,6 +75,154 @@ function scoreLabel(score) {
   return '다름 속의 매력 🌈';
 }
 
+// ── 오늘의 커플 대화 질문 (60개, 날짜 기반 순환) ──────────
+const DAILY_QUESTIONS = [
+  "처음 만났을 때 상대방의 어떤 점이 마음에 들었나요?",
+  "우리가 함께한 가장 소중한 순간은 무엇인가요?",
+  "10년 후 우리는 어디서 어떻게 살고 있을까요?",
+  "서로에 대해 아직 모르는 것이 있다면 무엇일까요?",
+  "상대방에게 가장 감사한 점은 무엇인가요?",
+  "우리 관계에서 가장 자랑스러운 부분은 무엇인가요?",
+  "함께 꼭 해보고 싶은 버킷리스트가 있나요?",
+  "내가 힘들 때 상대방이 어떻게 해줬으면 하나요?",
+  "상대방의 어떤 작은 습관이 귀엽게 느껴지나요?",
+  "우리의 첫 데이트를 다시 한다면 어디를 가고 싶으세요?",
+  "서로에게 가장 힘이 됐던 말이 있나요?",
+  "함께 가장 많이 웃었던 순간은 언제인가요?",
+  "상대방에게 평소에 하지 못했던 말이 있다면?",
+  "상대방의 어떤 모습이 가장 멋있다고 생각하나요?",
+  "서로 함께 배우고 싶은 것이 있나요?",
+  "가장 좋아하는 우리만의 루틴이 있나요?",
+  "상대방이 스트레스 받을 때 어떻게 도와줄 수 있을까요?",
+  "함께 여행하고 싶은 꿈의 여행지는 어디인가요?",
+  "상대방이 나를 이해해줬다고 느낀 순간은 언제인가요?",
+  "서로에게 가장 닮고 싶은 점은 무엇인가요?",
+  "상대방이 나에게 더 솔직하게 말해줬으면 하는 것이 있나요?",
+  "우리의 관계를 한 단어로 표현하면 무엇인가요?",
+  "함께 이루고 싶은 가장 큰 꿈은 무엇인가요?",
+  "상대방의 어떤 작은 배려가 가장 기억에 남나요?",
+  "서로의 취미를 함께 즐겨본 적이 있나요? 어땠나요?",
+  "상대방이 나를 위해 해준 것 중 가장 감동적인 것은?",
+  "우리 관계에서 앞으로 더 노력하고 싶은 것은 무엇인가요?",
+  "상대방과 함께라면 무엇이든 할 수 있을 것 같은 이유는?",
+  "우리가 노부부가 되었을 때 어떤 모습이길 바라나요?",
+  "상대방의 어떤 성격이 나를 더 좋은 사람으로 만들어주나요?",
+  "함께 한 번쯤 도전해보고 싶은 새로운 경험이 있나요?",
+  "상대방이 나를 위해 변해준 것이 있다면 무엇인가요?",
+  "우리 관계에서 가장 소중히 지키고 싶은 것은?",
+  "서로에게 더 잘 표현하고 싶은 감정이 있나요?",
+  "함께 매일 하고 싶은 작은 습관이 있다면?",
+  "상대방이 나를 가장 잘 이해한다고 느끼는 순간은?",
+  "우리가 함께 산다면 어떤 집에서 살고 싶나요?",
+  "서로의 꿈을 응원하는 나만의 방법이 있나요?",
+  "상대방이 나에게 보내는 사랑 신호는 어떤 것인가요?",
+  "우리 둘만의 특별한 단어나 암호 같은 게 있나요?",
+  "함께 보내는 시간 중 가장 행복한 순간은?",
+  "상대방이 나를 웃게 만드는 방법은 무엇인가요?",
+  "서로에게 미안한 마음이 있다면 무엇인가요?",
+  "함께 이루고 싶은 올해의 목표가 있나요?",
+  "상대방이 없었다면 지금 나는 어떤 사람이었을까요?",
+  "우리가 처음 손을 잡은 순간을 기억하나요?",
+  "서로의 가장 큰 장점을 세 가지씩 말해볼까요?",
+  "함께 보고 싶은 영화나 드라마가 있나요?",
+  "상대방이 나에게 바라는 한 가지가 있다면?",
+  "우리가 처음 '사귀자'고 했을 때 어떤 기분이었나요?",
+  "서로 닮은 점을 세 가지 찾아볼 수 있을까요?",
+  "상대방의 어떤 행동이 가장 설레게 만드나요?",
+  "우리가 함께 성장했다고 느끼는 순간은 언제인가요?",
+  "지금 이 순간 상대방에게 가장 하고 싶은 말은?",
+  "우리 관계에서 가장 잘 소통하는 방식은 무엇인가요?",
+  "서로에게 가장 필요한 사람이 됐다고 느끼는 순간은?",
+  "함께 꼭 가보고 싶은 식당이나 카페가 있나요?",
+  "상대방이 나를 위해 해줬으면 하는 작은 부탁이 있다면?",
+  "우리가 이렇게 잘 맞는 이유는 무엇일까요?",
+  "상대방과 함께 있으면 어떤 감정이 드나요?",
+];
+
+// ── 미니 연애 유형 테스트 ─────────────────────────────────
+const MINI_QUESTIONS = [
+  { q: "연애에서 가장 중요하게 여기는 것은?",
+    opts: [{ text: "신뢰와 안정감", type: 'S' }, { text: "설레는 감정과 특별한 순간", type: 'R' },
+           { text: "함께 성장하는 것", type: 'P' }, { text: "서로의 자유와 독립", type: 'F' }] },
+  { q: "파트너가 연락을 늦게 할 때 나는?",
+    opts: [{ text: "크게 신경 쓰지 않는다", type: 'S' }, { text: "걱정되어 먼저 연락한다", type: 'P' },
+           { text: "나도 바쁘니 괜찮다", type: 'F' }, { text: "서운하지만 예쁜 메시지를 남긴다", type: 'R' }] },
+  { q: "이상적인 데이트 스타일은?",
+    opts: [{ text: "분위기 있는 레스토랑과 야경", type: 'R' }, { text: "새로운 액티비티 도전", type: 'P' },
+           { text: "집에서 편하게 영화 보기", type: 'S' }, { text: "각자 하고 싶은 것 즐기기", type: 'F' }] },
+  { q: "서운할 때 나는?",
+    opts: [{ text: "바로 솔직하게 이야기한다", type: 'S' }, { text: "넌지시 표현하고 알아줬으면 한다", type: 'R' },
+           { text: "감정을 충분히 표현한다", type: 'P' }, { text: "혼자 정리하고 넘어간다", type: 'F' }] },
+  { q: "애정 표현 스타일은?",
+    opts: [{ text: "말과 행동으로 적극적으로", type: 'P' }, { text: "특별한 이벤트와 선물", type: 'R' },
+           { text: "꾸준한 작은 관심과 배려", type: 'S' }, { text: "함께하는 소소한 일상", type: 'F' }] },
+  { q: "미래를 생각할 때 나는?",
+    opts: [{ text: "함께 구체적 계획을 세우고 싶다", type: 'S' }, { text: "아름다운 미래 모습을 상상한다", type: 'R' },
+           { text: "함께 더 나은 사람이 되고 싶다", type: 'P' }, { text: "자연스럽게 흘러가면 좋겠다", type: 'F' }] },
+  { q: "연애에서 가장 힘든 것은?",
+    opts: [{ text: "신뢰가 흔들릴 때", type: 'S' }, { text: "설렘이 줄어들 것 같을 때", type: 'R' },
+           { text: "함께 성장하지 못하는 것 같을 때", type: 'P' }, { text: "나만의 공간이 없을 때", type: 'F' }] },
+];
+
+const LOVE_TYPES = {
+  S: { emoji: '💚', name: '안정 신뢰형', short: '든든한 버팀목',
+    desc: '신뢰와 안정감을 가장 중요하게 여깁니다. 꾸준하고 믿음직한 파트너로, 상대방이 편안하게 의지할 수 있는 관계를 만들어요.',
+    strength: '높은 신뢰도 · 꾸준한 헌신 · 솔직한 소통',
+    match: '감정 표현이 솔직하고 안정감을 원하는 분과 잘 맞아요.',
+    tip: '때로는 작은 이벤트로 설렘도 선물해보세요! 💫',
+    color: '#4A9A5A', pale: '#EAF5EC' },
+  R: { emoji: '🌹', name: '낭만 감성형', short: '설렘 제조기',
+    desc: '감성적이고 특별한 순간을 사랑합니다. 작은 이벤트와 감동적인 표현으로 연애를 풍성하게 만드는 로맨티스트예요.',
+    strength: '풍부한 감수성 · 창의적 표현 · 세심한 배려',
+    match: '감동과 설렘을 함께 나눌 수 있는 분과 잘 맞아요.',
+    tip: '일상적인 안정감도 연애의 소중한 부분이에요. 🌱',
+    color: C.rose, pale: C.rosePale },
+  P: { emoji: '🔥', name: '열정 성장형', short: '함께 타오르는 불꽃',
+    desc: '강렬하고 진취적인 연애를 원합니다. 파트너와 함께 성장하고 더 나은 사람이 되는 것에 큰 가치를 두는 열정적인 타입이에요.',
+    strength: '강한 헌신 · 함께 성장하는 마인드 · 적극적 표현',
+    match: '비슷한 열정과 목표를 공유할 수 있는 분과 잘 맞아요.',
+    tip: '파트너의 충전 시간도 배려해주세요. 💆',
+    color: '#D4634A', pale: '#FEF0EC' },
+  F: { emoji: '🌊', name: '자유 여유형', short: '바람 같은 자유로움',
+    desc: '서로의 독립성을 존중하며 여유롭고 자연스러운 관계를 선호합니다. 집착 없이 서로를 믿고 개인 공간을 지켜주는 성숙한 연애를 해요.',
+    strength: '서로 존중 · 집착 없는 신뢰 · 개인 공간 배려',
+    match: '독립성을 이해하고 여유 있는 연애를 원하는 분과 잘 맞아요.',
+    tip: '때로는 더 적극적인 관심 표현도 필요할 수 있어요. 💌',
+    color: C.lavender, pale: C.lavPale },
+};
+
+function calcLoveType(answers) {
+  const counts = { S: 0, R: 0, P: 0, F: 0 };
+  answers.forEach(a => { if (a) counts[a] = (counts[a] || 0) + 1; });
+  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+}
+
+// ── BIG5 기반 케미 유형 ──────────────────────────────────
+function getPersonalityLabel(big5Data) {
+  if (!big5Data) return null;
+  const { O=50, C=50, E=50, A=50, N=50 } = big5Data;
+  return [
+    { emoji: '⚡', name: '활력형', v: E },
+    { emoji: '🤝', name: '친화형', v: A },
+    { emoji: '🎨', name: '탐구형', v: O },
+    { emoji: '📋', name: '계획형', v: C },
+    { emoji: '🌊', name: '감수형', v: N },
+  ].sort((a, b) => b.v - a.v)[0];
+}
+
+function getCoupleChemType(myBig5, partnerBig5) {
+  if (!myBig5 || !partnerBig5) return null;
+  const eDiff = Math.abs((myBig5.E||50) - (partnerBig5.E||50));
+  const avgE  = ((myBig5.E||50) + (partnerBig5.E||50)) / 2;
+  const avgA  = ((myBig5.A||50) + (partnerBig5.A||50)) / 2;
+  const avgO  = ((myBig5.O||50) + (partnerBig5.O||50)) / 2;
+  if (eDiff < 15 && avgE > 60) return { emoji: '🔥', name: '열정 폭발형', desc: '둘 다 에너지가 넘쳐 함께하면 시너지 폭발!', color: '#D4634A' };
+  if (eDiff > 30) return { emoji: '🌊', name: '균형 보완형', desc: '서로 다른 에너지가 완벽한 균형을 이뤄요.', color: C.lavender };
+  if (avgA > 65) return { emoji: '💚', name: '따뜻한 배려형', desc: '서로를 깊이 배려하는 따뜻하고 안정적인 케미예요.', color: '#4A9A5A' };
+  if (avgO > 65) return { emoji: '🎨', name: '창의적 탐험형', desc: '새로운 것을 함께 탐험하는 모험심 넘치는 케미예요.', color: C.amber };
+  return { emoji: '💕', name: '특별한 우리형', desc: '둘만의 독특하고 소중한 케미를 가지고 있어요.', color: C.rose };
+}
+
 // ── HeartSVG 일러스트 ─────────────────────────────────────
 function HeartIllust({ score = 75, style = {} }) {
   const fill = scoreColor(score);
@@ -223,6 +371,415 @@ function TestResultBadge({ type, result, date }) {
           borderRadius: 100, background: meta.color, color: 'white',
         }}>완료</span>
       )}
+    </div>
+  );
+}
+
+// ── DailyQuestionCard ─────────────────────────────────────
+function DailyQuestionCard() {
+  const [offset, setOffset] = useState(0);
+  const [copied, setCopied] = useState(false);
+  const dayIdx = (Math.floor(Date.now() / 86400000) + offset) % DAILY_QUESTIONS.length;
+  const q = DAILY_QUESTIONS[dayIdx];
+
+  function copyQuestion() {
+    const text = `💕 오늘의 커플 대화 질문\n\n"${q}"\n\nhttps://couple.maumful.com`;
+    if (navigator.share) {
+      navigator.share({ title: '오늘의 커플 질문', text }).catch(() => {});
+    } else {
+      navigator.clipboard?.writeText(text).catch(() => {});
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }
+
+  return (
+    <div style={{
+      borderRadius: 20, padding: '20px', marginBottom: 20,
+      background: `linear-gradient(135deg, ${C.rosePale}, ${C.lavPale})`,
+      boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
+      border: `1px solid ${C.roseL}33`,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 18 }}>💬</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: C.rose }}>오늘의 커플 대화 질문</span>
+        </div>
+        <span style={{ fontSize: 11, color: C.muted, background: 'rgba(255,255,255,0.6)', padding: '2px 8px', borderRadius: 20 }}>
+          Day {((dayIdx + 1))}
+        </span>
+      </div>
+      <div style={{
+        fontSize: 15, fontWeight: 600, color: C.dark, lineHeight: 1.7,
+        padding: '16px', background: 'rgba(255,255,255,0.7)', borderRadius: 14,
+        marginBottom: 14, fontFamily: "'Noto Serif KR', serif",
+        textAlign: 'center',
+      }}>
+        "{q}"
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button onClick={() => setOffset(o => o + 1)} style={{
+          flex: 1, padding: '9px', borderRadius: 10, border: 'none', cursor: 'pointer',
+          background: 'rgba(255,255,255,0.7)', color: C.muted,
+          fontSize: 12, fontWeight: 600, fontFamily: "'Noto Sans KR', sans-serif",
+        }}>다음 질문 →</button>
+        <button onClick={copyQuestion} style={{
+          flex: 1, padding: '9px', borderRadius: 10, border: 'none', cursor: 'pointer',
+          background: C.rose, color: 'white',
+          fontSize: 12, fontWeight: 700, fontFamily: "'Noto Sans KR', sans-serif",
+        }}>{copied ? '✓ 복사됨' : '📤 파트너와 공유'}</button>
+      </div>
+    </div>
+  );
+}
+
+// ── MiniLoveTestView ──────────────────────────────────────
+function MiniLoveTestView({ onBack }) {
+  const [step, setStep]       = useState(-1); // -1=인트로
+  const [answers, setAnswers] = useState([]);
+  const [result, setResult]   = useState(null);
+
+  function handleAnswer(type) {
+    const next = [...answers, type];
+    setAnswers(next);
+    if (next.length >= MINI_QUESTIONS.length) {
+      setResult(calcLoveType(next));
+    } else {
+      setStep(s => s + 1);
+    }
+  }
+
+  function reset() { setStep(-1); setAnswers([]); setResult(null); }
+
+  function shareResult(t) {
+    const text = `💕 나의 연애 유형은 "${t.emoji} ${t.name}"\n\n${t.short} — ${t.desc.slice(0, 50)}...\n\n나도 테스트해봐요!\nhttps://couple.maumful.com`;
+    navigator.share ? navigator.share({ title: '나의 연애 유형', text }).catch(() => {})
+                    : navigator.clipboard?.writeText(text).catch(() => {});
+  }
+
+  const currentQ = MINI_QUESTIONS[step];
+  const t = result ? LOVE_TYPES[result] : null;
+  const progress = step >= 0 ? ((step + 1) / MINI_QUESTIONS.length * 100) : 0;
+
+  return (
+    <div style={{ minHeight: '100vh', background: `linear-gradient(160deg, ${C.rosePale}, ${C.cream})` }}>
+      <nav style={{
+        position: 'sticky', top: 0, zIndex: 100,
+        background: 'rgba(253,252,247,0.88)', backdropFilter: 'blur(16px)',
+        borderBottom: '1px solid rgba(181,85,106,0.12)',
+        padding: '0 20px', height: 56,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <button onClick={result ? reset : (step === -1 ? onBack : () => setStep(s => s - 1))} style={{
+          background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: C.dark,
+          display: 'flex', alignItems: 'center', gap: 6,
+        }}>← <span style={{ fontSize: 14, fontWeight: 600 }}>나의 연애 유형</span></button>
+        {step >= 0 && !result && (
+          <span style={{ fontSize: 12, color: C.muted }}>{step + 1} / {MINI_QUESTIONS.length}</span>
+        )}
+      </nav>
+
+      <div style={{ maxWidth: 480, margin: '0 auto', padding: '32px 20px 60px' }}>
+
+        {/* 인트로 */}
+        {step === -1 && !result && (
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 72, marginBottom: 16 }}>💝</div>
+            <h2 style={{ fontSize: 22, fontWeight: 700, color: C.dark, marginBottom: 10, fontFamily: "'Noto Serif KR', serif" }}>
+              나의 연애 유형은?
+            </h2>
+            <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.8, marginBottom: 32 }}>
+              7가지 질문으로 알아보는 나의 연애 스타일.<br/>
+              크레딧 없이 무료로 바로 시작할 수 있어요!
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28, textAlign: 'left' }}>
+              {Object.values(LOVE_TYPES).map(t => (
+                <div key={t.name} style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '12px 16px', borderRadius: 14,
+                  background: t.pale, border: `1px solid ${t.color}22`,
+                }}>
+                  <span style={{ fontSize: 24 }}>{t.emoji}</span>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: t.color }}>{t.name}</div>
+                    <div style={{ fontSize: 11, color: C.muted }}>{t.short}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => setStep(0)} style={{
+              width: '100%', padding: '14px', borderRadius: 14, border: 'none', cursor: 'pointer',
+              background: `linear-gradient(135deg, ${C.rose}, ${C.roseL})`,
+              color: 'white', fontWeight: 700, fontSize: 15,
+              fontFamily: "'Noto Sans KR', sans-serif",
+              boxShadow: `0 8px 24px ${C.rose}44`,
+            }}>시작하기 →</button>
+          </div>
+        )}
+
+        {/* 문항 */}
+        {step >= 0 && !result && currentQ && (
+          <div>
+            <div style={{ marginBottom: 20 }}>
+              <div style={{
+                height: 6, borderRadius: 100, background: '#F0E0E8', overflow: 'hidden', marginBottom: 8,
+              }}>
+                <div style={{
+                  height: '100%', borderRadius: 100, width: `${progress}%`,
+                  background: `linear-gradient(90deg, ${C.roseL}, ${C.rose})`,
+                  transition: 'width 0.4s ease',
+                }}/>
+              </div>
+              <div style={{ fontSize: 11, color: C.muted, textAlign: 'right' }}>
+                {step + 1}/{MINI_QUESTIONS.length}
+              </div>
+            </div>
+            <div style={{
+              fontSize: 18, fontWeight: 700, color: C.dark, lineHeight: 1.6,
+              marginBottom: 28, textAlign: 'center',
+              fontFamily: "'Noto Serif KR', serif",
+              padding: '0 8px',
+            }}>
+              Q{step + 1}. {currentQ.q}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {currentQ.opts.map((opt, i) => (
+                <button key={i} onClick={() => handleAnswer(opt.type)} style={{
+                  padding: '16px 20px', borderRadius: 14, border: `1.5px solid ${C.roseL}33`,
+                  background: 'white', cursor: 'pointer', textAlign: 'left',
+                  fontSize: 14, fontWeight: 600, color: C.dark,
+                  fontFamily: "'Noto Sans KR', sans-serif",
+                  transition: 'all 0.15s',
+                }}>
+                  {opt.text}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 결과 */}
+        {result && t && (
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 72, marginBottom: 12, animation: 'heartbeat 1s ease-in-out 3' }}>{t.emoji}</div>
+            <div style={{ fontSize: 12, color: t.color, fontWeight: 700, marginBottom: 4, letterSpacing: 2 }}>
+              나의 연애 유형
+            </div>
+            <h2 style={{
+              fontSize: 24, fontWeight: 700, color: C.dark, marginBottom: 6,
+              fontFamily: "'Noto Serif KR', serif",
+            }}>{t.name}</h2>
+            <div style={{
+              display: 'inline-block', marginBottom: 24,
+              padding: '5px 16px', borderRadius: 100,
+              background: t.color + '18', color: t.color, fontWeight: 700, fontSize: 13,
+            }}>{t.short}</div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, textAlign: 'left', marginBottom: 24 }}>
+              <div style={{
+                padding: '16px', borderRadius: 16, background: t.pale,
+                border: `1px solid ${t.color}22`,
+              }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: t.color, marginBottom: 6 }}>💡 연애 성향</div>
+                <div style={{ fontSize: 13, color: C.dark, lineHeight: 1.7 }}>{t.desc}</div>
+              </div>
+              <div style={{ padding: '14px 16px', borderRadius: 14, background: 'white', border: '1px solid #F0E0E8' }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, marginBottom: 4 }}>✨ 강점</div>
+                <div style={{ fontSize: 12, color: C.dark }}>{t.strength}</div>
+              </div>
+              <div style={{ padding: '14px 16px', borderRadius: 14, background: 'white', border: '1px solid #F0E0E8' }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, marginBottom: 4 }}>💑 잘 맞는 유형</div>
+                <div style={{ fontSize: 12, color: C.dark }}>{t.match}</div>
+              </div>
+              <div style={{
+                padding: '14px 16px', borderRadius: 14,
+                background: `linear-gradient(135deg, ${C.rosePale}, ${C.lavPale})`,
+                border: `1px solid ${C.roseL}33`,
+              }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: C.rose, marginBottom: 4 }}>💌 성장 팁</div>
+                <div style={{ fontSize: 12, color: C.dark }}>{t.tip}</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => shareResult(t)} style={{
+                flex: 1, padding: '12px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                background: `linear-gradient(135deg, ${C.rose}, ${C.roseL})`,
+                color: 'white', fontWeight: 700, fontSize: 13,
+                fontFamily: "'Noto Sans KR', sans-serif",
+              }}>📤 결과 공유하기</button>
+              <button onClick={reset} style={{
+                flex: 1, padding: '12px', borderRadius: 12,
+                border: `1px solid ${C.roseL}44`, cursor: 'pointer',
+                background: 'white', color: C.rose, fontWeight: 700, fontSize: 13,
+                fontFamily: "'Noto Sans KR', sans-serif",
+              }}>🔄 다시 해보기</button>
+            </div>
+
+            <button onClick={onBack} style={{
+              width: '100%', marginTop: 10, padding: '12px', borderRadius: 12,
+              border: '1px solid #E0D0D8', cursor: 'pointer',
+              background: 'white', color: C.muted, fontSize: 12,
+              fontFamily: "'Noto Sans KR', sans-serif",
+            }}>← 홈으로 돌아가기</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── SoloAnalysisView ──────────────────────────────────────
+function SoloAnalysisView({ testResults, userName, credits, isMaster, onBack }) {
+  const [report, setReport]   = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState('');
+  const COST = 5;
+  const canAfford = isMaster || (credits >= COST);
+  const hasData = !!(testResults?.big5 || testResults?.lost || testResults?.dsi);
+
+  async function generateSoloReport() {
+    setLoading(true); setError('');
+    try {
+      const res = await api.post('/api/couple/solo-analysis', {});
+      if (res.success) {
+        setReport(res.data.report);
+      } else {
+        setError(res.error || '분석 생성 실패');
+      }
+    } catch { setError('서버 오류가 발생했습니다.'); }
+    finally { setLoading(false); }
+  }
+
+  function shareReport() {
+    const text = `💕 마음커플 — 나의 연애 성향 분석\n\n${report.slice(0, 200)}...\n\nhttps://couple.maumful.com`;
+    navigator.share ? navigator.share({ title: '나의 연애 성향 분석', text }).catch(() => {})
+                    : navigator.clipboard?.writeText(text).catch(() => {});
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', background: `linear-gradient(160deg, ${C.rosePale}, ${C.cream})` }}>
+      <nav style={{
+        position: 'sticky', top: 0, zIndex: 100,
+        background: 'rgba(253,252,247,0.88)', backdropFilter: 'blur(16px)',
+        borderBottom: '1px solid rgba(181,85,106,0.12)',
+        padding: '0 20px', height: 56,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <button onClick={onBack} style={{
+          background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: C.dark,
+          display: 'flex', alignItems: 'center', gap: 6,
+        }}>← <span style={{ fontSize: 14, fontWeight: 600 }}>이상형 성향 분석</span></button>
+        {!isMaster && (
+          <span style={{ fontSize: 12, color: C.rose, fontWeight: 700 }}>
+            {COST}cr
+          </span>
+        )}
+      </nav>
+
+      <div style={{ maxWidth: 480, margin: '0 auto', padding: '32px 20px 60px' }}>
+        {!report ? (
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 64, marginBottom: 16 }}>🔮</div>
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: C.dark, marginBottom: 10, fontFamily: "'Noto Serif KR', serif" }}>
+              나의 이상형 성향 분석
+            </h2>
+            <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.8, marginBottom: 28 }}>
+              내 심리검사 결과를 바탕으로 AI가 분석하는<br/>
+              나의 연애 강점, 잘 맞는 파트너 유형, 성장 포인트
+            </p>
+
+            {!hasData && (
+              <div style={{
+                padding: '16px', borderRadius: 14, background: '#FFF8F0',
+                border: '1px solid #FFD8A0', fontSize: 13, color: '#A07040', marginBottom: 24, textAlign: 'left',
+              }}>
+                💡 마음풀에서 BIG5, LOST, SDRI 검사를 하나 이상 완료해야 이용할 수 있어요.
+              </div>
+            )}
+
+            {hasData && !canAfford && (
+              <div style={{
+                padding: '14px', borderRadius: 14, background: '#FFF0F0',
+                border: '1px solid #FFD0D0', fontSize: 13, color: '#D05555', marginBottom: 24, textAlign: 'left',
+              }}>
+                💸 크레딧이 부족합니다. (필요: {COST}cr / 보유: {credits}cr)
+              </div>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, textAlign: 'left', marginBottom: 28 }}>
+              {[
+                { emoji: '💪', title: '나의 연애 강점', desc: '내가 관계에서 잘하는 것과 매력 포인트' },
+                { emoji: '💑', title: '잘 맞는 파트너 유형', desc: '나와 궁합이 좋은 성격·행동 유형' },
+                { emoji: '🌱', title: '함께 성장할 포인트', desc: '더 좋은 관계를 위한 개인 성장 방향' },
+              ].map(item => (
+                <div key={item.title} style={{
+                  display: 'flex', gap: 12, padding: '14px', borderRadius: 14,
+                  background: 'white', border: '1px solid #F0E0E8',
+                }}>
+                  <span style={{ fontSize: 24 }}>{item.emoji}</span>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: C.dark }}>{item.title}</div>
+                    <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{item.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={generateSoloReport}
+              disabled={!hasData || !canAfford || loading}
+              style={{
+                width: '100%', padding: '14px', borderRadius: 14, border: 'none', cursor: hasData && canAfford ? 'pointer' : 'not-allowed',
+                background: hasData && canAfford
+                  ? `linear-gradient(135deg, ${C.lavender}, ${C.lavL})`
+                  : '#E0D0D8',
+                color: 'white', fontWeight: 700, fontSize: 15,
+                fontFamily: "'Noto Sans KR', sans-serif",
+                boxShadow: hasData && canAfford ? `0 8px 24px ${C.lavender}44` : 'none',
+                opacity: loading ? 0.7 : 1,
+              }}
+            >
+              {loading ? '🔮 AI가 분석 중...' : `🔮 분석 시작하기 ${isMaster ? '(무료)' : `(${COST}cr)`}`}
+            </button>
+
+            {error && (
+              <div style={{ marginTop: 12, fontSize: 13, color: '#D05555', textAlign: 'center' }}>{error}</div>
+            )}
+          </div>
+        ) : (
+          <div>
+            <div style={{ textAlign: 'center', marginBottom: 24 }}>
+              <div style={{ fontSize: 48, marginBottom: 8 }}>🔮</div>
+              <h2 style={{ fontSize: 18, fontWeight: 700, color: C.dark, fontFamily: "'Noto Serif KR', serif" }}>
+                {userName}님의 연애 성향 분석
+              </h2>
+            </div>
+            <div style={{
+              background: 'white', borderRadius: 20, padding: '24px 20px',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.06)', marginBottom: 16,
+            }}>
+              <div style={{ fontSize: 13, color: C.dark, lineHeight: 2, whiteSpace: 'pre-wrap', wordBreak: 'keep-all' }}>
+                {report}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={shareReport} style={{
+                flex: 1, padding: '12px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                background: `linear-gradient(135deg, ${C.lavender}, ${C.lavL})`,
+                color: 'white', fontWeight: 700, fontSize: 13,
+                fontFamily: "'Noto Sans KR', sans-serif",
+              }}>📤 결과 공유하기</button>
+              <button onClick={onBack} style={{
+                flex: 1, padding: '12px', borderRadius: 12,
+                border: `1px solid ${C.lavL}44`, cursor: 'pointer',
+                background: 'white', color: C.lavender, fontWeight: 700, fontSize: 13,
+                fontFamily: "'Noto Sans KR', sans-serif",
+              }}>← 홈으로</button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -657,7 +1214,7 @@ function CoupleHubApp() {
   const [loading, setLoading]     = useState(true);
   const [data, setData]           = useState(null);
   const [error, setError]         = useState('');
-  const [view, setView]           = useState('hub');  // 'hub' | 'report' | 'join'
+  const [view, setView]           = useState('hub');  // 'hub' | 'report' | 'miniTest' | 'soloAnalysis'
   const [sessionData, setSession] = useState(null);
   const [partnerName, setPartner] = useState('파트너');
   const [myRole, setMyRole]       = useState('host');
@@ -801,6 +1358,24 @@ useEffect(() => {
     </div>
   );
 
+  // 미니 연애 유형 테스트
+  if (view === 'miniTest') {
+    return <MiniLoveTestView onBack={() => setView('hub')} />;
+  }
+
+  // 솔로 이상형 분석
+  if (view === 'soloAnalysis') {
+    return (
+      <SoloAnalysisView
+        testResults={data?.testResults}
+        userName={displayName(data?.user)}
+        credits={data?.user?.credits ?? 0}
+        isMaster={data?.isMaster}
+        onBack={() => setView('hub')}
+      />
+    );
+  }
+
   // 리포트 뷰
   if (view === 'report' && sessionData) {
     return (
@@ -874,18 +1449,56 @@ useEffect(() => {
       <div style={{ maxWidth: 640, margin: '0 auto', padding: '24px 20px 40px' }}>
 
         {/* ── 인사 카드 ── */}
-        <div style={{
-          borderRadius: 20, padding: '20px', marginBottom: 20,
-          background: 'white', boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
-        }}>
-          <div style={{ fontSize: 18, fontWeight: 700, color: C.dark, marginBottom: 4 }}>
-            안녕하세요, {displayName(user)}님 👋
-            {isMaster && <span style={{ fontSize: 11, background: C.rose, color: 'white', borderRadius: 6, padding: '2px 8px', fontWeight: 700, marginLeft: 6 }}>MASTER</span>}
-          </div>
-          <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.6 }}>
-            심리검사 결과로 파트너와의 관계 패턴을 함께 탐색해보세요.
-          </div>
-        </div>
+        {(() => {
+          const myBig5Data = testResults?.big5?.data;
+          const myPersonality = getPersonalityLabel(myBig5Data);
+          return (
+            <div style={{
+              borderRadius: 20, padding: '20px', marginBottom: 20,
+              background: 'white', boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: C.dark }}>
+                  안녕하세요, {displayName(user)}님 👋
+                  {isMaster && <span style={{ fontSize: 11, background: C.rose, color: 'white', borderRadius: 6, padding: '2px 8px', fontWeight: 700, marginLeft: 6 }}>MASTER</span>}
+                </div>
+                {myPersonality && (
+                  <span style={{
+                    fontSize: 11, fontWeight: 700, padding: '4px 10px',
+                    borderRadius: 100, background: C.rosePale, color: C.rose,
+                    border: `1px solid ${C.roseL}44`, whiteSpace: 'nowrap',
+                  }}>
+                    {myPersonality.emoji} {myPersonality.name}
+                  </span>
+                )}
+              </div>
+              <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.6, marginBottom: 14 }}>
+                심리검사 결과로 파트너와의 관계 패턴을 함께 탐색해보세요.
+              </div>
+              {/* 빠른 액션 버튼 */}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => setView('miniTest')} style={{
+                  flex: 1, padding: '10px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                  background: `linear-gradient(135deg, ${C.rosePale}, ${C.lavPale})`,
+                  color: C.rose, fontWeight: 700, fontSize: 12,
+                  fontFamily: "'Noto Sans KR', sans-serif",
+                  border: `1px solid ${C.roseL}33`,
+                }}>
+                  💝 연애 유형 테스트 <span style={{ fontWeight: 400, color: C.muted }}>무료</span>
+                </button>
+                <button onClick={() => setView('soloAnalysis')} style={{
+                  flex: 1, padding: '10px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                  background: C.lavPale,
+                  color: C.lavender, fontWeight: 700, fontSize: 12,
+                  fontFamily: "'Noto Sans KR', sans-serif",
+                  border: `1px solid ${C.lavL}33`,
+                }}>
+                  🔮 이상형 분석 <span style={{ fontWeight: 400, color: C.muted }}>5cr</span>
+                </button>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ── 검사 결과 현황 ── */}
         <div style={{
@@ -1113,15 +1726,57 @@ useEffect(() => {
           </div>
         )}
 
-        {/* ── 이전 리포트 ── */}
+        {/* ── 오늘의 커플 대화 질문 ── */}
+        <DailyQuestionCard />
+
+        {/* ── 이전 리포트 + 점수 히스토리 ── */}
         {recentReports?.length > 0 && (
           <div style={{
             borderRadius: 20, padding: '20px',
             background: 'white', boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
+            marginBottom: 20,
           }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: C.dark, marginBottom: 14 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: C.dark, marginBottom: 6 }}>
               📜 이전 분석 리포트
             </div>
+            {/* 점수 변화 히스토리 (2개 이상 시 표시) */}
+            {recentReports.length >= 2 && (() => {
+              const scores = [...recentReports].reverse().map(r => r.compatibility_score || 0);
+              const latest = scores[scores.length - 1];
+              const prev   = scores[scores.length - 2];
+              const diff   = latest - prev;
+              return (
+                <div style={{
+                  padding: '12px 14px', borderRadius: 12, marginBottom: 14,
+                  background: diff >= 0 ? '#EAF5EC' : '#FEF0EC',
+                  border: `1px solid ${diff >= 0 ? '#4A9A5A' : '#D4634A'}22`,
+                  display: 'flex', alignItems: 'center', gap: 12,
+                }}>
+                  <div style={{ fontSize: 24 }}>{diff >= 0 ? '📈' : '📉'}</div>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: diff >= 0 ? '#4A9A5A' : '#D4634A' }}>
+                      궁합 점수 {diff >= 0 ? `+${diff}점` : `${diff}점`} 변화
+                    </div>
+                    <div style={{ fontSize: 11, color: C.muted }}>
+                      {diff >= 0 ? '함께 성장하고 있어요! 🌱' : '더 깊이 이해하는 과정이에요. 💪'}
+                    </div>
+                  </div>
+                  {/* 미니 바 차트 */}
+                  <div style={{ flex: 1, display: 'flex', gap: 3, alignItems: 'flex-end', height: 32 }}>
+                    {scores.map((s, i) => (
+                      <div key={i} style={{
+                        flex: 1, borderRadius: 4,
+                        height: `${Math.max(20, s)}%`,
+                        background: i === scores.length - 1
+                          ? (diff >= 0 ? '#4A9A5A' : '#D4634A')
+                          : C.roseL + '66',
+                        minHeight: 6, maxHeight: 32,
+                      }}/>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {recentReports.map(r => (
                 <button key={r.id} onClick={() => { setSession(r); setView('report'); }} style={{
@@ -1131,9 +1786,9 @@ useEffect(() => {
                 }}>
                   <div style={{
                     width: 44, height: 44, borderRadius: 100,
-                    background: `linear-gradient(135deg, ${C.rose}, ${C.roseL})`,
+                    background: `linear-gradient(135deg, ${scoreColor(r.compatibility_score||0)}, ${C.roseL})`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 18, flexShrink: 0,
+                    fontSize: 14, fontWeight: 800, color: 'white', flexShrink: 0,
                   }}>{r.compatibility_score || '?'}</div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: C.dark }}>

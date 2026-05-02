@@ -655,6 +655,85 @@ app.post('/api/couple/partner-submit', async (c) => {
   return c.json({ success: true, data: { status: newStatus } })
 })
 
+// ── POST /api/couple/solo-analysis ────────────────────────
+// 나 혼자 심리검사 결과 기반 AI 이상형 성향 분석 (5cr)
+app.post('/api/couple/solo-analysis', async (c) => {
+  const { DB } = c.env
+  const userId = await getCoupleUserId(c.req.raw, c.env)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+
+  const user = await DB.prepare(
+    'SELECT email, nickname, credits FROM users WHERE id=?'
+  ).bind(userId).first<{ email: string; nickname: string | null; credits: number }>()
+  if (!user) return c.json({ success: false, error: '사용자 없음' }, 404)
+
+  const isMaster = isMasterAccount(user.email)
+  const COST = 5
+  if (!isMaster && user.credits < COST) {
+    return c.json({ success: false, error: `크레딧 부족 (보유: ${user.credits}, 필요: ${COST})`, needsCharge: true }, 402)
+  }
+
+  const [big5Row, lostRow, dsiRow] = await Promise.all([
+    DB.prepare(`SELECT result_json FROM test_history WHERE user_id=? AND test_type='BIG5' AND result_json IS NOT NULL ORDER BY performed_at DESC LIMIT 1`).bind(userId).first<{ result_json: string }>(),
+    DB.prepare(`SELECT result_json FROM test_history WHERE user_id=? AND test_type='LOST' AND result_json IS NOT NULL ORDER BY performed_at DESC LIMIT 1`).bind(userId).first<{ result_json: string }>(),
+    DB.prepare(`SELECT result_json FROM test_history WHERE user_id=? AND test_type='DSI' AND result_json IS NOT NULL ORDER BY performed_at DESC LIMIT 1`).bind(userId).first<{ result_json: string }>(),
+  ])
+
+  if (!big5Row && !lostRow && !dsiRow) {
+    return c.json({ success: false, error: '검사 결과가 없습니다. 마음풀에서 먼저 검사를 완료해주세요.' }, 400)
+  }
+
+  const name = user.nickname || user.email.split('@')[0]
+  let prompt = `당신은 연애·관계 심리 전문가입니다. 아래 심리검사 결과를 바탕으로 이 사람의 연애 성향과 이상적인 파트너 유형을 분석해주세요.\n\n[분석 대상] ${name}\n\n`
+
+  try {
+    if (big5Row) {
+      const b = JSON.parse(big5Row.result_json) as Record<string, number>
+      const labels: Record<string, string> = { O:'개방성', C:'성실성', E:'외향성', A:'친화성', N:'신경성' }
+      prompt += `[BIG5 성격검사]\n`
+      for (const key of ['O','C','E','A','N']) prompt += `${labels[key]}: ${b[key] ?? 0}점\n`
+      prompt += '\n'
+    }
+    if (lostRow) {
+      const l = JSON.parse(lostRow.result_json) as Record<string, string>
+      prompt += `[LOST 행동유형]\n유형: ${l.typeCode ?? '?'} — ${l.typeName ?? ''}\n\n`
+    }
+    if (dsiRow) {
+      const d = JSON.parse(dsiRow.result_json) as { total?: number }
+      prompt += `[자아분화(SDRI)]\n총점: ${d.total ?? 0}점 (만점 125점)\n\n`
+    }
+  } catch {}
+
+  prompt += `[분석 지침]\n다음 세 가지를 각각 3~4줄로 작성해주세요:\n`
+  prompt += `1. 나의 연애 강점: 이 사람이 관계에서 잘하는 것과 매력 포인트\n`
+  prompt += `2. 잘 맞는 파트너 유형: 이 사람과 궁합이 좋은 성격·행동 특성 (구체적으로)\n`
+  prompt += `3. 함께 성장할 포인트: 더 좋은 관계를 위한 개인 성장 방향 (긍정적 표현으로)\n`
+  prompt += `\n전체 500자 이내, 따뜻하고 실용적인 톤으로 작성하세요. 진단명·병명은 사용하지 마세요.`
+
+  const apiKey = await getAnthropicKey(c.env)
+  if (!apiKey) return c.json({ error: 'API 키 미설정' }, 500)
+
+  const res = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1000, stream: false, messages: [{ role: 'user', content: prompt }] }),
+  })
+
+  if (!res.ok) {
+    const errText = await res.text()
+    return c.json({ error: 'AI 오류', detail: errText }, 502)
+  }
+
+  const aiData = await res.json() as { content: Array<{ type: string; text: string }> }
+  const reportText = aiData.content?.find(b => b.type === 'text')?.text ?? ''
+
+  if (COST > 0 && !isMaster) {
+    await spendCredits(DB, userId, COST, 'solo-analysis')
+  }
+
+  return c.json({ success: true, data: { report: reportText } })
+})
+
 // ── GET /api/couple/admin/stats ────────────────────────────
 // 관리자 통계 (마스터 계정 전용)
 app.get('/api/couple/admin/stats', async (c) => {
