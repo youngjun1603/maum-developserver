@@ -673,6 +673,103 @@ package/maumcouple/migrations/0002_relationship_checkins.sql
 
 ---
 
+## 중기 과제 F~I (2026-05-02)
+
+### F: PWA 지원
+
+**신규 파일:**
+- `maumgame-main/public/manifest.json` — theme_color #4A7C59, categories: health/games
+- `maumgame-main/public/sw.js` — Cache-first 정적 자산 + push event 처리
+- `package/maumcouple/public/manifest.json` — theme_color #E05A8A, categories: health/lifestyle/social
+- `package/maumcouple/public/sw.js` — 동일 패턴
+
+**수정 파일:**
+- `maumgame-main/src/index.tsx` — manifest link, Apple/OG 메타태그, SW 등록 스크립트
+- `package/maumcouple/src/index.tsx` — 동일
+
+(maumful은 이미 완성 상태)
+
+### G: 공유 기능 강화
+
+**maumgame-main/public/static/game_hub.jsx — EmotionWeeklyReport**
+
+- 펼쳐진 상태에서 '공유 🔗' 버튼 표시
+- Web Share API 우선, fallback: clipboard.writeText
+- 공유 내용: 주요 감정 이모지 + 기록 일수 + AI 분석 요약 80자 + #마음풀 #마음게임
+
+### H: 상담사 리뷰 시스템
+
+**maumful-main/public/static/counseling.jsx**
+
+- `MyAppointments` 컴포넌트에 `reviewModal` state 추가 → 리뷰 버튼이 alert 대신 ReviewModal 직접 오픈
+- `CounselorReviewsModal` 신규 컴포넌트 — GET /api/counseling/reviews/:id 로 리뷰 목록 표시 (별점/작성자/내용/상담사 답변)
+- 상담사 카드에 review_count > 0 일 때 '⭐ 리뷰' 버튼 → CounselorReviewsModal 오픈
+
+**maumful-main/src/index.tsx**
+
+```typescript
+// GET  /api/admin/counseling/reviews?page= — 전체 리뷰 (admin_hidden 포함)
+// PATCH /api/admin/counseling/reviews/:id/visibility — 숨김/공개 토글 + avg_rating 재계산
+// GET  /api/push/vapid-key — VAPID 공개 키 반환
+// POST /api/push/subscribe — maumful push 구독 저장
+```
+
+**maumful-main/public/static/counseling_admin.jsx**
+
+- `aApi.reviews(page)` / `aApi.toggleReview(id, hidden)` 메서드 추가
+- `AdminReviews` 컴포넌트: 상담사명/작성자/별점/내용/등록일 + 숨김/공개 토글, 페이지네이션
+- 어드민 탭에 '⭐ 리뷰 관리' 추가
+
+### I: Web Push 알림
+
+#### DB 마이그레이션
+
+```
+maumful-main/migrations/0014_push_subscriptions.sql
+→ push_subscriptions 테이블 (user_id, service, endpoint, p256dh, auth_key)
+→ UNIQUE(user_id, service) — 서비스당 1개 구독 유지
+→ 프로덕션 + 스테이징 적용 완료
+```
+
+#### package/maumcouple/src/index.tsx
+
+```typescript
+// signVapidJwt(privateKeyB64u, audience) — PKCS#8 DER 래핑 + WebCrypto ES256 서명
+// sendWebPush(endpoint, privKey, pubKey) — VAPID auth 헤더 + 빈 payload 발송
+// GET  /api/couple/vapid-key — VAPID 공개 키 반환
+// POST /api/couple/push-subscribe — maumcouple push 구독 저장
+// POST /api/couple/join — 파트너 참여 시 호스트의 push_subscriptions 조회 → sendWebPush() 호출
+```
+
+#### package/maumcouple/public/static/couple_hub.jsx — SessionWaitingView
+
+- `pushActive` state 추가
+- host 역할일 때 컴포넌트 마운트 시 자동 push 구독:
+  1. GET /api/couple/vapid-key → VAPID 공개 키
+  2. `pushManager.subscribe({ userVisibleOnly: true, applicationServerKey })` 
+  3. POST /api/couple/push-subscribe → 구독 저장
+- 초대코드 섹션에 '🔔 알림 켜짐' 배지 표시 (pushActive === true 시)
+
+#### VAPID 키 등록 (프로덕션 배포 전 필수)
+
+```powershell
+# VAPID 키 쌍 생성 (Node.js 환경)
+npx web-push generate-vapid-keys
+# 출력된 Public Key, Private Key를 아래 명령으로 등록
+
+cd package/maumcouple
+npx wrangler secret put VAPID_PRIVATE_KEY
+npx wrangler secret put VAPID_PUBLIC_KEY
+
+cd ../maumful-main
+npx wrangler secret put VAPID_PRIVATE_KEY
+npx wrangler secret put VAPID_PUBLIC_KEY
+```
+
+Web Push는 VAPID 키 등록 전까지 비활성 상태로 동작 (push 발송 스킵, 나머지 기능 정상).
+
+---
+
 ## 단기 기능 개발 (A~E) + 기술부채 (M, N) (2026-05-02)
 
 ### A: 마음커플 초대 이메일
