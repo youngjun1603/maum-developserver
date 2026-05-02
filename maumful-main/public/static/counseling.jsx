@@ -282,6 +282,7 @@ function MyAppointments({setView}){
   const [loading,setLoading]=useS(true);
   const [videoRoom,setVideoRoom]=useS(null);
   const [cancelling,setCancelling]=useS(null);
+  const [reviewModal,setReviewModal]=useS(null);
 
   const load=async()=>{
     setLoading(true);
@@ -334,7 +335,7 @@ function MyAppointments({setView}){
           <div style={{display:'flex',gap:7,marginTop:12,paddingTop:10,borderTop:'1px solid rgba(0,0,0,.06)'}}>
             {canVideo&&<button onClick={()=>setVideoRoom({roomId:a.video_room_id,counselorName:a.counselor_name})} style={{flex:1,padding:'9px 0',background:'#2D6A4F',color:'white',border:'none',borderRadius:8,fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:"'Noto Sans KR',sans-serif"}}>📹 화상 상담 입장</button>}
             {canCancel&&<button onClick={()=>handleCancel(a.id)} disabled={cancelling===a.id} style={{flex:1,padding:'9px 0',background:'white',color:'#9A9A9A',border:'1px solid rgba(0,0,0,.12)',borderRadius:8,fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:"'Noto Sans KR',sans-serif"}}>{cancelling===a.id?'취소 중...':'예약 취소'}</button>}
-            {canReview&&<button onClick={()=>{if(typeof ReviewModal!=='undefined')alert('리뷰 작성: counseling 페이지에서 가능합니다');}} style={{flex:1,padding:'9px 0',background:'#FEF3C7',color:'#B45309',border:'none',borderRadius:8,fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:"'Noto Sans KR',sans-serif"}}>⭐ 리뷰 작성</button>}
+            {canReview&&<button onClick={()=>setReviewModal({appointmentId:a.id,counselorName:a.counselor_name})} style={{flex:1,padding:'9px 0',background:'#FEF3C7',color:'#B45309',border:'none',borderRadius:8,fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:"'Noto Sans KR',sans-serif"}}>⭐ 리뷰 작성</button>}
           </div>
         )}
       </div>
@@ -345,6 +346,14 @@ function MyAppointments({setView}){
     <div style={{fontFamily:"'Noto Sans KR',sans-serif"}}>
       {upcoming.length>0&&<><div style={{fontSize:13,fontWeight:700,color:'#5A5A5A',marginBottom:9}}>예정된 상담 ({upcoming.length})</div>{upcoming.map(a=><Card key={a.id} a={a}/>)}</>}
       {past.length>0&&<div style={{marginTop:upcoming.length>0?18:0}}><div style={{fontSize:13,fontWeight:700,color:'#9A9A9A',marginBottom:9}}>지난 상담</div>{past.map(a=><Card key={a.id} a={a}/>)}</div>}
+
+      {reviewModal&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.55)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000,padding:16}} onClick={e=>{if(e.target===e.currentTarget)setReviewModal(null);}}>
+          <div style={{background:'white',borderRadius:18,width:'100%',maxWidth:440,boxShadow:'0 20px 72px rgba(0,0,0,.25)'}}>
+            <ReviewModal appointmentId={reviewModal.appointmentId} counselorName={reviewModal.counselorName} onClose={()=>setReviewModal(null)} onDone={()=>{setReviewModal(null);load();}}/>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -502,6 +511,66 @@ function ReviewModal({appointmentId,counselorName,onClose,onDone}){
 
 
 // ============================================================
+// CounselorReviewsModal — 상담사 리뷰 목록 모달
+// ============================================================
+function CounselorReviewsModal({counselorId,counselorName,avgRating,reviewCount,onClose}){
+  const {useState:useS,useEffect:useE}=React;
+  const [reviews,setReviews]=useS([]);
+  const [loading,setLoading]=useS(true);
+  const [page,setPage]=useS(1);
+
+  const load=(p)=>{
+    setLoading(true);
+    fetch(`/api/counseling/reviews/${counselorId}?page=${p}`)
+      .then(r=>r.json())
+      .then(d=>{if(d.success)setReviews(d.data||[]);})
+      .finally(()=>setLoading(false));
+  };
+  useE(()=>load(1),[counselorId]);
+
+  const Stars=({r})=><span style={{color:'#F59E0B',fontSize:14}}>{Array.from({length:5},(_,i)=>i<Math.round(r)?'★':'☆').join('')}</span>;
+
+  return(
+    <div style={{fontFamily:"'Noto Sans KR',sans-serif",maxHeight:'80vh',overflowY:'auto'}}>
+      <div style={{padding:'20px 22px',borderBottom:'1px solid rgba(0,0,0,.08)',display:'flex',justifyContent:'space-between',alignItems:'flex-start',position:'sticky',top:0,background:'white',zIndex:1}}>
+        <div>
+          <div style={{fontSize:16,fontWeight:700}}>{counselorName} 상담사 리뷰</div>
+          <div style={{display:'flex',alignItems:'center',gap:6,marginTop:4}}>
+            <Stars r={parseFloat(avgRating)||0}/>
+            <span style={{fontSize:14,fontWeight:700}}>{parseFloat(avgRating||0).toFixed(1)}</span>
+            <span style={{fontSize:13,color:'#9A9A9A'}}>({reviewCount}개)</span>
+          </div>
+        </div>
+        <button onClick={onClose} style={{background:'none',border:'none',fontSize:20,cursor:'pointer',color:'#9A9A9A',padding:'0 4px'}}>✕</button>
+      </div>
+      <div style={{padding:'12px 22px 22px'}}>
+        {loading?<div style={{textAlign:'center',padding:'32px',color:'#9A9A9A'}}>로딩 중...</div>:
+          reviews.length===0?<div style={{textAlign:'center',padding:'32px',color:'#9A9A9A'}}><div style={{fontSize:32,marginBottom:8}}>💬</div>아직 리뷰가 없습니다</div>:
+          <div style={{display:'flex',flexDirection:'column',gap:14}}>
+            {reviews.map(r=>(
+              <div key={r.id} style={{borderBottom:'1px solid rgba(0,0,0,.06)',paddingBottom:14}}>
+                <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+                  <Stars r={r.rating}/>
+                  <span style={{fontSize:12,fontWeight:600,color:'#1A1A1A'}}>{r.reviewer_name}</span>
+                  <span style={{fontSize:11,color:'#C0C0C0',marginLeft:'auto'}}>{new Date(r.created_at).toLocaleDateString('ko-KR',{year:'numeric',month:'short',day:'numeric'})}</span>
+                </div>
+                {r.content&&<div style={{fontSize:13,color:'#5A5A5A',lineHeight:1.7}}>{r.content}</div>}
+                {r.counselor_reply&&(
+                  <div style={{marginTop:8,background:'#F9F9F7',borderRadius:8,padding:'10px 14px',borderLeft:'3px solid #2D6A4F33'}}>
+                    <div style={{fontSize:11,fontWeight:700,color:'#2D6A4F',marginBottom:3}}>상담사 답변</div>
+                    <div style={{fontSize:12,color:'#5A5A5A',lineHeight:1.6}}>{r.counselor_reply}</div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        }
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 // CounselingPage — 메인 페이지
 // ============================================================
 function CounselingPage({setView,isLoggedIn,currentUser}){
@@ -519,6 +588,7 @@ function CounselingPage({setView,isLoggedIn,currentUser}){
   const [videoRoom,setVideoRoom]=useS(null);
   const [onboardingOpen,setOnboardingOpen]=useS(false);
   const [reviewModal,setReviewModal]=useS(null);
+  const [counselorReviews,setCounselorReviews]=useS(null);
   const [showDemoNotice,setShowDemoNotice]=useS(true);
 
   const FALLBACK_CENTERS=[
@@ -735,9 +805,12 @@ function CounselingPage({setView,isLoggedIn,currentUser}){
                     <div style={{textAlign:'right',flexShrink:0}}><div style={{fontSize:14,fontWeight:700}}>{fmt(c.fee_per_session)}</div><div style={{fontSize:11,color:'#9A9A9A'}}>{c.session_minutes}분</div></div>
                   </div>
                   <div style={{display:'flex',flexWrap:'wrap',gap:3}}>{specs.map(s=><span key={s} style={{fontSize:10,fontWeight:500,padding:'2px 7px',borderRadius:100,background:cc.bg,color:cc.color}}>{s}</span>)}</div>
-                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginTop:2}}>
-                    <div style={{display:'flex',gap:3}}>{types.map(t=><span key={t} style={{fontSize:10,padding:'2px 6px',borderRadius:4,background:'#F5F5F0',color:'#5A5A5A'}}>{SESSION_TYPES[t]?.icon} {SESSION_TYPES[t]?.label}</span>)}</div>
-                    <button onClick={()=>{setBookingTarget({id:c.id,emoji:c.photo_emoji,name:c.name,title:c.title,centerName:c.center_name,centerId:c.center_id,fee:c.fee_per_session,minutes:c.session_minutes,types:parseArr(c.available_types)});setBookingOpen(true);}} style={{background:cc.color,color:'white',border:'none',borderRadius:7,padding:'7px 14px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:"'Noto Sans KR',sans-serif",whiteSpace:'nowrap'}}>예약하기</button>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginTop:2,gap:6}}>
+                    <div style={{display:'flex',gap:3,flexWrap:'wrap'}}>{types.map(t=><span key={t} style={{fontSize:10,padding:'2px 6px',borderRadius:4,background:'#F5F5F0',color:'#5A5A5A'}}>{SESSION_TYPES[t]?.icon} {SESSION_TYPES[t]?.label}</span>)}</div>
+                    <div style={{display:'flex',gap:5,flexShrink:0}}>
+                      {(c.review_count||0)>0&&<button onClick={()=>setCounselorReviews({id:c.id,name:c.name,avg:c.avg_rating,cnt:c.review_count})} style={{background:'#FEF3C7',color:'#B45309',border:'none',borderRadius:7,padding:'7px 10px',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:"'Noto Sans KR',sans-serif",whiteSpace:'nowrap'}}>⭐ 리뷰</button>}
+                      <button onClick={()=>{setBookingTarget({id:c.id,emoji:c.photo_emoji,name:c.name,title:c.title,centerName:c.center_name,centerId:c.center_id,fee:c.fee_per_session,minutes:c.session_minutes,types:parseArr(c.available_types)});setBookingOpen(true);}} style={{background:cc.color,color:'white',border:'none',borderRadius:7,padding:'7px 14px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:"'Noto Sans KR',sans-serif",whiteSpace:'nowrap'}}>예약하기</button>
+                    </div>
                   </div>
                 </div>
               );
@@ -761,11 +834,20 @@ function CounselingPage({setView,isLoggedIn,currentUser}){
         </div>
       )}
 
-      {/* 리뷰 모달 */}
+      {/* 리뷰 작성 모달 */}
       {reviewModal&&(
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.55)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000,padding:16}} onClick={e=>{if(e.target===e.currentTarget)setReviewModal(null);}}>
           <div style={{background:'white',borderRadius:18,width:'100%',maxWidth:440,boxShadow:'0 20px 72px rgba(0,0,0,.25)'}}>
             <ReviewModal appointmentId={reviewModal.appointmentId} counselorName={reviewModal.counselorName} onClose={()=>setReviewModal(null)} onDone={()=>{setReviewModal(null);alert('리뷰가 등록되었습니다. 감사합니다!');}}/>
+          </div>
+        </div>
+      )}
+
+      {/* 상담사 리뷰 목록 모달 */}
+      {counselorReviews&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.55)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000,padding:16}} onClick={e=>{if(e.target===e.currentTarget)setCounselorReviews(null);}}>
+          <div style={{background:'white',borderRadius:18,width:'100%',maxWidth:480,maxHeight:'85vh',overflowY:'auto',boxShadow:'0 20px 72px rgba(0,0,0,.25)'}}>
+            <CounselorReviewsModal counselorId={counselorReviews.id} counselorName={counselorReviews.name} avgRating={counselorReviews.avg} reviewCount={counselorReviews.cnt} onClose={()=>setCounselorReviews(null)}/>
           </div>
         </div>
       )}

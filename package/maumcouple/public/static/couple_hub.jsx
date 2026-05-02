@@ -2190,6 +2190,41 @@ function SessionWaitingView({ session, myRole, onRefresh, onReport, onCancel }) 
 
   const prevRef = React.useRef({ isHostDone: false, isGuestDone: false, bothDone: false });
 
+  const [pushActive, setPushActive] = useState(false);
+
+  // Web Push 구독 (파트너 참여 시 백그라운드 알림)
+  useEffect(() => {
+    if (myRole !== 'host' || bothDone) return;
+    (async () => {
+      try {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+        const perm = Notification.permission === 'default'
+          ? await Notification.requestPermission()
+          : Notification.permission;
+        if (perm !== 'granted') return;
+
+        const vapidRes = await fetch('/api/couple/vapid-key', { headers: api._h() });
+        const { key } = await vapidRes.json();
+        if (!key) return;
+
+        const reg = await navigator.serviceWorker.ready;
+        const existing = await reg.pushManager.getSubscription();
+        const sub = existing || await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: Uint8Array.from(atob(key.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0)),
+        });
+
+        const { endpoint, keys } = sub.toJSON();
+        await fetch('/api/couple/push-subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...api._h() },
+          body: JSON.stringify({ endpoint, p256dh: keys?.p256dh, auth: keys?.auth }),
+        });
+        setPushActive(true);
+      } catch {}
+    })();
+  }, [myRole, bothDone]);
+
   // 브라우저 알림 권한 요청 (최초 1회)
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
@@ -2341,7 +2376,14 @@ function SessionWaitingView({ session, myRole, onRefresh, onReport, onCancel }) 
             background: C.rosePale, borderRadius: 14, padding: '16px',
             border: `1px solid ${C.roseL}33`, marginBottom: 16,
           }}>
-            <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>파트너에게 공유할 초대코드</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <div style={{ fontSize: 11, color: C.muted }}>파트너에게 공유할 초대코드</div>
+              {myRole === 'host' && pushActive && (
+                <span style={{ fontSize: 10, color: '#10B981', fontWeight: 600, background: '#D1FAE5', padding: '2px 8px', borderRadius: 100 }}>
+                  🔔 알림 켜짐
+                </span>
+              )}
+            </div>
             <div style={{
               fontSize: 32, fontWeight: 800, letterSpacing: 8,
               color: C.rose, fontFamily: 'monospace', textAlign: 'center', marginBottom: 12,

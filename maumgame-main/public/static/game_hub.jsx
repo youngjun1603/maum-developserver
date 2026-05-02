@@ -1062,11 +1062,30 @@ function EmotionWeeklyReport() {
             }}>{entries.length}일 기록</span>
           )}
         </div>
-        <button onClick={() => setExpanded(v => !v)} style={{
-          background:'none', border:'none', cursor:'pointer',
-          fontSize:12, color:C.muted, fontWeight:600,
-          fontFamily:"'Noto Sans KR',sans-serif",
-        }}>{expanded ? '접기 ▲' : '펼치기 ▼'}</button>
+        <div style={{ display:'flex', gap:6 }}>
+          {expanded && reportData?.report && (
+            <button onClick={() => {
+              const topEmotion = entries.length > 0
+                ? (EMOTION_DISPLAY[entries[entries.length-1]?.emotion] || { emoji:'😶', label:entries[entries.length-1]?.emotion })
+                : null;
+              const text = `🌿 이번 주 마음의 정원\n${topEmotion ? topEmotion.emoji + ' ' + topEmotion.label + ' ' : ''}${entries.length}일 감정 기록\n\n${reportData.report.slice(0,80)}...\n\n#마음풀 #마음게임 #감정기록`;
+              if (navigator.share) {
+                navigator.share({ title:'이번 주 감정 흐름', text }).catch(()=>{});
+              } else {
+                navigator.clipboard?.writeText(text).then(()=>alert('복사됐어요!')).catch(()=>{});
+              }
+            }} style={{
+              background:'none', border:'none', cursor:'pointer',
+              fontSize:12, color:C.muted, fontWeight:600,
+              fontFamily:"'Noto Sans KR',sans-serif",
+            }}>공유 🔗</button>
+          )}
+          <button onClick={() => setExpanded(v => !v)} style={{
+            background:'none', border:'none', cursor:'pointer',
+            fontSize:12, color:C.muted, fontWeight:600,
+            fontFamily:"'Noto Sans KR',sans-serif",
+          }}>{expanded ? '접기 ▲' : '펼치기 ▼'}</button>
+        </div>
       </div>
 
       {expanded && (

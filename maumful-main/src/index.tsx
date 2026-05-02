@@ -3159,6 +3159,64 @@ app.get('/api/counseling/reviews/:counselorId', async (c) => {
   return c.json({ success: true, data: rows.results, page })
 })
 
+// ── 어드민: 전체 리뷰 조회 ────────────────────────────────
+app.get('/api/admin/counseling/reviews', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+  const page  = parseInt(c.req.query('page') || '1')
+  const limit = 20
+  const rows = await DB.prepare(`
+    SELECT cr.id, cr.rating, cr.content, cr.is_anonymous, cr.admin_hidden, cr.created_at,
+           co.name AS counselor_name, co.id AS counselor_id,
+           CASE WHEN cr.is_anonymous=1 THEN '익명' ELSE COALESCE(u.nickname, u.email) END AS reviewer_name
+    FROM counseling_reviews cr
+    JOIN counselors co ON cr.counselor_id=co.id
+    JOIN users u ON cr.user_id=u.id
+    ORDER BY cr.created_at DESC LIMIT ? OFFSET ?
+  `).bind(limit, (page - 1) * limit).all()
+  const total = await DB.prepare('SELECT COUNT(*) AS cnt FROM counseling_reviews').first<{ cnt: number }>()
+  return c.json({ success: true, data: rows.results, total: total?.cnt || 0, page })
+})
+
+// ── 어드민: 리뷰 숨김/공개 토글 ──────────────────────────
+app.patch('/api/admin/counseling/reviews/:id/visibility', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+  const id = parseInt(c.req.param('id'))
+  const { hidden } = await c.req.json() as { hidden: boolean }
+  await DB.prepare('UPDATE counseling_reviews SET admin_hidden=? WHERE id=?').bind(hidden ? 1 : 0, id).run()
+  // 해당 상담사 avg_rating 재계산
+  const rev = await DB.prepare('SELECT counselor_id FROM counseling_reviews WHERE id=?').bind(id).first<{ counselor_id: number }>()
+  if (rev) {
+    await DB.prepare("UPDATE counselors SET avg_rating=(SELECT AVG(rating) FROM counseling_reviews WHERE counselor_id=? AND admin_hidden=0),review_count=(SELECT COUNT(*) FROM counseling_reviews WHERE counselor_id=? AND admin_hidden=0) WHERE id=?")
+      .bind(rev.counselor_id, rev.counselor_id, rev.counselor_id).run()
+  }
+  return c.json({ success: true })
+})
+
+// ── Web Push: VAPID 공개 키 ────────────────────────────────
+app.get('/api/push/vapid-key', (c) => {
+  const key = c.env.VAPID_PUBLIC_KEY || ''
+  return c.json({ success: true, key })
+})
+
+// ── Web Push: 구독 저장 ───────────────────────────────────
+app.post('/api/push/subscribe', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+  const { endpoint, p256dh, auth } = await c.req.json() as { endpoint: string; p256dh: string; auth: string }
+  if (!endpoint || !p256dh || !auth) return c.json({ success: false, error: '잘못된 구독 정보' }, 400)
+  await DB.prepare(`
+    INSERT INTO push_subscriptions (user_id, service, endpoint, p256dh, auth_key)
+    VALUES (?, 'maumful', ?, ?, ?)
+    ON CONFLICT(user_id, service) DO UPDATE SET endpoint=excluded.endpoint, p256dh=excluded.p256dh, auth_key=excluded.auth_key
+  `).bind(userId, endpoint, p256dh, auth).run()
+  return c.json({ success: true })
+})
+
 // ── 온보딩 신청 (일반 사용자) ─────────────────────────────
 app.post('/api/counseling/onboarding', async (c) => {
   const { DB, KV } = c.env

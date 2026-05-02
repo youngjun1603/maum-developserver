@@ -24,6 +24,8 @@ const aApi = {
   async grantCredits(id,amount,reason) { return (await fetch(`/api/admin/users/${id}/credits`,{method:'POST',headers:this._h(),body:JSON.stringify({amount,reason})})).json(); },
   async errorLogs(service='',limit=50) { return (await fetch(`/api/admin/error-logs?service=${encodeURIComponent(service)}&limit=${limit}`,{headers:this._h()})).json(); },
   async clearErrorLogs() { return (await fetch('/api/admin/error-logs',{method:'DELETE',headers:this._h()})).json(); },
+  async reviews(page=1) { return (await fetch(`/api/admin/counseling/reviews?page=${page}`,{headers:this._h()})).json(); },
+  async toggleReview(id,hidden) { return (await fetch(`/api/admin/counseling/reviews/${id}/visibility`,{method:'PATCH',headers:this._h(),body:JSON.stringify({hidden})})).json(); },
 
   // ── 센터 CRUD ───────────────────────────────────────────────
   async createCenter(body)     { return (await fetch('/api/admin/counseling/centers',{method:'POST',headers:this._h(),body:JSON.stringify(body)})).json(); },
@@ -1019,6 +1021,74 @@ function AdminSettlements(){
   );
 }
 
+// ── 탭: 리뷰 관리 ───────────────────────────────────────────
+function AdminReviews(){
+  const {useState:useS,useEffect:useE}=React;
+  const [reviews,setReviews]=useS([]);
+  const [page,setPage]=useS(1);
+  const [total,setTotal]=useS(0);
+  const [loading,setLoading]=useS(true);
+  const [toggling,setToggling]=useS(null);
+
+  const load=(p)=>{
+    setLoading(true);
+    aApi.reviews(p).then(r=>{if(r.success){setReviews(r.data||[]);setTotal(r.total||0);}}).finally(()=>setLoading(false));
+  };
+  useE(()=>load(1),[]);
+
+  const handleToggle=async(id,hidden)=>{
+    setToggling(id);
+    await aApi.toggleReview(id,hidden);
+    setToggling(null);
+    load(page);
+  };
+
+  const Stars=({r})=><span style={{color:'#F59E0B',fontSize:12}}>{Array.from({length:5},(_,i)=>i<Math.round(r)?'★':'☆').join('')}</span>;
+  const totalPages=Math.ceil(total/20)||1;
+
+  return(
+    <div>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+        <div style={{fontSize:15,fontWeight:700}}>⭐ 리뷰 관리 (총 {total}건)</div>
+        <div style={{display:'flex',gap:8}}>
+          <button onClick={()=>{setPage(1);load(1);}} style={{padding:'7px 14px',borderRadius:8,border:'none',background:'#2D6A4F',color:'white',fontWeight:600,fontSize:13,cursor:'pointer',fontFamily:"'Noto Sans KR',sans-serif"}}>새로고침</button>
+        </div>
+      </div>
+      {loading?<div style={{textAlign:'center',padding:'32px',color:'#9A9A9A'}}>로딩 중...</div>:(
+        <>
+          <Table
+            cols={['#','상담사','작성자','별점','내용','등록일','숨김']}
+            rows={reviews}
+            renderRow={(r,i)=>(
+              <tr key={r.id} style={{borderBottom:'1px solid rgba(0,0,0,.05)',background:r.admin_hidden?'#FEF2F2':i%2===0?'white':'#FAFAF8',opacity:r.admin_hidden?.65:1}}>
+                <td style={{padding:'10px 12px',color:'#9A9A9A',fontSize:12}}>{(page-1)*20+i+1}</td>
+                <td style={{padding:'10px 12px',fontWeight:600,fontSize:13}}>{r.counselor_name}</td>
+                <td style={{padding:'10px 12px',fontSize:13,color:'#5A5A5A'}}>{r.reviewer_name}</td>
+                <td style={{padding:'10px 12px',whiteSpace:'nowrap'}}><Stars r={r.rating}/><span style={{fontSize:11,marginLeft:3}}>{r.rating}점</span></td>
+                <td style={{padding:'10px 12px',fontSize:12,color:'#5A5A5A',maxWidth:240,wordBreak:'break-word'}}>{r.content||<span style={{color:'#C0C0C0'}}>내용 없음</span>}</td>
+                <td style={{padding:'10px 12px',fontSize:11,color:'#9A9A9A',whiteSpace:'nowrap'}}>{fmtDate(r.created_at)}</td>
+                <td style={{padding:'10px 12px'}}>
+                  <button onClick={()=>handleToggle(r.id,!r.admin_hidden)} disabled={toggling===r.id}
+                    style={{padding:'5px 10px',borderRadius:6,border:'none',background:r.admin_hidden?'#D8F3DC':'#FEF2F2',color:r.admin_hidden?'#2D6A4F':'#991B1B',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:"'Noto Sans KR',sans-serif"}}>
+                    {toggling===r.id?'...':(r.admin_hidden?'공개':'숨김')}
+                  </button>
+                </td>
+              </tr>
+            )}
+          />
+          <div style={{display:'flex',justifyContent:'center',gap:6,marginTop:20}}>
+            <button onClick={()=>{const p=Math.max(1,page-1);setPage(p);load(p);}} disabled={page===1}
+              style={{padding:'6px 12px',borderRadius:7,border:'1px solid rgba(0,0,0,.12)',background:page===1?'#F5F5F0':'white',color:page===1?'#C0C0C0':'#1A1A1A',cursor:page===1?'default':'pointer',fontSize:12,fontFamily:"'Noto Sans KR',sans-serif"}}>← 이전</button>
+            <span style={{padding:'6px 12px',fontSize:12,color:'#5A5A5A'}}>{page} / {totalPages}</span>
+            <button onClick={()=>{const p=Math.min(totalPages,page+1);setPage(p);load(p);}} disabled={page===totalPages}
+              style={{padding:'6px 12px',borderRadius:7,border:'1px solid rgba(0,0,0,.12)',background:page===totalPages?'#F5F5F0':'white',color:page===totalPages?'#C0C0C0':'#1A1A1A',cursor:page===totalPages?'default':'pointer',fontSize:12,fontFamily:"'Noto Sans KR',sans-serif"}}>다음 →</button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ── 탭: 오류 로그 ───────────────────────────────────────────
 function AdminErrorLogs(){
   const {useState:useS,useEffect:useE}=React;
@@ -1132,7 +1202,7 @@ function CounselingAdminPage({setView}){
     ['overview','📊 대시보드'],['users','👤 사용자 관리'],['onboarding','📨 온보딩 신청'],
     ['centers','🏥 센터 관리'],['counselors','👥 상담사 관리'],
     ['appointments','📅 예약 관리'],['settlements','💰 정산 관리'],
-    ['errorlogs','🔴 오류 로그'],
+    ['reviews','⭐ 리뷰 관리'],['errorlogs','🔴 오류 로그'],
   ];
 
   if(!authed)return(
@@ -1192,6 +1262,7 @@ function CounselingAdminPage({setView}){
           {tab==='counselors'  &&<AdminCounselors/>}
           {tab==='appointments'&&<AdminAppointments/>}
           {tab==='settlements' &&<AdminSettlements/>}
+          {tab==='reviews'     &&<AdminReviews/>}
           {tab==='errorlogs'   &&<AdminErrorLogs/>}
         </div>
       </div>

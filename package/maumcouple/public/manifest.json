@@ -1,0 +1,17 @@
+{
+  "name": "마음커플",
+  "short_name": "마음커플",
+  "description": "심리검사 결과로 커플 궁합과 관계 패턴을 분석해보세요",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FDF7F9",
+  "theme_color": "#E05A8A",
+  "orientation": "portrait-primary",
+  "lang": "ko",
+  "icons": [
+    { "src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "categories": ["health", "lifestyle", "social"],
+  "screenshots": []
+}

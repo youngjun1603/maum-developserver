@@ -8,11 +8,13 @@ import { cors } from 'hono/cors'
 
 // ── Bindings ──────────────────────────────────────────────
 interface Bindings {
-  DB:               D1Database
-  KV:               KVNamespace
+  DB:                D1Database
+  KV:                KVNamespace
   ANTHROPIC_API_KEY?: string
-  JWT_SECRET?:      string
-  RESEND_API_KEY?:  string
+  JWT_SECRET?:       string
+  RESEND_API_KEY?:   string
+  VAPID_PRIVATE_KEY?: string
+  VAPID_PUBLIC_KEY?:  string
 }
 
 // ── 타입 ──────────────────────────────────────────────────
@@ -86,6 +88,39 @@ function genSessionCode(): string {
 // ── Anthropic API 키 조회 ─────────────────────────────────
 async function getAnthropicKey(env: Bindings): Promise<string | null> {
   return env.ANTHROPIC_API_KEY ?? null
+}
+
+// ── VAPID JWT 서명 (ES256) ────────────────────────────────
+async function signVapidJwt(privateKeyB64u: string, audience: string): Promise<string> {
+  const b64uDec = (s: string) => Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0))
+  const b64uEnc = (buf: ArrayBuffer) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_')
+  const raw = b64uDec(privateKeyB64u)
+  // PKCS#8 DER 래핑 (P-256 EC private key, 32 bytes)
+  const pkcs8 = new Uint8Array([
+    0x30,0x41,0x02,0x01,0x00,0x30,0x13,0x06,0x07,
+    0x2a,0x86,0x48,0xce,0x3d,0x02,0x01,0x06,0x08,
+    0x2a,0x86,0x48,0xce,0x3d,0x03,0x01,0x07,0x04,
+    0x27,0x30,0x25,0x02,0x01,0x01,0x04,0x20,...raw,
+  ])
+  const key = await crypto.subtle.importKey('pkcs8', pkcs8, { name:'ECDSA', namedCurve:'P-256' }, false, ['sign'])
+  const now = Math.floor(Date.now() / 1000)
+  const hdr = btoa(JSON.stringify({typ:'JWT',alg:'ES256'})).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_')
+  const pay = btoa(JSON.stringify({aud:audience,exp:now+43200,sub:'mailto:noreply@maumful.com'})).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_')
+  const sig = await crypto.subtle.sign({name:'ECDSA',hash:'SHA-256'}, key, new TextEncoder().encode(`${hdr}.${pay}`))
+  return `${hdr}.${pay}.${b64uEnc(sig)}`
+}
+
+// ── Web Push 발송 (VAPID 인증, 페이로드 없음) ─────────────
+async function sendWebPush(endpoint: string, privKey: string, pubKey: string): Promise<boolean> {
+  try {
+    const origin = new URL(endpoint).origin
+    const jwt = await signVapidJwt(privKey, origin)
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Authorization': `vapid t=${jwt},k=${pubKey}`, 'TTL': '86400', 'Content-Length': '0' },
+    })
+    return res.status < 300
+  } catch { return false }
 }
 
 // ── 테스트 타입별 비용 계산 ────────────────────────────────
@@ -205,6 +240,17 @@ const HTML = (v: string) => `<!DOCTYPE html>
   <title>마음커플 — 커플 심리 분석</title>
   <meta name="description" content="BIG5·LOST 심리검사 결과로 커플 궁합과 관계 패턴을 분석해보세요.">
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/static/icon-192.png">
+  <meta name="theme-color" content="#E05A8A">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="마음커플">
+  <meta property="og:title" content="마음커플 — 커플 심리 분석">
+  <meta property="og:description" content="BIG5·LOST 심리검사 결과로 커플 궁합과 관계 패턴을 분석해보세요.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="/static/icon-512.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=Noto+Serif+KR:wght@600;700&display=swap" rel="stylesheet">
@@ -233,6 +279,9 @@ const HTML = (v: string) => `<!DOCTYPE html>
       localStorage.setItem('couple_token', t);
       const nextUrl = codeParam ? '/?code=' + encodeURIComponent(codeParam) : '/';
       window.history.replaceState({}, '', nextUrl);
+    }
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
   </script>
 </body>
@@ -453,7 +502,38 @@ app.post('/api/couple/join', async (c) => {
   ).bind(userId, JSON.stringify(guestResult), newStatus, session.id).run()
 
   const updated = await DB.prepare('SELECT * FROM couple_sessions WHERE id=?').bind(session.id).first<CoupleSession>()
+
+  // 호스트에게 Web Push 알림 전송 (VAPID 구성된 경우)
+  if (c.env.VAPID_PRIVATE_KEY && c.env.VAPID_PUBLIC_KEY) {
+    const hostSub = await DB.prepare(
+      `SELECT endpoint FROM push_subscriptions WHERE user_id=? AND service='maumcouple'`
+    ).bind(session.host_user_id).first<{ endpoint: string }>()
+    if (hostSub) {
+      sendWebPush(hostSub.endpoint, c.env.VAPID_PRIVATE_KEY, c.env.VAPID_PUBLIC_KEY).catch(() => {})
+    }
+  }
+
   return c.json({ success: true, data: { session: updated, guestJoined: true } })
+})
+
+// ── GET /api/couple/vapid-key ─────────────────────────────
+app.get('/api/couple/vapid-key', (c) => {
+  return c.json({ success: true, key: c.env.VAPID_PUBLIC_KEY || '' })
+})
+
+// ── POST /api/couple/push-subscribe ──────────────────────
+app.post('/api/couple/push-subscribe', async (c) => {
+  const { DB } = c.env
+  const userId = await getCoupleUserId(c.req.raw, c.env)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+  const { endpoint, p256dh, auth } = await c.req.json().catch(() => ({})) as { endpoint?: string; p256dh?: string; auth?: string }
+  if (!endpoint || !p256dh || !auth) return c.json({ success: false, error: '잘못된 구독 정보' }, 400)
+  await DB.prepare(`
+    INSERT INTO push_subscriptions (user_id, service, endpoint, p256dh, auth_key)
+    VALUES (?, 'maumcouple', ?, ?, ?)
+    ON CONFLICT(user_id, service) DO UPDATE SET endpoint=excluded.endpoint, p256dh=excluded.p256dh, auth_key=excluded.auth_key
+  `).bind(userId, endpoint, p256dh, auth).run()
+  return c.json({ success: true })
 })
 
 // ── GET /api/couple/session/:code ─────────────────────────

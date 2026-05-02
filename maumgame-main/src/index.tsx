@@ -94,8 +94,16 @@ const HTML = (v: string) => `<!DOCTYPE html>
   <meta name="description" content="심리검사 결과를 바탕으로 나만의 마음 정원을 가꾸는 치유 게임">
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+  <link rel="manifest" href="/manifest.json">
   <link rel="apple-touch-icon" href="/static/icon-192.png">
   <meta name="theme-color" content="#4A7C59">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="마음게임">
+  <meta property="og:title" content="마음의 정원 — 마음풀">
+  <meta property="og:description" content="심리검사 결과를 바탕으로 나만의 마음 정원을 가꾸는 치유 게임">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="/static/icon-512.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Noto+Serif+KR:wght@400;600&display=swap" rel="stylesheet">
@@ -138,6 +146,9 @@ const HTML = (v: string) => `<!DOCTYPE html>
       // ?game= 파라미터는 보존하여 game_hub.jsx가 자동 실행할 수 있도록
       const nextUrl = gameParam ? '/?game=' + encodeURIComponent(gameParam) : '/';
       window.history.replaceState({}, '', nextUrl);
+    }
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
   </script>
 </body>

@@ -1,0 +1,17 @@
+{
+  "name": "마음의 정원",
+  "short_name": "마음게임",
+  "description": "심리검사 결과를 바탕으로 나만의 마음 정원을 가꾸는 치유 게임",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FDFCF7",
+  "theme_color": "#4A7C59",
+  "orientation": "portrait-primary",
+  "lang": "ko",
+  "icons": [
+    { "src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "categories": ["health", "games"],
+  "screenshots": []
+}
