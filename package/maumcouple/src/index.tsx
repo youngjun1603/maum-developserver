@@ -655,6 +655,106 @@ app.post('/api/couple/partner-submit', async (c) => {
   return c.json({ success: true, data: { status: newStatus } })
 })
 
+// ── POST /api/couple/coach ────────────────────────────────
+// AI 관계 코칭 채팅 (하루 3회 무료, 이후 2cr/회)
+app.post('/api/couple/coach', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getCoupleUserId(c.req.raw, c.env)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+
+  const user = await DB.prepare('SELECT email, nickname, credits FROM users WHERE id=?')
+    .bind(userId).first<{ email: string; nickname: string | null; credits: number }>()
+  if (!user) return c.json({ success: false, error: '사용자 없음' }, 404)
+
+  const { messages } = await c.req.json().catch(() => ({})) as {
+    messages?: Array<{ role: string; content: string }>
+  }
+  if (!messages?.length) return c.json({ success: false, error: '메시지 필요' }, 400)
+
+  const isMaster = isMasterAccount(user.email)
+  const FREE_LIMIT = 3
+  const PAID_COST  = 2
+
+  // KST 기준 일일 카운터
+  const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10)
+  const counterKey = `couple_coach:${userId}:${today}`
+  const usedToday  = parseInt((await KV.get(counterKey)) || '0', 10)
+
+  if (!isMaster) {
+    if (usedToday >= FREE_LIMIT) {
+      if (user.credits < PAID_COST) {
+        return c.json({ success: false, error: `크레딧 부족 (필요: ${PAID_COST}cr)`, needsCharge: true, usedToday }, 402)
+      }
+      await spendCredits(DB, userId, PAID_COST, 'couple-coach')
+    }
+  }
+
+  // 사용자 BIG5 컨텍스트
+  const name = user.nickname || user.email.split('@')[0]
+  let personalCtx = ''
+  try {
+    const big5Row = await DB.prepare(
+      `SELECT result_json FROM test_history WHERE user_id=? AND test_type='BIG5' AND result_json IS NOT NULL ORDER BY performed_at DESC LIMIT 1`
+    ).bind(userId).first<{ result_json: string }>()
+    if (big5Row) {
+      const b = JSON.parse(big5Row.result_json) as Record<string, number>
+      const traits: string[] = []
+      if ((b.E || 50) > 60) traits.push('외향적')
+      else if ((b.E || 50) < 40) traits.push('내향적')
+      if ((b.A || 50) > 65) traits.push('친화력 높음')
+      if ((b.N || 50) > 65) traits.push('감수성 예민')
+      if ((b.C || 50) > 65) traits.push('계획적')
+      if (traits.length) personalCtx = `\n[내담자 특성] ${name}: ${traits.join(', ')}`
+    }
+  } catch {}
+
+  const systemPrompt = `당신은 따뜻하고 공감적인 커플·연애 관계 코치입니다.${personalCtx}
+
+내담자의 연애 고민이나 관계 문제에 대해 전문적이고 실질적인 조언을 해주세요.
+- 심리학 기반 근거 있는 조언 (애착 이론, 비폭력 소통 등)
+- 진단명·병명 절대 사용 금지
+- 따뜻하고 비판하지 않는 톤
+- 답변은 200자 이내, 간결하게
+- 필요 시 구체적인 대화 예시나 실천 방법 제안`
+
+  const apiKey = await getAnthropicKey(c.env)
+  if (!apiKey) return c.json({ error: 'API 키 미설정' }, 500)
+
+  const res = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 600,
+      system: systemPrompt,
+      messages: messages.slice(-10).map(m => ({ role: m.role, content: m.content })),
+    }),
+  })
+
+  if (!res.ok) {
+    const errText = await res.text()
+    return c.json({ error: 'AI 오류', detail: errText }, 502)
+  }
+
+  const aiData = await res.json() as { content: Array<{ type: string; text: string }> }
+  const replyText = aiData.content?.find(b => b.type === 'text')?.text ?? ''
+
+  if (!isMaster) {
+    await KV.put(counterKey, String(usedToday + 1), { expirationTtl: 86400 })
+  }
+
+  return c.json({
+    success: true,
+    data: {
+      reply: replyText,
+      usedToday: usedToday + 1,
+      freeLimit: FREE_LIMIT,
+      isPaid: usedToday >= FREE_LIMIT,
+      creditsSpent: (!isMaster && usedToday >= FREE_LIMIT) ? PAID_COST : 0,
+    },
+  })
+})
+
 // ── GET /api/couple/checkins ──────────────────────────────
 // 관계 성장 체크인 기록 조회 (최근 6개)
 app.get('/api/couple/checkins', async (c) => {
