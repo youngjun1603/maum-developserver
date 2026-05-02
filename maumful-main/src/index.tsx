@@ -952,7 +952,8 @@ app.post('/api/ai-chat', async (c) => {
   // 비로그인 허용 — IP 기반 Rate Limit으로 제한
   const isGuest = !userId
 
-  const today = new Date().toISOString().slice(0, 10)
+  // KST(UTC+9) 기준 날짜 — UTC 사용 시 자정~09:00 KST 구간에서 전날 카운터가 이월됨
+  const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10)
   // 오류 환불 시 카운터 감소에 쓸 핸들러 범위 변수
   let chatDailyKey = ''
   let chatIsMaster = false
