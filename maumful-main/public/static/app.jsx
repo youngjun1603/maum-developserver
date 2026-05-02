@@ -143,6 +143,47 @@ const storage = {
   remove: (key) => { try { localStorage.removeItem(key); return true; } catch { return false; } },
 };
 
+// ============================================================
+// 콘텐츠 보호 — 보호 대상 뷰 목록
+// ============================================================
+const PROTECTED_VIEWS = new Set([
+  'phq9Test','phq9Result',
+  'gad7Test','gad7Result',
+  'dass21Test','dass21Result',
+  'big5Test','big5Result',
+  'burnoutTest','burnoutResult',
+  'lostTest','lostResult',
+  'sctTest','sctResult',
+  'dsiTest','dsiResult',
+]);
+
+// 워터마크 오버레이 — SVG 반복 패턴 (캡처 추적용)
+function WatermarkOverlay({ email }) {
+  const label = (email || '마음풀') + '  ·  maumful.com  ·  무단배포금지';
+  // SVG foreignObject는 일부 브라우저에서 제한 — text element 사용
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 8900,
+      pointerEvents: 'none', userSelect: 'none', overflow: 'hidden',
+    }}>
+      <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"
+        style={{ position: 'absolute', inset: 0 }}>
+        <defs>
+          <pattern id="wm" x="0" y="0" width="320" height="130"
+            patternUnits="userSpaceOnUse" patternTransform="rotate(-28)">
+            <text x="10" y="55" fill="rgba(0,0,0,0.048)"
+              fontSize="12" fontFamily="Arial,Helvetica,sans-serif" fontWeight="700"
+              letterSpacing="0.5">{label}</text>
+            <text x="10" y="100" fill="rgba(0,0,0,0.025)"
+              fontSize="10" fontFamily="Arial,Helvetica,sans-serif">© 마음풀 콘텐츠 무단복제 금지</text>
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#wm)" />
+      </svg>
+    </div>
+  );
+}
+
 // Google Sign-In 버튼 컴포넌트 (App 외부에 정의해야 Hook 규칙 준수)
 function GoogleSignInBtn({ onLogin, btnText = 'signin_with' }) {
   const ref = React.useRef(null);
@@ -262,6 +303,7 @@ function PsychologicalTestSystem() {
   const [myPageTab, setMyPageTab]     = useState('credits'); // 'credits' | 'history' | 'settings' | 'appointments'
   const [changePwMsg, setChangePwMsg] = useState({ type: '', text: '' });
   const [pushStatus, setPushStatus]   = useState('unknown'); // 'unknown'|'unsupported'|'denied'|'subscribed'|'idle'
+  const [devToolsOpen, setDevToolsOpen] = useState(false);  // 개발자도구 감지
   const [creditSubTab, setCreditSubTab] = useState('usage');   // 'usage' | 'charge'
   const [selectedTests, setSelectedTests] = useState(['PHQ9']); // 대시보드에서 선택한 검사
 
@@ -1701,6 +1743,76 @@ function PsychologicalTestSystem() {
   }
 
   // ============================================================
+  // 콘텐츠 보호 — 이벤트 차단 (보호 뷰 진입/이탈 시 토글)
+  // ============================================================
+  useEffect(() => {
+    const isProtected = PROTECTED_VIEWS.has(view);
+
+    // body 텍스트 선택 차단
+    document.body.style.userSelect         = isProtected ? 'none' : '';
+    document.body.style.webkitUserSelect   = isProtected ? 'none' : '';
+    document.body.style.mozUserSelect      = isProtected ? 'none' : '';
+
+    // 인쇄 차단 style 태그 주입/제거
+    const styleId = 'maumful-print-block';
+    let printStyle = document.getElementById(styleId);
+    if (isProtected) {
+      if (!printStyle) {
+        printStyle = document.createElement('style');
+        printStyle.id = styleId;
+        printStyle.textContent = '@media print { body { display:none !important; } }';
+        document.head.appendChild(printStyle);
+      }
+    } else {
+      printStyle?.remove();
+    }
+
+    if (!isProtected) return;
+
+    const noCtxMenu  = (e) => e.preventDefault();
+    const noCopy     = (e) => e.preventDefault();
+    const noDrag     = (e) => e.preventDefault();
+    const noKeys     = (e) => {
+      const k = e.key?.toLowerCase();
+      const ctrl = e.ctrlKey || e.metaKey;
+      // 복사·저장·인쇄·소스·전체선택
+      if (ctrl && ['c','s','p','u','a'].includes(k)) { e.preventDefault(); e.stopPropagation(); }
+      // 개발자도구 단축키
+      if (k === 'f12' || (ctrl && e.shiftKey && ['i','j','c'].includes(k))) e.preventDefault();
+    };
+    const noPrint = (e) => { e.preventDefault(); e.stopPropagation(); };
+
+    document.addEventListener('contextmenu', noCtxMenu,  { capture: true });
+    document.addEventListener('copy',        noCopy,     { capture: true });
+    document.addEventListener('dragstart',   noDrag,     { capture: true });
+    document.addEventListener('keydown',     noKeys,     { capture: true });
+    window.addEventListener('beforeprint',   noPrint,    { capture: true });
+
+    return () => {
+      document.removeEventListener('contextmenu', noCtxMenu,  { capture: true });
+      document.removeEventListener('copy',        noCopy,     { capture: true });
+      document.removeEventListener('dragstart',   noDrag,     { capture: true });
+      document.removeEventListener('keydown',     noKeys,     { capture: true });
+      window.removeEventListener('beforeprint',   noPrint,    { capture: true });
+    };
+  }, [view]);
+
+  // 개발자도구 감지 (창 크기 비교 방식)
+  useEffect(() => {
+    if (!PROTECTED_VIEWS.has(view)) { setDevToolsOpen(false); return; }
+    const THRESHOLD = 160;
+    const check = () => {
+      const open =
+        (window.outerWidth  - window.innerWidth)  > THRESHOLD ||
+        (window.outerHeight - window.innerHeight) > THRESHOLD;
+      setDevToolsOpen(open);
+    };
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, [view]);
+
+  // ============================================================
   // 친구 초대 함수
   // ============================================================
   async function loadReferralData() {
@@ -2281,6 +2393,34 @@ function PsychologicalTestSystem() {
       <div style={{ fontSize: 32 }}>🌿</div>
     </div>
   );
+
+  // ── 보호 레이어 (보호 뷰에서 항상 최상단 렌더) ──────────────
+  const isProtectedView = PROTECTED_VIEWS.has(view);
+  const ProtectionLayers = isProtectedView ? (
+    <>
+      {/* 워터마크 — 사용자 이메일 반복 (캡처 추적) */}
+      <WatermarkOverlay email={currentUser?.email} />
+      {/* 개발자도구 감지 시 콘텐츠 블러 오버레이 */}
+      {devToolsOpen && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'rgba(0,0,0,0.93)',
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          fontFamily: "'Noto Sans KR', sans-serif",
+        }}>
+          <div style={{ fontSize: 52, marginBottom: 16 }}>🔒</div>
+          <div style={{ color: 'white', fontSize: 20, fontWeight: 700, marginBottom: 10 }}>
+            개발자 도구가 감지되었습니다
+          </div>
+          <div style={{ color: '#9CA3AF', fontSize: 14, textAlign: 'center', lineHeight: 1.8 }}>
+            콘텐츠 보호를 위해 개발자 도구를 닫아주세요.<br/>
+            닫으면 자동으로 해제됩니다.
+          </div>
+        </div>
+      )}
+    </>
+  ) : null;
 
   // ============================================================
   // 뷰: 랜딩 홈 페이지 (비로그인 기본 진입점)
@@ -6541,6 +6681,7 @@ function PsychologicalTestSystem() {
     const filled = sdriCompletionQ.filter(q => srciResponses[q.num]?.trim()).length;
     return (
       <div className="min-h-screen bg-gradient-to-br from-violet-50 to-indigo-50 p-4">
+        {ProtectionLayers}
         <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-6">
           {pendingTests.length > 1 && (
             <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
@@ -6607,6 +6748,7 @@ function PsychologicalTestSystem() {
     const likertFilled = Object.keys(sdriResponses).length;
     return (
       <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-50 p-4">
+        {ProtectionLayers}
         <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-6">
           {pendingTests.length > 1 && (
             <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
@@ -6683,6 +6825,7 @@ function PsychologicalTestSystem() {
 
   if (view === "phq9Test") return (
     <div className="min-h-screen bg-gray-50 p-4">
+      {ProtectionLayers}
       <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
         {pendingTests.length > 1 && (
           <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
@@ -6736,6 +6879,7 @@ function PsychologicalTestSystem() {
   // GAD-7 검사 화면
   if (view === "gad7Test") return (
     <div className="min-h-screen bg-gray-50 p-4">
+      {ProtectionLayers}
       <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
         {pendingTests.length > 1 && (
           <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
@@ -6789,6 +6933,7 @@ function PsychologicalTestSystem() {
   // DASS-21 검사 화면
   if (view === "dass21Test") return (
     <div className="min-h-screen bg-gray-50 p-4">
+      {ProtectionLayers}
       <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
         {pendingTests.length > 1 && (
           <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
@@ -6843,6 +6988,7 @@ function PsychologicalTestSystem() {
   // 번아웃 검사 화면
   if (view === "burnoutTest") return (
     <div className="min-h-screen bg-gray-50 p-4">
+      {ProtectionLayers}
       <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-6">
         {pendingTests.length > 1 && (
           <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
@@ -6941,6 +7087,7 @@ function PsychologicalTestSystem() {
 
   if (view === "big5Test") return (
     <div className="min-h-screen bg-gray-50 p-4">
+      {ProtectionLayers}
       <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
         {pendingTests.length > 1 && (
           <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
@@ -7031,6 +7178,7 @@ function PsychologicalTestSystem() {
     const answered = Object.keys(lostResponses).length;
     return (
       <div className="min-h-screen bg-gray-50 p-4">
+        {ProtectionLayers}
         <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
           {pendingTests.length > 1 && (
             <div className="mb-4 bg-teal-50 border border-teal-200 rounded-xl p-3">
@@ -7186,6 +7334,7 @@ function PsychologicalTestSystem() {
 
     return (
       <div className="min-h-screen bg-gray-50 p-4">
+        {ProtectionLayers}
         <div className="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
           <div className="flex justify-between items-center mb-6">
             <div>
@@ -7278,6 +7427,7 @@ function PsychologicalTestSystem() {
 
     return (
       <div className="min-h-screen bg-gray-50 p-4">
+        {ProtectionLayers}
         <div className="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
           <div className="flex justify-between items-center mb-6">
             <div>
@@ -7350,6 +7500,7 @@ function PsychologicalTestSystem() {
     const result = calcPhq9();
     return (
       <div className="min-h-screen bg-gray-50 p-4">
+        {ProtectionLayers}
         <div className="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-bold text-green-800">😔 PHQ-9 우울 자가점검 결과</h1>
@@ -7431,6 +7582,7 @@ function PsychologicalTestSystem() {
     const result = calcGad7();
     return (
       <div className="min-h-screen bg-gray-50 p-4">
+        {ProtectionLayers}
         <div className="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-bold text-orange-800">😰 GAD-7 불안 자가점검 결과</h1>
@@ -7513,6 +7665,7 @@ function PsychologicalTestSystem() {
     const result = calcDass21();
     return (
       <div className="min-h-screen bg-gray-50 p-4">
+        {ProtectionLayers}
         <div className="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-bold text-teal-800">📊 DASS-21 결과</h1>
@@ -7655,6 +7808,7 @@ function PsychologicalTestSystem() {
     
     return (
       <div className="min-h-screen bg-gray-50 p-4">
+        {ProtectionLayers}
         <div className="max-w-5xl mx-auto bg-white rounded-xl shadow-lg p-6">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-3xl font-bold text-red-600">🔥 번아웃 증후군 검사 결과 (K-MBI+)</h1>
@@ -7838,6 +7992,7 @@ function PsychologicalTestSystem() {
     const result = calcBig5();
     return (
       <div className="min-h-screen bg-gray-50 p-4">
+        {ProtectionLayers}
         <div className="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-bold text-purple-800">🌟 Big5 성격검사 결과</h1>
@@ -7931,6 +8086,7 @@ function PsychologicalTestSystem() {
 
     return (
       <div className="min-h-screen bg-gray-50 p-4">
+        {ProtectionLayers}
         <div className="max-w-4xl mx-auto space-y-4">
           {/* 헤더 */}
           <div className="bg-white rounded-xl shadow p-6">

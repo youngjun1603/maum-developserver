@@ -2287,13 +2287,14 @@ app.get('/api/admin/test-ai', async (c) => {
 app.get('/', (c) => {
   const v = Date.now()
   const googleClientId = c.env.GOOGLE_CLIENT_ID || ''
-  return c.html(`<!DOCTYPE html>
+  const res = c.html(`<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>마음풀 — 전문 심리검사 & AI 상담</title>
   <meta name="description" content="PHQ-9·GAD-7·Big5 등 전문 심리검사 8종을 온라인에서. AI 상담으로 나의 결과를 깊이 이해하세요.">
+  <meta name="robots" content="noai, noimageai">
 
   <!-- PWA -->
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
@@ -2341,6 +2342,8 @@ app.get('/', (c) => {
   </script>
 </body>
 </html>`)
+  res.headers.set('X-Robots-Tag', 'noai, noimageai')
+  return res
 })
 
 // ============================================================
