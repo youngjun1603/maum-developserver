@@ -205,6 +205,7 @@ function GratitudeGame({ onExit }) {
           questions_answered: litStars,
           answer_count: answerTexts.length,
           total_chars: totalChars,
+          answers: Object.fromEntries(questions.map(q => [q.id, answers[q.id] || ''])),
         },
       });
       onExit?.({
@@ -217,6 +218,17 @@ function GratitudeGame({ onExit }) {
       onExit?.({ score: score + bonusScore, expGained:0, leveledUp:false, newAchievements:[] });
     }
   };
+
+  function shareGratitude() {
+    const lines = questions
+      .map(q => answers[q.id]?.trim())
+      .filter(Boolean)
+      .map((a, i) => `${questions[i].emoji} ${a}`);
+    const text = `⭐ 오늘의 감사 일기\n\n${lines.join('\n')}\n\n마음게임에서 함께해요 💕\nhttps://game.maumful.com`;
+    navigator.share
+      ? navigator.share({ title: '오늘의 감사 일기', text }).catch(() => {})
+      : navigator.clipboard?.writeText(text).catch(() => {});
+  }
 
   // ── 인트로 ────────────────────────────────────────────────
   if (screen === 'intro') return (
@@ -433,6 +445,15 @@ function GratitudeGame({ onExit }) {
           ))}
         </div>
 
+        <button onClick={shareGratitude}
+          style={{
+            fontFamily:"'Noto Sans KR',sans-serif", width:'100%',
+            padding:'12px', background:'rgba(255,255,255,0.1)',
+            color:'rgba(255,255,255,0.85)', border:'1px solid rgba(255,255,255,0.2)',
+            borderRadius:14, fontSize:13, fontWeight:600, cursor:'pointer', marginBottom:10,
+          }}>
+          💕 파트너와 공유하기
+        </button>
         <button onClick={handleFinish}
           style={{
             fontFamily:"'Noto Sans KR',sans-serif", width:'100%',

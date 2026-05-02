@@ -115,6 +115,15 @@ function MoodGame({ onExit }) {
     );
   }
 
+  function shareMood() {
+    const e = MOOD_MAP[selEmotion] || MOOD_MAP.calm;
+    const stars = '⭐'.repeat(intensity);
+    const text = `${e.emoji} 오늘의 감정: ${e.label} ${stars}${note ? `\n"${note}"` : ''}\n\n마음게임에서 함께해요 💕\nhttps://game.maumful.com`;
+    navigator.share
+      ? navigator.share({ title: '오늘의 감정 기록', text }).catch(() => {})
+      : navigator.clipboard?.writeText(text).catch(() => {});
+  }
+
   // ── Done ─────────────────────────────────────────────────
   if (screen === 'done') {
     const e = MOOD_MAP[selEmotion] || MOOD_MAP.calm;
@@ -142,6 +151,12 @@ function MoodGame({ onExit }) {
             <div style={{ fontSize:12, color:MC.muted }}>경험치</div>
           </div>
         )}
+        <button onClick={shareMood} style={{
+          ...mbtn('rgba(255,255,255,0.85)', MC.muted, { borderRadius:13, width:'100%', maxWidth:280 }),
+          padding:'11px', fontSize:13, marginBottom:10,
+        }}>
+          💕 파트너와 공유하기
+        </button>
         <div style={{ display:'flex', gap:10, width:'100%', maxWidth:280 }}>
           <button onClick={() => setScreen('calendar')} style={{
             ...mbtn('rgba(255,255,255,0.85)', MC.muted, { borderRadius:13, flex:1 }),

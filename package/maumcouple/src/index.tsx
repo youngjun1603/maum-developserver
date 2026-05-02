@@ -12,6 +12,7 @@ interface Bindings {
   KV:               KVNamespace
   ANTHROPIC_API_KEY?: string
   JWT_SECRET?:      string
+  RESEND_API_KEY?:  string
 }
 
 // ── 타입 ──────────────────────────────────────────────────
@@ -978,8 +979,137 @@ app.post('/api/couple/solo-analysis', async (c) => {
   return c.json({ success: true, data: { report: reportText } })
 })
 
+// ── GET /api/couple/partner-moments ─────────────────────────
+// 파트너의 최근 마음게임 기록 (감정 수채화 + 별빛 감사 일기)
+app.get('/api/couple/partner-moments', async (c) => {
+  const { DB } = c.env
+  const userId = await getCoupleUserId(c.req.raw, c.env)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+
+  // 가장 최근 커플 세션에서 파트너 ID 찾기 (상태 무관)
+  const session = await DB.prepare(
+    `SELECT host_user_id, guest_user_id FROM couple_sessions
+     WHERE (host_user_id=? OR guest_user_id=?)
+     ORDER BY created_at DESC LIMIT 1`
+  ).bind(userId, userId).first<{ host_user_id: number; guest_user_id: number | null }>()
+
+  if (!session) return c.json({ success: true, data: { hasPartner: false } })
+
+  const partnerId = session.host_user_id === userId ? session.guest_user_id : session.host_user_id
+  if (!partnerId) return c.json({ success: true, data: { hasPartner: false } })
+
+  const partner = await DB.prepare('SELECT nickname, email FROM users WHERE id=?')
+    .bind(partnerId).first<{ nickname: string | null; email: string }>()
+  const partnerName = partner?.nickname || partner?.email?.split('@')[0] || '파트너'
+
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString()
+
+  const [moodRows, gratRows] = await Promise.all([
+    DB.prepare(
+      `SELECT metadata, created_at FROM game_session_logs
+       WHERE user_id=? AND game_id='mood' AND created_at > ?
+       ORDER BY created_at DESC LIMIT 7`
+    ).bind(partnerId, sevenDaysAgo).all<{ metadata: string; created_at: string }>(),
+    DB.prepare(
+      `SELECT metadata, created_at FROM game_session_logs
+       WHERE user_id=? AND game_id='gratitude'
+       ORDER BY created_at DESC LIMIT 3`
+    ).bind(partnerId).all<{ metadata: string; created_at: string }>(),
+  ])
+
+  const parse = (row: { metadata: string; created_at: string }) => {
+    try { return { ...JSON.parse(row.metadata), created_at: row.created_at } }
+    catch { return { created_at: row.created_at } }
+  }
+
+  return c.json({
+    success: true,
+    data: {
+      hasPartner: true,
+      partnerName,
+      moodEntries: moodRows.results.map(parse),
+      gratEntries: gratRows.results.map(parse),
+    },
+  })
+})
+
 // ── GET /api/couple/admin/stats ────────────────────────────
 // 관리자 통계 (마스터 계정 전용)
+// ── POST /api/couple/invite-email ─────────────────────────
+// 파트너 이메일로 세션 초대 링크 발송
+app.post('/api/couple/invite-email', async (c) => {
+  const { DB } = c.env
+  const userId = await getCoupleUserId(c.req.raw, c.env)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+
+  const { email, session_code } = await c.req.json() as { email: string; session_code: string }
+  if (!email || !session_code) return c.json({ success: false, error: '이메일과 세션 코드 필요' }, 400)
+
+  // 이메일 유효성 간단 체크
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    return c.json({ success: false, error: '올바른 이메일 주소를 입력하세요' }, 400)
+
+  // 세션 소유자 확인
+  const session = await DB.prepare(
+    'SELECT session_code, host_user_id FROM couple_sessions WHERE session_code=? AND status=?'
+  ).bind(session_code, 'waiting').first<{ session_code: string; host_user_id: number }>()
+  if (!session || session.host_user_id !== userId)
+    return c.json({ success: false, error: '유효하지 않은 세션입니다' }, 404)
+
+  // 발신자 닉네임
+  const me = await DB.prepare('SELECT nickname, email FROM users WHERE id=?').bind(userId).first<{ nickname: string | null; email: string }>()
+  const myName = me?.nickname || me?.email?.split('@')[0] || '파트너'
+
+  const base = 'https://couple.maumful.com'
+  const inviteUrl = `${base}/?code=${session_code}`
+
+  if (!c.env.RESEND_API_KEY)
+    return c.json({ success: false, error: 'RESEND_API_KEY 미설정 — 이메일 발송 불가' }, 500)
+
+  const html = `
+<div style="font-family:'Apple SD Gothic Neo',sans-serif;max-width:480px;margin:0 auto;background:#FFF8F9;padding:0;border-radius:16px;overflow:hidden">
+  <div style="background:linear-gradient(135deg,#D4587A,#E8829E);padding:32px 24px;text-align:center">
+    <div style="font-size:40px;margin-bottom:8px">💕</div>
+    <h1 style="color:white;font-size:20px;margin:0;font-weight:700">마음커플 초대가 도착했어요</h1>
+  </div>
+  <div style="padding:28px 28px 24px">
+    <p style="font-size:15px;color:#333;line-height:1.7;margin-bottom:20px">
+      안녕하세요! <strong>${myName}</strong>님이 마음커플에서 심리 궁합 분석을 함께 해보자고 초대했어요.
+    </p>
+    <div style="background:white;border-radius:12px;padding:18px 20px;margin-bottom:24px;border:1px solid #F0D8E0;text-align:center">
+      <div style="font-size:12px;color:#B07088;margin-bottom:6px">초대코드</div>
+      <div style="font-size:32px;font-weight:800;letter-spacing:8px;color:#D4587A;font-family:monospace">${session_code}</div>
+    </div>
+    <a href="${inviteUrl}" style="display:block;text-align:center;padding:14px;background:linear-gradient(135deg,#D4587A,#E8829E);color:white;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;margin-bottom:16px">
+      💕 검사 시작하기
+    </a>
+    <p style="font-size:12px;color:#A09098;text-align:center;line-height:1.6">
+      로그인 없이 바로 참여할 수 있어요.<br>위 버튼을 클릭하거나 <a href="https://couple.maumful.com" style="color:#D4587A">couple.maumful.com</a>에서 코드를 입력하세요.
+    </p>
+  </div>
+  <div style="padding:12px 28px 20px;text-align:center">
+    <p style="font-size:11px;color:#C0A8B0">마음커플 — 커플 심리 분석 서비스</p>
+  </div>
+</div>`
+
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${c.env.RESEND_API_KEY}` },
+      body: JSON.stringify({ from: '마음커플 <noreply@maumful.com>', to: [email], subject: `💕 ${myName}님이 마음커플에 초대했어요`, html }),
+    })
+    if (!res.ok) {
+      const err = await res.text()
+      console.error('[invite-email] Resend 오류:', err)
+      return c.json({ success: false, error: '이메일 발송 실패' }, 500)
+    }
+    return c.json({ success: true })
+  } catch (e) {
+    console.error('[invite-email] 예외:', e)
+    return c.json({ success: false, error: '이메일 발송 실패' }, 500)
+  }
+})
+
 app.get('/api/couple/admin/stats', async (c) => {
   const { DB } = c.env
   const userId = await getCoupleUserId(c.req.raw, c.env)

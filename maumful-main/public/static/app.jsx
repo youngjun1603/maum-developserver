@@ -114,6 +114,12 @@ const api = {
     const r = await this._fetch('/api/test/history');
     return r.json();
   },
+  async saveTestScore(testType, score, level = '') {
+    const r = await this._fetch('/api/test/save-score', {
+      method: 'POST', body: JSON.stringify({ test_type: testType, score, level }),
+    });
+    return r.json();
+  },
 
   // ── 지역 설정 ─────────────────────────────────────────────
   async getRegionConfig() {
@@ -1440,6 +1446,27 @@ function PsychologicalTestSystem() {
     }
   }
 
+  // Google Sign-In 콜백 — GSI 라이브러리가 credential 반환 시 호출
+  async function handleGoogleLogin(credential) {
+    setLoginMsg({ type: 'loading', text: 'Google 로그인 중...' });
+    const result = await api.loginGoogle(credential);
+    if (!result.success) {
+      setLoginMsg({ type: 'error', text: result.error || 'Google 로그인에 실패했습니다.' });
+      return;
+    }
+    const { accessToken, refreshToken, user } = result.data;
+    tokenStore.setTokens(accessToken, refreshToken);
+    tokenStore.setUser(user);
+    setCurrentUser(user);
+    setCredits(user.credits);
+    setIsLoggedIn(true);
+    setLoginMsg({ type: '', text: '' });
+    const postLoginView = sessionStorage.getItem('post_login_view');
+    if (postLoginView) { sessionStorage.removeItem('post_login_view'); setView(postLoginView); }
+    else setView('memberDashboard');
+    loadTestHistory();
+  }
+
   async function handleSignup(e) {
     if (e) e.preventDefault();
     const { email, password, pwConfirm, nickname } = signupForm;
@@ -2361,6 +2388,22 @@ function PsychologicalTestSystem() {
           className="w-full bg-green-700 text-white py-3 rounded-xl font-bold hover:bg-green-800 transition mb-4 text-base">
           로그인
         </button>
+        {window.GOOGLE_CLIENT_ID && React.createElement((() => {
+          // Google GSI 버튼 컴포넌트 (인라인 IIFE로 정의)
+          const ref = React.useRef(null);
+          React.useEffect(() => {
+            if (!window.google?.accounts?.id || !ref.current) return;
+            window.google.accounts.id.initialize({
+              client_id: window.GOOGLE_CLIENT_ID,
+              callback: (response) => handleGoogleLogin(response.credential),
+            });
+            window.google.accounts.id.renderButton(ref.current, {
+              type: 'standard', theme: 'outline', size: 'large',
+              text: 'signin_with', shape: 'rectangular', width: ref.current.offsetWidth || 340,
+            });
+          }, []);
+          return React.createElement('div', { ref, className: 'w-full mb-4', style: { minHeight: 44 } });
+        })())}
         <div className="relative mb-4">
           <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"/></div>
           <div className="relative flex justify-center"><span className="px-3 bg-white text-gray-400 text-xs">또는</span></div>
@@ -2464,9 +2507,32 @@ function PsychologicalTestSystem() {
           }
           handleSignup();
         }}
-          className="w-full bg-green-700 text-white py-3 rounded-xl font-bold hover:bg-green-800 transition">
+          className="w-full bg-green-700 text-white py-3 rounded-xl font-bold hover:bg-green-800 transition mb-4">
           가입하기
         </button>
+        {window.GOOGLE_CLIENT_ID && (
+          <>
+            <div className="relative mb-4">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"/></div>
+              <div className="relative flex justify-center"><span className="px-3 bg-white text-gray-400 text-xs">또는 소셜 계정으로 시작</span></div>
+            </div>
+            {React.createElement((() => {
+              const ref = React.useRef(null);
+              React.useEffect(() => {
+                if (!window.google?.accounts?.id || !ref.current) return;
+                window.google.accounts.id.initialize({
+                  client_id: window.GOOGLE_CLIENT_ID,
+                  callback: (response) => handleGoogleLogin(response.credential),
+                });
+                window.google.accounts.id.renderButton(ref.current, {
+                  type: 'standard', theme: 'outline', size: 'large',
+                  text: 'signup_with', shape: 'rectangular', width: ref.current.offsetWidth || 340,
+                });
+              }, []);
+              return React.createElement('div', { ref, style: { minHeight: 44 } });
+            })())}
+          </>
+        )}
       </div>
     </div>
   );
@@ -3172,7 +3238,29 @@ function PsychologicalTestSystem() {
             test:'심리검사', chat:'AI 채팅',
             charge:'크레딧 충전', refund_api_error:'오류 환불',
             admin_grant:'관리자 지급', referral:'친구 초대',
+            couple:'마음커플 분석', couple_session:'마음커플 세션',
+            game:'마음게임', game_spend:'마음게임 아이템',
+            solo_analysis:'이상형 성향 분석', date_course:'데이트 코스 추천',
+            coach:'관계 코치', counseling:'상담 예약',
+            ai_refund:'AI 오류 환불', bonus:'보너스 지급',
           }[r] || r);
+
+          const reasonIcon = (t) => {
+            if (t.type === 'spend') {
+              if (t.reason === 'test') return '📋';
+              if (t.reason === 'chat') return '💬';
+              if (t.reason?.startsWith('couple') || t.reason === 'solo_analysis' || t.reason === 'date_course' || t.reason === 'coach') return '💕';
+              if (t.reason?.startsWith('game')) return '🌿';
+              if (t.reason === 'counseling') return '🏥';
+              return '💸';
+            }
+            if (t.reason === 'charge') return '💳';
+            if (t.reason === 'signup_bonus' || t.reason === 'bonus') return '🎁';
+            if (t.reason === 'referral') return '🤝';
+            if (t.reason?.includes('refund')) return '↩️';
+            if (t.reason === 'admin_grant') return '⭐';
+            return '✦';
+          };
 
           const fmtDt = (d) => new Date(d).toLocaleString('ko-KR', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
 
@@ -3226,7 +3314,7 @@ function PsychologicalTestSystem() {
                     <div key={i} className="bg-white rounded-xl p-3.5 flex items-center justify-between border border-gray-100">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-red-50 flex items-center justify-center text-base">
-                          {t.reason==='test' ? '📋' : t.reason==='chat' ? '💬' : '💸'}
+                          {reasonIcon(t)}
                         </div>
                         <div>
                           <div className="text-sm font-semibold text-gray-700">{reasonLabel(t.reason)}</div>
@@ -3247,7 +3335,7 @@ function PsychologicalTestSystem() {
                     <div key={i} className="bg-white rounded-xl p-3.5 flex items-center justify-between border border-gray-100">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-green-50 flex items-center justify-center text-base">
-                          {t.reason==='charge' ? '💳' : t.reason==='signup_bonus' ? '🎁' : t.reason==='referral' ? '🤝' : '✦'}
+                          {reasonIcon(t)}
                         </div>
                         <div>
                           <div className="text-sm font-semibold text-gray-700">{reasonLabel(t.reason)}</div>
@@ -3280,17 +3368,95 @@ function PsychologicalTestSystem() {
 
         {/* 검사 이력 */}
         {myPageTab === 'history' && (
-          <div className="space-y-2">
+          <div>
             {testHistory.length === 0 && <p className="text-gray-400 text-sm text-center py-4">검사 이력이 없습니다</p>}
-            {testHistory.map((h, i) => (
-              <div key={i} className="bg-white rounded-xl p-3 flex items-center justify-between border border-gray-100">
-                <div>
-                  <span className="font-semibold text-gray-700 text-sm">{h.test_type}</span>
-                  <span className="text-xs text-gray-400 ml-2">{new Date(h.performed_at).toLocaleString('ko-KR')}</span>
+            {/* 점수가 있는 검사의 트렌드 요약 */}
+            {(() => {
+              const scored = ['PHQ9','GAD7','BURNOUT','DSI'];
+              const scoreMax = { PHQ9: 27, GAD7: 21, BURNOUT: 240, DSI: 125 };
+              const scoreColor = (type, score) => {
+                if (type === 'PHQ9') return score >= 15 ? '#ef4444' : score >= 10 ? '#f97316' : score >= 5 ? '#eab308' : '#22c55e';
+                if (type === 'GAD7') return score >= 15 ? '#ef4444' : score >= 10 ? '#f97316' : score >= 5 ? '#eab308' : '#22c55e';
+                if (type === 'BURNOUT') { const p = score/240; return p >= 0.71 ? '#ef4444' : p >= 0.51 ? '#f97316' : p >= 0.31 ? '#eab308' : '#22c55e'; }
+                if (type === 'DSI') return score >= 90 ? '#22c55e' : score >= 60 ? '#eab308' : '#ef4444';
+                return '#6b7280';
+              };
+              const summaries = scored.map(type => {
+                const rows = testHistory.filter(h => h.test_type === type && h.score != null);
+                if (rows.length === 0) return null;
+                return { type, rows };
+              }).filter(Boolean);
+              if (summaries.length === 0) return null;
+              return (
+                <div className="mb-4 p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
+                  <div className="text-xs font-bold text-emerald-700 mb-3">📈 점수 추이</div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {summaries.map(({ type, rows }) => {
+                      const latest = rows[0];
+                      const prev = rows[1];
+                      const diff = prev ? latest.score - prev.score : null;
+                      const max = scoreMax[type] || 100;
+                      const pct = Math.round((latest.score / max) * 100);
+                      const color = scoreColor(type, latest.score);
+                      const testLabel = { PHQ9:'우울(PHQ-9)', GAD7:'불안(GAD-7)', BURNOUT:'번아웃', DSI:'자아분화' };
+                      return (
+                        <div key={type} className="bg-white rounded-xl p-3 border border-gray-100">
+                          <div className="text-xs text-gray-400 mb-1">{testLabel[type]}</div>
+                          <div className="flex items-end gap-1 mb-1">
+                            <span className="text-xl font-bold" style={{ color }}>{latest.score}</span>
+                            <span className="text-xs text-gray-400 mb-0.5">/{max}</span>
+                            {diff !== null && (
+                              <span className="text-xs font-semibold ml-1" style={{ color: type === 'DSI' ? (diff > 0 ? '#22c55e' : '#ef4444') : (diff > 0 ? '#ef4444' : '#22c55e') }}>
+                                {diff > 0 ? `▲${diff}` : diff < 0 ? `▼${Math.abs(diff)}` : '→'}
+                              </span>
+                            )}
+                          </div>
+                          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
+                          </div>
+                          {latest.level && <div className="text-xs mt-1" style={{ color }}>{latest.level}</div>}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-                <span className="text-xs text-red-400">-{h.credits_spent} cr</span>
-              </div>
-            ))}
+              );
+            })()}
+            {/* 전체 이력 목록 */}
+            <div className="space-y-2">
+              {testHistory.map((h, i) => {
+                const prevSame = testHistory.slice(i + 1).find(p => p.test_type === h.test_type);
+                const testEmoji2 = { PHQ9:'😔', GAD7:'😰', DASS21:'📊', BIG5:'🌟', LOST:'🧭', SCT:'✍️', DSI:'🪞', BURNOUT:'🔥' };
+                return (
+                  <div key={i} className="bg-white rounded-xl p-3 border border-gray-100">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{testEmoji2[h.test_type] || '📋'}</span>
+                        <div>
+                          <span className="font-semibold text-gray-700 text-sm">{h.test_type}</span>
+                          <span className="text-xs text-gray-400 ml-2">{new Date(h.performed_at).toLocaleDateString('ko-KR')}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {h.score != null && (
+                          <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                            {h.score}점
+                          </span>
+                        )}
+                        {h.level && (
+                          <span className="text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100">
+                            {h.level}
+                          </span>
+                        )}
+                        {prevSame && (
+                          <span className="text-xs bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full border border-emerald-100">재검사</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 
@@ -5041,6 +5207,7 @@ function PsychologicalTestSystem() {
     }
     const { scales, total } = calcSdri();
     saveCoupleResult('DSI', { scales, total });
+    api.saveTestScore("DSI", total, total >= 90 ? '건강한 분화' : total >= 60 ? '중간 분화' : '낮은 분화').catch(() => {});
     const data = {
       sessionId, testType: "DSI",
       responses: { scales, total, answers: sdriResponses },
@@ -5057,6 +5224,8 @@ function PsychologicalTestSystem() {
       setSaveStatus("⚠️ " + (9 - Object.keys(phq9Responses).length) + "개 문항이 남아있습니다.");
       return;
     }
+    const { total, level } = calcPhq9();
+    api.saveTestScore("PHQ9", total, level).catch(() => {});
     const data = {
       sessionId, testType: "PHQ9",
       responses: phq9Responses,
@@ -5073,6 +5242,8 @@ function PsychologicalTestSystem() {
       setSaveStatus("⚠️ " + (7 - Object.keys(gad7Responses).length) + "개 문항이 남아있습니다.");
       return;
     }
+    const { total, level } = calcGad7();
+    api.saveTestScore("GAD7", total, level).catch(() => {});
     const data = {
       sessionId, testType: "GAD7",
       responses: gad7Responses,
@@ -5089,6 +5260,8 @@ function PsychologicalTestSystem() {
       setSaveStatus("⚠️ " + (21 - Object.keys(dass21Responses).length) + "개 문항이 남아있습니다.");
       return;
     }
+    const { depression } = calcDass21();
+    api.saveTestScore("DASS21", depression.score, depression.level).catch(() => {});
     const data = {
       sessionId, testType: "DASS21",
       responses: dass21Responses,
@@ -5130,6 +5303,8 @@ function PsychologicalTestSystem() {
       setSaveStatus("⚠️ " + (50 - Object.keys(burnoutResponses).length) + "개 문항이 남아있습니다.");
       return;
     }
+    const { totalScore, level } = calcBurnout();
+    api.saveTestScore("BURNOUT", totalScore, level).catch(() => {});
     const data = {
       sessionId, testType: "BURNOUT",
       responses: burnoutResponses,

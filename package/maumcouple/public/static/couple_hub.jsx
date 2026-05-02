@@ -948,6 +948,145 @@ function CoupleQuizView({ onBack }) {
   );
 }
 
+// ── 감정 레이블 매핑 (마음게임 mood.jsx와 동일) ───────────
+const MOOD_LABELS = {
+  happy:   { emoji: '😊', label: '행복',  color: '#F5C842' },
+  calm:    { emoji: '😌', label: '평온',  color: '#7BC4A0' },
+  tired:   { emoji: '😴', label: '피곤',  color: '#9BB0C0' },
+  anxious: { emoji: '😰', label: '불안',  color: '#F5A050' },
+  sad:     { emoji: '😢', label: '슬픔',  color: '#6B9ACB' },
+  angry:   { emoji: '😤', label: '화남',  color: '#E86C6C' },
+};
+
+// ── PartnerMomentsSection ─────────────────────────────────
+function PartnerMomentsSection() {
+  const [data, setData]       = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [open, setOpen]       = useState(true);
+
+  useEffect(() => {
+    api.get('/api/couple/partner-moments').then(res => {
+      if (res.success) setData(res.data);
+    }).finally(() => setLoading(false));
+  }, []);
+
+  if (loading || !data?.hasPartner) return null;
+
+  const { partnerName, moodEntries = [], gratEntries = [] } = data;
+  if (moodEntries.length === 0 && gratEntries.length === 0) return null;
+
+  function fmtTime(iso) {
+    const d = new Date(iso);
+    const now = new Date();
+    const diff = Math.floor((now - d) / 60000);
+    if (diff < 60) return `${diff}분 전`;
+    if (diff < 1440) return `${Math.floor(diff / 60)}시간 전`;
+    return `${Math.floor(diff / 1440)}일 전`;
+  }
+
+  return (
+    <div style={{
+      borderRadius: 20, overflow: 'hidden',
+      background: 'white', boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
+      marginBottom: 20,
+    }}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        style={{
+          width: '100%', padding: '16px 20px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 18 }}>💕</span>
+          <span style={{ fontSize: 14, fontWeight: 700, color: C.dark }}>
+            {partnerName}님의 마음 일기
+          </span>
+        </div>
+        <span style={{ fontSize: 18, color: C.muted }}>{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div style={{ padding: '0 20px 20px' }}>
+
+          {/* 감정 타임라인 */}
+          {moodEntries.length > 0 && (
+            <div style={{ marginBottom: gratEntries.length > 0 ? 16 : 0 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, marginBottom: 10 }}>
+                🎨 최근 7일 감정
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {moodEntries.map((entry, i) => {
+                  const em = MOOD_LABELS[entry.emotion] || { emoji: '💭', label: entry.emotion || '?', color: C.muted };
+                  const stars = entry.intensity ? '⭐'.repeat(Math.min(5, entry.intensity)) : '';
+                  return (
+                    <div key={i} style={{
+                      display: 'flex', alignItems: 'flex-start', gap: 10,
+                      padding: '10px 12px', borderRadius: 12,
+                      background: '#FAF5FC', border: `1px solid ${em.color}22`,
+                    }}>
+                      <span style={{ fontSize: 24, flexShrink: 0 }}>{em.emoji}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: em.color }}>{em.label}</span>
+                          {stars && <span style={{ fontSize: 11 }}>{stars}</span>}
+                        </div>
+                        {entry.note && (
+                          <div style={{ fontSize: 12, color: C.dark, fontStyle: 'italic', lineHeight: 1.5 }}>
+                            "{entry.note}"
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 10, color: C.muted, flexShrink: 0 }}>
+                        {fmtTime(entry.created_at)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 감사 일기 */}
+          {gratEntries.length > 0 && (
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, marginBottom: 10 }}>
+                ⭐ 최근 감사 일기
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {gratEntries.map((entry, i) => {
+                  const answers = entry.answers || {};
+                  const answerTexts = Object.values(answers).filter(Boolean);
+                  if (answerTexts.length === 0) return null;
+                  return (
+                    <div key={i} style={{
+                      padding: '12px 14px', borderRadius: 12,
+                      background: 'rgba(255,224,138,0.06)', border: '1px solid rgba(255,224,138,0.3)',
+                    }}>
+                      <div style={{ fontSize: 10, color: C.muted, marginBottom: 6 }}>{fmtTime(entry.created_at)}</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {answerTexts.slice(0, 2).map((text, j) => (
+                          <div key={j} style={{ fontSize: 12, color: C.dark, lineHeight: 1.5 }}>
+                            ✦ {text}
+                          </div>
+                        ))}
+                        {answerTexts.length > 2 && (
+                          <div style={{ fontSize: 11, color: C.muted }}>+{answerTexts.length - 2}개 더</div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── AnniversaryView ───────────────────────────────────────
 const ANNIVERSARY_KEY = 'couple_first_date';
 
@@ -1120,9 +1259,69 @@ function RelationshipCheckinView({ onBack, onDone }) {
   function HistorySection() {
     if (!history?.length) return null;
     const MAX = 10 * 5; // 50점 만점
+
+    // SVG 트렌드 라인 차트 (시간순 정렬: 오래된 것이 왼쪽)
+    const sorted = [...history].reverse(); // API는 최신순, 차트는 오래된→최신
+    const W = 280, H = 80, PAD = 16;
+    const plotW = W - PAD * 2, plotH = H - PAD * 2;
+    const minScore = Math.min(...sorted.map(h => h.total_score));
+    const maxScore = Math.max(...sorted.map(h => h.total_score), MAX * 0.4);
+    const xStep = sorted.length > 1 ? plotW / (sorted.length - 1) : plotW;
+
+    const toX = i => PAD + (sorted.length > 1 ? i * xStep : plotW / 2);
+    const toY = v => PAD + plotH - ((v - Math.max(0, minScore - 5)) / (maxScore - Math.max(0, minScore - 5) + 1)) * plotH;
+
+    const points = sorted.map((h, i) => ({ x: toX(i), y: toY(h.total_score), score: h.total_score, date: h.created_at }));
+    const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+    const latestInfo = checkinScoreInfo(history[0].total_score, MAX);
+
     return (
       <div style={{ marginTop: 20 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 10 }}>📈 체크인 기록</div>
+        <div style={{ fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 12 }}>📈 관계 건강도 트렌드</div>
+
+        {/* 라인 차트 */}
+        {sorted.length >= 2 && (
+          <div style={{
+            background: 'white', borderRadius: 16, padding: '16px',
+            border: `1px solid ${C.rose}22`, marginBottom: 12,
+          }}>
+            <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+              {/* 격자선 */}
+              {[25, 50, 75, 100].map(pct => {
+                const y = toY(MAX * pct / 100);
+                return (
+                  <g key={pct}>
+                    <line x1={PAD} y1={y} x2={W - PAD} y2={y} stroke="#F0E8EC" strokeWidth="1"/>
+                    <text x={PAD - 2} y={y + 3} textAnchor="end" fontSize="7" fill="#C0A0B0">{pct}</text>
+                  </g>
+                );
+              })}
+              {/* 채움 영역 */}
+              <path
+                d={`${pathD} L ${points[points.length-1].x} ${PAD+plotH} L ${points[0].x} ${PAD+plotH} Z`}
+                fill={`${C.rose}18`} stroke="none"
+              />
+              {/* 라인 */}
+              <path d={pathD} fill="none" stroke={C.rose} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              {/* 점 + 날짜 레이블 */}
+              {points.map((p, i) => (
+                <g key={i}>
+                  <circle cx={p.x} cy={p.y} r="4" fill="white" stroke={C.rose} strokeWidth="2"/>
+                  <text x={p.x} y={H - 3} textAnchor="middle" fontSize="7" fill="#C0A0B0">
+                    {new Date(p.date).toLocaleDateString('ko-KR',{month:'numeric',day:'numeric'})}
+                  </text>
+                </g>
+              ))}
+              {/* 최신 점수 강조 */}
+              <text x={points[points.length-1].x} y={points[points.length-1].y - 7}
+                textAnchor="middle" fontSize="9" fontWeight="bold" fill={C.rose}>
+                {Math.round(points[points.length-1].score / MAX * 100)}점
+              </text>
+            </svg>
+          </div>
+        )}
+
+        {/* 기록 리스트 */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {history.map((h, i) => {
             const info = checkinScoreInfo(h.total_score, MAX);
@@ -1976,8 +2175,60 @@ function CoupleReportView({ session, myRole, partnerName, userName, onBack }) {
 
 // ── SessionWaitingView ────────────────────────────────────
 function SessionWaitingView({ session, myRole, onRefresh, onReport, onCancel }) {
-  const [polling, setPolling] = useState(false);
+  const [polling, setPolling]         = useState(false);
+  const [lastChecked, setLastChecked] = useState(null);
+  const [notifyBanner, setNotifyBanner] = useState(null);
+  const [emailInput, setEmailInput]   = useState('');
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailResult, setEmailResult] = useState(null); // 'ok' | 'err'
   const code = session?.session_code || '';
+
+  // 이 변수들을 폴링보다 먼저 선언해야 TDZ 문제가 없음
+  const isHostDone = !!session?.host_result_json;
+  const isGuestDone = !!session?.guest_result_json;
+  const bothDone   = session?.status === 'both_done' || (isHostDone && isGuestDone);
+
+  const prevRef = React.useRef({ isHostDone: false, isGuestDone: false, bothDone: false });
+
+  // 브라우저 알림 권한 요청 (최초 1회)
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // 상태 변경 감지 → 브라우저 알림 + 배너
+  useEffect(() => {
+    const prev = prevRef.current;
+    if (!prev.bothDone && bothDone) {
+      fireBrowserNotif('💕 두 분 모두 준비 완료!', '커플 리포트를 생성할 수 있어요.');
+      setNotifyBanner('🎉 파트너도 검사를 완료했어요! 아래에서 리포트를 생성해보세요.');
+    } else if (!prev.isGuestDone && isGuestDone && myRole === 'host') {
+      fireBrowserNotif('💕 파트너가 참여했어요!', '파트너가 검사를 완료했습니다.');
+      setNotifyBanner('💕 파트너가 검사를 완료했어요!');
+    } else if (!prev.isHostDone && isHostDone && myRole === 'guest') {
+      fireBrowserNotif('💕 파트너가 검사를 완료했어요!', '이제 리포트를 생성할 수 있어요.');
+      setNotifyBanner('💕 파트너가 검사를 완료했어요!');
+    }
+    prevRef.current = { isHostDone, isGuestDone, bothDone };
+  }, [isHostDone, isGuestDone, bothDone]);
+
+  function fireBrowserNotif(title, body) {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      try { new Notification(title, { body, icon: '/favicon.ico' }); } catch {}
+    }
+  }
+
+  async function sendInviteEmail() {
+    if (!emailInput || emailSending) return;
+    setEmailSending(true); setEmailResult(null);
+    try {
+      const res = await api.post('/api/couple/invite-email', { email: emailInput, session_code: code });
+      setEmailResult(res.success ? 'ok' : 'err');
+      if (res.success) setEmailInput('');
+    } catch { setEmailResult('err'); }
+    finally { setEmailSending(false); }
+  }
 
   function copyCode() {
     const msg = `마음커플 초대코드: ${code}\n함께 심리 분석해봐요 💕\nhttps://couple.maumful.com/?code=${code}`;
@@ -1991,16 +2242,26 @@ function SessionWaitingView({ session, myRole, onRefresh, onReport, onCancel }) 
     navigator.clipboard?.writeText(`${base}?partner=${code}`).catch(() => {});
   }
 
-  // 폴링: 파트너 미참여 시 30초, 참여 후 10초 간격
-  const pollInterval = isGuestDone || isHostDone ? 10000 : 30000;
+  // 폴링: 참여 완료 전 30초, 참여 후 both_done 되기 전까지 10초, both_done 이후 30초
+  const pollInterval = (isHostDone || isGuestDone) && !bothDone ? 10000 : 30000;
   useEffect(() => {
     const timer = setInterval(async () => {
       setPolling(true);
       await onRefresh();
+      setLastChecked(new Date());
       setPolling(false);
     }, pollInterval);
     return () => clearInterval(timer);
   }, [pollInterval]);
+
+  // 수동 새로고침
+  async function handleManualRefresh() {
+    if (polling) return;
+    setPolling(true);
+    await onRefresh();
+    setLastChecked(new Date());
+    setPolling(false);
+  }
 
   // 세션 만료 체크
   const isExpired = session?.expires_at && new Date(session.expires_at) < new Date();
@@ -2017,9 +2278,9 @@ function SessionWaitingView({ session, myRole, onRefresh, onReport, onCancel }) 
     );
   }
 
-  const isHostDone  = !!session?.host_result_json;
-  const isGuestDone = !!session?.guest_result_json;
-  const bothDone    = session?.status === 'both_done' || (isHostDone && isGuestDone);
+  const lastCheckedText = lastChecked
+    ? `${lastChecked.getHours().toString().padStart(2,'0')}:${lastChecked.getMinutes().toString().padStart(2,'0')}:${lastChecked.getSeconds().toString().padStart(2,'0')} 확인됨`
+    : '';
 
   return (
     <div style={{
@@ -2029,6 +2290,23 @@ function SessionWaitingView({ session, myRole, onRefresh, onReport, onCancel }) 
       <div style={{ height: 180 }}>
         {bothDone ? <HeartIllust score={75}/> : <WaitingIllust/>}
       </div>
+
+      {/* 상태 변경 배너 */}
+      {notifyBanner && (
+        <div style={{
+          background: `linear-gradient(135deg, ${C.rose}22, ${C.roseL}33)`,
+          borderBottom: `1px solid ${C.rose}33`,
+          padding: '10px 20px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <div style={{ fontSize: 13, color: C.rose, fontWeight: 600 }}>{notifyBanner}</div>
+          <button onClick={() => setNotifyBanner(null)} style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            fontSize: 16, color: C.muted, padding: '0 4px',
+          }}>×</button>
+        </div>
+      )}
+
       <div style={{ padding: '20px 20px 24px' }}>
         <div style={{ fontSize: 16, fontWeight: 700, color: C.dark, marginBottom: 4 }}>
           {bothDone ? '🎉 두 사람 모두 준비 완료!' : '파트너를 기다리는 중'}
@@ -2049,6 +2327,7 @@ function SessionWaitingView({ session, myRole, onRefresh, onReport, onCancel }) 
               flex: 1, padding: '10px 12px', borderRadius: 12, textAlign: 'center',
               background: done ? C.rosePale : '#F5F5F5',
               border: `1px solid ${done ? C.roseL + '44' : '#E0E0E0'}`,
+              transition: 'all 0.3s ease',
             }}>
               <div style={{ fontSize: 18 }}>{done ? '✅' : '⏳'}</div>
               <div style={{ fontSize: 11, color: done ? C.rose : C.muted, marginTop: 4, fontWeight: 600 }}>{label}</div>
@@ -2082,12 +2361,74 @@ function SessionWaitingView({ session, myRole, onRefresh, onReport, onCancel }) 
             }}>
               📋 마음커플 코드 복사 (계정 있는 파트너)
             </button>
+
+            {/* 이메일로 초대 */}
+            <div style={{ marginTop: 12, borderTop: `1px solid ${C.rose}22`, paddingTop: 12 }}>
+              <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>또는 이메일로 직접 초대</div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input
+                  type="email"
+                  value={emailInput}
+                  onChange={e => { setEmailInput(e.target.value); setEmailResult(null); }}
+                  onKeyDown={e => e.key === 'Enter' && sendInviteEmail()}
+                  placeholder="파트너 이메일 주소"
+                  style={{
+                    flex: 1, padding: '8px 10px', borderRadius: 8, border: `1px solid ${C.rose}44`,
+                    fontSize: 12, fontFamily: "'Noto Sans KR', sans-serif", outline: 'none',
+                    background: 'white',
+                  }}
+                />
+                <button onClick={sendInviteEmail} disabled={!emailInput || emailSending} style={{
+                  padding: '8px 12px', borderRadius: 8, border: 'none',
+                  background: (!emailInput || emailSending) ? '#E0D0D0' : C.rose,
+                  color: 'white', fontWeight: 700, fontSize: 12, cursor: (!emailInput || emailSending) ? 'not-allowed' : 'pointer',
+                  fontFamily: "'Noto Sans KR', sans-serif", whiteSpace: 'nowrap',
+                }}>
+                  {emailSending ? '...' : '📨 전송'}
+                </button>
+              </div>
+              {emailResult === 'ok' && (
+                <div style={{ fontSize: 11, color: '#4A9A5A', marginTop: 5, fontWeight: 600 }}>✓ 초대 이메일을 발송했어요!</div>
+              )}
+              {emailResult === 'err' && (
+                <div style={{ fontSize: 11, color: '#D4634A', marginTop: 5 }}>이메일 발송에 실패했습니다. 다시 시도해주세요.</div>
+              )}
+            </div>
           </div>
         )}
 
+        {/* 폴링 상태 + 수동 새로고침 */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          marginBottom: 12,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {polling ? (
+              <>
+                <div style={{
+                  width: 8, height: 8, borderRadius: '50%', background: C.rose,
+                  animation: 'pulse 1s infinite',
+                }}/>
+                <span style={{ fontSize: 11, color: C.rose }}>파트너 상태 확인 중...</span>
+              </>
+            ) : (
+              <span style={{ fontSize: 11, color: C.muted }}>{lastCheckedText}</span>
+            )}
+          </div>
+          <button onClick={handleManualRefresh} disabled={polling} style={{
+            padding: '4px 10px', borderRadius: 8,
+            border: `1px solid ${C.roseL}44`, background: 'white',
+            color: polling ? C.muted : C.rose, fontSize: 11, fontWeight: 600,
+            cursor: polling ? 'not-allowed' : 'pointer',
+            fontFamily: "'Noto Sans KR', sans-serif",
+          }}>
+            {polling ? '...' : '↻ 지금 확인'}
+          </button>
+        </div>
+
         {/* 만료 시간 */}
-        <div style={{ fontSize: 11, color: C.muted, textAlign: 'center', marginBottom: 8 }}>
-          ⏰ 세션 만료: {fmtDate(session?.expires_at)} {polling ? '(확인 중...)' : ''}
+        <div style={{ fontSize: 11, color: C.muted, textAlign: 'center', marginBottom: 12 }}>
+          ⏰ 세션 만료: {fmtDate(session?.expires_at)}
         </div>
 
         {/* host만 취소 가능 */}
@@ -2701,6 +3042,9 @@ useEffect(() => {
 
         {/* ── 오늘의 커플 대화 질문 ── */}
         <DailyQuestionCard />
+
+        {/* ── 파트너 마음 일기 ── */}
+        <PartnerMomentsSection />
 
         {/* ── 이전 리포트 + 점수 히스토리 ── */}
         {recentReports?.length > 0 && (

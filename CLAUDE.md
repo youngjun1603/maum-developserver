@@ -496,6 +496,7 @@ package/maumcouple/migrations/0002_relationship_checkins.sql
 | GET | `/api/couple/credits` | 크레딧 잔액 | ✓ | 무료 |
 | GET | `/api/couple/session/:code` | 세션 상태 폴링 | ✓ | 무료 |
 | GET | `/api/couple/checkins` | 체크인 기록 조회 | ✓ | 무료 |
+| GET | `/api/couple/partner-moments` | 파트너 마음게임 기록 (감정+감사) | ✓ | 무료 |
 | GET | `/api/couple/partner-info/:code` | 파트너 링크 정보 | ✗ | 무료 |
 | GET | `/api/couple/admin/stats` | 관리자 통계 | ✓ (마스터) | 무료 |
 | POST | `/api/couple/session` | 세션 생성 (host) | ✓ | 20~45cr |
@@ -555,3 +556,117 @@ package/maumcouple/migrations/0002_relationship_checkins.sql
 
 **수정**: `step < CHECKIN_QUESTIONS.length - 1` 조건 추가 — 마지막 문항에서는 자동 진행 않고
 사용자가 "✅ 체크인 완료하기" 버튼을 직접 눌러 제출하도록 변경.
+
+---
+
+## 커플 공유 기능 — 4단계 (2026-05-02)
+
+### maumgame-main/public/static/games/gratitude.jsx
+
+- `handleFinish` metadata에 `answers` 객체 추가 (파트너 조회용):
+  `answers: Object.fromEntries(questions.map(q => [q.id, answers[q.id] || '']))`
+- done 화면에 "💕 파트너와 공유하기" 버튼 추가 (Web Share API / clipboard fallback)
+- `shareGratitude()` 함수: 3개 감사 답변 텍스트 → share
+
+### maumgame-main/public/static/games/mood.jsx
+
+- done 화면에 "💕 파트너와 공유하기" 버튼 추가
+- `shareMood()` 함수: 감정 이모지 + 강도 + 메모 → share
+
+### package/maumcouple/public/static/couple_hub.jsx
+
+- `MOOD_LABELS` 상수 추가 (감정 이모지·레이블·색상)
+- `PartnerMomentsSection` 컴포넌트 추가:
+  - `GET /api/couple/partner-moments` 호출
+  - 파트너 최근 7일 감정 타임라인 표시 (이모지+강도+메모)
+  - 파트너 최근 3개 감사 일기 답변 표시
+  - 접기/펼치기 토글
+  - 파트너 없으면 렌더 안 함
+- 허브 레이아웃: `<DailyQuestionCard />` 아래, 이전 리포트 위에 `<PartnerMomentsSection />` 삽입
+
+### package/maumcouple/src/index.tsx
+
+```typescript
+// GET /api/couple/partner-moments
+// 가장 최근 커플 세션에서 파트너 ID 조회
+// → partner의 game_session_logs에서 mood(7일) + gratitude(3개) 조회
+// → { hasPartner, partnerName, moodEntries, gratEntries }
+// gratitude answers 필드: gratitude.jsx 4단계 이후부터 metadata.answers에 포함됨
+```
+
+---
+
+## UX / 기능 개선 — 5~9단계 (2026-05-02)
+
+### 5단계: 마음게임 주간 이메일 요약
+
+**maumgame-main/src/index.tsx**
+
+- `Bindings`에 `RESEND_API_KEY?: string` 추가
+- `sendWeeklySummaryEmail(env, to, nickname, stats)` 함수: HTML 이메일 생성, Resend API 발송
+  - `from: '마음게임 <noreply@maumful.com>'`
+  - 스탯 그리드 (플레이 횟수 / EXP / 연속출석 / 주요 감정)
+- `handleScheduled()` 개편: 지난 7일 활성 사용자 조회 → 사용자별 stats 계산 → 이메일 발송
+- **등록 필요**: `cd maumgame-main && npx wrangler secret put RESEND_API_KEY`
+
+### 6단계: 마음커플 파트너 진행 알림 UX
+
+**package/maumcouple/public/static/couple_hub.jsx — SessionWaitingView**
+
+- **TDZ 버그 수정**: `isHostDone` / `isGuestDone` 변수를 폴링 useEffect보다 먼저 선언
+- `Browser Notification API`: 컴포넌트 마운트 시 권한 요청
+- `prevRef`: 이전 상태(isHostDone/isGuestDone/bothDone)를 useRef로 추적
+- 상태 변경 시 → 브라우저 알림(fireBrowserNotif) + 인라인 배너(notifyBanner) 표시
+- 수동 새로고침 "↻ 지금 확인" 버튼 추가
+- 폴링 중 pulse 애니메이션 dot + 마지막 확인 시각 표시 (HH:MM:SS)
+- 폴링 간격: `(isHostDone || isGuestDone) && !bothDone` → 10초, 그 외 30초
+
+### 7단계: 어드민 KPI 대시보드
+
+**maumful-main/public/static/counseling_admin.jsx**
+
+- `aApi` 메서드 추가: `dailyStats(days)`, `testStats()`, `users(page, search)`, `grantCredits(id, amount, reason)`
+- `MiniBarChart` 컴포넌트: CSS 기반 바 차트 (라이브러리 없음)
+- `AdminOverview` 개선:
+  - 일별 트렌드 2-패널 차트 (신규가입+검사 / AI채팅+결제, 최근 14일)
+  - 검사 유형별 수행 현황 (수평 진행바)
+- `AdminUsers` 컴포넌트 추가:
+  - 이메일 검색 + 페이지네이션 (20개/페이지)
+  - 사용자 목록 (이메일/닉네임/크레딧/가입일/인증 여부)
+  - "+ 지급" 버튼 → 크레딧 지급/차감 모달
+- 사이드바 탭에 "👤 사용자 관리" 추가
+
+### 8단계: 마음게임 통계 화면
+
+**maumgame-main/src/index.tsx**
+
+```typescript
+// GET /api/game/stats
+// 게임별: play_count, best_score, total_exp, last_played (GROUP BY game_id)
+// 이번 주: play_count, exp_gained (최근 7일)
+// 이번 달: play_count, exp_gained (최근 30일)
+```
+
+**maumgame-main/public/static/game_engine.jsx**
+
+- `getGameStats()` 메서드 추가 → `/api/game/stats`
+
+**maumgame-main/public/static/game_hub.jsx**
+
+- `GAME_META` 상수: 게임 ID → 이름/이모지 매핑
+- `GameStatsSection` 컴포넌트:
+  - 접기/펼치기 (첫 펼침 시 API 1회 호출)
+  - 이번 주/이번 달 요약 카드 (2열 그리드)
+  - 게임별 수행 현황: 플레이 횟수 + 베스트 스코어 + 마지막 플레이 날짜
+- `<GameStatsSection />` — AchievementPanel 위에 삽입
+
+### 9단계: 마음커플 체크인 트렌드 차트
+
+**package/maumcouple/public/static/couple_hub.jsx — RelationshipCheckinView.HistorySection**
+
+- SVG 라인 차트 추가 (데이터 2개 이상 시 표시):
+  - 오래된 → 최신 순서 (왼쪽→오른쪽)
+  - 격자선 (25/50/75/100점 레이블)
+  - 채움 영역(gradient fill) + 라인 + 점(dot) + 날짜 레이블
+  - 최신 점수 강조 텍스트
+- 기존 리스트 뷰 + 전월 대비 비교 메시지는 유지

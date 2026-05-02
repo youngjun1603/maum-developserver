@@ -21,6 +21,7 @@ type Bindings = {
   RESEND_FROM_EMAIL?: string      // 이메일 발신자 주소 (예: noreply@your-domain.com)
   SERVICE_URL?: string            // 서비스 도메인 (예: https://maumful.kr)
   COUNSELING_NOTIFY_EMAIL?: string // 상담 알림 수신 이메일
+  GOOGLE_CLIENT_ID?: string       // Google OAuth 클라이언트 ID
 }
 
 type User = {
@@ -697,9 +698,29 @@ app.get('/api/test/history', async (c) => {
   if (!userId) return c.json({ success: false, error: '로그인이 필요합니다.' }, 401)
 
   const h = await DB.prepare(
-    'SELECT test_type,lang,credits_spent,performed_at FROM test_history WHERE user_id=? ORDER BY performed_at DESC LIMIT 50'
+    'SELECT test_type,lang,credits_spent,performed_at,score,level FROM test_history WHERE user_id=? ORDER BY performed_at DESC LIMIT 50'
   ).bind(userId).all()
   return c.json({ success: true, data: h.results })
+})
+
+// ── POST /api/test/save-score ─────────────────────────────
+// 검사 완료 후 점수/등급 저장 (가장 최근 행 업데이트)
+app.post('/api/test/save-score', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false, error: '로그인이 필요합니다.' }, 401)
+
+  const { test_type, score, level } = await c.req.json().catch(() => ({})) as {
+    test_type?: string; score?: number; level?: string
+  }
+  if (!test_type || score === undefined) return c.json({ success: false, error: '파라미터 부족' }, 400)
+
+  await DB.prepare(
+    `UPDATE test_history SET score=?, level=?
+     WHERE id=(SELECT id FROM test_history WHERE user_id=? AND test_type=? ORDER BY performed_at DESC LIMIT 1)`
+  ).bind(score, level ?? null, userId, test_type).run()
+
+  return c.json({ success: true })
 })
 
 // ============================================================
@@ -2184,6 +2205,7 @@ app.get('/api/admin/test-ai', async (c) => {
 // ============================================================
 app.get('/', (c) => {
   const v = Date.now()
+  const googleClientId = c.env.GOOGLE_CLIENT_ID || ''
   return c.html(`<!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -2221,6 +2243,8 @@ app.get('/', (c) => {
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  ${googleClientId ? `<script src="https://accounts.google.com/gsi/client" async defer></script>` : ''}
+  <script>window.GOOGLE_CLIENT_ID = ${JSON.stringify(googleClientId)};</script>
 </head>
 <body>
   <div id="root"></div>

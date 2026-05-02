@@ -644,6 +644,118 @@ const ALL_ACHIEVEMENT_IDS = [
   'all_games',
 ];
 
+// ── 게임 통계 섹션 ───────────────────────────────────────
+const GAME_META = {
+  garden:    { name:'마음 정원', emoji:'🌿' },
+  mood:      { name:'감정 체크인', emoji:'🎨' },
+  efmt:      { name:'감정 탐색', emoji:'💭' },
+  gratitude: { name:'감사 일기', emoji:'⭐' },
+  tree:      { name:'생각 나무', emoji:'🌳' },
+  burnout:   { name:'번아웃 체크', emoji:'🔥' },
+};
+
+function GameStatsSection() {
+  const [stats, setStats] = React.useState(null);
+  const [loading, setLoading] = React.useState(false);
+  const [expanded, setExpanded] = React.useState(false);
+
+  const load = React.useCallback(() => {
+    if (stats) return; // 이미 로딩됨
+    setLoading(true);
+    GameEngine.getGameStats().then(res => {
+      if (res.success) setStats(res.data);
+    }).finally(() => setLoading(false));
+  }, [stats]);
+
+  const handleToggle = () => {
+    if (!expanded) load();
+    setExpanded(v => !v);
+  };
+
+  const { perGame = [], week = {}, month = {} } = stats || {};
+
+  return (
+    <div style={{ marginBottom:24 }}>
+      <button onClick={handleToggle} style={{
+        width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between',
+        background:'rgba(255,255,255,0.7)', backdropFilter:'blur(8px)',
+        borderRadius:20, padding:'16px 20px', border:'1px solid rgba(255,255,255,0.6)',
+        cursor:'pointer', fontFamily:"'Noto Sans KR',sans-serif",
+      }}>
+        <div style={{ fontSize:14, fontWeight:700, color:C.dark, display:'flex', alignItems:'center', gap:6 }}>
+          <span style={{ fontSize:16 }}>📊</span> 내 게임 통계
+        </div>
+        <span style={{ fontSize:12, color:C.muted }}>{expanded ? '접기 ▲' : '펼치기 ▼'}</span>
+      </button>
+
+      {expanded && (
+        <div style={{
+          background:'rgba(255,255,255,0.7)', backdropFilter:'blur(8px)',
+          borderRadius:'0 0 20px 20px', padding:'4px 20px 20px',
+          border:'1px solid rgba(255,255,255,0.6)', borderTop:'none',
+          marginTop:-4,
+        }}>
+          {loading && <div style={{ textAlign:'center', padding:'24px', color:C.muted, fontSize:13 }}>불러오는 중...</div>}
+          {!loading && stats && (
+            <>
+              {/* 요약 카드 */}
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:16, paddingTop:16 }}>
+                {[
+                  { label:'이번 주 플레이', value:`${week.playCount||0}회`, sub:`+${week.expGained||0} EXP`, color:C.sage },
+                  { label:'이번 달 플레이', value:`${month.playCount||0}회`, sub:`+${month.expGained||0} EXP`, color:C.amber },
+                ].map(c => (
+                  <div key={c.label} style={{
+                    background:'white', borderRadius:14, padding:'14px 16px',
+                    border:`1px solid ${c.color}22`,
+                  }}>
+                    <div style={{ fontSize:11, color:C.muted, marginBottom:4 }}>{c.label}</div>
+                    <div style={{ fontSize:20, fontWeight:700, color:c.color }}>{c.value}</div>
+                    <div style={{ fontSize:11, color:C.muted }}>{c.sub}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* 게임별 통계 */}
+              <div style={{ fontSize:12, fontWeight:700, color:C.muted, marginBottom:10, letterSpacing:'0.5px' }}>
+                게임별 수행 현황
+              </div>
+              {perGame.length === 0 && (
+                <div style={{ textAlign:'center', padding:'20px', color:C.muted, fontSize:13 }}>아직 플레이 기록이 없어요</div>
+              )}
+              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                {perGame.map(g => {
+                  const meta = GAME_META[g.game_id] || { name:g.game_id, emoji:'🎮' };
+                  const lastDate = g.last_played ? new Date(g.last_played).toLocaleDateString('ko-KR',{month:'short',day:'numeric'}) : '-';
+                  return (
+                    <div key={g.game_id} style={{
+                      display:'flex', alignItems:'center', justifyContent:'space-between',
+                      background:'white', borderRadius:12, padding:'12px 14px',
+                    }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                        <span style={{ fontSize:20 }}>{meta.emoji}</span>
+                        <div>
+                          <div style={{ fontSize:13, fontWeight:600, color:C.dark }}>{meta.name}</div>
+                          <div style={{ fontSize:11, color:C.muted }}>마지막: {lastDate}</div>
+                        </div>
+                      </div>
+                      <div style={{ textAlign:'right' }}>
+                        <div style={{ fontSize:15, fontWeight:700, color:C.sage }}>{(g.play_count||0)}회</div>
+                        {(g.best_score||0) > 0 && (
+                          <div style={{ fontSize:11, color:C.amber }}>베스트 {g.best_score}점</div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AchievementPanel({ earned = [], isMaster = false }) {
   const [expanded, setExpanded] = React.useState(false);
 
@@ -1462,6 +1574,9 @@ function GameHubApp() {
             ))}
           </div>
         </div>
+
+        {/* ── 게임 통계 ── */}
+        <GameStatsSection />
 
         {/* ── 업적 ── */}
         <AchievementPanel

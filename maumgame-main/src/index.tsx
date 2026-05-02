@@ -7,6 +7,7 @@ type Bindings = {
   KV:               KVNamespace
   JWT_SECRET?:      string
   ANTHROPIC_API_KEY?: string
+  RESEND_API_KEY?:  string
   MAUMFUL_URL?:      string
   SERVICE_URL?:     string
 }
@@ -250,6 +251,39 @@ app.get('/api/game/me', async (c) => {
       userTestScores: master ? { PHQ9: 0, BURNOUT: 30, GAD7: 0 } : userTestScores,
       recentPlayDates,
       todaySessions,
+    },
+  })
+})
+
+// ── GET /api/game/stats ────────────────────────────────────
+// 게임별 플레이 횟수 + 베스트 스코어 + 이번 주 요약
+app.get('/api/game/stats', async (c) => {
+  const { DB } = c.env
+  const userId = await getGameUserId(c.req.raw, c.env)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+
+  const [perGame, weekSummary, monthSummary] = await Promise.all([
+    DB.prepare(
+      `SELECT game_id, COUNT(*) as play_count, MAX(score) as best_score,
+              SUM(exp_gained) as total_exp, MAX(created_at) as last_played
+       FROM game_session_logs WHERE user_id=? GROUP BY game_id ORDER BY play_count DESC`
+    ).bind(userId).all(),
+    DB.prepare(
+      `SELECT COUNT(*) as play_count, COALESCE(SUM(exp_gained),0) as exp_gained
+       FROM game_session_logs WHERE user_id=? AND created_at >= date('now','-6 days')`
+    ).bind(userId).first<{ play_count: number; exp_gained: number }>(),
+    DB.prepare(
+      `SELECT COUNT(*) as play_count, COALESCE(SUM(exp_gained),0) as exp_gained
+       FROM game_session_logs WHERE user_id=? AND created_at >= date('now','-29 days')`
+    ).bind(userId).first<{ play_count: number; exp_gained: number }>(),
+  ])
+
+  return c.json({
+    success: true,
+    data: {
+      perGame: perGame.results,
+      week:  { playCount: weekSummary?.play_count || 0,  expGained: weekSummary?.exp_gained || 0 },
+      month: { playCount: monthSummary?.play_count || 0, expGained: monthSummary?.exp_gained || 0 },
     },
   })
 })
@@ -771,14 +805,96 @@ app.get('/api/game/emotion-report', async (c) => {
   }
 })
 
-// ── 번아웃 주간 리포트 자동 생성 (Cron) ─────────────────────
+// ── 주간 이메일 발송 헬퍼 ────────────────────────────────────
+async function sendWeeklySummaryEmail(
+  env: Bindings,
+  to: string,
+  nickname: string,
+  stats: { playCount: number; expGained: number; topEmotion: string | null; levelName: string; streak: number }
+): Promise<void> {
+  const key = env.RESEND_API_KEY
+  if (!key) return
+
+  const emojiMap: Record<string, string> = { happy:'😊', calm:'😌', tired:'😴', anxious:'😰', sad:'😢', angry:'😤' }
+  const emojiLabel: Record<string, string> = { happy:'행복', calm:'평온', tired:'피곤', anxious:'불안', sad:'슬픔', angry:'화남' }
+  const topEmoji = stats.topEmotion ? emojiMap[stats.topEmotion] || '💭' : ''
+  const topLabel = stats.topEmotion ? emojiLabel[stats.topEmotion] || stats.topEmotion : ''
+
+  const html = `<!DOCTYPE html>
+<html lang="ko">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#F5F0E8;font-family:'Apple SD Gothic Neo',sans-serif;">
+<div style="max-width:480px;margin:0 auto;padding:32px 20px;">
+  <div style="background:white;border-radius:24px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+    <div style="background:linear-gradient(135deg,#4A7A5A,#6BA880);padding:32px 28px;text-align:center;">
+      <div style="font-size:48px;margin-bottom:8px;">🌿</div>
+      <div style="font-size:22px;font-weight:700;color:white;">지난 한 주, 수고했어요</div>
+      <div style="font-size:14px;color:rgba(255,255,255,0.85);margin-top:6px;">${nickname}님의 마음 정원 주간 리포트</div>
+    </div>
+    <div style="padding:28px 24px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;">
+        <div style="background:#EAF5EC;border-radius:16px;padding:16px;text-align:center;">
+          <div style="font-size:28px;font-weight:800;color:#4A7A5A;">${stats.playCount}</div>
+          <div style="font-size:11px;color:#6A8A6A;margin-top:2px;">게임 플레이</div>
+        </div>
+        <div style="background:#FFF8EC;border-radius:16px;padding:16px;text-align:center;">
+          <div style="font-size:28px;font-weight:800;color:#D4954A;">+${stats.expGained}</div>
+          <div style="font-size:11px;color:#A07040;margin-top:2px;">경험치 획득</div>
+        </div>
+        ${stats.streak > 0 ? `
+        <div style="background:#FCF0F3;border-radius:16px;padding:16px;text-align:center;">
+          <div style="font-size:28px;font-weight:800;color:#B5556A;">🔥${stats.streak}</div>
+          <div style="font-size:11px;color:#8A4A5A;margin-top:2px;">연속 방문</div>
+        </div>` : ''}
+        ${stats.topEmotion ? `
+        <div style="background:#F0EEF8;border-radius:16px;padding:16px;text-align:center;">
+          <div style="font-size:28px;">${topEmoji}</div>
+          <div style="font-size:11px;color:#7A6EA8;margin-top:2px;">${topLabel}</div>
+        </div>` : ''}
+      </div>
+      <div style="background:#F5F0E8;border-radius:14px;padding:14px 16px;margin-bottom:24px;">
+        <div style="font-size:13px;color:#5A6A5A;line-height:1.7;">
+          현재 <strong style="color:#4A7A5A">${stats.levelName}</strong> 정원사예요.
+          이번 주도 마음을 가꿔줘서 고마워요. 작은 실천이 정원을 점점 풍성하게 만들고 있어요 🌸
+        </div>
+      </div>
+      <a href="https://game.maumful.com"
+        style="display:block;text-align:center;padding:14px;background:linear-gradient(135deg,#4A7A5A,#6BA880);color:white;text-decoration:none;border-radius:14px;font-weight:700;font-size:15px;">
+        오늘도 정원 가꾸러 가기 →
+      </a>
+    </div>
+    <div style="padding:16px 24px;text-align:center;border-top:1px solid #F0EAE0;">
+      <div style="font-size:11px;color:#A0A090;">마음풀 · game.maumful.com</div>
+    </div>
+  </div>
+</div>
+</body></html>`
+
+  await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from: '마음게임 <noreply@maumful.com>',
+      to: [to],
+      subject: `🌿 ${nickname}님, 지난 한 주 마음 정원 리포트가 도착했어요`,
+      html,
+    }),
+  }).catch(() => { /**/ })
+}
+
+// ── 번아웃 주간 리포트 자동 생성 + 주간 이메일 발송 (Cron) ──
 async function handleScheduled(env: Bindings) {
   const { DB } = env
-  // 지난 7일간 번아웃 게임을 플레이한 사용자
+
+  // 지난 7일간 활동한 사용자 (이메일 인증 완료자만)
   const activeUsers = await DB.prepare(`
-    SELECT DISTINCT user_id FROM game_session_logs
-    WHERE game_id='burnout' AND created_at >= date('now', '-7 days')
-  `).all<{ user_id: number }>()
+    SELECT DISTINCT gsl.user_id, u.email, u.nickname, ugs.total_exp, ugs.garden_level, ugs.streak_days
+    FROM game_session_logs gsl
+    JOIN users u ON gsl.user_id = u.id
+    LEFT JOIN user_game_status ugs ON gsl.user_id = ugs.user_id
+    WHERE gsl.created_at >= date('now', '-7 days')
+      AND u.is_email_verified = 1
+  `).all<{ user_id: number; email: string; nickname: string | null; total_exp: number; garden_level: number; streak_days: number }>()
 
   const now = new Date(Date.now() + 9 * 3600 * 1000)
   const dayOfWeek = now.getUTCDay() === 0 ? 6 : now.getUTCDay() - 1
@@ -786,30 +902,58 @@ async function handleScheduled(env: Bindings) {
   weekStart.setUTCDate(now.getUTCDate() - dayOfWeek)
   const weekStartStr = weekStart.toISOString().slice(0, 10)
 
-  for (const u of activeUsers.results) {
-    const sessions = await DB.prepare(`
-      SELECT metadata FROM game_session_logs
-      WHERE user_id=? AND game_id='burnout' AND created_at >= date('now', '-7 days')
-    `).bind(u.user_id).all<{ metadata: string | null }>()
+  const levelNames: Record<number, string> = { 1:'씨앗', 2:'새싹', 3:'꽃봉오리', 4:'꽃피움', 5:'만개', 6:'정원사' }
 
-    let totalEnergy = 0, energyCount = 0, missionCount = 0
+  for (const u of activeUsers.results) {
+    // 지난 7일 세션 통계
+    const sessions = await DB.prepare(`
+      SELECT game_id, score, metadata FROM game_session_logs
+      WHERE user_id=? AND created_at >= date('now', '-7 days')
+    `).bind(u.user_id).all<{ game_id: string; score: number; metadata: string | null }>()
+
+    let totalExp = 0, missionCount = 0
+    const emotionCounts: Record<string, number> = {}
+
     for (const s of sessions.results) {
+      totalExp += s.score || 0
       try {
         const meta = s.metadata ? JSON.parse(s.metadata) : {}
-        if (typeof meta.energy === 'number') { totalEnergy += meta.energy; energyCount++ }
-        if (typeof meta.completedMissions === 'number') missionCount += meta.completedMissions
+        if (s.game_id === 'burnout') {
+          if (typeof meta.completedMissions === 'number') missionCount += meta.completedMissions
+          // 번아웃 주간 리포트 데이터도 수집
+          let totalEnergy = 0, energyCount = 0
+          if (typeof meta.energy === 'number') { totalEnergy += meta.energy; energyCount++ }
+          const avgEnergy = energyCount > 0 ? Math.round(totalEnergy / energyCount) : 50
+          await DB.prepare('DELETE FROM weekly_reports WHERE user_id=? AND week_start=?')
+            .bind(u.user_id, weekStartStr).run()
+          await DB.prepare(
+            'INSERT INTO weekly_reports (user_id, avg_energy, completed_missions, burnout_delta, week_start) VALUES (?,?,?,?,?)'
+          ).bind(u.user_id, avgEnergy, missionCount, '0%', weekStartStr).run().catch(() => { /**/ })
+        }
+        if (s.game_id === 'mood' && meta.emotion) {
+          const e = meta.emotion as string
+          emotionCounts[e] = (emotionCounts[e] || 0) + 1
+        }
       } catch { /**/ }
     }
 
-    const avgEnergy = energyCount > 0 ? Math.round(totalEnergy / energyCount) : 50
+    const topEmotion = Object.keys(emotionCounts).sort((a, b) => emotionCounts[b] - emotionCounts[a])[0] || null
+    const levelName = levelNames[u.garden_level || 1] || '씨앗'
+    const nickname = u.nickname || u.email.split('@')[0]
 
-    // 같은 주 기존 레코드 교체
-    await DB.prepare('DELETE FROM weekly_reports WHERE user_id=? AND week_start=?')
-      .bind(u.user_id, weekStartStr).run()
-    await DB.prepare(
-      'INSERT INTO weekly_reports (user_id, avg_energy, completed_missions, burnout_delta, week_start) VALUES (?,?,?,?,?)'
-    ).bind(u.user_id, avgEnergy, missionCount, '0%', weekStartStr).run().catch(() => { /**/ })
+    // 주간 이메일 발송 (Resend)
+    await sendWeeklySummaryEmail(env, u.email, nickname, {
+      playCount: sessions.results.length,
+      expGained: Math.round(totalExp / 10), // EXP 단위로 환산
+      topEmotion,
+      levelName,
+      streak: u.streak_days || 0,
+    })
+
+    console.log(`[Cron] 주간 이메일 발송: ${u.email} (${sessions.results.length}회 플레이)`)
   }
+
+  console.log(`[Cron] 총 ${activeUsers.results.length}명에게 주간 리포트 발송 완료`)
 }
 
 export default {

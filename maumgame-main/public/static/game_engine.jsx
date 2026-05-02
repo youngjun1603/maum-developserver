@@ -203,10 +203,16 @@ const GameEngine = (() => {
     return res.json();
   }
 
+  // ── 게임 통계 조회 ───────────────────────────────────────
+  async function getGameStats() {
+    const res = await fetch('/api/game/stats', { headers: authHeader() });
+    return res.json();
+  }
+
   return {
     getMe, saveSession, transformSentence, updateVisual,
     getCredits, spendCredit, saveScore,
-    getLeaderboard, getDailyTip, getMoodHistory, getEmotionReport,
+    getLeaderboard, getDailyTip, getMoodHistory, getEmotionReport, getGameStats,
     getLevelInfo, getGardenTheme, getAchievementInfo,
     formatDuration, formatRelativeTime,
     LEVELS,

@@ -18,6 +18,10 @@ const aApi = {
   async onboarding()  { return (await fetch('/api/admin/counseling/onboarding',{headers:this._h()})).json(); },
   async reviewOnboarding(id,status,note) { return (await fetch(`/api/admin/counseling/onboarding/${id}`,{method:'PATCH',headers:this._h(),body:JSON.stringify({status,admin_note:note})})).json(); },
   async globalStats() { return (await fetch('/api/admin/stats',{headers:this._h()})).json(); },
+  async dailyStats(days=14) { return (await fetch(`/api/admin/stats/daily?days=${days}`,{headers:this._h()})).json(); },
+  async testStats()  { return (await fetch('/api/admin/stats/tests',{headers:this._h()})).json(); },
+  async users(page=1,search='') { return (await fetch(`/api/admin/users?page=${page}&limit=20&search=${encodeURIComponent(search)}`,{headers:this._h()})).json(); },
+  async grantCredits(id,amount,reason) { return (await fetch(`/api/admin/users/${id}/credits`,{method:'POST',headers:this._h(),body:JSON.stringify({amount,reason})})).json(); },
 
   // ── 센터 CRUD ───────────────────────────────────────────────
   async createCenter(body)     { return (await fetch('/api/admin/counseling/centers',{method:'POST',headers:this._h(),body:JSON.stringify(body)})).json(); },
@@ -72,16 +76,45 @@ function Table({cols,rows,renderRow}){
   );
 }
 
+// ── 미니 바 차트 (라이브러리 없이 CSS) ─────────────────────
+function MiniBarChart({data,keys,colors,height=60}){
+  if(!data||!data.length) return null;
+  const maxVal = Math.max(1,...data.map(d=>Math.max(...keys.map(k=>d[k]||0))));
+  return(
+    <div style={{display:'flex',alignItems:'flex-end',gap:2,height,padding:'4px 0'}}>
+      {data.map((d,i)=>(
+        <div key={i} style={{flex:1,display:'flex',alignItems:'flex-end',gap:1,height:'100%',position:'relative'}}>
+          {keys.map((k,ki)=>(
+            <div key={k} title={`${d.date||''} ${k}: ${d[k]||0}`} style={{
+              flex:1, borderRadius:'2px 2px 0 0',
+              background:colors[ki]||'#999',
+              height:`${Math.round(((d[k]||0)/maxVal)*100)}%`,
+              minHeight:1, transition:'height .2s',
+            }}/>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── 탭: 대시보드 ────────────────────────────────────────────
 function AdminOverview(){
   const {useState:useS,useEffect:useE}=React;
   const [stats,setStats]=useS(null);
   const [gStats,setGStats]=useS(null);
+  const [daily,setDaily]=useS([]);
+  const [testBreakdown,setTestBreakdown]=useS([]);
   const [loading,setLoading]=useS(true);
 
   useE(()=>{
-    Promise.all([aApi.stats(),aApi.globalStats()])
-      .then(([s,g])=>{if(s.success)setStats(s.data);if(g.success)setGStats(g.data);})
+    Promise.all([aApi.stats(),aApi.globalStats(),aApi.dailyStats(14),aApi.testStats()])
+      .then(([s,g,d,t])=>{
+        if(s.success)setStats(s.data);
+        if(g.success)setGStats(g.data);
+        if(d.success)setDaily((d.data||[]).slice(-14));
+        if(t.success)setTestBreakdown(t.data||[]);
+      })
       .finally(()=>setLoading(false));
   },[]);
 
@@ -89,6 +122,8 @@ function AdminOverview(){
   if(!stats)return<div style={{textAlign:'center',padding:'40px',color:'#E24B4A'}}>데이터 조회 실패</div>;
 
   const s=stats;
+  const totalTests = testBreakdown.reduce((a,t)=>a+(t.count||0),0)||1;
+
   return(
     <div>
       <div style={{fontSize:15,fontWeight:700,marginBottom:16,color:'#5A5A5A'}}>상담 플랫폼 현황</div>
@@ -104,16 +139,185 @@ function AdminOverview(){
         <StatCard icon="📋" label="오늘 신규 예약" value={`${s.appointments?.today||0}건`} color="#F97316"/>
         <StatCard icon="📨" label="온보딩 신청" value={`${s.onboarding?.pending||0}건`} sub="검토 대기" color="#EC4899"/>
       </div>
+
       {gStats&&(
         <>
           <div style={{fontSize:15,fontWeight:700,marginBottom:12,color:'#5A5A5A'}}>심리검사 플랫폼 현황</div>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12}}>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:24}}>
             <StatCard icon="👤" label="전체 회원" value={`${gStats.users?.total||0}명`} sub={`오늘 신규 ${gStats.users?.new_today||0}명`}/>
             <StatCard icon="🧠" label="검사 수행" value={`${gStats.tests?.total||0}회`} sub={`오늘 ${gStats.tests?.today||0}회`}/>
             <StatCard icon="💬" label="AI 채팅" value={`${gStats.chats?.total||0}회`} sub={`오늘 ${gStats.chats?.today||0}회`}/>
             <StatCard icon="💳" label="이번달 결제" value={fmtW(gStats.charges?.revenue)} sub={`${gStats.charges?.cnt||0}건`}/>
           </div>
         </>
+      )}
+
+      {/* 일별 트렌드 차트 */}
+      {daily.length>0&&(
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:24}}>
+          {/* 신규 가입 + 검사 수행 */}
+          <div style={{background:'white',border:'1px solid rgba(0,0,0,.08)',borderRadius:12,padding:'18px 20px'}}>
+            <div style={{fontSize:13,fontWeight:600,color:'#5A5A5A',marginBottom:4}}>📈 일별 신규가입 / 검사 수행 (최근 14일)</div>
+            <div style={{display:'flex',gap:12,marginBottom:8}}>
+              <span style={{fontSize:11,color:'#3B82F6',display:'flex',alignItems:'center',gap:4}}><span style={{width:10,height:10,borderRadius:2,background:'#3B82F6',display:'inline-block'}}/>가입</span>
+              <span style={{fontSize:11,color:'#10B981',display:'flex',alignItems:'center',gap:4}}><span style={{width:10,height:10,borderRadius:2,background:'#10B981',display:'inline-block'}}/>검사</span>
+            </div>
+            <MiniBarChart data={daily} keys={['signups','tests']} colors={['#3B82F6','#10B981']} height={72}/>
+            <div style={{display:'flex',justifyContent:'space-between',marginTop:4}}>
+              <span style={{fontSize:10,color:'#C0C0C0'}}>{daily[0]?.date?.slice(5)||''}</span>
+              <span style={{fontSize:10,color:'#C0C0C0'}}>{daily[daily.length-1]?.date?.slice(5)||''}</span>
+            </div>
+          </div>
+          {/* AI 채팅 + 결제 건수 */}
+          <div style={{background:'white',border:'1px solid rgba(0,0,0,.08)',borderRadius:12,padding:'18px 20px'}}>
+            <div style={{fontSize:13,fontWeight:600,color:'#5A5A5A',marginBottom:4}}>💬 일별 AI 채팅 / 결제 건수 (최근 14일)</div>
+            <div style={{display:'flex',gap:12,marginBottom:8}}>
+              <span style={{fontSize:11,color:'#7C3AED',display:'flex',alignItems:'center',gap:4}}><span style={{width:10,height:10,borderRadius:2,background:'#7C3AED',display:'inline-block'}}/>채팅</span>
+              <span style={{fontSize:11,color:'#F59E0B',display:'flex',alignItems:'center',gap:4}}><span style={{width:10,height:10,borderRadius:2,background:'#F59E0B',display:'inline-block'}}/>결제</span>
+            </div>
+            <MiniBarChart data={daily} keys={['chats','charges']} colors={['#7C3AED','#F59E0B']} height={72}/>
+            <div style={{display:'flex',justifyContent:'space-between',marginTop:4}}>
+              <span style={{fontSize:10,color:'#C0C0C0'}}>{daily[0]?.date?.slice(5)||''}</span>
+              <span style={{fontSize:10,color:'#C0C0C0'}}>{daily[daily.length-1]?.date?.slice(5)||''}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 검사 유형 분포 */}
+      {testBreakdown.length>0&&(
+        <div style={{background:'white',border:'1px solid rgba(0,0,0,.08)',borderRadius:12,padding:'18px 20px'}}>
+          <div style={{fontSize:13,fontWeight:600,color:'#5A5A5A',marginBottom:14}}>🧠 검사 유형별 수행 현황</div>
+          <div style={{display:'flex',flexDirection:'column',gap:10}}>
+            {testBreakdown.sort((a,b)=>(b.count||0)-(a.count||0)).map((t,i)=>{
+              const pct=Math.round(((t.count||0)/totalTests)*100);
+              const clrs=['#3B82F6','#10B981','#7C3AED','#F59E0B','#EF4444','#EC4899'];
+              return(
+                <div key={t.test_type||i}>
+                  <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
+                    <span style={{fontSize:12,fontWeight:600,color:'#1A1A1A'}}>{t.test_type||'기타'}</span>
+                    <span style={{fontSize:12,color:'#9A9A9A'}}>{(t.count||0).toLocaleString()}회 ({pct}%)</span>
+                  </div>
+                  <div style={{background:'#F0F0EC',borderRadius:100,height:6,overflow:'hidden'}}>
+                    <div style={{width:`${pct}%`,height:'100%',borderRadius:100,background:clrs[i%clrs.length],transition:'width .3s'}}/>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── 탭: 사용자 관리 ─────────────────────────────────────────
+function AdminUsers(){
+  const {useState:useS,useEffect:useE}=React;
+  const [users,setUsers]=useS([]);
+  const [page,setPage]=useS(1);
+  const [search,setSearch]=useS('');
+  const [searchInput,setSearchInput]=useS('');
+  const [total,setTotal]=useS(0);
+  const [loading,setLoading]=useS(true);
+  const [grantModal,setGrantModal]=useS(null); // {id,email,credits}
+  const [grantAmt,setGrantAmt]=useS('');
+  const [grantReason,setGrantReason]=useS('');
+  const [granting,setGranting]=useS(false);
+
+  const load=(p,s)=>{
+    setLoading(true);
+    aApi.users(p,s).then(r=>{
+      if(r.success){setUsers(r.data.users||[]);setTotal(r.data.total||0);}
+    }).finally(()=>setLoading(false));
+  };
+  useE(()=>load(1,''),[]);
+
+  const handleSearch=()=>{setPage(1);setSearch(searchInput);load(1,searchInput);};
+  const handlePage=p=>{setPage(p);load(p,search);};
+
+  const handleGrant=async()=>{
+    if(!grantAmt||isNaN(grantAmt))return;
+    setGranting(true);
+    const r=await aApi.grantCredits(grantModal.id,parseInt(grantAmt),grantReason);
+    setGranting(false);
+    if(r.success){
+      setGrantModal(null);setGrantAmt('');setGrantReason('');
+      load(page,search);
+    } else alert(r.error||'오류');
+  };
+
+  const totalPages=Math.ceil(total/20)||1;
+
+  return(
+    <div>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+        <div style={{fontSize:15,fontWeight:700}}>사용자 관리 (총 {total.toLocaleString()}명)</div>
+        <div style={{display:'flex',gap:8}}>
+          <input value={searchInput} onChange={e=>setSearchInput(e.target.value)}
+            onKeyDown={e=>e.key==='Enter'&&handleSearch()}
+            placeholder="이메일 검색" style={{padding:'7px 12px',border:'1px solid rgba(0,0,0,.12)',borderRadius:8,fontSize:13,fontFamily:"'Noto Sans KR',sans-serif",outline:'none',width:200}}/>
+          <button onClick={handleSearch} style={{padding:'7px 14px',borderRadius:8,border:'none',background:'#2D6A4F',color:'white',fontWeight:600,fontSize:13,cursor:'pointer',fontFamily:"'Noto Sans KR',sans-serif"}}>검색</button>
+        </div>
+      </div>
+      {loading?<div style={{textAlign:'center',padding:'32px',color:'#9A9A9A'}}>로딩 중...</div>:(
+        <>
+          <Table
+            cols={['#','이메일','닉네임','크레딧','가입일','검증','크레딧 지급']}
+            rows={users}
+            renderRow={(u,i)=>(
+              <tr key={u.id} style={{borderBottom:'1px solid rgba(0,0,0,.05)'}}>
+                <td style={{padding:'10px 12px',color:'#9A9A9A',fontSize:12}}>{(page-1)*20+i+1}</td>
+                <td style={{padding:'10px 12px',fontWeight:500}}>{u.email}</td>
+                <td style={{padding:'10px 12px',color:'#5A5A5A'}}>{u.nickname||'-'}</td>
+                <td style={{padding:'10px 12px',fontWeight:600,color:'#2D6A4F'}}>{(u.credits||0).toLocaleString()}cr</td>
+                <td style={{padding:'10px 12px',color:'#9A9A9A',fontSize:12,whiteSpace:'nowrap'}}>{fmtDate(u.created_at)}</td>
+                <td style={{padding:'10px 12px'}}>
+                  <Chip label={u.email_verified?'인증':'미인증'} color={u.email_verified?'green':'amber'}/>
+                </td>
+                <td style={{padding:'10px 12px'}}>
+                  <button onClick={()=>setGrantModal({id:u.id,email:u.email,credits:u.credits})}
+                    style={{padding:'5px 12px',borderRadius:7,border:'1px solid #2D6A4F33',background:'white',color:'#2D6A4F',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:"'Noto Sans KR',sans-serif"}}>
+                    + 지급
+                  </button>
+                </td>
+              </tr>
+            )}
+          />
+          {/* 페이지네이션 */}
+          <div style={{display:'flex',justifyContent:'center',gap:6,marginTop:20}}>
+            <button onClick={()=>handlePage(Math.max(1,page-1))} disabled={page===1}
+              style={{padding:'6px 12px',borderRadius:7,border:'1px solid rgba(0,0,0,.12)',background:page===1?'#F5F5F0':'white',color:page===1?'#C0C0C0':'#1A1A1A',cursor:page===1?'default':'pointer',fontSize:12,fontFamily:"'Noto Sans KR',sans-serif"}}>← 이전</button>
+            <span style={{padding:'6px 12px',fontSize:12,color:'#5A5A5A'}}>{page} / {totalPages}</span>
+            <button onClick={()=>handlePage(Math.min(totalPages,page+1))} disabled={page===totalPages}
+              style={{padding:'6px 12px',borderRadius:7,border:'1px solid rgba(0,0,0,.12)',background:page===totalPages?'#F5F5F0':'white',color:page===totalPages?'#C0C0C0':'#1A1A1A',cursor:page===totalPages?'default':'pointer',fontSize:12,fontFamily:"'Noto Sans KR',sans-serif"}}>다음 →</button>
+          </div>
+        </>
+      )}
+
+      {/* 크레딧 지급 모달 */}
+      {grantModal&&(
+        <Modal title={`크레딧 지급 — ${grantModal.email}`} onClose={()=>setGrantModal(null)}>
+          <div style={{padding:'20px 22px',display:'flex',flexDirection:'column',gap:14}}>
+            <div style={{fontSize:13,color:'#5A5A5A'}}>현재 크레딧: <strong>{(grantModal.credits||0).toLocaleString()}cr</strong></div>
+            <div>
+              <label style={{fontSize:12,color:'#9A9A9A',display:'block',marginBottom:4}}>지급 크레딧 (음수 입력 시 차감)</label>
+              <input type="number" value={grantAmt} onChange={e=>setGrantAmt(e.target.value)}
+                placeholder="예: 10 (지급) 또는 -5 (차감)"
+                style={{width:'100%',padding:'10px 12px',border:'1px solid rgba(0,0,0,.12)',borderRadius:8,fontSize:14,fontFamily:"'Noto Sans KR',sans-serif",outline:'none'}}/>
+            </div>
+            <div>
+              <label style={{fontSize:12,color:'#9A9A9A',display:'block',marginBottom:4}}>사유 (선택)</label>
+              <input value={grantReason} onChange={e=>setGrantReason(e.target.value)} placeholder="관리자 지급"
+                style={{width:'100%',padding:'10px 12px',border:'1px solid rgba(0,0,0,.12)',borderRadius:8,fontSize:13,fontFamily:"'Noto Sans KR',sans-serif",outline:'none'}}/>
+            </div>
+            <button onClick={handleGrant} disabled={granting} style={{
+              padding:'12px',borderRadius:10,border:'none',background:'#2D6A4F',color:'white',
+              fontWeight:700,fontSize:14,cursor:granting?'not-allowed':'pointer',
+              fontFamily:"'Noto Sans KR',sans-serif",
+            }}>{granting?'처리 중...':'크레딧 지급'}</button>
+          </div>
+        </Modal>
       )}
     </div>
   );
@@ -834,8 +1038,9 @@ function CounselingAdminPage({setView}){
   const logout=()=>{localStorage.removeItem('admin_secret');setAuthed(false);setSecretInput('');};
 
   const tabs=[
-    ['overview','📊 대시보드'],['onboarding','📨 온보딩 신청'],['centers','🏥 센터 관리'],
-    ['counselors','👥 상담사 관리'],['appointments','📅 예약 관리'],['settlements','💰 정산 관리'],
+    ['overview','📊 대시보드'],['users','👤 사용자 관리'],['onboarding','📨 온보딩 신청'],
+    ['centers','🏥 센터 관리'],['counselors','👥 상담사 관리'],
+    ['appointments','📅 예약 관리'],['settlements','💰 정산 관리'],
   ];
 
   if(!authed)return(
@@ -889,6 +1094,7 @@ function CounselingAdminPage({setView}){
         {/* 메인 영역 */}
         <div style={{flex:1,padding:'28px 32px',overflow:'auto'}}>
           {tab==='overview'    &&<AdminOverview/>}
+          {tab==='users'       &&<AdminUsers/>}
           {tab==='onboarding'  &&<AdminOnboarding/>}
           {tab==='centers'     &&<AdminCenters/>}
           {tab==='counselors'  &&<AdminCounselors/>}
