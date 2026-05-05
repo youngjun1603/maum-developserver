@@ -2870,9 +2870,7 @@ app.get('/.well-known/assetlinks.json', (c) => {
         namespace: 'android_app',
         package_name: 'com.maumful.app',
         sha256_cert_fingerprints: [
-          // PWABuilder로 생성한 키스토어의 SHA256 fingerprint로 교체 필요
-          // Play Console → 앱 서명 → 앱 서명 키 인증서 → SHA-256 인증서 지문
-          'PLACEHOLDER_REPLACE_WITH_ACTUAL_SHA256_FINGERPRINT'
+          '1D:7C:67:6D:5A:78:38:E8:CB:F0:1E:7F:7F:A6:96:62:D0:D2:05:24:70:BA:4E:BF:6D:E9:E7:2C:92:41:EE:99'
         ]
       }
     }

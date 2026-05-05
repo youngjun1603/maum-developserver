@@ -259,6 +259,6 @@ jobs:
           name: maumful-android-v${{ github.event.inputs.version }}
           path: |
             android/app-release-signed.apk
-            android/app-release-signed.aab
+            android/app-release-bundle.aab
           if-no-files-found: warn
           retention-days: 30
