@@ -1859,7 +1859,7 @@ Bubblewrap CLI로 `maumful.com`을 TWA(Trusted Web Activity)로 패키징한 And
 | 파일 | `android-keystore.jks` (GitHub Secret `KEYSTORE_BASE64`에 저장) |
 | alias | `maumful` |
 | 비밀번호 | GitHub Secrets `KEYSTORE_PASSWORD` / `KEYSTORE_KEY_PASSWORD` |
-| SHA256 핑거프린트 | `1D:7C:67:6D:5A:78:38:E8:CB:F0:1E:7F:7F:A6:96:62:D0:D2:05:24:70:BA:4E:BF:6D:E9:E7:2C:92:41:EE:99` |
+| SHA256 핑거프린트 | `EA:98:3F:BC:39:E6:FE:EC:83:52:4C:43:6A:7F:0A:F5:CF:40:26:D6:FF:C4:62:0B:1E:19:77:D9:7B:6B:BC:91` |
 
 키스토어는 GitHub Secrets에 저장되어 있으므로 재빌드 시 자동 복원됨.
 
