@@ -30,22 +30,38 @@ jobs:
       - name: Install Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
 
-      # ── 키스토어 준비 ────────────────────────────────────────
-      # 최초 실행: KEYSTORE_BASE64 시크릿이 없으면 새로 생성
-      # 이후 실행: 저장된 시크릿에서 복원
-      - name: Restore keystore from secret
-        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
-        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android-keystore.jks
-
-      - name: Generate NEW keystore (최초 1회만 실행됨)
-        if: ${{ secrets.KEYSTORE_BASE64 == '' }}
+      # ── 키스토어 존재 여부 확인 ──────────────────────────────
+      - name: Check keystore secret
+        id: keystore-check
         run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "has_keystore=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_keystore=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_BASE64 }}
+
+      # ── 기존 키스토어 복원 (2회차 이후) ─────────────────────
+      - name: Restore keystore from secret
+        if: steps.keystore-check.outputs.has_keystore == 'true'
+        run: echo "$KEYSTORE_B64" | base64 -d > android-keystore.jks
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_BASE64 }}
+
+      # ── 신규 키스토어 생성 (최초 1회) ────────────────────────
+      - name: Generate NEW keystore (최초 1회만 실행됨)
+        if: steps.keystore-check.outputs.has_keystore == 'false'
+        run: |
+          STORE_PASS="${KEYSTORE_PASSWORD:-maumful_temp_2024}"
+          KEY_PASS="${KEYSTORE_KEY_PASSWORD:-maumful_temp_2024}"
+
           keytool -genkey -v \
             -keystore android-keystore.jks \
             -alias maumful \
             -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass "${{ secrets.KEYSTORE_PASSWORD || 'maumful_temp_2024' }}" \
-            -keypass "${{ secrets.KEYSTORE_KEY_PASSWORD || 'maumful_temp_2024' }}" \
+            -storepass "$STORE_PASS" \
+            -keypass "$KEY_PASS" \
             -dname "CN=마음풀, OU=App, O=MaumfulService, L=Seoul, S=Seoul, C=KR"
 
           echo ""
@@ -57,33 +73,38 @@ jobs:
           keytool -list -v \
             -keystore android-keystore.jks \
             -alias maumful \
-            -storepass "maumful_temp_2024" \
+            -storepass "$STORE_PASS" \
             | grep "SHA256"
           echo ""
-          echo "[2] KEYSTORE_BASE64 (GitHub Secret 'KEYSTORE_BASE64' 에 저장)"
+          echo "[2] KEYSTORE_BASE64 (GitHub Secret KEYSTORE_BASE64 에 저장)"
           base64 -w 0 android-keystore.jks
           echo ""
           echo "========================================================"
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
 
-      # ── twa-manifest.json 버전 업데이트 ────────────────────
-      - name: Update version in twa-manifest.json
+      # ── twa-manifest.json 버전 + 패스워드 업데이트 ──────────
+      - name: Update twa-manifest.json
         run: |
-          PASS="${{ secrets.KEYSTORE_PASSWORD || 'maumful_temp_2024' }}"
-          KEY_PASS="${{ secrets.KEYSTORE_KEY_PASSWORD || 'maumful_temp_2024' }}"
+          STORE_PASS="${KEYSTORE_PASSWORD:-maumful_temp_2024}"
+          KEY_PASS="${KEYSTORE_KEY_PASSWORD:-maumful_temp_2024}"
           jq \
             --arg v "${{ github.event.inputs.version }}" \
-            --argjson vc "${{ github.event.inputs.version_code }}" \
-            --arg pass "$PASS" \
+            --argjson vc ${{ github.event.inputs.version_code }} \
+            --arg pass "$STORE_PASS" \
             --arg kpass "$KEY_PASS" \
             '.appVersionName = $v | .appVersionCode = $vc | .signingKey.storepassword = $pass | .signingKey.keypassword = $kpass' \
-            android/twa-manifest.json > /tmp/twa-manifest-updated.json
-          cp /tmp/twa-manifest-updated.json android/twa-manifest.json
+            android/twa-manifest.json > /tmp/twa-updated.json
+          cp /tmp/twa-updated.json android/twa-manifest.json
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
 
       # ── Bubblewrap 빌드 ─────────────────────────────────────
       - name: Build TWA APK
         working-directory: android
-        run: |
-          bubblewrap build --skipPwaValidation
+        run: bubblewrap build --skipPwaValidation
 
       # ── 빌드 결과물 업로드 ──────────────────────────────────
       - name: Upload APK artifact
