@@ -21,5 +21,8 @@ Thumbs.db
 .vscode/settings.json
 .idea/
 
+# Claude Code local settings (API keys 포함)
+.claude/settings.local.json
+
 # Build output
 *.tsbuildinfo
