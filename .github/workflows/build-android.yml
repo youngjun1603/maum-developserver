@@ -143,17 +143,27 @@ jobs:
           console.log('Checksum created:', checksum);
           "
 
-      # ── Bubblewrap 빌드 (expect로 남은 대화형 프롬프트 처리) ─
+      # ── Bubblewrap 빌드 (expect로 모든 대화형 프롬프트 자동 응답) ─
       - name: Build TWA APK
         working-directory: android
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
         run: |
+          export BUILD_STORE_PASS="${KEYSTORE_PASSWORD:-maumful_temp_2024}"
+          export BUILD_KEY_PASS="${KEYSTORE_KEY_PASSWORD:-maumful_temp_2024}"
+
           expect << 'EXPECT_SCRIPT'
           set timeout 300
           log_user 1
+          set store_pass $env(BUILD_STORE_PASS)
+          set key_pass $env(BUILD_KEY_PASS)
           spawn bubblewrap build --skipPwaValidation
           expect {
-            -re {[Yy]/[Nn]\)?} { send "n\r"; exp_continue }
-            -re {[Yy]es/[Nn]o}  { send "no\r"; exp_continue }
+            -re {[Yy]/[Nn]}              { send "n\r";          exp_continue }
+            "Key Store:"                  { send "$store_pass\r"; exp_continue }
+            "Password for key"            { send "$key_pass\r";   exp_continue }
+            "Enter key password for"      { send "$key_pass\r";   exp_continue }
             eof
           }
           lassign [wait] _ _ _ rc
