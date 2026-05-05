@@ -41,7 +41,7 @@ jobs:
       - name: Install Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
 
-      # ── expect 설치 (TTY 시뮬레이션으로 대화형 프롬프트 처리) ──
+      # ── expect 설치 (keystore 비밀번호 프롬프트 처리용) ──────
       - name: Install expect
         run: sudo apt-get install -y expect
 
@@ -54,8 +54,7 @@ jobs:
             --arg sdk "$ANDROID_HOME" \
             '{"jdkPath": $jdk, "androidSdkPath": $sdk}' \
             > ~/.bubblewrap/config.json
-          echo "✅ Bubblewrap config:"
-          cat ~/.bubblewrap/config.json
+          echo "✅ Bubblewrap config: $(cat ~/.bubblewrap/config.json)"
 
       # ── 키스토어 존재 여부 확인 ──────────────────────────────
       - name: Check keystore secret
@@ -123,30 +122,98 @@ jobs:
             '.appVersionName = $v | .appVersionCode = $vc | .signingKey.storepassword = $pass | .signingKey.keypassword = $kpass' \
             android/twa-manifest.json > /tmp/twa-updated.json
           cp /tmp/twa-updated.json android/twa-manifest.json
-          echo "✅ twa-manifest.json updated"
-          cat android/twa-manifest.json
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
 
-      # ── Android 프로젝트 파일 생성 ────────────────────────────
-      # bubblewrap update: twa-manifest.json → gradlew, app/, gradle/ 등 생성
-      # --skipPwaValidation: 네트워크 PWA 검증 생략 (CI 환경 무한 대기 방지)
-      - name: Generate Android project (bubblewrap update)
+      # ── Android 프로젝트 파일 생성 (CLI 우회, @bubblewrap/core 직접 호출) ──
+      # bubblewrap update 는 CI 에서 대화형 프롬프트 + 네트워크 대기로 무한 정지됨
+      # @bubblewrap/core 의 AndroidProject.build() 를 직접 호출하면 프롬프트 없음
+      - name: Generate Android project files (no interactive prompts)
         working-directory: android
-        timeout-minutes: 5
         run: |
-          expect << 'EXPECT_SCRIPT'
-          set timeout 240
-          log_user 1
-          spawn bubblewrap update --skipPwaValidation
-          expect {
-            -re {[Yy]/[Nn]} { send "y\r"; exp_continue }
-            eof
+          node << 'NODE_EOF'
+          const { execSync, spawnSync } = require('child_process');
+          const path = require('path');
+          const fs = require('fs');
+
+          async function findCore() {
+            const globalRoot = execSync('npm root -g', { encoding: 'utf-8' }).trim();
+            console.log('npm global root:', globalRoot);
+
+            const candidates = [
+              path.join(globalRoot, '@bubblewrap', 'core'),
+              path.join(globalRoot, '@bubblewrap', 'cli', 'node_modules', '@bubblewrap', 'core'),
+            ];
+
+            for (const p of candidates) {
+              if (fs.existsSync(path.join(p, 'package.json'))) {
+                console.log('Found @bubblewrap/core at:', p);
+                return p;
+              }
+            }
+
+            // 깊은 탐색
+            const res = spawnSync('find', [globalRoot, '-name', 'package.json', '-path', '*bubblewrap/core*'], { encoding: 'utf-8', timeout: 15000 });
+            const matches = (res.stdout || '').trim().split('\n').filter(p => p.includes('@bubblewrap/core'));
+            if (matches.length) {
+              const found = path.dirname(matches[0]);
+              console.log('Deep search found:', found);
+              return found;
+            }
+
+            throw new Error('@bubblewrap/core not found. Available: ' +
+              fs.readdirSync(path.join(globalRoot, '@bubblewrap')).join(', '));
           }
-          lassign [wait] _ _ _ rc
-          exit $rc
-          EXPECT_SCRIPT
+
+          async function main() {
+            const corePath = await findCore();
+            const core = require(corePath);
+            console.log('Core exports:', Object.keys(core).join(', '));
+
+            const { TwaManifest, AndroidProject } = core;
+
+            const log = {
+              debug: () => {},
+              info:  (m) => console.log('[INFO]', m),
+              warn:  (m) => console.warn('[WARN]', m),
+              error: (m) => console.error('[ERROR]', m),
+            };
+
+            console.log('Loading twa-manifest.json...');
+            const manifest = await TwaManifest.fromFile('twa-manifest.json');
+            console.log('Package:', manifest.packageId, '| Host:', manifest.host);
+
+            console.log('Creating AndroidProject and building files...');
+            const project = new AndroidProject(manifest);
+            await project.build('.', log);
+
+            console.log('Saving checksum...');
+            await TwaManifest.saveManifestChecksum('.', manifest);
+
+            // local.properties: Gradle이 Android SDK 경로를 찾을 수 있도록
+            const sdkDir = process.env.ANDROID_HOME;
+            if (sdkDir) {
+              fs.writeFileSync('local.properties', `sdk.dir=${sdkDir}\n`);
+              console.log('local.properties created with sdk.dir:', sdkDir);
+            }
+
+            if (fs.existsSync('gradlew')) {
+              fs.chmodSync('gradlew', '755');
+              console.log('✅ gradlew is ready');
+              console.log('Generated files:', fs.readdirSync('.').join(', '));
+            } else {
+              console.error('❌ gradlew was NOT generated!');
+              console.log('Directory contents:', fs.readdirSync('.').join(', '));
+              process.exit(1);
+            }
+          }
+
+          main().catch(e => {
+            console.error('❌ Fatal:', e.message || e);
+            process.exit(1);
+          });
+          NODE_EOF
 
       # ── gradlew 존재 확인 ─────────────────────────────────────
       - name: Verify Android project files
@@ -155,11 +222,11 @@ jobs:
           echo "=== android/ 디렉토리 내용 ==="
           ls -la
           if [ ! -f gradlew ]; then
-            echo "❌ gradlew not found — bubblewrap update 실패"
+            echo "❌ gradlew not found"
             exit 1
           fi
           chmod +x gradlew
-          echo "✅ gradlew 존재 확인"
+          echo "✅ gradlew 확인"
 
       # ── Bubblewrap 빌드 ─────────────────────────────────────
       - name: Build TWA APK
