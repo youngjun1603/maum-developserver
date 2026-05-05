@@ -14,10 +14,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    env:
-      ANDROID_HOME: /usr/local/lib/android/sdk
-      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
@@ -30,36 +27,22 @@ jobs:
         with:
           node-version: '20'
 
-      # ── Android SDK 라이선스 자동 동의 ───────────────────────
-      - name: Accept Android SDK licenses
+      # ── Android SDK 공식 Action으로 설치 ────────────────────
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      # ── 필수 패키지 설치 ─────────────────────────────────────
+      - name: Install Android SDK packages
         run: |
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || true
-          yes | $ANDROID_HOME/tools/bin/sdkmanager --licenses 2>/dev/null || true
+          sdkmanager "build-tools;34.0.0" "platforms;android-34" "platform-tools"
+          echo "✅ build-tools: $(ls $ANDROID_HOME/build-tools/)"
+          echo "✅ ANDROID_HOME=$ANDROID_HOME"
+          echo "✅ JAVA_HOME=$JAVA_HOME"
 
       - name: Install Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
 
-      # ── Android SDK build-tools 명시 설치 ───────────────────
-      - name: Setup Android SDK build-tools
-        run: |
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          echo "=== SDK 전체 목록 ==="
-          ls -la $ANDROID_HOME/ 2>/dev/null || echo "ANDROID_HOME 없음"
-          echo "=== build-tools ==="
-          ls $ANDROID_HOME/build-tools/ 2>/dev/null || echo "build-tools 없음"
-          echo "=== sdkmanager 위치 ==="
-          find $ANDROID_HOME -name "sdkmanager" 2>/dev/null || echo "sdkmanager 없음"
-
-          # sdkmanager로 build-tools 설치
-          SDKMGR=$(find $ANDROID_HOME -name "sdkmanager" -type f 2>/dev/null | head -1)
-          if [ -n "$SDKMGR" ]; then
-            yes | "$SDKMGR" --licenses 2>/dev/null || true
-            "$SDKMGR" "build-tools;34.0.0" "platforms;android-34" "platform-tools" 2>/dev/null || true
-            echo "=== 설치 후 build-tools ==="
-            ls $ANDROID_HOME/build-tools/ 2>/dev/null
-          fi
-
-      # ── Bubblewrap 설정 (jq로 안전한 JSON 생성) ─────────────
+      # ── Bubblewrap 설정 ───────────────────────────────────────
       - name: Configure Bubblewrap
         run: |
           mkdir -p ~/.bubblewrap
@@ -68,7 +51,8 @@ jobs:
             --arg sdk "$ANDROID_HOME" \
             '{"jdkPath": $jdk, "androidSdkPath": $sdk}' \
             > ~/.bubblewrap/config.json
-          echo "Config: $(cat ~/.bubblewrap/config.json)"
+          echo "✅ Bubblewrap config:"
+          cat ~/.bubblewrap/config.json
 
       # ── 키스토어 존재 여부 확인 ──────────────────────────────
       - name: Check keystore secret
@@ -108,7 +92,6 @@ jobs:
           echo "========================================================"
           echo "  ★ 아래 정보를 GitHub Secrets에 저장하세요 ★"
           echo "========================================================"
-          echo ""
           echo "[1] SHA256 Fingerprint (assetlinks.json에 입력)"
           keytool -list -v \
             -keystore android-keystore.jks \
@@ -142,7 +125,6 @@ jobs:
           KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
 
       # ── Bubblewrap 빌드 ─────────────────────────────────────
-      # config.json에 jdkPath + androidSdkPath 완전히 설정됐으므로 프롬프트 없음
       - name: Build TWA APK
         working-directory: android
         run: bubblewrap build --skipPwaValidation
