@@ -39,25 +39,36 @@ jobs:
       - name: Install Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
 
+      # ── Android SDK build-tools 명시 설치 ───────────────────
+      - name: Setup Android SDK build-tools
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "=== SDK 전체 목록 ==="
+          ls -la $ANDROID_HOME/ 2>/dev/null || echo "ANDROID_HOME 없음"
+          echo "=== build-tools ==="
+          ls $ANDROID_HOME/build-tools/ 2>/dev/null || echo "build-tools 없음"
+          echo "=== sdkmanager 위치 ==="
+          find $ANDROID_HOME -name "sdkmanager" 2>/dev/null || echo "sdkmanager 없음"
+
+          # sdkmanager로 build-tools 설치
+          SDKMGR=$(find $ANDROID_HOME -name "sdkmanager" -type f 2>/dev/null | head -1)
+          if [ -n "$SDKMGR" ]; then
+            yes | "$SDKMGR" --licenses 2>/dev/null || true
+            "$SDKMGR" "build-tools;34.0.0" "platforms;android-34" "platform-tools" 2>/dev/null || true
+            echo "=== 설치 후 build-tools ==="
+            ls $ANDROID_HOME/build-tools/ 2>/dev/null
+          fi
+
       # ── Bubblewrap 설정 (jq로 안전한 JSON 생성) ─────────────
       - name: Configure Bubblewrap
         run: |
-          echo "=== 환경 확인 ==="
-          echo "JAVA_HOME=$JAVA_HOME"
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          echo "build-tools:"
-          ls $ANDROID_HOME/build-tools/ 2>/dev/null || echo "  NOT FOUND"
-          echo "==================="
-
           mkdir -p ~/.bubblewrap
           jq -n \
             --arg jdk "$JAVA_HOME" \
             --arg sdk "$ANDROID_HOME" \
             '{"jdkPath": $jdk, "androidSdkPath": $sdk}' \
             > ~/.bubblewrap/config.json
-
-          echo "Bubblewrap config:"
-          cat ~/.bubblewrap/config.json
+          echo "Config: $(cat ~/.bubblewrap/config.json)"
 
       # ── 키스토어 존재 여부 확인 ──────────────────────────────
       - name: Check keystore secret
