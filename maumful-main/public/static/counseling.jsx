@@ -56,6 +56,7 @@ function BookingModal({counselor,onClose,onComplete,isLoggedIn,setView}){
   const [selTime,setSelTime]=useS(null);
   const [selType,setSelType]=useS(null);
   const [memo,setMemo]=useS('');
+  const [shareResult,setShareResult]=useS(false);
   const [preparing,setPreparing]=useS(false);
   const [done,setDone]=useS(false);
   const c=counselor;
@@ -86,7 +87,7 @@ function BookingModal({counselor,onClose,onComplete,isLoggedIn,setView}){
     setPreparing(true);
     try{
       const scheduledAt=`${toDateStr(selDate)}T${selTime}:00`;
-      const res=await cApi.prepare({counselorId:c.id,scheduledAt,sessionType:selType,userMemo:memo});
+      const res=await cApi.prepare({counselorId:c.id,scheduledAt,sessionType:selType,userMemo:memo,shareTestResult:shareResult});
       if(!res.success){alert(res.error||'예약 준비 실패');setPreparing(false);return;}
       const d=res.data;
       // 토스 SDK 로드
@@ -195,6 +196,16 @@ function BookingModal({counselor,onClose,onComplete,isLoggedIn,setView}){
             </div>
             <div style={{fontSize:13,fontWeight:600,marginBottom:7}}>상담사에게 전달할 내용 (선택)</div>
             <textarea value={memo} onChange={e=>setMemo(e.target.value)} placeholder="상담 신청 이유나 주요 고민을 간단히 적어주세요." rows={3} style={{width:'100%',padding:'10px 12px',borderRadius:9,border:'1px solid rgba(0,0,0,.12)',fontSize:13,resize:'none',fontFamily:"'Noto Sans KR',sans-serif",outline:'none',background:'#FAFAF8',lineHeight:1.6}}/>
+            {/* 검사 결과 공유 토글 */}
+            <div style={{marginTop:12,padding:'10px 13px',background:'#F0FDF4',borderRadius:10,border:'1px solid #BBF7D0',display:'flex',alignItems:'center',gap:10,cursor:'pointer'}} onClick={()=>setShareResult(v=>!v)}>
+              <div style={{width:36,height:20,borderRadius:10,background:shareResult?'#22C55E':'#D1D5DB',transition:'background .2s',position:'relative',flexShrink:0}}>
+                <div style={{width:16,height:16,borderRadius:'50%',background:'white',position:'absolute',top:2,left:shareResult?18:2,transition:'left .2s',boxShadow:'0 1px 3px rgba(0,0,0,.2)'}}/>
+              </div>
+              <div>
+                <div style={{fontSize:13,fontWeight:600,color:shareResult?'#16A34A':'#374151'}}>📋 검사 결과 상담사에게 미리 공유</div>
+                <div style={{fontSize:11,color:'#6B7280',marginTop:1}}>최근 검사 결과가 상담사에게 전달되어 더 깊은 상담이 가능합니다</div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -571,6 +582,127 @@ function CounselorReviewsModal({counselorId,counselorName,avgRating,reviewCount,
 }
 
 // ============================================================
+// NearbyMapModal — 위치 기반 주변 상담센터 지도
+// ============================================================
+const KAKAO_JS_KEY = 'a457be7a7c4e4860244c0bf255d6d2bd';
+
+function NearbyMapModal({onClose, affiliatedCounselors=[]}){
+  const {useState:useS,useEffect:useE,useRef}=React;
+  const [loading,setLoading]=useS(true);
+  const [error,setError]=useS(null);
+  const [places,setPlaces]=useS([]);
+  const [affiliated,setAffiliated]=useS([]);
+  const mapRef=useRef(null);
+
+  useE(()=>{
+    function loadMap(){
+      window.kakao.maps.load(()=>{
+        if(!navigator.geolocation){setError('위치 서비스를 지원하지 않는 브라우저입니다.');setLoading(false);return;}
+        navigator.geolocation.getCurrentPosition(pos=>{
+          const {latitude:lat,longitude:lng}=pos.coords;
+          const center=new window.kakao.maps.LatLng(lat,lng);
+          const map=new window.kakao.maps.Map(mapRef.current,{center,level:5});
+          // 내 위치 마커
+          new window.kakao.maps.Marker({position:center,map,title:'내 위치'});
+          // 서버에서 주변 기관 검색
+          fetch(`/api/nearby-counseling?lat=${lat}&lng=${lng}`)
+            .then(r=>r.json())
+            .then(data=>{
+              setAffiliated(data.affiliated||[]);
+              setPlaces(data.external||[]);
+              (data.external||[]).forEach(p=>{
+                const pos=new window.kakao.maps.LatLng(p.y,p.x);
+                const marker=new window.kakao.maps.Marker({position:pos,map,title:p.place_name});
+                const iw=new window.kakao.maps.InfoWindow({content:`<div style="padding:6px 10px;font-size:12px;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">${p.place_name}</div>`});
+                window.kakao.maps.event.addListener(marker,'click',()=>iw.open(map,marker));
+              });
+            })
+            .catch(()=>setError('주변 정보를 불러오지 못했습니다.'))
+            .finally(()=>setLoading(false));
+        },()=>{setError('위치 권한을 허용해 주세요.');setLoading(false);},{timeout:10000});
+      });
+    }
+    if(window.kakao&&window.kakao.maps){loadMap();}
+    else{
+      const s=document.createElement('script');
+      s.src=`//dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_JS_KEY}&autoload=false`;
+      s.onload=loadMap;
+      document.head.appendChild(s);
+    }
+  },[]);
+
+  const dist=p=>p.distance?`${p.distance<1000?p.distance+'m':(p.distance/1000).toFixed(1)+'km'}`:'';
+
+  return(
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:3000,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+      <div style={{background:'white',borderRadius:20,width:'100%',maxWidth:580,maxHeight:'90vh',overflow:'hidden',display:'flex',flexDirection:'column',fontFamily:"'Noto Sans KR',sans-serif"}}>
+        {/* 헤더 */}
+        <div style={{padding:'16px 20px 12px',borderBottom:'1px solid rgba(0,0,0,.08)',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
+          <div>
+            <div style={{fontSize:16,fontWeight:700}}>📍 주변 상담센터 찾기</div>
+            <div style={{fontSize:11,color:'#9A9A9A',marginTop:2}}>내 위치 기반 정신건강의학과·심리상담센터</div>
+          </div>
+          <button onClick={onClose} style={{background:'none',border:'none',fontSize:20,cursor:'pointer',color:'#9A9A9A',padding:4}}>✕</button>
+        </div>
+        {/* 지도 */}
+        <div style={{position:'relative',height:240,flexShrink:0,background:'#f0f0f0'}}>
+          <div ref={mapRef} style={{width:'100%',height:'100%'}}/>
+          {loading&&<div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(255,255,255,.85)',fontSize:13,color:'#5A5A5A',zIndex:1}}>📍 위치 확인 중...</div>}
+          {error&&<div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#FEF2F2',fontSize:13,color:'#991B1B',padding:20,textAlign:'center',zIndex:1}}>{error}</div>}
+        </div>
+        {/* 목록 */}
+        <div style={{flex:1,overflowY:'auto',padding:'14px 16px'}}>
+          {/* 제휴 상담사 우선 */}
+          {affiliated.length>0&&(
+            <div style={{marginBottom:14}}>
+              <div style={{fontSize:11,fontWeight:700,color:'#2D6A4F',marginBottom:7}}>🌿 마음풀 제휴 상담사</div>
+              {affiliated.slice(0,3).map(c=>(
+                <div key={c.id} style={{background:'#F0FAF4',border:'1px solid #B7E4C7',borderRadius:10,padding:'10px 12px',marginBottom:7,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:700}}>{c.photo_emoji} {c.name}</div>
+                    <div style={{fontSize:11,color:'#5A5A5A',marginTop:2}}>{c.title} · {c.center_name}</div>
+                  </div>
+                  <button onClick={onClose} style={{fontSize:11,color:'#2D6A4F',fontWeight:700,background:'none',border:'1px solid #2D6A4F',borderRadius:7,padding:'4px 9px',cursor:'pointer',fontFamily:"'Noto Sans KR',sans-serif"}}>예약하기</button>
+                </div>
+              ))}
+            </div>
+          )}
+          {/* 외부 기관 */}
+          <div style={{fontSize:11,fontWeight:700,color:'#5A5A5A',marginBottom:8}}>📍 주변 기관 {places.length>0?`(${places.length})`:''}</div>
+          {!loading&&places.length===0&&!error&&(
+            <div style={{textAlign:'center',padding:'20px 0',color:'#9A9A9A',fontSize:13}}>주변 2km 이내 검색 결과가 없습니다.</div>
+          )}
+          {places.map((p,i)=>(
+            <div key={p.id||i} style={{padding:'10px 2px',borderBottom:'1px solid rgba(0,0,0,.06)'}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:8}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:13,fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.place_name}</div>
+                  <div style={{fontSize:11,color:'#9A9A9A',marginTop:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.road_address_name||p.address_name}</div>
+                  {p.phone&&<div style={{fontSize:11,color:'#2D6A4F',marginTop:2}}>☎ {p.phone}</div>}
+                </div>
+                <div style={{fontSize:11,color:'#9A9A9A',flexShrink:0,textAlign:'right'}}>
+                  <div>{dist(p)}</div>
+                  <a href={p.place_url} target="_blank" rel="noopener noreferrer" style={{color:'#2D6A4F',fontWeight:600,textDecoration:'none'}}>지도 →</a>
+                </div>
+              </div>
+            </div>
+          ))}
+          {/* 위기 상담 */}
+          <div style={{marginTop:18,padding:'12px 14px',background:'#FEF2F2',borderRadius:10,border:'1px solid #FECACA'}}>
+            <div style={{fontSize:12,fontWeight:700,color:'#991B1B',marginBottom:5}}>🆘 즉각 도움이 필요하다면</div>
+            <div style={{fontSize:12,color:'#7F1D1D',lineHeight:1.8}}>
+              자살예방상담전화 <strong>☎ 1393</strong> (24시간)<br/>
+              정신건강위기상담전화 <strong>☎ 1577-0199</strong> (24시간)<br/>
+              생명의전화 <strong>☎ 1588-9191</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 // CounselingPage — 메인 페이지
 // ============================================================
 function CounselingPage({setView,isLoggedIn,currentUser}){
@@ -590,6 +722,7 @@ function CounselingPage({setView,isLoggedIn,currentUser}){
   const [reviewModal,setReviewModal]=useS(null);
   const [counselorReviews,setCounselorReviews]=useS(null);
   const [showDemoNotice,setShowDemoNotice]=useS(true);
+  const [nearbyOpen,setNearbyOpen]=useS(false);
 
   const FALLBACK_CENTERS=[
     {id:1,name:'마음숲 심리상담센터',logo_emoji:'🌲',description:'우울·불안·대인관계 전문.',address:'서울 강남구 테헤란로 123',specialty_tags:'["우울","불안","대인관계","자존감"]',status:'pending'},
@@ -697,6 +830,7 @@ function CounselingPage({setView,isLoggedIn,currentUser}){
   return(
     <div style={{fontFamily:"'Noto Sans KR',sans-serif",background:'#FAFAF8',minHeight:'100vh'}}>
       <DemoNoticeModal />
+      {nearbyOpen&&<NearbyMapModal onClose={()=>setNearbyOpen(false)} affiliatedCounselors={counselors}/>}
       {/* 헤더 */}
       <div style={{background:'linear-gradient(135deg,#F0FAF4,#FAFAF8)',borderBottom:'1px solid rgba(0,0,0,.07)',padding:'44px 24px 34px'}}>
         <div style={{maxWidth:1200,margin:'0 auto'}}>
@@ -715,7 +849,12 @@ function CounselingPage({setView,isLoggedIn,currentUser}){
             <>
               <div style={{display:'inline-block',background:'#D8F3DC',color:'#2D6A4F',fontSize:12,fontWeight:700,letterSpacing:'1.5px',textTransform:'uppercase',padding:'4px 12px',borderRadius:100,marginBottom:12}}>Counseling</div>
               <h1 style={{fontSize:32,fontWeight:700,marginBottom:9}}>전문 <span style={{color:'#2D6A4F'}}>상담사</span>와 연결하세요</h1>
-              <p style={{fontSize:15,color:'#5A5A5A',maxWidth:460}}>심리검사 결과를 바탕으로 나에게 맞는 상담사를 찾고 간편하게 예약하세요.</p>
+              <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+                <p style={{fontSize:15,color:'#5A5A5A',maxWidth:420,margin:0}}>심리검사 결과를 바탕으로 나에게 맞는 상담사를 찾고 간편하게 예약하세요.</p>
+                <button onClick={()=>setNearbyOpen(true)} style={{flexShrink:0,display:'flex',alignItems:'center',gap:6,padding:'9px 16px',background:'white',border:'1.5px solid #2D6A4F',borderRadius:10,fontSize:13,fontWeight:700,color:'#2D6A4F',cursor:'pointer',fontFamily:"'Noto Sans KR',sans-serif",boxShadow:'0 2px 8px rgba(45,106,79,.12)'}}>
+                  📍 주변 상담센터 찾기
+                </button>
+              </div>
             </>
           )}
         </div>
@@ -821,7 +960,7 @@ function CounselingPage({setView,isLoggedIn,currentUser}){
         {/* 제휴 배너 */}
         <div style={{marginTop:36,background:'white',border:'1px dashed rgba(0,0,0,.12)',borderRadius:13,padding:'22px 26px',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:12}}>
           <div><div style={{fontSize:14,fontWeight:700,marginBottom:4}}>상담센터 제휴 신청</div><p style={{fontSize:13,color:'#5A5A5A',lineHeight:1.6}}>귀 센터의 상담사를 마음풀에 등록하고 더 많은 내담자를 만나세요.</p></div>
-          <button onClick={()=>setView('memberLogin')} style={{background:'#2D6A4F',color:'white',border:'none',borderRadius:8,padding:'10px 20px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:"'Noto Sans KR',sans-serif"}}>제휴 신청하기 →</button>
+          <button onClick={()=>setOnboardingOpen(true)} style={{background:'#2D6A4F',color:'white',border:'none',borderRadius:8,padding:'10px 20px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:"'Noto Sans KR',sans-serif"}}>제휴 신청하기 →</button>
         </div>
       </div>
 

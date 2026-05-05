@@ -26,6 +26,7 @@ type Bindings = {
   NAVER_SITE_KEY?: string         // 네이버 서치어드바이저 인증 코드
   VAPID_PUBLIC_KEY?: string
   VAPID_PRIVATE_KEY?: string
+  KAKAO_REST_API_KEY?: string
 }
 
 type User = {
@@ -39,6 +40,7 @@ type User = {
   country_code: string
   credits: number
   is_email_verified: number
+  partner_code: string | null
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -318,7 +320,7 @@ app.post('/api/auth/register', async (c) => {
   if (!rl.allowed) return c.json({ success: false, error: '잠시 후 다시 시도해주세요.' }, 429)
 
   const body = await c.req.json()
-  const { email, password, nickname, locale = 'ko' } = body
+  const { email, password, nickname, locale = 'ko', partnerCode } = body
 
   if (!email || !password)
     return c.json({ success: false, error: '이메일과 비밀번호는 필수입니다.' }, 400)
@@ -333,11 +335,17 @@ app.post('/api/auth/register', async (c) => {
   const passwordHash = await hashPassword(password)
   const country      = (c.req.header('cf-ipcountry') ?? 'KR').toUpperCase()
 
+  // 파트너 코드 검증 (있는 경우에만)
+  const validPartner = partnerCode
+    ? await DB.prepare("SELECT code FROM partners WHERE code=? AND is_active=1").bind(String(partnerCode).toUpperCase()).first<{ code: string }>()
+    : null
+  const resolvedPartnerCode = validPartner?.code ?? null
+
   // 가입 보너스: 20 크레딧
   const result = await DB.prepare(`
-    INSERT INTO users (email, password_hash, nickname, locale, country_code, credits, is_email_verified)
-    VALUES (?, ?, ?, ?, ?, 20, 0)
-  `).bind(email.toLowerCase(), passwordHash, nickname ?? email.split('@')[0], locale, country).run()
+    INSERT INTO users (email, password_hash, nickname, locale, country_code, credits, is_email_verified, partner_code)
+    VALUES (?, ?, ?, ?, ?, 20, 0, ?)
+  `).bind(email.toLowerCase(), passwordHash, nickname ?? email.split('@')[0], locale, country, resolvedPartnerCode).run()
 
   const userId = result.meta.last_row_id as number
 
@@ -427,6 +435,121 @@ app.post('/api/auth/login', async (c) => {
       emailVerified: user.is_email_verified === 1,
     },
   })
+})
+
+// ============================================================
+// 파트너 채널 SSO 로그인
+// ============================================================
+// 파트너가 자신의 사용자를 마음풀에 자동 로그인시키는 엔드포인트.
+// 파트너 서버는 { uid, email?, nick?, exp } payload를 JSON 직렬화 후
+// Base64Url 인코딩하고 HMAC-SHA256(sso_secret, payload_b64u)로 서명.
+// 최종 sso_token = payload_b64u + "." + sig_b64u
+app.post('/api/auth/partner-sso', async (c) => {
+  const { DB, KV } = c.env
+  const ip = c.req.header('cf-connecting-ip') || 'unknown'
+  const rl = await checkRateLimit(KV, `partner_sso:${ip}`, 20, 60)
+  if (!rl.allowed) return c.json({ success: false, error: '요청이 너무 많습니다.' }, 429)
+
+  const { partnerCode, ssoToken } = await c.req.json() as { partnerCode?: string; ssoToken?: string }
+  if (!partnerCode || !ssoToken)
+    return c.json({ success: false, error: 'partnerCode, ssoToken 필수' }, 400)
+
+  const partner = await DB.prepare(
+    "SELECT code, name, sso_secret FROM partners WHERE code=? AND is_active=1"
+  ).bind(partnerCode.toUpperCase()).first<{ code: string; name: string; sso_secret: string | null }>()
+
+  if (!partner)       return c.json({ success: false, error: '유효하지 않은 파트너 코드' }, 404)
+  if (!partner.sso_secret) return c.json({ success: false, error: '이 파트너는 SSO를 지원하지 않습니다.' }, 403)
+
+  // 토큰 검증: payload_b64u.sig_b64u
+  const dotIdx = ssoToken.lastIndexOf('.')
+  if (dotIdx < 0) return c.json({ success: false, error: '잘못된 SSO 토큰 형식' }, 400)
+  const payloadB64 = ssoToken.slice(0, dotIdx)
+  const receivedSig = ssoToken.slice(dotIdx + 1)
+
+  const enc = new TextEncoder()
+  const key = await crypto.subtle.importKey(
+    'raw', enc.encode(partner.sso_secret),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  )
+  const sigBuf = await crypto.subtle.sign('HMAC', key, enc.encode(payloadB64))
+  const expectedSig = btoa(String.fromCharCode(...new Uint8Array(sigBuf)))
+    .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
+
+  if (receivedSig !== expectedSig)
+    return c.json({ success: false, error: '서명 검증 실패' }, 401)
+
+  // payload 파싱
+  let payload: { uid: string; email?: string; nick?: string; exp?: number }
+  try {
+    const json = atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/'))
+    payload = JSON.parse(json)
+  } catch {
+    return c.json({ success: false, error: '페이로드 파싱 실패' }, 400)
+  }
+
+  // 만료 확인
+  if (payload.exp && payload.exp < Math.floor(Date.now() / 1000))
+    return c.json({ success: false, error: 'SSO 토큰이 만료되었습니다.' }, 401)
+  if (!payload.uid)
+    return c.json({ success: false, error: 'uid 필드 필수' }, 400)
+
+  const socialProvider = `partner_${partner.code.toLowerCase()}`
+  const socialId       = String(payload.uid)
+
+  // 기존 파트너 계정 조회 또는 신규 생성
+  let user = await DB.prepare(
+    "SELECT * FROM users WHERE social_provider=? AND social_id=?"
+  ).bind(socialProvider, socialId).first<User>()
+
+  let isNewUser = false
+  if (!user) {
+    isNewUser = true
+    const country  = (c.req.header('cf-ipcountry') ?? 'KR').toUpperCase()
+    const nickname = payload.nick ?? (payload.email ? payload.email.split('@')[0] : `${partner.name}유저`)
+    const email    = payload.email ?? null
+    const r = await DB.prepare(`
+      INSERT INTO users (email, password_hash, social_provider, social_id, nickname, locale, country_code, credits, is_email_verified, partner_code)
+      VALUES (?, NULL, ?, ?, ?, 'ko', ?, 20, 1, ?)
+    `).bind(email, socialProvider, socialId, nickname, country, partner.code).run()
+    const newId = r.meta.last_row_id as number
+    await DB.prepare('INSERT INTO credit_transactions (user_id,type,amount,reason,balance_after) VALUES (?,?,?,?,?)')
+      .bind(newId, 'gain', 20, 'signup_bonus', 20).run()
+    user = await DB.prepare("SELECT * FROM users WHERE id=?").bind(newId).first<User>()
+  }
+
+  if (!user) return c.json({ success: false, error: '사용자 생성 실패' }, 500)
+
+  const secret       = await getJwtSecret(KV)
+  const now          = Math.floor(Date.now() / 1000)
+  const accessToken  = await signJwt({ sub: user.id, email: user.email, iat: now, exp: now + 3600 }, secret)
+  const refreshToken = await signJwt({ sub: user.id, type: 'refresh', iat: now, exp: now + 30 * 86400 }, secret)
+  await KV.put(`refresh:${user.id}`, refreshToken, { expirationTtl: 30 * 86400 })
+
+  return c.json({
+    success: true,
+    data: {
+      accessToken, refreshToken,
+      user: { id: user.id, email: user.email, nickname: user.nickname, locale: user.locale, credits: user.credits },
+      isNewUser,
+    },
+  })
+})
+
+// ============================================================
+// 파트너 공개 설정 조회 (프론트에서 브랜딩/환영메시지 표시용)
+// ============================================================
+app.get('/api/partner/config', async (c) => {
+  const { DB } = c.env
+  const code = (c.req.query('p') ?? '').toUpperCase()
+  if (!code) return c.json({ success: false, error: 'p 파라미터 필수' }, 400)
+
+  const partner = await DB.prepare(
+    "SELECT code, name, welcome_message, featured_tests, primary_color, logo_url FROM partners WHERE code=? AND is_active=1"
+  ).bind(code).first<{ code: string; name: string; welcome_message: string | null; featured_tests: string | null; primary_color: string | null; logo_url: string | null }>()
+
+  if (!partner) return c.json({ success: false, error: '파트너를 찾을 수 없습니다.' }, 404)
+  return c.json({ success: true, data: partner })
 })
 
 // 토큰 갱신
@@ -1009,6 +1132,413 @@ app.post('/api/test/save-result', async (c) => {
   return c.json({ success: true })
 })
 
+// ── GET /api/user/daily-context ───────────────────────────
+// 3개 서비스 데이터 종합 → AI 개인화 인사말 + 채팅 컨텍스트 생성
+app.get('/api/user/daily-context', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ error: '로그인 필요' }, 401)
+
+  const user = await DB.prepare('SELECT nickname FROM users WHERE id=?').bind(userId).first<{ nickname: string }>()
+  const name = user?.nickname || '회원'
+
+  // 1. 최근 검사 이력 (타입별 최신 1건)
+  const testRows = await DB.prepare(
+    `SELECT test_type, score, level, performed_at FROM test_history
+     WHERE user_id=? AND score IS NOT NULL AND performed_at > datetime('now','-60 days')
+     GROUP BY test_type HAVING performed_at = MAX(performed_at)
+     ORDER BY performed_at DESC LIMIT 8`
+  ).bind(userId).all<{ test_type: string; score: number; level: string; performed_at: string }>()
+
+  // 2. 최근 7일 감정 기록 (마음게임 mood)
+  const moodRows = await DB.prepare(
+    `SELECT score, metadata, created_at FROM game_session_logs
+     WHERE user_id=? AND game_id='mood' AND created_at > datetime('now','-7 days')
+     ORDER BY created_at DESC LIMIT 5`
+  ).bind(userId).all<{ score: number; metadata: string; created_at: string }>()
+
+  // 3. 최근 관계 체크인 (마음커플)
+  const checkin = await DB.prepare(
+    `SELECT total_score, created_at FROM relationship_checkins
+     WHERE user_id=? ORDER BY created_at DESC LIMIT 1`
+  ).bind(userId).first<{ total_score: number; created_at: string }>()
+
+  const tests = testRows.results || []
+  const moods = moodRows.results || []
+  const hasData = tests.length > 0 || moods.length > 0
+
+  if (!hasData) {
+    return c.json({ success: true, hasData: false, greeting: null, chatContext: null })
+  }
+
+  // 컨텍스트 문자열 구성
+  const parts: string[] = []
+  if (tests.length > 0) {
+    const testSummary = tests.map(t => {
+      const days = Math.floor((Date.now() - new Date(t.performed_at).getTime()) / 86400000)
+      return `${t.test_type}(${days}일 전, ${t.score}점${t.level ? '/' + t.level : ''})`
+    }).join(', ')
+    parts.push(`최근 검사: ${testSummary}`)
+  }
+  if (moods.length > 0) {
+    const MOOD_MAP: Record<number, string> = { 1:'기쁨', 2:'평온', 3:'무감각', 4:'슬픔', 5:'불안', 6:'화남', 7:'지침' }
+    const moodList = moods.map(m => {
+      try { const meta = JSON.parse(m.metadata || '{}'); return MOOD_MAP[meta.mood] || '기록됨' } catch { return '기록됨' }
+    }).join(', ')
+    parts.push(`최근 감정 기록: ${moodList}`)
+  }
+  if (checkin) {
+    const days = Math.floor((Date.now() - new Date(checkin.created_at).getTime()) / 86400000)
+    parts.push(`관계 체크인: ${checkin.total_score}/50점 (${days}일 전)`)
+  }
+  const chatContext = parts.join('\n')
+
+  // AI 인사말 생성
+  const apiKey = await getAnthropicKey(DB, c.env)
+  if (!apiKey) {
+    return c.json({ success: true, hasData: true, greeting: `${name}님, 오늘 마음은 어떠세요?`, chatContext })
+  }
+
+  const aiPrompt = `마음풀 앱 사용자 데이터:\n${chatContext}\n이름: ${name}\n\n위 데이터를 참고해 AI 상담사 첫 인사말을 1~2문장으로 작성하세요.\n규칙: 수치 직접 언급 금지, 따뜻한 어조, 오늘 상태 묻는 열린 질문으로 마무리, 진단 표현 금지`
+
+  let greeting = `${name}님, 오늘 하루 마음은 어떠세요?`
+  try {
+    const aiRes = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 150, messages: [{ role: 'user', content: aiPrompt }] }),
+    })
+    if (aiRes.ok) {
+      const j = await aiRes.json() as { content: Array<{ text: string }> }
+      if (j.content?.[0]?.text) greeting = j.content[0].text.trim()
+    }
+  } catch { /* 기본 인사말 유지 */ }
+
+  return c.json({ success: true, hasData: true, greeting, chatContext })
+})
+
+// ── GET /api/test/recent-summary ──────────────────────────
+// 최근 검사 결과 요약 (예약 시 상담사 공유용)
+app.get('/api/test/recent-summary', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ error: '로그인 필요' }, 401)
+
+  const rows = await DB.prepare(
+    `SELECT test_type, score, ai_analysis, performed_at FROM test_history WHERE user_id=? AND score IS NOT NULL ORDER BY performed_at DESC LIMIT 5`
+  ).bind(userId).all<{ test_type: string; score: number; ai_analysis: string | null; performed_at: string }>()
+
+  const tests = rows.results || []
+  if (tests.length === 0) return c.json({ success: true, summary: null, tests: [] })
+
+  const summary = tests.map(r =>
+    `${r.test_type} (${r.performed_at.slice(0,10)}): ${r.score}점${r.ai_analysis ? ' — ' + r.ai_analysis.slice(0,80) : ''}`
+  ).join('\n')
+
+  return c.json({ success: true, summary, tests })
+})
+
+// ── POST /api/test/external-result ───────────────────────
+// 외부 검사 결과 수동 입력 (다른 기관/앱에서 받은 결과)
+app.post('/api/test/external-result', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ error: '로그인 필요' }, 401)
+
+  const body = await c.req.json().catch(() => ({})) as {
+    testType?: string
+    score?: number
+    note?: string
+    conductedAt?: string
+  }
+  const { testType, score, note, conductedAt } = body
+
+  const ALLOWED_TYPES = ['PHQ9','GAD7','BURNOUT','BIG5','LOST','DSI','DASS21','SRCI','CUSTOM']
+  if (!testType || !ALLOWED_TYPES.includes(testType)) {
+    return c.json({ error: '지원하지 않는 검사 유형입니다' }, 400)
+  }
+  if (score === undefined || score === null || typeof score !== 'number') {
+    return c.json({ error: '점수를 입력해 주세요' }, 400)
+  }
+
+  const performedAt = conductedAt || new Date().toISOString()
+  const aiAnalysis = note ? note.slice(0, 500) : null
+
+  await DB.prepare(
+    `INSERT INTO test_history (user_id, test_type, lang, credits_spent, score, ai_analysis, performed_at, source) VALUES (?, ?, 'ko', 0, ?, ?, ?, 'external')`
+  ).bind(userId, testType, score, aiAnalysis, performedAt).run()
+
+  return c.json({ success: true })
+})
+
+// ── POST /api/test/analyze-pdf ────────────────────────────
+// 외부 검사 PDF 텍스트 → AI 비임상 해석 + 게임/재검사 추천
+app.post('/api/test/analyze-pdf', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ error: '로그인 필요' }, 401)
+
+  const body = await c.req.json().catch(() => ({})) as {
+    testType?: string; pdfText?: string; fileName?: string
+  }
+  const { testType = 'EXTERNAL', pdfText, fileName } = body
+
+  if (!pdfText || pdfText.trim().length < 50) {
+    return c.json({ error: 'PDF에서 텍스트를 충분히 추출할 수 없었습니다. 스캔 이미지 PDF는 지원되지 않습니다.' }, 400)
+  }
+  if (pdfText.length > 20000) {
+    return c.json({ error: 'PDF가 너무 큽니다. 결과지 핵심 페이지만 포함해 주세요.' }, 400)
+  }
+
+  const apiKey = await getAnthropicKey(DB, c.env)
+  if (!apiKey) return c.json({ error: 'AI 서비스 미설정' }, 500)
+
+  const systemPrompt = `당신은 심리검사 결과를 일반인이 이해하기 쉽게 설명하는 전문 해설가입니다.
+
+⚠️ 절대 준수 원칙:
+- 임상적 진단명(질환명, DSM 기준 등)은 절대 언급하지 마세요
+- "~장애", "~증", "~병" 같은 의학적 표현 금지
+- "성향", "경향", "특성", "패턴"으로 표현하세요
+- 약물/치료 권유 금지
+- 마지막에 "전문가 상담을 권유합니다" 문장 포함
+
+분석 구조 (반드시 이 순서로, 각 섹션 제목 포함):
+**주요 성향** — 이 검사에서 나타난 핵심 특성 2~3가지 (구체적, 생활 밀착형)
+**일상 속 패턴** — 대인관계·업무·감정 조절에서 어떻게 나타날 수 있는지
+**강점** — 이 성향에서 비롯되는 긍정적 측면
+**성장 포인트** — 균형과 성장을 위해 관심 가질 부분 (비판 아닌 가능성으로)
+**마음풀 추천 활동** — 아래 게임 목록 중 이 결과와 가장 잘 맞는 것 2~3개 구체적으로 연결
+
+게임 목록: mood(감정 온도계), garden(마음 정원), efmt(감정꽃), gratitude(감사 일기), tree(마음나무), burnout(번아웃 테스트), worry(걱정 풍선), focus(마음 집중력)
+
+분석 마지막 줄에 반드시 아래 형식으로 JSON 출력 (다른 텍스트 없이):
+GAMES:["game1","game2"]
+FOLLOWUP:["PHQ9","GAD7"]
+(FOLLOWUP은 마음풀 내 검사 중 이 결과와 관련 깊은 것: PHQ9/GAD7/BURNOUT/BIG5/LOST/DSI)`
+
+  const truncated = pdfText.slice(0, 15000)
+  const userMsg = `검사 종류: ${testType}${fileName ? ` (${fileName})` : ''}\n\n=== 검사 결과 내용 ===\n${truncated}`
+
+  let aiRes: Response
+  try {
+    aiRes = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1200,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userMsg }],
+      }),
+    })
+  } catch (e: unknown) {
+    return c.json({ error: 'AI 연결 오류: ' + String(e) }, 500)
+  }
+
+  if (!aiRes.ok) {
+    const errText = await aiRes.text().catch(() => '(응답 없음)')
+    return c.json({ error: `AI 분석 실패 (${aiRes.status}): ${errText.slice(0, 200)}` }, 500)
+  }
+
+  let aiJson: { content: Array<{ text: string }> }
+  try {
+    aiJson = await aiRes.json() as { content: Array<{ text: string }> }
+  } catch (e: unknown) {
+    return c.json({ error: 'AI 응답 파싱 오류: ' + String(e) }, 500)
+  }
+  const rawText = aiJson.content?.[0]?.text || ''
+
+  // GAMES / FOLLOWUP 파싱
+  const gamesMatch = rawText.match(/GAMES:\[([^\]]*)\]/)
+  const followupMatch = rawText.match(/FOLLOWUP:\[([^\]]*)\]/)
+  const suggestedGames: string[] = gamesMatch
+    ? gamesMatch[1].replace(/"/g, '').split(',').map(s => s.trim()).filter(Boolean)
+    : ['mood', 'garden']
+  const followUpTests: string[] = followupMatch
+    ? followupMatch[1].replace(/"/g, '').split(',').map(s => s.trim()).filter(Boolean)
+    : []
+
+  // GAMES:/FOLLOWUP: 줄 제거한 순수 분석 텍스트
+  const analysis = rawText.replace(/GAMES:\[[^\]]*\]/g, '').replace(/FOLLOWUP:\[[^\]]*\]/g, '').trim()
+
+  // test_history 저장 (외부 + AI 분석 포함)
+  try {
+    await DB.prepare(
+      `INSERT INTO test_history (user_id, test_type, lang, credits_spent, ai_analysis, performed_at, source) VALUES (?, ?, 'ko', 0, ?, CURRENT_TIMESTAMP, 'external')`
+    ).bind(userId, testType.toUpperCase().slice(0, 20), analysis.slice(0, 1000)).run()
+  } catch {
+    // source 컬럼 없는 구버전 스키마 fallback
+    await DB.prepare(
+      `INSERT INTO test_history (user_id, test_type, lang, credits_spent, ai_analysis, performed_at) VALUES (?, ?, 'ko', 0, ?, CURRENT_TIMESTAMP)`
+    ).bind(userId, testType.toUpperCase().slice(0, 20), analysis.slice(0, 1000)).run()
+  }
+
+  return c.json({ success: true, analysis, suggestedGames, followUpTests })
+})
+
+// ── 장기 트렌드 예측 ─────────────────────────────────────────
+app.get('/api/test/trend-prediction', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+
+  const testType = c.req.query('type') || 'PHQ9'
+  const rows = await DB.prepare(
+    `SELECT score, performed_at FROM test_history WHERE user_id=? AND test_type=? AND score IS NOT NULL ORDER BY performed_at DESC LIMIT 10`
+  ).bind(userId, testType).all<{ score: number; performed_at: string }>()
+  const data = (rows.results || []).reverse() // 오래된 순
+  if (data.length < 3) return c.json({ success: false, error: '예측에는 최소 3회 이상의 검사 이력이 필요합니다.', count: data.length })
+
+  // 선형 회귀로 다음 점수 예측
+  const n = data.length
+  const xs = data.map((_, i) => i)
+  const ys = data.map(d => d.score)
+  const xMean = xs.reduce((a, b) => a + b, 0) / n
+  const yMean = ys.reduce((a, b) => a + b, 0) / n
+  const slope = xs.reduce((a, x, i) => a + (x - xMean) * (ys[i] - yMean), 0) /
+                xs.reduce((a, x) => a + (x - xMean) ** 2, 0)
+  const intercept = yMean - slope * xMean
+  const predictedRaw = Math.round(intercept + slope * n)
+  const predicted = Math.max(0, Math.min(100, predictedRaw))
+
+  const latest = ys[ys.length - 1]
+  const trend = slope > 0.5 ? '악화' : slope < -0.5 ? '호전' : '안정'
+  const diff = predicted - latest
+  const diffText = diff > 0 ? `+${diff}점 예상` : diff < 0 ? `${diff}점 예상` : '현 수준 유지'
+
+  // AI 코멘트 생성
+  const apiKey = await getAnthropicKey(DB, c.env)
+  let comment = ''
+  if (apiKey) {
+    const prompt = `사용자의 ${testType} 검사 점수 추이: ${data.map(d => `${d.performed_at.slice(0,10)} ${d.score}점`).join(', ')}. 트렌드: ${trend}. 예측 점수: ${predicted}점. 이 정보를 바탕으로 비임상적이고 따뜻한 응원 메시지를 2문장으로 작성하세요. 진단 표현 금지.`
+    try {
+      const aiRes = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
+        method: 'POST',
+        headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 150, messages: [{ role: 'user', content: prompt }] })
+      })
+      const aiData = await aiRes.json() as any
+      comment = aiData?.content?.[0]?.text || ''
+    } catch { /* 실패 시 코멘트 없이 반환 */ }
+  }
+
+  return c.json({
+    success: true,
+    testType, data,
+    predicted, trend, diffText,
+    slope: parseFloat(slope.toFixed(2)),
+    comment,
+  })
+})
+
+// ── GET /api/test/cbt-plan ────────────────────────────────
+// PHQ9/GAD7/BURNOUT 점수 기반 맞춤형 8주 자기관리 플랜 생성 (7일 KV 캐시)
+app.get('/api/test/cbt-plan', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+
+  // 최근 검사 점수 수집 (test_type별 최신 score — MAX(performed_at)이 SELECT에 있으면 SQLite가 해당 행의 score 반환)
+  const scores = await DB.prepare(
+    `SELECT test_type, score, MAX(performed_at) as latest
+     FROM test_history
+     WHERE user_id=? AND test_type IN ('PHQ9','GAD7','BURNOUT','DASS21')
+       AND score IS NOT NULL
+     GROUP BY test_type`
+  ).bind(userId).all<{ test_type: string; score: number }>()
+
+  if (!scores.results.length) {
+    return c.json({ success: false, error: '검사 이력이 없습니다. 먼저 PHQ-9 또는 GAD-7 검사를 수행해 주세요.' })
+  }
+
+  const scoreMap: Record<string, number> = {}
+  for (const r of scores.results) scoreMap[r.test_type] = r.score
+
+  const cacheKey = `cbt_plan:${userId}`
+  const todayKST = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10)
+
+  // 7일 캐시 확인
+  const cached = await KV.get(cacheKey, 'json') as { plan: unknown[]; summary: string; scores: Record<string, number>; generatedAt: string } | null
+  if (cached && cached.generatedAt >= new Date(Date.now() - 7 * 86400 * 1000).toISOString().slice(0, 10)) {
+    return c.json({ success: true, ...cached, cached: true })
+  }
+
+  const apiKey = await getAnthropicKey(DB, c.env)
+  if (!apiKey) return c.json({ success: false, error: 'AI 키 미설정' }, 500)
+
+  const scoreDesc = Object.entries(scoreMap).map(([t, s]) => `${t} ${s}점`).join(', ')
+  const prompt = `사용자의 심리검사 점수: ${scoreDesc}.
+
+이 점수를 바탕으로 사용자에게 맞춤형 8주 자기관리 플랜을 JSON 형식으로 작성하세요.
+각 주차는 다음 필드를 포함해야 합니다:
+- week: 주차 번호 (1~8)
+- title: 이번 주 핵심 주제 (한글 10자 이내)
+- theme: 구체적 테마 설명 (20자 이내)
+- practice: 매일 실천할 활동 1가지 (30자 이내)
+- game: 추천 게임 ID (mood/garden/efmt/gratitude/burnout/focus/worry/tree 중 하나)
+- tip: 따뜻한 한줄 응원 (30자 이내)
+
+그리고 summary 필드: 이 플랜의 전체 목표를 2문장으로 설명 (임상 표현 금지, 비임상적 언어 사용).
+
+JSON만 반환하세요. 형식:
+{"summary":"...","plan":[{"week":1,"title":"...","theme":"...","practice":"...","game":"...","tip":"..."},...]}`
+
+  try {
+    const aiRes = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 2000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    })
+    if (!aiRes.ok) return c.json({ success: false, error: `AI 오류 (${aiRes.status})` }, 502)
+    const aiData = await aiRes.json() as any
+    const raw = (aiData?.content?.[0]?.text || '').trim()
+
+    // JSON 파싱 (마크다운 코드블록 감싸짐 처리)
+    let jsonStr: string
+    if (raw.startsWith('{')) {
+      jsonStr = raw
+    } else {
+      const si = raw.indexOf('{')
+      const ei = raw.lastIndexOf('}')
+      if (si === -1 || ei === -1) return c.json({ success: false, error: 'AI 응답에서 JSON을 찾을 수 없습니다. 잠시 후 다시 시도해 주세요.' }, 502)
+      jsonStr = raw.slice(si, ei + 1)
+    }
+    const parsed = JSON.parse(jsonStr) as { summary: string; plan: unknown[] }
+
+    const result = { plan: parsed.plan, summary: parsed.summary, scores: scoreMap, generatedAt: todayKST }
+    await KV.put(cacheKey, JSON.stringify(result), { expirationTtl: 7 * 86400 })
+
+    return c.json({ success: true, ...result, cached: false })
+  } catch (e: unknown) {
+    return c.json({ success: false, error: (e as Error)?.message || '플랜 생성 실패' }, 500)
+  }
+})
+
+// 대화 기억 조회
+app.get('/api/ai-chat/memory', async (c) => {
+  const { KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+  const memStore = await KV.get(`chat_mem:${userId}`, 'json') as Record<string, { date: string; points: string[] }> | null
+  if (!memStore) return c.json({ success: true, memories: {} })
+  return c.json({ success: true, memories: Object.fromEntries(
+    Object.entries(memStore).map(([k, v]) => [k, { date: v.date, count: v.points.length }])
+  )})
+})
+
+// 대화 기억 삭제
+app.delete('/api/ai-chat/memory', async (c) => {
+  const { KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+  await KV.delete(`chat_mem:${userId}`)
+  return c.json({ success: true })
+})
+
 app.post('/api/ai-chat', async (c) => {
   const { DB, KV } = c.env
   const userId = await getAuthUserId(c.req.raw, KV)
@@ -1090,8 +1620,48 @@ app.post('/api/ai-chat', async (c) => {
     }
   }
 
-  const { messages, testContext } = await c.req.json()
+  const { messages, testContext, dailyContext } = await c.req.json()
   const { testType, counselingType = 'psychological', summary, lang = 'ko' } = testContext ?? {}
+  const dailyCtxPart = dailyContext ? `\n\n[사용자 최근 활동 데이터]\n${dailyContext}` : ''
+
+  // ── 대화 기억 로드 (이전 세션 맥락 주입) ────────────────────
+  const memKey = userId ? `chat_mem:${userId}` : null
+  let memoryContext = ''
+  let hasMemory = false
+  if (memKey) {
+    const memStore = await KV.get(memKey, 'json') as Record<string, { date: string; points: string[] }> | null
+    const typeKey = testType || 'GENERAL'
+    const mem = memStore?.[typeKey]
+    if (mem?.points?.length) {
+      hasMemory = true
+      memoryContext = `\n\n[이전 상담 기억 (${mem.date})]\n${mem.points.map((p: string) => `・${p}`).join('\n')}`
+    }
+    // 현재 대화 저장 (4번 이상 주고받은 경우 — 이 요청 이전의 히스토리 기반)
+    if (messages.length >= 4) {
+      const userPts = (messages as Array<{role:string;content:string}>)
+        .filter(m => m.role === 'user').slice(-3)
+        .map(m => String(m.content).slice(0, 100))
+      const updated = { ...(memStore || {}), [typeKey]: { date: today, points: userPts } }
+      const saveP = KV.put(memKey, JSON.stringify(updated), { expirationTtl: 30 * 86400 })
+      try { c.executionCtx.waitUntil(saveP) } catch { saveP.catch(() => {}) }
+    }
+  }
+
+  // 3회 이상 측정된 검사 유형의 트렌드 맥락 생성 (로그인 사용자만)
+  let trendContext = ''
+  if (userId && testType && testType !== 'GENERAL') {
+    const trendRows = await DB.prepare(
+      `SELECT score, performed_at FROM test_history WHERE user_id=? AND test_type=? AND score IS NOT NULL ORDER BY performed_at DESC LIMIT 5`
+    ).bind(userId, testType).all<{ score: number; performed_at: string }>()
+    const rows = trendRows.results || []
+    if (rows.length >= 3) {
+      const oldest = rows[rows.length - 1]
+      const latest = rows[0]
+      const diff = latest.score - oldest.score
+      const trend = diff > 0 ? `+${diff}점 악화` : diff < 0 ? `${diff}점 호전` : '변화 없음'
+      trendContext = `\n\n[누적 트렌드 - ${testType} 최근 ${rows.length}회]: ${rows.map(r => `${r.performed_at.slice(0,10)} ${r.score}점`).reverse().join(' → ')} (${trend})`
+    }
+  }
 
   const apiKey = await getAnthropicKey(DB, c.env)
   if (!apiKey) {
@@ -1103,13 +1673,14 @@ app.post('/api/ai-chat', async (c) => {
     ? `당신은 기독교 상담 전문가입니다. 따뜻하고 공감적인 태도로 상담하세요.
 
 검사 결과 맥락:
-${summary ?? '검사 결과 없음 — 일반적인 마음 돌봄 상담으로 진행하세요.'}
+${summary ?? '검사 결과 없음 — 일반적인 마음 돌봄 상담으로 진행하세요.'}${trendContext}${memoryContext}${dailyCtxPart}
 
 상담 원칙:
 - 진단명이나 병명을 절대 단정하지 마세요
 - "의료적 진단이 필요합니다"는 표현 대신 "전문가와 이야기 나눠보세요"로 표현하세요
 - 성경 말씀은 강요하지 말고 위로의 맥락에서 자연스럽게 인용하세요
 - 약물 복용이나 처방은 절대 언급하지 마세요
+- 트렌드 데이터가 있으면 변화 추이를 자연스럽게 언급하고 격려하세요
 
 답변 형식 (매번 이 순서로 작성, 총 350자 이내):
 **공감** - 감정을 1~2문장으로 따뜻하게 반영
@@ -1118,13 +1689,14 @@ ${summary ?? '검사 결과 없음 — 일반적인 마음 돌봄 상담으로 �
     : `당신은 따뜻하고 전문적인 마음 돌봄 상담사입니다.
 
 검사 결과 맥락:
-${summary ?? '검사 결과 없음 — 일반적인 마음 돌봄 상담으로 진행하세요.'}
+${summary ?? '검사 결과 없음 — 일반적인 마음 돌봄 상담으로 진행하세요.'}${trendContext}${memoryContext}${dailyCtxPart}
 
 상담 원칙:
 - 진단명이나 병명을 절대 단정하지 마세요 (예: "우울증입니다" 금지)
 - "의료적 진단이 필요합니다" 대신 "전문가와 이야기 나눠보시면 도움이 될 것 같아요"로 표현하세요
 - 약물 복용이나 처방은 절대 언급하지 마세요
 - 사용자가 위기 신호(자해, 죽고 싶다 등)를 보이면 즉시 "자살예방상담전화 1393"을 안내하세요
+- 트렌드 데이터가 있으면 변화 흐름을 자연스럽게 언급하고 격려하세요
 
 답변 형식 (매번 이 순서로 작성, 총 350자 이내):
 **공감** - 감정을 1~2문장으로 따뜻하게 반영
@@ -1757,8 +2329,13 @@ app.post('/api/credits/prepare-charge', async (c) => {
   if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
   const { packageKey, pg } = await c.req.json()
   const pkg = PACKAGES[packageKey]; if (!pkg) return c.json({ success: false, error: '잘못된 패키지' }, 400)
-  const r = await DB.prepare('INSERT INTO credit_charges (user_id,package_key,credits,amount,currency,pg) VALUES (?,?,?,?,?,?)')
-    .bind(userId, packageKey, pkg.credits, pkg.amount, pg === 'stripe' ? 'USD' : 'KRW', pg).run()
+
+  // 유저의 유입 파트너 코드 승계
+  const userRow = await DB.prepare('SELECT partner_code FROM users WHERE id=?').bind(userId).first<{ partner_code: string | null }>()
+  const partnerCode = userRow?.partner_code ?? null
+
+  const r = await DB.prepare('INSERT INTO credit_charges (user_id,package_key,credits,amount,currency,pg,partner_code) VALUES (?,?,?,?,?,?,?)')
+    .bind(userId, packageKey, pkg.credits, pkg.amount, pg === 'stripe' ? 'USD' : 'KRW', pg, partnerCode).run()
   return c.json({ success: true, data: { chargeId: r.meta.last_row_id, credits: pkg.credits, amount: pkg.amount } })
 })
 
@@ -2283,6 +2860,26 @@ app.get('/api/admin/test-ai', async (c) => {
 </body></html>`)
 })
 
+// ── TWA 도메인 인증 (Android 앱 연동) ─────────────────────
+// SHA256 fingerprint는 Play Console 앱 서명 설정에서 확인 후 업데이트
+app.get('/.well-known/assetlinks.json', (c) => {
+  const links = [
+    {
+      relation: ['delegate_permission/common.handle_all_urls'],
+      target: {
+        namespace: 'android_app',
+        package_name: 'com.maumful.app',
+        sha256_cert_fingerprints: [
+          // PWABuilder로 생성한 키스토어의 SHA256 fingerprint로 교체 필요
+          // Play Console → 앱 서명 → 앱 서명 키 인증서 → SHA-256 인증서 지문
+          'PLACEHOLDER_REPLACE_WITH_ACTUAL_SHA256_FINGERPRINT'
+        ]
+      }
+    }
+  ]
+  return c.json(links, 200, { 'Content-Type': 'application/json' })
+})
+
 // ============================================================
 // 메인 페이지
 // ============================================================
@@ -2470,6 +3067,44 @@ app.get('/api/counseling/centers', async (c) => {
   return c.json({ success: true, data: rows.results })
 })
 
+// ── GET /api/nearby-counseling ────────────────────────────
+app.get('/api/nearby-counseling', async (c) => {
+  const lat = c.req.query('lat')
+  const lng = c.req.query('lng')
+  const radius = Number(c.req.query('radius') || 3000)
+  if (!lat || !lng) return c.json({ error: 'Missing location' }, 400)
+  const key = c.env.KAKAO_REST_API_KEY
+  if (!key) return c.json({ error: 'Kakao key not configured' }, 500)
+  const { DB } = c.env
+
+  const [affiliatedRows] = await Promise.all([
+    DB.prepare(
+      `SELECT co.id, co.name, co.title, co.photo_emoji, co.fee_per_session, co.avg_rating, ce.name as center_name
+       FROM counselors co LEFT JOIN counseling_centers ce ON co.center_id=ce.id
+       WHERE co.status='active' ORDER BY co.avg_rating DESC LIMIT 5`
+    ).all<any>(),
+  ])
+
+  const queries = ['정신건강의학과', '심리상담센터', '정신건강복지센터']
+  const seen = new Set<string>()
+  const external: any[] = []
+  for (const query of queries) {
+    try {
+      const res = await fetch(
+        `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query)}&x=${lng}&y=${lat}&radius=${radius}&sort=distance&size=5`,
+        { headers: { Authorization: `KakaoAK ${key}` } }
+      )
+      if (!res.ok) continue
+      const data: any = await res.json()
+      for (const p of (data.documents || [])) {
+        if (!seen.has(p.id)) { seen.add(p.id); external.push(p) }
+      }
+    } catch {}
+  }
+  external.sort((a, b) => Number(a.distance || 0) - Number(b.distance || 0))
+  return c.json({ affiliated: affiliatedRows.results || [], external: external.slice(0, 15) })
+})
+
 // ── GET /api/counseling/counselors ────────────────────────
 app.get('/api/counseling/counselors', async (c) => {
   const { DB } = c.env
@@ -2534,8 +3169,10 @@ app.post('/api/counseling/appointments/prepare', async (c) => {
     scheduledAt: string   // ISO 날짜+시간
     sessionType: string
     userMemo?: string
+    shareTestResult?: boolean
+    testSummary?: string
   }
-  const { counselorId, scheduledAt, sessionType, userMemo } = body
+  const { counselorId, scheduledAt, sessionType, userMemo, shareTestResult, testSummary } = body
 
   const counselor = await DB.prepare(
     'SELECT co.*,ce.name as center_name,ce.commission_rate FROM counselors co JOIN counseling_centers ce ON co.center_id=ce.id WHERE co.id=?'
@@ -2559,11 +3196,28 @@ app.post('/api/counseling/appointments/prepare', async (c) => {
   const videoRoomId  = sessionType === 'video' ? genJitsiRoom() : null
   const videoRoomUrl = videoRoomId ? `https://meet.jit.si/${videoRoomId}` : null
 
+  // 검사 결과 공유 동의 시 최근 검사 요약 조회
+  let finalTestSummary: string | null = null
+  if (shareTestResult) {
+    if (testSummary) {
+      finalTestSummary = testSummary
+    } else {
+      const recentTests = await DB.prepare(
+        `SELECT test_type, score, ai_analysis, performed_at FROM test_history WHERE user_id=? AND score IS NOT NULL ORDER BY performed_at DESC LIMIT 3`
+      ).bind(userId).all<{ test_type: string; score: number; ai_analysis: string | null; performed_at: string }>()
+      if (recentTests.results && recentTests.results.length > 0) {
+        finalTestSummary = recentTests.results.map(r =>
+          `${r.test_type} (${r.performed_at.slice(0,10)}): ${r.score}점${r.ai_analysis ? ' — ' + r.ai_analysis.slice(0,80) : ''}`
+        ).join('\n')
+      }
+    }
+  }
+
   // 예약 레코드 생성 (pending)
   const r = await DB.prepare(`
-    INSERT INTO appointments (user_id,counselor_id,center_id,scheduled_at,duration_min,session_type,status,fee_amount,video_room_id,video_room_url,user_memo)
-    VALUES (?,?,?,?,?,?,'pending',?,?,?,?)
-  `).bind(userId, counselorId, counselor.center_id, scheduledAt, counselor.session_minutes, sessionType, counselor.fee_per_session, videoRoomId, videoRoomUrl, userMemo || null).run()
+    INSERT INTO appointments (user_id,counselor_id,center_id,scheduled_at,duration_min,session_type,status,fee_amount,video_room_id,video_room_url,user_memo,test_summary)
+    VALUES (?,?,?,?,?,?,'pending',?,?,?,?,?)
+  `).bind(userId, counselorId, counselor.center_id, scheduledAt, counselor.session_minutes, sessionType, counselor.fee_per_session, videoRoomId, videoRoomUrl, userMemo || null, finalTestSummary).run()
 
   const appointmentId = r.meta.last_row_id as number
   const orderId = `appt_${appointmentId}_${Date.now()}`
@@ -3392,6 +4046,192 @@ async function handleScheduled(env: Bindings) {
     } catch (e) { console.error('[Cron] 오류:', e) }
   }
 }
+
+// ============================================================
+// 어드민 파트너 채널 관리 API
+// ============================================================
+
+// 파트너 목록 조회
+app.get('/api/admin/partners', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  const rows = await DB.prepare(`
+    SELECT p.code, p.name, p.revenue_share_rate, p.welcome_message,
+           p.featured_tests, p.primary_color, p.contact_email, p.is_active, p.created_at,
+           COUNT(DISTINCT u.id)  AS total_users,
+           COUNT(DISTINCT cc.id) AS total_charges,
+           COALESCE(SUM(cc.amount), 0) AS total_revenue
+    FROM partners p
+    LEFT JOIN users u ON u.partner_code = p.code
+    LEFT JOIN credit_charges cc ON cc.partner_code = p.code AND cc.status = 'completed'
+    GROUP BY p.code
+    ORDER BY p.created_at DESC
+  `).all()
+
+  return c.json({ success: true, data: rows.results })
+})
+
+// 파트너 등록
+app.post('/api/admin/partners', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  const body = await c.req.json() as Record<string, unknown>
+  const { code, name, sso_secret, revenue_share_rate, welcome_message, featured_tests, primary_color, logo_url, contact_email } = body
+
+  if (!code || !name) return c.json({ success: false, error: 'code, name 필수' }, 400)
+  const codeStr = String(code).toUpperCase().replace(/[^A-Z0-9_]/g, '')
+  if (!codeStr) return c.json({ success: false, error: '코드는 영문 대문자/숫자/언더스코어만 허용' }, 400)
+
+  const existing = await DB.prepare("SELECT code FROM partners WHERE code=?").bind(codeStr).first()
+  if (existing) return c.json({ success: false, error: '이미 존재하는 파트너 코드' }, 409)
+
+  await DB.prepare(`
+    INSERT INTO partners (code, name, sso_secret, revenue_share_rate, welcome_message, featured_tests, primary_color, logo_url, contact_email)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(
+    codeStr, String(name),
+    sso_secret ? String(sso_secret) : null,
+    Number(revenue_share_rate ?? 0),
+    welcome_message ? String(welcome_message) : null,
+    featured_tests  ? String(featured_tests)  : null,
+    primary_color   ? String(primary_color)   : null,
+    logo_url        ? String(logo_url)        : null,
+    contact_email   ? String(contact_email)   : null,
+  ).run()
+
+  return c.json({ success: true, data: { code: codeStr } }, 201)
+})
+
+// 파트너 수정
+app.patch('/api/admin/partners/:code', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  const code = c.req.param('code').toUpperCase()
+  const body = await c.req.json() as Record<string, unknown>
+  const allowed = ['name','sso_secret','revenue_share_rate','welcome_message','featured_tests','primary_color','logo_url','contact_email','is_active']
+  const sets: string[] = []
+  const vals: unknown[] = []
+
+  for (const k of allowed) {
+    if (body[k] !== undefined) { sets.push(`${k}=?`); vals.push(body[k] ?? null); }
+  }
+  if (sets.length === 0) return c.json({ success: false, error: '변경 사항 없음' }, 400)
+
+  vals.push(code)
+  await DB.prepare(`UPDATE partners SET ${sets.join(',')} WHERE code=?`).bind(...vals).run()
+  return c.json({ success: true })
+})
+
+// 파트너별 통계 (가입자, 결제, 매출)
+app.get('/api/admin/partner-stats', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  const { code, from, to } = c.req.query() as Record<string, string>
+  if (!code) return c.json({ success: false, error: 'code 파라미터 필수' }, 400)
+
+  const fromDate = from ?? new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)
+  const toDate   = to   ?? new Date().toISOString().slice(0, 10)
+
+  const [userStats, chargeStats, dailySignups, dailyRevenue] = await Promise.all([
+    DB.prepare(`
+      SELECT COUNT(*) AS total, SUM(CASE WHEN date(created_at) >= ? AND date(created_at) <= ? THEN 1 ELSE 0 END) AS period
+      FROM users WHERE partner_code=?
+    `).bind(fromDate, toDate, code).first<{ total: number; period: number }>(),
+
+    DB.prepare(`
+      SELECT COUNT(*) AS total_charges,
+             COALESCE(SUM(amount), 0) AS total_revenue,
+             COALESCE(SUM(CASE WHEN date(created_at) >= ? AND date(created_at) <= ? THEN amount ELSE 0 END), 0) AS period_revenue
+      FROM credit_charges WHERE partner_code=? AND status='completed'
+    `).bind(fromDate, toDate, code).first<{ total_charges: number; total_revenue: number; period_revenue: number }>(),
+
+    DB.prepare(`
+      SELECT date(created_at) AS day, COUNT(*) AS cnt
+      FROM users WHERE partner_code=? AND date(created_at) >= ? AND date(created_at) <= ?
+      GROUP BY day ORDER BY day
+    `).bind(code, fromDate, toDate).all(),
+
+    DB.prepare(`
+      SELECT date(created_at) AS day, COALESCE(SUM(amount),0) AS revenue, COUNT(*) AS cnt
+      FROM credit_charges WHERE partner_code=? AND status='completed'
+        AND date(created_at) >= ? AND date(created_at) <= ?
+      GROUP BY day ORDER BY day
+    `).bind(code, fromDate, toDate).all(),
+  ])
+
+  const partner = await DB.prepare("SELECT name, revenue_share_rate FROM partners WHERE code=?")
+    .bind(code).first<{ name: string; revenue_share_rate: number }>()
+
+  const periodRevenue = chargeStats?.period_revenue ?? 0
+  const shareRate = partner?.revenue_share_rate ?? 0
+
+  return c.json({
+    success: true,
+    data: {
+      partner: { code, name: partner?.name ?? code, revenue_share_rate: shareRate },
+      period: { from: fromDate, to: toDate },
+      users: { total: userStats?.total ?? 0, period: userStats?.period ?? 0 },
+      charges: { total_charges: chargeStats?.total_charges ?? 0, total_revenue: chargeStats?.total_revenue ?? 0, period_revenue: periodRevenue },
+      settlement: { period_revenue: periodRevenue, share_amount: Math.floor(periodRevenue * shareRate) },
+      daily: { signups: dailySignups.results, revenue: dailyRevenue.results },
+    },
+  })
+})
+
+// 파트너 정산 리포트 (월별)
+app.get('/api/admin/partner-settlement', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  const { code, month } = c.req.query() as Record<string, string>
+  if (!code || !month) return c.json({ success: false, error: 'code, month 파라미터 필수 (month: YYYY-MM)' }, 400)
+
+  const partner = await DB.prepare("SELECT code, name, revenue_share_rate, contact_email FROM partners WHERE code=?")
+    .bind(code.toUpperCase()).first<{ code: string; name: string; revenue_share_rate: number; contact_email: string | null }>()
+  if (!partner) return c.json({ success: false, error: '파트너를 찾을 수 없습니다.' }, 404)
+
+  const fromDate = `${month}-01`
+  const toDate   = new Date(new Date(fromDate).getFullYear(), new Date(fromDate).getMonth() + 1, 0).toISOString().slice(0, 10)
+
+  const [newUsers, charges] = await Promise.all([
+    DB.prepare(`
+      SELECT COUNT(*) AS cnt FROM users
+      WHERE partner_code=? AND date(created_at) >= ? AND date(created_at) <= ?
+    `).bind(code.toUpperCase(), fromDate, toDate).first<{ cnt: number }>(),
+
+    DB.prepare(`
+      SELECT COUNT(*) AS cnt, COALESCE(SUM(amount),0) AS total
+      FROM credit_charges
+      WHERE partner_code=? AND status='completed' AND date(created_at) >= ? AND date(created_at) <= ?
+    `).bind(code.toUpperCase(), fromDate, toDate).first<{ cnt: number; total: number }>(),
+  ])
+
+  const totalRevenue = charges?.total ?? 0
+  const shareAmount  = Math.floor(totalRevenue * partner.revenue_share_rate)
+
+  return c.json({
+    success: true,
+    data: {
+      partner: { code: partner.code, name: partner.name, contact_email: partner.contact_email },
+      month,
+      new_users: newUsers?.cnt ?? 0,
+      paid_users: charges?.cnt ?? 0,
+      total_revenue: totalRevenue,
+      share_rate: partner.revenue_share_rate,
+      share_amount: shareAmount,
+      maumful_revenue: totalRevenue - shareAmount,
+    },
+  })
+})
 
 // ── POST /api/user/cookie-consent ─────────────────────────
 // 마케팅 쿠키 동의/거부를 KV에 저장 (LocalStorage 보완)
