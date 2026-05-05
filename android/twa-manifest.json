@@ -24,6 +24,7 @@
     "keypassword": "KEYSTORE_KEY_PASSWORD_PLACEHOLDER",
     "storepassword": "KEYSTORE_PASSWORD_PLACEHOLDER"
   },
+  "splashScreenFadeOutDuration": 300,
   "enableNotifications": true,
   "enableSiteSettingsShortcut": true,
   "isChromeOSOnly": false,
