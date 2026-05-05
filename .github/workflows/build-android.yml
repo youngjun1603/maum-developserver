@@ -15,6 +15,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
     steps:
       - uses: actions/checkout@v4
 
@@ -27,8 +30,22 @@ jobs:
         with:
           node-version: '20'
 
+      # ── Android SDK 라이선스 자동 동의 ───────────────────────
+      - name: Accept Android SDK licenses
+        run: |
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || true
+          yes | $ANDROID_HOME/tools/bin/sdkmanager --licenses 2>/dev/null || true
+
       - name: Install Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
+
+      # ── Bubblewrap이 시스템 SDK/JDK를 사용하도록 설정 ────────
+      - name: Configure Bubblewrap
+        run: |
+          mkdir -p ~/.bubblewrap
+          echo "{\"jdkPath\":\"$JAVA_HOME\",\"androidSdkPath\":\"$ANDROID_HOME\"}" > ~/.bubblewrap/config.json
+          echo "Bubblewrap config:"
+          cat ~/.bubblewrap/config.json
 
       # ── 키스토어 존재 여부 확인 ──────────────────────────────
       - name: Check keystore secret
@@ -62,7 +79,7 @@ jobs:
             -keyalg RSA -keysize 2048 -validity 10000 \
             -storepass "$STORE_PASS" \
             -keypass "$KEY_PASS" \
-            -dname "CN=마음풀, OU=App, O=MaumfulService, L=Seoul, S=Seoul, C=KR"
+            -dname "CN=maumful, OU=App, O=MaumfulService, L=Seoul, S=Seoul, C=KR"
 
           echo ""
           echo "========================================================"
