@@ -1839,3 +1839,73 @@ function speakText(text, msgId) {
 - 프론트: `CampaignSection` 컴포넌트 — 이미 구현됨
 - DB: `game_campaign_progress` 테이블 + 인덱스 (0005_campaign.sql)
 - **프로덕션 마이그레이션 적용 완료** (2026-05-05, maumful-db 테이블 수 28개로 확인)
+
+---
+
+## 마음풀 Android TWA 앱 (2026-05-05)
+
+### 개요
+
+Bubblewrap CLI로 `maumful.com`을 TWA(Trusted Web Activity)로 패키징한 Android 앱.
+
+- 패키지명: `com.maumful.app`
+- 빌드 도구: `@bubblewrap/cli` + `@bubblewrap/core`
+- 빌드 자동화: `.github/workflows/build-android.yml` (GitHub Actions)
+
+### 키스토어
+
+| 항목 | 값 |
+|---|---|
+| 파일 | `android-keystore.jks` (GitHub Secret `KEYSTORE_BASE64`에 저장) |
+| alias | `maumful` |
+| 비밀번호 | GitHub Secrets `KEYSTORE_PASSWORD` / `KEYSTORE_KEY_PASSWORD` |
+| SHA256 핑거프린트 | `1D:7C:67:6D:5A:78:38:E8:CB:F0:1E:7F:7F:A6:96:62:D0:D2:05:24:70:BA:4E:BF:6D:E9:E7:2C:92:41:EE:99` |
+
+키스토어는 GitHub Secrets에 저장되어 있으므로 재빌드 시 자동 복원됨.
+
+### GitHub Secrets (youngjun1603/maum-developserver)
+
+| Secret | 설명 |
+|---|---|
+| `KEYSTORE_BASE64` | 키스토어 파일 base64 인코딩 |
+| `KEYSTORE_PASSWORD` | 키스토어 비밀번호 |
+| `KEYSTORE_KEY_PASSWORD` | 키 비밀번호 |
+
+### assetlinks.json
+
+`maumful-main/src/index.tsx` — `GET /.well-known/assetlinks.json` 엔드포인트에 SHA256 등록 완료.
+
+### 🔴 Play Store 등록 시 주의
+
+Play Console에서 **Google이 앱 서명을 관리**하도록 선택하면, Google이 별도의 앱 서명 키를 생성한다.  
+이 경우 Play Console → 앱 서명 → **앱 서명 키 인증서 SHA-256** 값으로 `assetlinks.json`을 반드시 재업데이트해야 TWA 인증이 정상 작동한다.
+
+```bash
+# assetlinks.json 재업데이트 후 재배포
+cd maumful-main && npx wrangler deploy
+```
+
+### 빌드 방법
+
+```
+GitHub → Actions → Build Android APK (TWA) → Run workflow
+  version: 1.0.x
+  version_code: (이전 코드 + 1)
+```
+
+빌드 산출물:
+- `app-release-signed.apk` — 사이드로딩/테스트용
+- `app-release-bundle.aab` — Play Store 제출용 (필수)
+
+### 핵심 CI 설계 (재발 방지)
+
+**왜 `bubblewrap update` 대신 `@bubblewrap/core` 직접 호출하나?**  
+`bubblewrap update`는 CI에서 PWA 네트워크 검증 + 대화형 프롬프트로 무한 대기함.  
+`@bubblewrap/core`의 `TwaGenerator.createTwaProject()`를 직접 호출하면 프롬프트 없이 프로젝트 파일 생성 가능.
+
+**왜 `expect` 도구를 사용하나?**  
+`bubblewrap build`의 키스토어 비밀번호 프롬프트는 inquirer.js가 `/dev/tty`를 직접 열어서 `echo "pass" |` 파이프가 통하지 않음.  
+`expect`가 실제 TTY를 에뮬레이션해야만 비밀번호 입력 처리 가능.
+
+**`twa-manifest.json`에 `splashScreenFadeOutDuration` 필수**  
+누락 시 생성된 `build.gradle`에서 `splashScreenFadeOutDuration: ,` 구문 오류 발생 → 빌드 실패.
