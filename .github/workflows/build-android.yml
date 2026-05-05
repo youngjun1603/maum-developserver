@@ -171,7 +171,7 @@ jobs:
             const core = require(corePath);
             console.log('Core exports:', Object.keys(core).join(', '));
 
-            const { TwaManifest, AndroidProject } = core;
+            const { TwaManifest, TwaGenerator } = core;
 
             const log = {
               debug: () => {},
@@ -184,9 +184,9 @@ jobs:
             const manifest = await TwaManifest.fromFile('twa-manifest.json');
             console.log('Package:', manifest.packageId, '| Host:', manifest.host);
 
-            console.log('Creating AndroidProject and building files...');
-            const project = new AndroidProject(manifest);
-            await project.build('.', log);
+            console.log('Creating TWA project files...');
+            const generator = new TwaGenerator();
+            await generator.createTwaProject('.', manifest, log);
 
             console.log('Saving checksum...');
             await TwaManifest.saveManifestChecksum('.', manifest);
