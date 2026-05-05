@@ -188,9 +188,6 @@ jobs:
             const generator = new TwaGenerator();
             await generator.createTwaProject('.', manifest, log);
 
-            console.log('Saving checksum...');
-            await TwaManifest.saveManifestChecksum('.', manifest);
-
             // local.properties: Gradle이 Android SDK 경로를 찾을 수 있도록
             const sdkDir = process.env.ANDROID_HOME;
             if (sdkDir) {
