@@ -121,7 +121,7 @@ jobs:
       # ── Bubblewrap 빌드 ─────────────────────────────────────
       - name: Build TWA APK
         working-directory: android
-        run: bubblewrap build --skipPwaValidation
+        run: printf "No\n" | bubblewrap build --skipPwaValidation
 
       # ── 빌드 결과물 업로드 ──────────────────────────────────
       - name: Upload APK artifact

@@ -11,12 +11,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install maumful dependencies
+        working-directory: maumful-main
+        run: npm ci
+
       - name: Deploy maumful
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: maumful-main
+          wranglerVersion: '4.4.0'
           command: deploy
 
   deploy-maumcouple:
@@ -26,10 +35,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install maumcouple dependencies
+        working-directory: package/maumcouple
+        run: npm ci
+
       - name: Deploy maumcouple
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: package/maumcouple
+          wranglerVersion: '4.4.0'
           command: deploy
