@@ -131,14 +131,15 @@ jobs:
 
       # ── Android 프로젝트 파일 생성 ────────────────────────────
       # bubblewrap update: twa-manifest.json → gradlew, app/, gradle/ 등 생성
-      # 체크섬도 함께 생성되므로 이후 build에서 "regenerate?" 프롬프트 안 뜸
+      # --skipPwaValidation: 네트워크 PWA 검증 생략 (CI 환경 무한 대기 방지)
       - name: Generate Android project (bubblewrap update)
         working-directory: android
+        timeout-minutes: 5
         run: |
           expect << 'EXPECT_SCRIPT'
-          set timeout 180
+          set timeout 240
           log_user 1
-          spawn bubblewrap update
+          spawn bubblewrap update --skipPwaValidation
           expect {
             -re {[Yy]/[Nn]} { send "y\r"; exp_continue }
             eof
