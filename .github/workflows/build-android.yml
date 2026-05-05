@@ -35,7 +35,6 @@ jobs:
       - name: Install Android SDK packages
         run: |
           sdkmanager "build-tools;34.0.0" "platforms;android-34" "platform-tools"
-          echo "✅ build-tools: $(ls $ANDROID_HOME/build-tools/)"
           echo "✅ ANDROID_HOME=$ANDROID_HOME"
           echo "✅ JAVA_HOME=$JAVA_HOME"
 
@@ -124,26 +123,44 @@ jobs:
             '.appVersionName = $v | .appVersionCode = $vc | .signingKey.storepassword = $pass | .signingKey.keypassword = $kpass' \
             android/twa-manifest.json > /tmp/twa-updated.json
           cp /tmp/twa-updated.json android/twa-manifest.json
+          echo "✅ twa-manifest.json updated"
+          cat android/twa-manifest.json
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
 
-      # ── 체크섬 파일 생성 (bubblewrap 프롬프트 사전 차단) ────
-      # bubblewrap은 MD5(JSON.stringify(manifest))를 체크섬으로 사용
-      - name: Create twa-manifest checksum
+      # ── Android 프로젝트 파일 생성 ────────────────────────────
+      # bubblewrap update: twa-manifest.json → gradlew, app/, gradle/ 등 생성
+      # 체크섬도 함께 생성되므로 이후 build에서 "regenerate?" 프롬프트 안 뜸
+      - name: Generate Android project (bubblewrap update)
         working-directory: android
         run: |
-          node -e "
-          const crypto = require('crypto');
-          const fs = require('fs');
-          const content = fs.readFileSync('twa-manifest.json', 'utf-8');
-          const manifest = JSON.parse(content);
-          const checksum = crypto.createHash('md5').update(JSON.stringify(manifest)).digest('hex');
-          fs.writeFileSync('twa-manifest.json.checksum', checksum);
-          console.log('Checksum created:', checksum);
-          "
+          expect << 'EXPECT_SCRIPT'
+          set timeout 180
+          log_user 1
+          spawn bubblewrap update
+          expect {
+            -re {[Yy]/[Nn]} { send "y\r"; exp_continue }
+            eof
+          }
+          lassign [wait] _ _ _ rc
+          exit $rc
+          EXPECT_SCRIPT
 
-      # ── Bubblewrap 빌드 (expect로 모든 대화형 프롬프트 자동 응답) ─
+      # ── gradlew 존재 확인 ─────────────────────────────────────
+      - name: Verify Android project files
+        working-directory: android
+        run: |
+          echo "=== android/ 디렉토리 내용 ==="
+          ls -la
+          if [ ! -f gradlew ]; then
+            echo "❌ gradlew not found — bubblewrap update 실패"
+            exit 1
+          fi
+          chmod +x gradlew
+          echo "✅ gradlew 존재 확인"
+
+      # ── Bubblewrap 빌드 ─────────────────────────────────────
       - name: Build TWA APK
         working-directory: android
         env:
@@ -154,16 +171,16 @@ jobs:
           export BUILD_KEY_PASS="${KEYSTORE_KEY_PASSWORD:-maumful_temp_2024}"
 
           expect << 'EXPECT_SCRIPT'
-          set timeout 300
+          set timeout 600
           log_user 1
           set store_pass $env(BUILD_STORE_PASS)
           set key_pass $env(BUILD_KEY_PASS)
           spawn bubblewrap build --skipPwaValidation
           expect {
-            -re {[Yy]/[Nn]}              { send "n\r";          exp_continue }
-            "Key Store:"                  { send "$store_pass\r"; exp_continue }
-            "Password for key"            { send "$key_pass\r";   exp_continue }
-            "Enter key password for"      { send "$key_pass\r";   exp_continue }
+            -re {[Yy]/[Nn]}         { send "n\r";          exp_continue }
+            "Key Store:"             { send "$store_pass\r"; exp_continue }
+            "Password for key"       { send "$key_pass\r";   exp_continue }
+            "Enter key password for" { send "$key_pass\r";   exp_continue }
             eof
           }
           lassign [wait] _ _ _ rc
