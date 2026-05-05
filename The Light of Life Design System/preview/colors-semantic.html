@@ -1,0 +1,23 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 20px; background: var(--paper); font-family: var(--font-sans); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: var(--r-md); background: var(--white); box-shadow: var(--sh-inset-hairline); }
+  .chip { width: 28px; height: 28px; border-radius: 4px; box-shadow: var(--sh-inset-hairline); flex-shrink: 0; }
+  .meta { display: flex; flex-direction: column; gap: 1px; }
+  .name { font-size: 12px; font-weight: 600; color: var(--ink-900); }
+  .var { font-size: 10.5px; color: var(--ink-500); font-family: var(--font-sans); font-feature-settings: "tnum" 1; }
+</style></head>
+<body>
+  <div class="grid">
+    <div class="row"><div class="chip" style="background:#FBF9F4"></div><div class="meta"><span class="name">Background</span><span class="var">--bg · paper</span></div></div>
+    <div class="row"><div class="chip" style="background:#FFFFFF"></div><div class="meta"><span class="name">Elevated surface</span><span class="var">--bg-elev</span></div></div>
+    <div class="row"><div class="chip" style="background:#0F2044"></div><div class="meta"><span class="name">Dark surface</span><span class="var">--bg-dark</span></div></div>
+    <div class="row"><div class="chip" style="background:#0E1320"></div><div class="meta"><span class="name">Foreground 1</span><span class="var">--fg-1 · ink-1000</span></div></div>
+    <div class="row"><div class="chip" style="background:#2A3142"></div><div class="meta"><span class="name">Foreground 2</span><span class="var">--fg-2 · ink-700</span></div></div>
+    <div class="row"><div class="chip" style="background:#5A6379"></div><div class="meta"><span class="name">Foreground 3</span><span class="var">--fg-3 · ink-500</span></div></div>
+    <div class="row"><div class="chip" style="background:#C9A227"></div><div class="meta"><span class="name">Accent</span><span class="var">--accent · gold</span></div></div>
+    <div class="row"><div class="chip" style="background:#6B21A8"></div><div class="meta"><span class="name">Link</span><span class="var">--link · purple-500</span></div></div>
+  </div>
+</body></html>

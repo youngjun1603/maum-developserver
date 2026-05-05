@@ -1,0 +1,26 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 28px; background: var(--paper); display: flex; flex-direction: column; gap: 16px; }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .btn { font-family: var(--font-sans); font-size: 14px; font-weight: 600; padding: 12px 22px; border-radius: var(--r-md); border: none; cursor: pointer; letter-spacing: -0.005em; transition: all var(--dur-2) var(--ease-out); }
+  .btn-primary { background: var(--brand-gold); color: var(--brand-navy-900); box-shadow: var(--sh-gold); }
+  .btn-primary:hover { background: var(--brand-gold-600); }
+  .btn-outline { background: transparent; color: var(--brand-navy); border: 1px solid var(--brand-navy); }
+  .btn-outline:hover { background: rgba(15,32,68,0.06); }
+  .btn-ghost { background: transparent; color: var(--brand-navy); }
+  .btn-ghost:hover { background: rgba(15,32,68,0.06); }
+  .btn-sm { padding: 8px 14px; font-size: 13px; }
+  .btn-lg { padding: 14px 28px; font-size: 15px; }
+</style></head>
+<body>
+  <div class="row">
+    <button class="btn btn-primary">무료로 시작하기</button>
+    <button class="btn btn-outline">기독교 상담사 찾기</button>
+    <button class="btn btn-ghost">자세히 보기 →</button>
+  </div>
+  <div class="row">
+    <button class="btn btn-primary btn-sm">Get started</button>
+    <button class="btn btn-primary btn-lg">교회 단위 도입 문의</button>
+  </div>
+</body></html>

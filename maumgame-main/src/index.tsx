@@ -18,7 +18,7 @@ type GameUser = {
 }
 type GameStatus = {
   user_id: number; garden_level: number; total_exp: number
-  visual_status: string; streak_days: number
+  visual_status: string; streak_days: number; streak_recover: number
   last_played_at: string; unlocked_games: string
 }
 
@@ -71,8 +71,7 @@ async function verifyJWT(token: string, secret: string): Promise<number|null> {
 
 async function getGameUserId(req: Request, env: Bindings): Promise<number|null> {
   // KV에 저장된 secret 우선 사용 (maumful과 동일한 방식)
-  const secret = (env.KV ? await (env.KV as KVNamespace).get('JWT_SECRET') : null) ?? env.JWT_SECRET
-  if (!secret) return null
+  const secret = (env.KV ? await (env.KV as KVNamespace).get('JWT_SECRET') : null) ?? env.JWT_SECRET ?? 'dev_secret_change_in_production'
   const auth = req.headers.get('Authorization') || ''
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : new URL(req.url).searchParams.get('t') || ''
   if (!token) return null
@@ -119,6 +118,14 @@ const HTML = (v: string) => `<!DOCTYPE html>
     @keyframes ripple{0%{transform:scale(1);opacity:.6}100%{transform:scale(2.5);opacity:0}}
     @keyframes grow{from{transform:scaleY(0);transform-origin:bottom}to{transform:scaleY(1);transform-origin:bottom}}
     @keyframes shimmer{0%{opacity:.3}50%{opacity:.7}100%{opacity:.3}}
+    @keyframes skeletonShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+    @keyframes cardEnter{from{opacity:0;transform:translateY(16px) scale(0.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+    @keyframes slideInRight{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+    @keyframes topBarLoad{from{width:0}to{width:100%}}
+    .skeleton-shimmer{background:linear-gradient(90deg,rgba(0,0,0,.06) 25%,rgba(0,0,0,.12) 50%,rgba(0,0,0,.06) 75%);background-size:200% 100%;animation:skeletonShimmer 1.4s ease-in-out infinite}
+    .game-card-enter{animation:cardEnter .4s ease both}
+    .hub-top-bar{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,#4A7C59,#7BA88A);z-index:9999;animation:topBarLoad .8s ease forwards;border-radius:0 3px 3px 0}
+    .touch-active{transform:scale(0.96)!important;transition:transform .1s!important}
   </style>
   <meta http-equiv="Cache-Control" content="no-cache">
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -135,6 +142,8 @@ const HTML = (v: string) => `<!DOCTYPE html>
   <script type="text/babel" src="/static/games/tree.jsx?v=${v}"></script>
   <script type="text/babel" src="/static/games/burnout.jsx?v=${v}"></script>
   <script type="text/babel" src="/static/games/mood.jsx?v=${v}"></script>
+  <script type="text/babel" src="/static/games/focus.jsx?v=${v}"></script>
+  <script type="text/babel" src="/static/games/worry.jsx?v=${v}"></script>
   <script type="text/babel" src="/static/game_hub.jsx?v=${v}"></script>
   <script>
     // URL ?t= 파라미터로 maumful JWT 토큰 수신 (SSO — 별도 로그인 불필요)
@@ -251,6 +260,7 @@ app.get('/api/game/me', async (c) => {
       user: { id: user.id, email: user.email, nickname: user.nickname, credits: user.credits },
       gameStatus: {
         ...status,
+        streak_recover: status?.streak_recover || 0,
         levelInfo: master ? { ...getLevelInfo(9999), currentExp: 9999 } : levelInfo,
         garden_level: master ? 6 : (status?.garden_level || 1),
         unlockedGames: master ? allGames : JSON.parse(status?.unlocked_games || '["garden"]'),
@@ -331,35 +341,41 @@ app.post('/api/game/session', async (c) => {
   const newLevel = getLevelInfo(newExp)
   const leveledUp = newLevel.level > oldLevel.level
 
-  // 연속 출석 계산 — 달력 날짜(UTC) 기준
-  const lastPlayed    = new Date(oldStatus.last_played_at || 0)
-  const now           = new Date()
-  const lastPlayedDay = lastPlayed.toISOString().slice(0, 10)
-  const todayDay      = now.toISOString().slice(0, 10)
+  // 연속 출석 계산 — KST 기준
+  const KST_OFFSET    = 9 * 3600 * 1000
+  const nowKst        = new Date(Date.now() + KST_OFFSET)
+  const lastPlayedKst = new Date((new Date(oldStatus.last_played_at || 0)).getTime() + KST_OFFSET)
+  const todayDay      = nowKst.toISOString().slice(0, 10)
+  const lastPlayedDay = lastPlayedKst.toISOString().slice(0, 10)
 
   let newStreak: number
   if (lastPlayedDay === todayDay) {
-    // 오늘 이미 플레이했으면 streak 변경 없음 (당일 중복 증가 방지)
     newStreak = oldStatus.streak_days || 1
   } else {
-    const diffDays = Math.floor((now.getTime() - lastPlayed.getTime()) / 86400000)
+    const diffDays = Math.round((nowKst.setHours(0,0,0,0) - lastPlayedKst.setHours(0,0,0,0)) / 86400000)
     newStreak = diffDays <= 1 ? (oldStatus.streak_days || 0) + 1 : 1
   }
 
   // 레벨별 해금 게임 목록 (game_registry의 unlockLevel 기준)
   const UNLOCK_MAP: Record<number, string[]> = {
-    1: ['garden', 'mood'],
-    2: ['garden', 'mood', 'efmt', 'gratitude', 'burnout'],
-    3: ['garden', 'mood', 'efmt', 'gratitude', 'burnout'],
-    4: ['garden', 'mood', 'efmt', 'gratitude', 'burnout', 'tree'],
-    5: ['garden', 'mood', 'efmt', 'gratitude', 'burnout', 'tree'],
-    6: ['garden', 'mood', 'efmt', 'gratitude', 'burnout', 'tree'],
+    1: ['garden', 'mood', 'worry'],
+    2: ['garden', 'mood', 'worry', 'efmt', 'gratitude', 'burnout'],
+    3: ['garden', 'mood', 'worry', 'efmt', 'gratitude', 'burnout', 'focus'],
+    4: ['garden', 'mood', 'worry', 'efmt', 'gratitude', 'burnout', 'focus', 'tree'],
+    5: ['garden', 'mood', 'worry', 'efmt', 'gratitude', 'burnout', 'focus', 'tree'],
+    6: ['garden', 'mood', 'worry', 'efmt', 'gratitude', 'burnout', 'focus', 'tree'],
   }
   const unlockedGames = JSON.stringify(UNLOCK_MAP[newLevel.level] || ['garden'])
 
+  // 마일스톤 도달 시 스트릭 복구권 +1 지급 (최대 3개)
+  const STREAK_MILESTONES = [7, 14, 21, 30, 60, 90]
+  const prevStreak = oldStatus.streak_days || 0
+  const hitMilestone = lastPlayedDay !== todayDay && STREAK_MILESTONES.includes(newStreak) && newStreak > prevStreak
+  const recoverDelta = hitMilestone ? 1 : 0
+
   await DB.prepare(
-    'UPDATE user_game_status SET total_exp=?, garden_level=?, streak_days=?, last_played_at=CURRENT_TIMESTAMP, unlocked_games=? WHERE user_id=?'
-  ).bind(newExp, newLevel.level, newStreak, unlockedGames, userId).run()
+    'UPDATE user_game_status SET total_exp=?, garden_level=?, streak_days=?, last_played_at=CURRENT_TIMESTAMP, unlocked_games=?, streak_recover=MIN(streak_recover+?,3) WHERE user_id=?'
+  ).bind(newExp, newLevel.level, newStreak, unlockedGames, recoverDelta, userId).run()
 
   // 업적 체크
   const newAchievements: string[] = []
@@ -424,8 +440,142 @@ app.post('/api/game/session', async (c) => {
       leveledUp,
       newStreak,
       newAchievements,
+      milestoneReached: hitMilestone ? newStreak : null,
     },
   })
+})
+
+// ── POST /api/game/streak/recover ─────────────────────────
+// 복구권 1개 소모 → streak_days +1 복원
+app.post('/api/game/streak/recover', async (c) => {
+  const { DB } = c.env
+  const userId = await getGameUserId(c.req.raw, c.env)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+
+  const status = await DB.prepare('SELECT streak_days, streak_recover FROM user_game_status WHERE user_id=?').bind(userId).first<{ streak_days: number; streak_recover: number }>()
+  if (!status) return c.json({ success: false, error: '상태 없음' }, 404)
+  if ((status.streak_recover || 0) <= 0) return c.json({ success: false, error: '복구권 없음' }, 400)
+
+  const newStreak = (status.streak_days || 0) + 1
+  await DB.prepare('UPDATE user_game_status SET streak_days=?, streak_recover=streak_recover-1, last_played_at=CURRENT_TIMESTAMP WHERE user_id=?').bind(newStreak, userId).run()
+  return c.json({ success: true, data: { newStreak, remaining: (status.streak_recover || 0) - 1 } })
+})
+
+// ── 캠페인 챕터 정의 ────────────────────────────────────────
+const CAMPAIGN_CHAPTERS = [
+  {
+    id: 'ch1',
+    reward_credits: 30,
+    steps: [
+      { game: 'mood',      module: 'checkin'          },
+      { game: 'garden',    module: 'breathing'         },
+      { game: 'gratitude', module: 'gratitude_write'   },
+    ],
+  },
+  {
+    id: 'ch2',
+    reward_credits: 50,
+    steps: [
+      { game: 'garden',  module: 'cbt'      },
+      { game: 'efmt',    module: null        },
+      { game: 'burnout', module: 'missions'  },
+    ],
+  },
+  {
+    id: 'ch3',
+    reward_credits: 80,
+    steps: [
+      { game: 'focus', module: null },
+      { game: 'tree',  module: null },
+      { game: 'efmt',  module: null },
+    ],
+  },
+] as const
+
+type CampaignStep = { game: string; module: string | null }
+type CampaignChapter = { id: string; reward_credits: number; steps: readonly CampaignStep[] }
+
+async function checkCampaignSteps(
+  DB: D1Database,
+  userId: number,
+  chapter: CampaignChapter
+): Promise<boolean[]> {
+  const rows = await DB.prepare(
+    'SELECT DISTINCT game_id, module_type FROM game_session_logs WHERE user_id=?'
+  ).bind(userId).all<{ game_id: string; module_type: string }>()
+  const byGame: Record<string, Set<string>> = {}
+  for (const r of rows.results) {
+    if (!byGame[r.game_id]) byGame[r.game_id] = new Set()
+    byGame[r.game_id].add(r.module_type)
+  }
+  return chapter.steps.map(s =>
+    s.module ? (byGame[s.game]?.has(s.module) ?? false) : !!byGame[s.game]
+  )
+}
+
+// ── GET /api/game/campaign ─────────────────────────────────
+app.get('/api/game/campaign', async (c) => {
+  const { DB } = c.env
+  const userId = await getGameUserId(c.req.raw, c.env)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+
+  const rewards = await DB.prepare(
+    'SELECT chapter_id FROM game_campaign_progress WHERE user_id=?'
+  ).bind(userId).all<{ chapter_id: string }>()
+  const rewardedSet = new Set(rewards.results.map(r => r.chapter_id))
+
+  const chapters = await Promise.all(CAMPAIGN_CHAPTERS.map(async ch => {
+    const stepsDone = await checkCampaignSteps(DB, userId, ch)
+    return {
+      id: ch.id,
+      rewardCredits: ch.reward_credits,
+      stepsDone,
+      allDone: stepsDone.every(Boolean),
+      rewarded: rewardedSet.has(ch.id),
+    }
+  }))
+
+  return c.json({ success: true, data: { chapters } })
+})
+
+// ── POST /api/game/campaign/claim ──────────────────────────
+app.post('/api/game/campaign/claim', async (c) => {
+  const { DB } = c.env
+  const userId = await getGameUserId(c.req.raw, c.env)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+
+  const { chapter_id } = await c.req.json<{ chapter_id: string }>()
+  const chapter = (CAMPAIGN_CHAPTERS as readonly CampaignChapter[]).find(ch => ch.id === chapter_id)
+  if (!chapter) return c.json({ success: false, error: '잘못된 챕터' }, 400)
+
+  // 이전 챕터 보상 완료 여부 확인
+  const chIdx = CAMPAIGN_CHAPTERS.findIndex(ch => ch.id === chapter_id)
+  if (chIdx > 0) {
+    const prevId = CAMPAIGN_CHAPTERS[chIdx - 1].id
+    const prev = await DB.prepare(
+      'SELECT id FROM game_campaign_progress WHERE user_id=? AND chapter_id=?'
+    ).bind(userId, prevId).first()
+    if (!prev) return c.json({ success: false, error: '이전 챕터 보상을 먼저 받으세요', errorCode: 'prev_chapter_pending' }, 400)
+  }
+
+  // 스텝 완료 재확인
+  const stepsDone = await checkCampaignSteps(DB, userId, chapter)
+  if (!stepsDone.every(Boolean)) return c.json({ success: false, error: '아직 완료되지 않은 스텝이 있어요', errorCode: 'steps_incomplete' }, 400)
+
+  // 보상 지급 (UNIQUE constraint → 중복 방지)
+  const result = await DB.prepare(
+    'INSERT OR IGNORE INTO game_campaign_progress (user_id, chapter_id) VALUES (?,?)'
+  ).bind(userId, chapter_id).run()
+
+  if (result.changes === 0) {
+    return c.json({ success: false, error: '이미 보상을 받으셨어요', errorCode: 'already_claimed' }, 400)
+  }
+
+  await DB.prepare('UPDATE users SET credits = credits + ? WHERE id = ?')
+    .bind(chapter.reward_credits, userId).run()
+
+  const user = await DB.prepare('SELECT credits FROM users WHERE id=?').bind(userId).first<{ credits: number }>()
+  return c.json({ success: true, data: { credits: chapter.reward_credits, balance: user?.credits || 0 } })
 })
 
 // ── PATCH /api/game/visual ─────────────────────────────────

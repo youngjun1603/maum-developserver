@@ -124,6 +124,25 @@ const GAME_REGISTRY = [
     Component: typeof TreeGame !== 'undefined' ? TreeGame : null,
   },
 
+  // ── 🧠 마음 집중력 (6호) ───────────────────────────────
+  {
+    id:            'focus',
+    name:          '마음 집중력',
+    emoji:         '🧠',
+    tagline:       '숫자·패턴으로 집중력을 단련해요',
+    description:   '숫자 기억과 그리드 패턴 훈련을 통해 지금 이 순간에 집중하는 마음챙김 인지 훈련. GAD-7/PHQ-9 점수에 따라 난이도가 조절됩니다.',
+    tags:          ['집중력', '인지훈련', '마음챙김'],
+    requiredTests: [],
+    suggestedFor:  '집중력이 떨어진 느낌이 드는 분, 마음이 분산되어 있는 분',
+    creditCost:    0,
+    unlockLevel:   3,
+    isAvailable:   true,
+    modules: [
+      { id:'focus_training', name:'집중력 훈련', emoji:'🔢', desc:'숫자 기억 + 패턴 기억 5라운드' },
+    ],
+    Component: typeof FocusGame !== 'undefined' ? FocusGame : null,
+  },
+
   // ── ⚡ 번아웃 회복 (5호) ────────────────────────────────
   {
     id:            'burnout',
@@ -143,6 +162,25 @@ const GAME_REGISTRY = [
       { id: 'weekly_report',name: '주간 리포트',   emoji: '📊', desc: '한 주간의 회복 흐름 확인' },
     ],
     Component: typeof BurnoutGame !== 'undefined' ? BurnoutGame : null,
+  },
+
+  // ── 🫧 걱정 풍선 (8호) ─────────────────────────────────────
+  {
+    id:            'worry',
+    name:          '걱정 풍선',
+    emoji:         '🫧',
+    tagline:       '걱정을 풍선에 담아 날려 보내요',
+    description:   'ACT(수용전념치료) 기반 인지 탈융합 훈련. 지금 마음을 무겁게 하는 걱정들을 풍선에 담고 하나씩 터뜨리며 내려놓는 연습을 해요. 걱정은 생각일 뿐이에요.',
+    tags:          ['이완', '스트레스해소', 'ACT', '마음챙김'],
+    requiredTests: [],
+    suggestedFor:  '걱정이 많은 분, 마음이 무거운 분, 스트레스를 내려놓고 싶은 분',
+    creditCost:    0,
+    unlockLevel:   1,
+    isAvailable:   true,
+    modules: [
+      { id: 'bubbles', name: '걱정 풍선 터뜨리기', emoji: '🫧', desc: '걱정을 풍선에 담아 터뜨리며 내려놓기' },
+    ],
+    Component: typeof WorryGame !== 'undefined' ? WorryGame : null,
   },
 ];
 

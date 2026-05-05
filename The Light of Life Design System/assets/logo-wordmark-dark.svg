@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 64" width="360" height="64">
+  <defs>
+    
+  </defs>
+  <g transform="translate(0,0)" fill="#0F2044">
+    <text x="0" y="28" class="en" font-size="22">The Light of Life</text>
+    <g transform="translate(176,18)" fill="#C9A227">
+      <path d="M8 0 L9.6 6.4 L16 8 L9.6 9.6 L8 16 L6.4 9.6 L0 8 L6.4 6.4 Z"></path>
+    </g>
+    <text x="200" y="28" class="ko" font-size="22" fill="#0F2044">말씀의빛</text>
+  </g>
+  <line x1="0" y1="40" x2="270" y2="40" stroke="#C9A227" stroke-width="0.75" opacity="0.7"></line>
+  <text x="0" y="56" font-family="Inter, sans-serif" font-size="9" letter-spacing="0.22em" fill="#8F7115" opacity="0.95">OFFICIAL PARTNER · CTS 기독교TV</text>
+</svg>

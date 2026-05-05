@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 44" width="160" height="44" role="img" aria-label="마음풀 Maumful">
+  <defs>
+    <linearGradient id="leaf" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#5BA886"></stop>
+      <stop offset="100%" stop-color="#2D6A4F"></stop>
+    </linearGradient>
+  </defs>
+  
+  <g transform="translate(4 4)">
+    <rect x="0" y="0" width="36" height="36" rx="11" fill="#EEF8F1"></rect>
+    
+    <path d="M18 8 C 12 14, 9 19, 9 23.5 C 9 28.2, 13 31, 18 31 C 23 31, 27 28.2, 27 23.5 C 27 19, 24 14, 18 8 Z" fill="url(#leaf)"></path>
+    
+    <path d="M24 11.5 C 27.5 11, 30 12.5, 31.5 14.5 C 29.5 15.5, 27 15.7, 24.7 14.5 C 23.6 13.9, 23.4 12.4, 24 11.5 Z" fill="#F4A261"></path>
+    <path d="M24.6 12.3 C 26 12.5, 27.6 13.1, 28.7 13.9" stroke="#fff" stroke-width="0.6" stroke-linecap="round" fill="none" opacity="0.8"></path>
+  </g>
+  
+  <text x="50" y="29" font-family="&#39;Noto Serif KR&#39;, serif" font-weight="700" font-size="20" fill="#0F3D2E" letter-spacing="-0.5">마음풀</text>
+</svg>

@@ -821,6 +821,154 @@ function LandingPage({ setView, isLoggedIn }) {
         </div>
       </section>
 
+      {/* ── ④-2 일반 AI와의 차별화 ──────────────────────── */}
+      <section style={{ padding: '80px 24px', background: '#F8F8F5' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div id="sec-diff" data-animate style={{ textAlign: 'center', marginBottom: 52, ...fadeIn('sec-diff') }}>
+            <div style={{
+              display: 'inline-block', background: '#FEF3C7', color: '#B45309',
+              fontSize: 12, fontWeight: 700, letterSpacing: '1.5px',
+              textTransform: 'uppercase', padding: '5px 14px', borderRadius: 100, marginBottom: 14,
+            }}>마음풀만의 차이</div>
+            <h2 style={{ fontSize: 34, fontWeight: 700, lineHeight: 1.3, marginBottom: 12 }}>
+              ChatGPT에게 물어보는 것과<br /><span style={{ color: '#2D6A4F' }}>무엇이 다른가요?</span>
+            </h2>
+            <p style={{ fontSize: 16, color: '#5A5A5A', maxWidth: 520, margin: '0 auto' }}>
+              일회성 대화가 아닌, 검사 기반 지속 관리 상담입니다
+            </p>
+          </div>
+
+          {/* 비교 카드 */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 56 }} className="compare-grid">
+            {/* 일반 AI */}
+            <div style={{
+              background: 'white', borderRadius: 16, padding: '32px 28px',
+              border: '2px solid rgba(0,0,0,0.08)',
+              opacity: 0.75,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: 12,
+                  background: '#F5F5F5', display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', fontSize: 22,
+                }}>🤖</div>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: '#555' }}>일반 AI (ChatGPT 등)</div>
+                  <div style={{ fontSize: 12, color: '#9A9A9A' }}>일회성 대화 서비스</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {[
+                  '내 심리 상태를 전혀 모른 채 답변',
+                  '오늘 대화는 내일이면 기억 못함',
+                  '검사 근거 없는 일반적 조언',
+                  '시간이 지나도 변화 추적 불가',
+                  '누구에게나 동일한 답변 패턴',
+                ].map(t => (
+                  <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ color: '#D1D5DB', fontSize: 16, flexShrink: 0 }}>✗</span>
+                    <span style={{ fontSize: 14, color: '#888' }}>{t}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 마음풀 */}
+            <div style={{
+              background: 'linear-gradient(135deg, #F0FAF4, #FAFAF8)',
+              borderRadius: 16, padding: '32px 28px',
+              border: '2px solid #52B788',
+              position: 'relative', overflow: 'hidden',
+            }}>
+              <div style={{
+                position: 'absolute', top: 14, right: 14,
+                background: '#2D6A4F', color: 'white',
+                fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 100,
+              }}>마음풀 방식</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: 12,
+                  background: '#D8F3DC', display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', fontSize: 22,
+                }}>🌿</div>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: '#1A1A1A' }}>마음풀 AI 상담</div>
+                  <div style={{ fontSize: 12, color: '#52B788' }}>심리검사 기반 지속 관리</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {[
+                  'PHQ-9, GAD-7 등 검사 결과를 이미 알고 대화',
+                  '이전 검사 이력·감정 기록을 기억해 맥락 유지',
+                  '내 점수와 증상 패턴 기반 개인화 상담',
+                  '시간 경과에 따른 심리 변화 트렌드 추적',
+                  '나만의 데이터 프로필로 정밀한 인사이트',
+                ].map(t => (
+                  <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ color: '#52B788', fontSize: 16, flexShrink: 0 }}>✓</span>
+                    <span style={{ fontSize: 14, color: '#3A3A3A' }}>{t}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* 외부 검사결과 AI 해석 하이라이트 */}
+          <div style={{
+            background: 'linear-gradient(135deg, #1A3D2B, #2D6A4F)',
+            borderRadius: 20, padding: '40px 48px',
+            display: 'grid', gridTemplateColumns: '1fr auto', gap: 40, alignItems: 'center',
+          }} className="pdf-banner">
+            <div>
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                background: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.9)',
+                fontSize: 12, fontWeight: 700, letterSpacing: '1px',
+                padding: '4px 12px', borderRadius: 100, marginBottom: 16,
+              }}>
+                <span>📄</span> NEW FEATURE
+              </div>
+              <h3 style={{ fontSize: 26, fontWeight: 700, color: 'white', marginBottom: 12, lineHeight: 1.4 }}>
+                MBTI, MMPI, K-WAIS…<br />외부 검사결과도 AI가 해석해 드립니다
+              </h3>
+              <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, marginBottom: 20 }}>
+                다른 기관에서 받은 심리검사 결과지를 업로드하거나 점수를 입력하면,
+                마음풀 AI가 전문적으로 해석하고 마음풀 프로필에 통합합니다.
+                이후 AI 상담이 이 결과까지 반영해 더 깊이 있는 대화를 제공합니다.
+              </p>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {['📎 PDF 업로드', '✏️ 점수 직접 입력', '🔗 상담 이력 통합', '💬 AI 해석 즉시 제공'].map(chip => (
+                  <span key={chip} style={{
+                    background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.88)',
+                    padding: '5px 12px', borderRadius: 100, fontSize: 12,
+                    border: '1px solid rgba(255,255,255,0.2)',
+                  }}>{chip}</span>
+                ))}
+              </div>
+            </div>
+            <div style={{ textAlign: 'center', flexShrink: 0 }}>
+              <button
+                onClick={() => setView(isLoggedIn ? 'memberDashboard' : 'testsIntro')}
+                style={{
+                  background: '#F4A261', border: 'none', borderRadius: 12,
+                  padding: '14px 28px', fontSize: 15, fontWeight: 700,
+                  color: 'white', cursor: 'pointer',
+                  fontFamily: "'Noto Sans KR', sans-serif", transition: 'all 0.2s',
+                  whiteSpace: 'nowrap',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#E76F51'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = '#F4A261'; }}
+              >
+                외부 결과 해석하기 →
+              </button>
+              <div style={{ marginTop: 8, fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>
+                로그인 후 마이페이지 → 검사이력에서 사용
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── ⑤ 이용 방법 (3단계) ─────────────────────────── */}
       <section style={{ padding: '80px 24px', background: 'white' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
@@ -1103,6 +1251,110 @@ function LandingPage({ setView, isLoggedIn }) {
 
 
 
+      {/* ── 마음커플 ─────────────────────────────────────── */}
+      <section style={{ padding: '80px 24px', background: '#FFF1F5' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}
+            className="ai-grid">
+
+            {/* 커플 카드 2×2 */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              {[
+                { emoji: '💕', name: 'BIG5 궁합 분석',    tag: '성격 차이를 강점으로', color: '#E05A8A', bg: '#FFE4EE' },
+                { emoji: '🤖', name: 'AI 커플 리포트',     tag: '맞춤 관계 인사이트',   color: '#9333EA', bg: '#F3E8FF' },
+                { emoji: '📊', name: '관계 건강도 체크인', tag: '월 1회 무료',           color: '#0891B2', bg: '#E0F7FA' },
+                { emoji: '🗓️', name: '데이트 코스 추천',  tag: 'AI 개인화 추천',        color: '#D97706', bg: '#FEF3C7' },
+              ].map(g => (
+                <div key={g.name}
+                  onClick={() => {
+                    if (!isLoggedIn) { setView('memberLogin'); return; }
+                    const h = window.location.hostname;
+                    const coupleBase = (h.includes('workers.dev') || h.includes('-dev.'))
+                      ? 'https://maumcouple-dev.limyj007.workers.dev'
+                      : 'https://couple.maumful.com';
+                    fetch('/api/couple-token', { headers: { Authorization: 'Bearer ' + (localStorage.getItem('access_token') || '') } })
+                      .then(r => r.json())
+                      .then(data => { const t = data.success ? data.coupleToken : (localStorage.getItem('access_token') || ''); window.open(`${coupleBase}?t=${encodeURIComponent(t)}`, '_blank', 'noopener noreferrer'); })
+                      .catch(() => window.open(coupleBase, '_blank', 'noopener noreferrer'));
+                  }}
+                  style={{
+                    background: g.bg, borderRadius: 16, padding: '22px 18px',
+                    cursor: 'pointer', transition: 'all 0.2s',
+                    border: `1.5px solid ${g.color}22`,
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 8px 28px rgba(0,0,0,0.10)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
+                >
+                  <div style={{ fontSize: 36, marginBottom: 10 }}>{g.emoji}</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: '#1A1A1A', marginBottom: 6 }}>{g.name}</div>
+                  <span style={{
+                    fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 100,
+                    background: 'white', color: g.color, border: `1px solid ${g.color}44`,
+                  }}>{g.tag}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* 텍스트 */}
+            <div>
+              <div style={{
+                display: 'inline-block', background: '#FFE4EE', color: '#E05A8A',
+                fontSize: 12, fontWeight: 700, letterSpacing: '1.5px',
+                textTransform: 'uppercase', padding: '5px 14px', borderRadius: 100, marginBottom: 20,
+              }}>Couple Insights</div>
+              <h2 style={{ fontSize: 36, fontWeight: 700, lineHeight: 1.3, marginBottom: 16 }}>
+                함께 성장하는<br /><span style={{ color: '#E05A8A' }}>마음커플</span>
+              </h2>
+              <p style={{ fontSize: 16, color: '#5A5A5A', lineHeight: 1.8, marginBottom: 28 }}>
+                BIG5 성격 검사를 기반으로 우리 둘의 궁합을 분석하고,<br />
+                AI가 생성한 맞춤 관계 리포트로 더 깊이 이해하세요.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
+                {[
+                  { icon: '💕', text: 'BIG5 궁합 분석 — 성격 차이를 강점으로 전환' },
+                  { icon: '🤖', text: 'AI 커플 리포트 — 파트너와 함께 분석 (무료)' },
+                  { icon: '📊', text: '관계 건강도 체크인 — 월 1회 무료 진단' },
+                  { icon: '🗓️', text: '데이트 코스 추천 — 취향 기반 AI 개인화' },
+                ].map(item => (
+                  <div key={item.text} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 18 }}>{item.icon}</span>
+                    <span style={{ fontSize: 14, color: '#5A5A5A' }}>{item.text}</span>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => {
+                  if (!isLoggedIn) { setView('memberLogin'); return; }
+                  const h = window.location.hostname;
+                  const coupleBase = (h.includes('workers.dev') || h.includes('-dev.'))
+                    ? 'https://maumcouple-dev.limyj007.workers.dev'
+                    : 'https://couple.maumful.com';
+                  fetch('/api/couple-token', { headers: { Authorization: 'Bearer ' + (localStorage.getItem('access_token') || '') } })
+                    .then(r => r.json())
+                    .then(data => { const t = data.success ? data.coupleToken : (localStorage.getItem('access_token') || ''); window.open(`${coupleBase}?t=${encodeURIComponent(t)}`, '_blank', 'noopener noreferrer'); })
+                    .catch(() => window.open(coupleBase, '_blank', 'noopener noreferrer'));
+                }}
+                style={{
+                  background: '#E05A8A', color: 'white', border: 'none',
+                  borderRadius: 12, padding: '14px 32px', fontSize: 16, fontWeight: 700,
+                  cursor: 'pointer', fontFamily: "'Noto Sans KR', sans-serif", transition: 'all 0.2s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#C0456F'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = '#E05A8A'; e.currentTarget.style.transform = 'none'; }}
+              >
+                마음커플 시작하기 →
+              </button>
+              <div style={{ marginTop: 12, fontSize: 12, color: '#9A9A9A' }}>
+                로그인 후 별도 로그인 없이 바로 이동합니다
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+
+
       {/* ── 서비스 성격 고지 바 ──────────────────────────── */}
       <div style={{
         background: '#F0FDF4', borderTop: '1px solid #86EFAC', borderBottom: '1px solid #86EFAC',
@@ -1152,7 +1404,7 @@ function LandingPage({ setView, isLoggedIn }) {
               },
               {
                 title: '서비스',
-                links: ['AI 상담', '마음 게임', '크레딧 충전'],
+                links: ['AI 상담', '마음 게임', '마음커플', '크레딧 충전'],
               },
               {
                 title: '고객지원',
@@ -1170,6 +1422,17 @@ function LandingPage({ setView, isLoggedIn }) {
                         if (l === '이용약관') setView('terms');
                         if (l === '개인정보처리방침') setView('privacy');
                         if (l === '어드민') setView('counselingAdmin');
+                        if (l === '마음커플') {
+                          if (!isLoggedIn) { setView('memberLogin'); return; }
+                          const h = window.location.hostname;
+                          const coupleBase = (h.includes('workers.dev') || h.includes('-dev.'))
+                            ? 'https://maumcouple-dev.limyj007.workers.dev'
+                            : 'https://couple.maumful.com';
+                          fetch('/api/couple-token', { headers: { Authorization: 'Bearer ' + (localStorage.getItem('access_token') || '') } })
+                            .then(r => r.json())
+                            .then(data => { window.open(`${coupleBase}?t=${encodeURIComponent(data.coupleToken || '')}`, '_blank', 'noopener noreferrer'); })
+                            .catch(() => window.open(coupleBase, '_blank', 'noopener noreferrer'));
+                        }
                       }}
                     >{l}</span>
                   </div>

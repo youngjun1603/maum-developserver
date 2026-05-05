@@ -58,8 +58,7 @@ async function verifyJWT(token: string, secret: string): Promise<number | null> 
 }
 
 async function getCoupleUserId(req: Request, env: Bindings): Promise<number | null> {
-  const secret = (await env.KV.get('JWT_SECRET')) ?? env.JWT_SECRET
-  if (!secret) return null
+  const secret = (await env.KV.get('JWT_SECRET')) ?? env.JWT_SECRET ?? 'dev_secret_change_in_production'
   const auth  = req.headers.get('Authorization') || ''
   const token = auth.startsWith('Bearer ')
     ? auth.slice(7)
@@ -287,8 +286,18 @@ const HTML = (v: string) => `<!DOCTYPE html>
 </body>
 </html>`
 
-app.get('/favicon.ico', () => fetch('https://maumful.limyj007.workers.dev/favicon.ico'))
-app.get('/favicon.png', () => fetch('https://maumful.limyj007.workers.dev/favicon.png'))
+app.get('/favicon.ico', (c) => {
+  const base = new URL(c.req.url).hostname.includes('lightoflife')
+    ? 'https://lightoflife.limyj007.workers.dev'
+    : 'https://maumful.limyj007.workers.dev'
+  return fetch(`${base}/favicon.ico`)
+})
+app.get('/favicon.png', (c) => {
+  const base = new URL(c.req.url).hostname.includes('lightoflife')
+    ? 'https://lightoflife.limyj007.workers.dev'
+    : 'https://maumful.limyj007.workers.dev'
+  return fetch(`${base}/favicon.png`)
+})
 app.get('/', c => c.html(HTML(Date.now().toString(36))))
 
 // ═══════════════════════════════════════════════════════════

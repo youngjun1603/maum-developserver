@@ -26,9 +26,18 @@ const TOKEN_KEY   = 'couple_token';
 const MAUMFUL_URL = (() => {
   const h = window.location.hostname;
   if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000';
+  if (h.includes('lightoflife')) return 'https://lightoflife.limyj007.workers.dev';
   if (h.includes('maumcouple-dev') || h.includes('-dev.')) return 'https://maumful-dev.limyj007.workers.dev';
   return 'https://maumful.com';
 })();
+
+const IS_CTS = window.location.hostname.includes('lightoflife');
+const SERVICE_NAME      = IS_CTS ? '커플 케어'                    : '마음커플';
+const SERVICE_ICON      = IS_CTS ? '💑'                           : '💕';
+const BACK_LABEL        = IS_CTS ? '← The Light of Life'         : '← 마음풀';
+const LOADING_TEXT      = IS_CTS ? '커플 케어를 불러오는 중...'   : '마음커플을 불러오는 중...';
+const MAIN_SERVICE_NAME = IS_CTS ? 'The Light of Life'            : '마음풀';
+const COUPLE_URL        = IS_CTS ? 'https://lightoflife-couple.limyj007.workers.dev' : 'https://couple.maumful.com';
 
 const COST_FULL  = 45;  // BIG5+LOST+DSI
 const COST_TWO   = 35;  // 2개 조합
@@ -257,7 +266,7 @@ function Big5CompareView({ myBig5, partnerBig5, myName, partnerName, onBack }) {
 
   function shareResult() {
     const lines = traits.map(t => `${t.emoji}${t.label}: ${myBig5?.[t.key] ?? 50} vs ${partnerBig5?.[t.key] ?? 50}`);
-    const text = `💕 BIG5 커플 비교\n${myName} vs ${partnerName}\n${lines.join('\n')}\n${chem ? `케미: ${chem.emoji} ${chem.name}` : ''}\nhttps://couple.maumful.com #마음커플`;
+    const text = `${SERVICE_ICON} BIG5 커플 비교\n${myName} vs ${partnerName}\n${lines.join('\n')}\n${chem ? `케미: ${chem.emoji} ${chem.name}` : ''}\n${COUPLE_URL} #${SERVICE_NAME}`;
     if (navigator.share) navigator.share({ title: 'BIG5 커플 비교', text }).catch(() => {});
     else navigator.clipboard?.writeText(text).then(() => alert('클립보드에 복사됐어요!')).catch(() => {});
   }
@@ -511,13 +520,13 @@ function LoginGate() {
       background: `linear-gradient(160deg, ${C.rosePale}, ${C.cream}, ${C.lavPale})`,
       padding: 24, textAlign: 'center',
     }}>
-      <div style={{ fontSize: 72, marginBottom: 20, animation: 'heartbeat 2s ease-in-out infinite' }}>💕</div>
+      <div style={{ fontSize: 72, marginBottom: 20, animation: 'heartbeat 2s ease-in-out infinite' }}>{SERVICE_ICON}</div>
       <h1 style={{
         fontSize: 28, fontWeight: 700, color: C.dark, marginBottom: 10,
         fontFamily: "'Noto Serif KR', serif",
-      }}>마음커플</h1>
+      }}>{SERVICE_NAME}</h1>
       <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.9, marginBottom: 32, maxWidth: 300 }}>
-        마음풀에서 로그인하면<br/>
+        {IS_CTS ? 'The Light of Life에서 로그인하면' : '마음풀에서 로그인하면'}<br/>
         별도 로그인 없이 바로 이용할 수 있어요.<br/>
         심리검사 결과로 파트너와의<br/>
         궁합과 관계 패턴을 분석해보세요 💑
@@ -530,7 +539,7 @@ function LoginGate() {
         boxShadow: `0 8px 24px ${C.rose}44`,
         fontFamily: "'Noto Sans KR', sans-serif",
       }}>
-        마음풀 로그인하고 시작하기 →
+        {IS_CTS ? 'The Light of Life 로그인하고 시작하기 →' : '마음풀 로그인하고 시작하기 →'}
       </a>
     </div>
   );
@@ -579,7 +588,7 @@ function DailyQuestionCard() {
   const q = DAILY_QUESTIONS[dayIdx];
 
   function copyQuestion() {
-    const text = `💕 오늘의 커플 대화 질문\n\n"${q}"\n\nhttps://couple.maumful.com`;
+    const text = `${SERVICE_ICON} 오늘의 커플 대화 질문\n\n"${q}"\n\n${COUPLE_URL}`;
     if (navigator.share) {
       navigator.share({ title: '오늘의 커플 질문', text }).catch(() => {});
     } else {
@@ -648,7 +657,7 @@ function MiniLoveTestView({ onBack }) {
   function reset() { setStep(-1); setAnswers([]); setResult(null); }
 
   function shareResult(t) {
-    const text = `💕 나의 연애 유형은 "${t.emoji} ${t.name}"\n\n${t.short} — ${t.desc.slice(0, 50)}...\n\n나도 테스트해봐요!\nhttps://couple.maumful.com`;
+    const text = `${SERVICE_ICON} 나의 연애 유형은 "${t.emoji} ${t.name}"\n\n${t.short} — ${t.desc.slice(0, 50)}...\n\n나도 테스트해봐요!\n${COUPLE_URL}`;
     navigator.share ? navigator.share({ title: '나의 연애 유형', text }).catch(() => {})
                     : navigator.clipboard?.writeText(text).catch(() => {});
   }
@@ -1056,7 +1065,7 @@ function CoupleQuizView({ onBack }) {
   function reset() { setStep(-1); setAnswers([]); setResult(null); }
 
   function shareResult(t) {
-    const text = `💕 나의 커플 스타일은 "${t.emoji} ${t.name}"\n\n${t.desc}\n\n나도 테스트해봐요! → https://couple.maumful.com`;
+    const text = `${SERVICE_ICON} 나의 커플 스타일은 "${t.emoji} ${t.name}"\n\n${t.desc}\n\n나도 테스트해봐요! → ${COUPLE_URL}`;
     navigator.share ? navigator.share({ title: '나의 커플 스타일', text }).catch(() => {})
                     : navigator.clipboard?.writeText(text).catch(() => {});
   }
@@ -1853,7 +1862,7 @@ function DateCourseView({ credits, isMaster, onBack }) {
   }
 
   function shareCourse() {
-    const text = `💕 오늘의 데이트 코스 추천 (${region}, ${mood})\n\n${course}\n\nhttps://couple.maumful.com`;
+    const text = `${SERVICE_ICON} 오늘의 데이트 코스 추천 (${region}, ${mood})\n\n${course}\n\n${COUPLE_URL}`;
     navigator.share ? navigator.share({ title: '데이트 코스 추천', text }).catch(() => {})
                     : navigator.clipboard?.writeText(text).catch(() => {});
   }
@@ -2047,7 +2056,7 @@ function SoloAnalysisView({ testResults, userName, credits, isMaster, onBack }) 
   }
 
   function shareReport() {
-    const text = `💕 마음커플 — 나의 연애 성향 분석\n\n${report.slice(0, 200)}...\n\nhttps://couple.maumful.com`;
+    const text = `${SERVICE_ICON} ${SERVICE_NAME} — 나의 연애 성향 분석\n\n${report.slice(0, 200)}...\n\n${COUPLE_URL}`;
     navigator.share ? navigator.share({ title: '나의 연애 성향 분석', text }).catch(() => {})
                     : navigator.clipboard?.writeText(text).catch(() => {});
   }
@@ -2089,7 +2098,7 @@ function SoloAnalysisView({ testResults, userName, credits, isMaster, onBack }) 
                 padding: '16px', borderRadius: 14, background: '#FFF8F0',
                 border: '1px solid #FFD8A0', fontSize: 13, color: '#A07040', marginBottom: 24, textAlign: 'left',
               }}>
-                💡 마음풀에서 BIG5, LOST, SDRI 검사를 하나 이상 완료해야 이용할 수 있어요.
+                💡 {MAIN_SERVICE_NAME}에서 BIG5, LOST, SDRI 검사를 하나 이상 완료해야 이용할 수 있어요.
               </div>
             )}
 
@@ -2391,8 +2400,8 @@ function CoupleReportView({ session, myRole, partnerName, userName, onBack }) {
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button onClick={() => {
-                  const text = `💕 마음커플 분석 결과\n\n궁합 점수: ${score}점 (${scoreLabel(score)})\n\n${report.slice(0, 200)}...\n\nhttps://couple.maumful.com`;
-                  navigator.share ? navigator.share({ title: '마음커플 분석 결과', text }) : navigator.clipboard?.writeText(text);
+                  const text = `${SERVICE_ICON} ${SERVICE_NAME} 분석 결과\n\n궁합 점수: ${score}점 (${scoreLabel(score)})\n\n${report.slice(0, 200)}...\n\n${COUPLE_URL}`;
+                  navigator.share ? navigator.share({ title: `${SERVICE_NAME} 분석 결과`, text }) : navigator.clipboard?.writeText(text);
                 }} style={{
                   flex: 1, padding: '10px', borderRadius: 10, border: `1px solid ${C.roseL}44`,
                   background: C.rosePale, color: C.rose, fontWeight: 700, fontSize: 12, cursor: 'pointer',
@@ -2402,7 +2411,7 @@ function CoupleReportView({ session, myRole, partnerName, userName, onBack }) {
                 </button>
                 <button onClick={() => {
                   const el = document.createElement('a');
-                  el.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(`마음커플 분석 리포트\n궁합: ${score}점\n\n${report}`);
+                  el.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(`${SERVICE_NAME} 분석 리포트\n궁합: ${score}점\n\n${report}`);
                   el.download = `couple_report_${new Date().toISOString().slice(0,10)}.txt`;
                   el.click();
                 }} style={{
@@ -2552,15 +2561,12 @@ function SessionWaitingView({ session, myRole, onRefresh, onReport, onCancel }) 
   }
 
   function copyCode() {
-    const msg = `마음커플 초대코드: ${code}\n함께 심리 분석해봐요 💕\nhttps://couple.maumful.com/?code=${code}`;
+    const msg = `${SERVICE_NAME} 초대코드: ${code}\n함께 심리 분석해봐요 ${SERVICE_ICON}\n${COUPLE_URL}/?code=${code}`;
     navigator.clipboard?.writeText(msg).catch(() => {});
   }
 
   function copyPartnerLink() {
-    const base = window.location.hostname.includes('workers.dev') || window.location.hostname.includes('-dev.')
-      ? 'https://maumful-dev.limyj007.workers.dev'
-      : 'https://maumful.com';
-    navigator.clipboard?.writeText(`${base}?partner=${code}`).catch(() => {});
+    navigator.clipboard?.writeText(`${MAUMFUL_URL}?partner=${code}`).catch(() => {});
   }
 
   // 폴링: 참여 완료 전 30초, 참여 후 both_done 되기 전까지 10초, both_done 이후 30초
@@ -2687,7 +2693,7 @@ function SessionWaitingView({ session, myRole, onRefresh, onReport, onCancel }) 
               background: 'white', color: C.rose, fontWeight: 600, fontSize: 12,
               fontFamily: "'Noto Sans KR', sans-serif",
             }}>
-              📋 마음커플 코드 복사 (계정 있는 파트너)
+              📋 {SERVICE_NAME} 코드 복사 (계정 있는 파트너)
             </button>
 
             {/* 이메일로 초대 */}
@@ -2930,9 +2936,9 @@ useEffect(() => {
       alignItems: 'center', justifyContent: 'center',
       background: `linear-gradient(160deg, ${C.rosePale}, ${C.cream})`,
     }}>
-      <div style={{ fontSize: 56, animation: 'heartbeat 1.5s ease-in-out infinite' }}>💕</div>
+      <div style={{ fontSize: 56, animation: 'heartbeat 1.5s ease-in-out infinite' }}>{SERVICE_ICON}</div>
       <div style={{ fontSize: 14, color: C.muted, marginTop: 16, animation: 'pulse 1.5s infinite' }}>
-        마음커플을 불러오는 중...
+        {LOADING_TEXT}
       </div>
     </div>
   );
@@ -3048,7 +3054,7 @@ useEffect(() => {
         padding: '10px 24px', background: C.rose, color: 'white',
         borderRadius: 10, fontSize: 14, fontWeight: 600,
         textDecoration: 'none', fontFamily: "'Noto Sans KR', sans-serif",
-      }}>마음풀로 돌아가기</a>
+      }}>{MAIN_SERVICE_NAME}로 돌아가기</a>
     </div>
   );
 
@@ -3071,9 +3077,9 @@ useEffect(() => {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 20 }}>💕</span>
+          <span style={{ fontSize: 20 }}>{SERVICE_ICON}</span>
           <span style={{ fontSize: 16, fontWeight: 700, color: C.dark, fontFamily: "'Noto Serif KR', serif" }}>
-            마음커플
+            {SERVICE_NAME}
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -3089,7 +3095,7 @@ useEffect(() => {
             padding: '5px 12px', borderRadius: 8,
             border: '1px solid rgba(0,0,0,0.08)',
             background: 'rgba(255,255,255,0.6)',
-          }}>← 마음풀</a>
+          }}>{BACK_LABEL}</a>
         </div>
       </nav>
 
@@ -3178,7 +3184,7 @@ useEffect(() => {
                 const canCompare = !!(testResults?.big5) && hasPartnerBig5;
                 return (
                   <button onClick={() => {
-                    if (!testResults?.big5) { alert('마음풀에서 BIG5 검사를 먼저 완료해 주세요.'); return; }
+                    if (!testResults?.big5) { alert(`${MAIN_SERVICE_NAME}에서 BIG5 검사를 먼저 완료해 주세요.`); return; }
                     if (!hasPartnerBig5) { alert('파트너도 BIG5 검사를 완료해야 비교할 수 있어요.'); return; }
                     setView('big5Compare');
                   }} style={{
@@ -3273,7 +3279,7 @@ useEffect(() => {
                   </a>
                 ))}
               </div>
-              <div style={{ fontSize: 11, color: C.muted }}>마음풀에서 하나 이상 완료하면 바로 커플 분석이 가능해요.</div>
+              <div style={{ fontSize: 11, color: C.muted }}>{MAIN_SERVICE_NAME}에서 하나 이상 완료하면 바로 커플 분석이 가능해요.</div>
             </div>
           ) : (
             <div>
@@ -3414,7 +3420,7 @@ useEffect(() => {
                 padding: '12px 16px', borderRadius: 12, background: '#FFF8F0',
                 border: '1px solid #FFD8A0', fontSize: 13, color: '#A07040', marginBottom: 16,
               }}>
-                💡 마음풀에서 BIG5, LOST, SDRI 검사 중 하나 이상을 완료해야 세션을 만들 수 있어요.
+                💡 {MAIN_SERVICE_NAME}에서 BIG5, LOST, SDRI 검사 중 하나 이상을 완료해야 세션을 만들 수 있어요.
               </div>
             )}
 
@@ -3535,7 +3541,7 @@ useEffect(() => {
               background: C.rose, color: 'white', fontWeight: 700, fontSize: 14,
               textDecoration: 'none', marginBottom: 10,
               fontFamily: "'Noto Sans KR', sans-serif",
-            }}>마음풀에서 충전하기</a>
+            }}>{MAIN_SERVICE_NAME}에서 충전하기</a>
             <button onClick={() => setCredit(null)} style={{
               background: 'none', border: 'none', color: C.muted,
               fontSize: 13, cursor: 'pointer', padding: '8px',

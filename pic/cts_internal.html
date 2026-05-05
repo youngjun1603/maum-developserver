@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Light of Life — 내부 전략 보고서</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --navy:#0F2044;--navy2:#1A3366;--navy3:#243F80;
+    --gold:#C9A227;--gold2:#E8BC3A;--gold3:#F5D878;
+    --purple:#6B21A8;--purple2:#8B33CC;
+    --green:#2D6A4F;--gl:#52B788;
+    --gray:#6B7280;--light:#F4F6FA;
+  }
+  body{font-family:'Noto Sans KR',sans-serif;background:#080E1F;overflow:hidden;height:100vh;height:100dvh;overscroll-behavior:none}
+  .deck{width:100%;height:100vh;height:100dvh;position:relative}
+  .slide{
+    position:absolute;inset:0;display:flex;flex-direction:column;
+    justify-content:center;align-items:center;padding:52px 80px;
+    opacity:0;pointer-events:none;transition:opacity .5s ease,transform .5s ease;
+    transform:translateX(50px);overflow:hidden;
+  }
+  .slide.active{opacity:1;pointer-events:all;transform:translateX(0)}
+  .slide.prev{opacity:0;transform:translateX(-50px)}
+
+  .s-cover{background:linear-gradient(150deg,#060C1E 0%,#0F2044 45%,#1A3366 100%)}
+  .s-navy{background:linear-gradient(135deg,#0A1628 0%,#0F2044 100%)}
+  .s-light{background:#F4F6FA}
+  .s-white{background:#FFFFFF}
+  .s-gold{background:linear-gradient(135deg,#1A0E00 0%,#2D1A00 50%,#3D2400 100%)}
+  .s-dark{background:linear-gradient(135deg,#080E1F 0%,#0F1A30 100%)}
+  .s-split{background:linear-gradient(135deg,#0A1628 0%,#0D2418 100%)}
+  .s-mission{background:linear-gradient(150deg,#0A0A1A 0%,#0F2044 40%,#0D1F16 100%)}
+
+  .tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:4px 14px;border-radius:20px;margin-bottom:14px}
+  .tag-gold{background:rgba(201,162,39,.18);color:var(--gold2);border:1px solid rgba(201,162,39,.3)}
+  .tag-white{background:rgba(255,255,255,.1);color:rgba(255,255,255,.8)}
+  .tag-navy{background:#EEF2FF;color:var(--navy)}
+  .tag-green{background:#D8F3DC;color:#1B4332}
+  h1{font-size:50px;font-weight:900;line-height:1.15;letter-spacing:-1px}
+  h2{font-size:34px;font-weight:800;line-height:1.2;letter-spacing:-.5px}
+  h3{font-size:20px;font-weight:700;line-height:1.3}
+  .lead{font-size:18px;line-height:1.65;font-weight:400}
+  .text-white{color:#fff!important}.text-gold{color:var(--gold2)!important}
+  .text-navy{color:var(--navy)!important}.text-green{color:var(--gl)!important}
+  .mt1{margin-top:8px}.mt2{margin-top:16px}.mt3{margin-top:22px}.mt4{margin-top:30px}
+  .w-full{width:100%}.text-center{text-align:center}
+
+  .card{background:#fff;border-radius:16px;padding:22px;box-shadow:0 4px 20px rgba(0,0,0,.08)}
+  .card-navy{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.11);border-radius:14px;padding:20px}
+  .card-gold{background:rgba(201,162,39,.08);border:1px solid rgba(201,162,39,.25);border-radius:14px;padding:20px}
+  .card-light{background:#F8FAFF;border:1px solid #E2E8F0;border-radius:12px;padding:18px}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;width:100%}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;width:100%}
+  .grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:13px;width:100%}
+  .flex{display:flex}.gap2{gap:14px}.gap3{gap:22px}.items-center{align-items:center}.flex-col{flex-direction:column}
+
+  .stat-num{font-size:44px;font-weight:900;line-height:1;letter-spacing:-2px}
+  .icon-box{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+  .icon-gold{background:rgba(201,162,39,.18)}.icon-navy{background:#EEF2FF}.icon-green{background:#D8F3DC}
+
+  .progress-bar{height:5px;background:rgba(255,255,255,.12);border-radius:3px;overflow:hidden;margin-top:6px}
+  .progress-fill{height:100%;border-radius:3px}
+
+  .check-item{display:flex;align-items:flex-start;gap:10px;margin-bottom:9px}
+  .check-dot{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:2px}
+
+  /* 파트너 카드 */
+  .partner-card{border-radius:18px;padding:24px;position:relative;overflow:hidden}
+  .partner-card .role-badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:3px 10px;border-radius:20px;margin-bottom:12px}
+
+  /* 수익 배분 바 */
+  .rev-bar-wrap{margin-bottom:10px}
+  .rev-bar-label{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+  .rev-bar{height:28px;border-radius:6px;display:flex;overflow:hidden}
+  .rev-seg{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;transition:all .5s}
+
+  /* 타임라인 */
+  .tl-phase{flex:1;padding:16px 14px;border-right:1px solid rgba(255,255,255,.07)}
+  .tl-phase:last-child{border-right:none}
+
+  /* KPI */
+  .kpi-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:12px;padding:16px;text-align:center}
+  .kpi-num{font-size:30px;font-weight:900;line-height:1.1;letter-spacing:-1px}
+  .kpi-label{font-size:10px;color:rgba(255,255,255,.45);margin-top:4px;font-weight:500}
+
+  /* 십자가 장식 */
+  .cross-deco{position:absolute;opacity:.04;font-size:180px;pointer-events:none;user-select:none}
+
+  /* 황금 구분선 */
+  .gold-divider{width:44px;height:3px;background:var(--gold);border-radius:2px;margin:14px 0}
+
+  /* 네비게이션 */
+  .nav{position:fixed;bottom:max(26px,env(safe-area-inset-bottom,26px));left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;z-index:100;
+       background:rgba(8,14,31,.80);backdrop-filter:blur(14px);
+       padding:8px 18px;padding-bottom:max(8px,env(safe-area-inset-bottom,8px));border-radius:50px;border:1px solid rgba(255,255,255,.15)}
+  .nav-btn{width:40px;height:40px;border-radius:50%;border:none;cursor:pointer;font-size:15px;
+           background:rgba(255,255,255,.15);color:#fff;
+           transition:all .2s;display:flex;align-items:center;justify-content:center}
+  .nav-btn:hover{background:rgba(201,162,39,.55);transform:scale(1.08)}
+  .nav-dots{display:flex;gap:8px}
+  .dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.28);cursor:pointer;transition:all .2s}
+  .dot.active{background:var(--gold2);width:22px;border-radius:4px}
+  .slide-counter{position:fixed;top:22px;right:32px;font-size:12px;color:rgba(255,255,255,.38);z-index:100;font-weight:600;letter-spacing:1px}
+  .logo-mark{position:fixed;top:22px;left:32px;font-size:13px;font-weight:800;color:rgba(255,255,255,.32);z-index:100;letter-spacing:.5px}
+
+  @media(max-width:900px){
+    .slide{padding:32px 22px}
+    h1{font-size:30px}h2{font-size:22px}
+    .grid3,.grid4{grid-template-columns:1fr 1fr}
+  }
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+  <!-- ① 표지 -->
+  <div class="slide s-cover active" id="s0">
+    <div class="cross-deco" style="right:-30px;top:-50px">✝</div>
+    <div class="text-center w-full">
+      <div style="display:inline-flex;align-items:center;gap:10px;background:rgba(201,162,39,.14);border:1px solid rgba(201,162,39,.28);border-radius:30px;padding:8px 22px;margin-bottom:28px">
+        <span style="font-size:15px">✝️</span>
+        <span style="font-size:11px;font-weight:700;color:var(--gold2);letter-spacing:2px;text-transform:uppercase">CTS 기독교TV 내부 전략 보고서</span>
+      </div>
+      <h1 class="text-white" style="font-size:52px;margin-bottom:10px;line-height:1.2">
+        The Light of Life<br>
+        <span style="color:var(--gold2)">기독교 정신건강 AI 플랫폼</span>
+      </h1>
+      <div class="gold-divider" style="margin:20px auto"></div>
+      <p class="lead text-white" style="opacity:.7;max-width:580px;margin:0 auto 32px">
+        전문 상담사 없는 교회를 지원하는 기독교 정신건강 플랫폼<br>
+        <span style="font-size:15px;opacity:.7">사명 · 수익성 · 역할 구조 · 성장 전략</span>
+      </p>
+      <div style="display:flex;justify-content:center;gap:20px;flex-wrap:wrap;max-width:640px;margin:0 auto">
+        <div style="flex:1;min-width:200px;text-align:left;padding:14px 18px;background:rgba(201,162,39,.1);border-radius:14px;border:1px solid rgba(201,162,39,.28)">
+          <div style="font-size:11px;font-weight:700;color:var(--gold2);letter-spacing:1.5px;margin-bottom:6px">CTS 사업 확장</div>
+          <div style="font-size:13px;font-weight:700;color:#fff;line-height:1.65">TV·앱라디오 이외 새로운 사업으로 확장<br><span style="color:rgba(255,255,255,.55);font-size:12px;font-weight:400">별다른 투자 없이 시작 — 초기 투자 리스크 없음</span></div>
+        </div>
+        <div style="flex:1;min-width:200px;text-align:left;padding:14px 18px;background:rgba(255,255,255,.05);border-radius:14px;border:1px solid rgba(255,255,255,.1)">
+          <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.6);letter-spacing:1.5px;margin-bottom:6px">시너지 파트너십</div>
+          <div style="font-size:13px;font-weight:700;color:#fff;line-height:1.65">각 참여자 강점 리소스를 결합<br><span style="color:rgba(255,255,255,.45);font-size:12px;font-weight:400">즉시 론칭 가능한 완성형 협력 구조</span></div>
+        </div>
+      </div>
+      <div style="margin-top:28px;font-size:11px;color:rgba(255,255,255,.28);letter-spacing:1px">CONFIDENTIAL · 내부 보고용 · 2026</div>
+    </div>
+  </div>
+
+  <!-- ② 사명 — 왜 이 프로그램인가 -->
+  <div class="slide s-mission" id="s1">
+    <div class="cross-deco" style="right:-20px;top:-40px">✝</div>
+    <div class="w-full">
+      <div class="tag tag-gold">Mission & Vision</div>
+      <h2 class="text-white" style="margin-bottom:5px">우리가 응답해야 할 <span style="color:var(--gold2)">두 가지 현실</span></h2>
+      <p style="color:rgba(255,255,255,.48);margin-bottom:14px">이 프로그램의 존재 이유 — 교회와 젊은 세대 모두가 필요로 하는 것</p>
+
+      <!-- 두 가지 문제를 나란히 -->
+      <div class="grid2" style="gap:14px;margin-bottom:14px">
+
+        <!-- 문제 1: 교회에 상담 전문가가 없다 -->
+        <div style="background:linear-gradient(135deg,rgba(15,32,68,.7),rgba(26,51,102,.5));border:2px solid rgba(201,162,39,.35);border-radius:16px;padding:18px 20px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+            <div style="font-size:32px">⛪</div>
+            <div>
+              <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--gold2);margin-bottom:3px">CHURCH REALITY</div>
+              <div style="font-size:15px;font-weight:900;color:#fff">교회에 상담 전문가가 없다</div>
+            </div>
+            <div style="margin-left:auto;text-align:center;background:rgba(201,162,39,.12);border:1px solid rgba(201,162,39,.3);border-radius:10px;padding:8px 12px">
+              <div style="font-size:22px;font-weight:900;color:var(--gold2)">95%+</div>
+              <div style="font-size:9px;color:rgba(255,255,255,.45);line-height:1.4">교회 전문<br>상담사 미보유</div>
+            </div>
+          </div>
+          <div style="font-size:12px;color:rgba(255,255,255,.65);line-height:1.8;margin-bottom:10px">
+            목회자 혼자 설교·심방·행정·상담까지 감당합니다.<br>
+            성도의 마음이 무너질 때 <strong style="color:#fff">교회가 도와주고 싶어도</strong><br>
+            전문 인프라가 없어 손을 쓸 수 없는 것이 현실입니다.
+          </div>
+          <div style="background:rgba(255,255,255,.06);border-radius:8px;padding:7px 12px;font-size:11px;color:rgba(255,255,255,.55);border-left:2px solid rgba(201,162,39,.5)">
+            목회자 68% 번아웃 경험 · 전국 7.7만 교회가 같은 현실
+          </div>
+        </div>
+
+        <!-- 문제 2: 젊은 세대가 필터링 없는 AI와 상담 중 -->
+        <div style="background:linear-gradient(135deg,rgba(107,33,168,.15),rgba(139,51,204,.07));border:2px solid rgba(168,85,247,.3);border-radius:16px;padding:18px 20px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+            <div style="font-size:32px">🤖</div>
+            <div>
+              <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;color:#C084FC;margin-bottom:3px">DIGITAL REALITY</div>
+              <div style="font-size:15px;font-weight:900;color:#fff">젊은 세대가 AI에게 상담한다</div>
+            </div>
+            <div style="margin-left:auto;text-align:center;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.3);border-radius:10px;padding:8px 12px">
+              <div style="font-size:22px;font-weight:900;color:#C084FC">20~30대</div>
+              <div style="font-size:9px;color:rgba(255,255,255,.45);line-height:1.4">AI 상담<br>주요 사용층</div>
+            </div>
+          </div>
+          <div style="font-size:12px;color:rgba(255,255,255,.65);line-height:1.8;margin-bottom:10px">
+            이미 20~30대 성도들은 ChatGPT 등 AI에게 마음의 어려움을 털어놓습니다.<br>
+            그러나 <strong style="color:#fff">성경적 기준 없이</strong>, 세상의 가치관이 담긴 필터링되지 않은<br>
+            정보로 상담이 이루어지고 있습니다.
+          </div>
+          <div style="background:rgba(168,85,247,.08);border-radius:8px;padding:7px 12px;font-size:11px;color:#C084FC;border-left:2px solid rgba(168,85,247,.5)">
+            ⚠️ 세속적 AI 상담 → 신앙 가치관과 충돌 · 잘못된 방향 제시 위험
+          </div>
+        </div>
+      </div>
+
+      <!-- 해결책 -->
+      <div style="background:linear-gradient(135deg,rgba(201,162,39,.12),rgba(201,162,39,.05));border:1px solid rgba(201,162,39,.35);border-radius:14px;padding:14px 20px;margin-bottom:12px;display:flex;align-items:center;gap:16px">
+        <div style="font-size:28px;flex-shrink:0">✝️</div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:800;color:var(--gold2);margin-bottom:4px">The Light of Life — 성경적 기준의 기독교 상담 AI</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.7);line-height:1.75">
+            교회에는 <strong style="color:#fff">전문 상담 인프라</strong>를, 젊은 성도에게는 <strong style="color:#fff">성경적 가치관으로 필터링된 AI 상담</strong>을 제공합니다.<br>
+            총신대 교수님의 학술 감수 + CTS의 신뢰 채널 = <span style="color:var(--gold2)">세상 어디에도 없는 기독교 전문 상담 플랫폼</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 말씀 -->
+      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:12px;padding:11px 20px;display:flex;align-items:center;gap:14px">
+        <div style="font-size:18px;flex-shrink:0">📖</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.65);line-height:1.75;font-style:italic;flex:1">
+          "상한 마음을 싸매시며 포로된 자에게 자유를, 갇힌 자에게 놓임을 선포하며" — 이사야 61:1
+        </div>
+        <div style="font-size:11px;color:var(--gold2);font-weight:700;flex-shrink:0;text-align:right">교회가 이 사명을<br>감당할 수 있도록</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ 시장 기회 -->
+  <div class="slide s-navy" id="s2">
+    <div class="cross-deco" style="left:-30px;top:-50px">✝</div>
+    <div class="w-full">
+      <div class="tag tag-gold">Market Opportunity</div>
+      <h2 class="text-white" style="margin-bottom:6px">기독교 정신건강 시장 기회</h2>
+      <p style="color:rgba(255,255,255,.48);margin-bottom:22px">충족되지 않은 수요 + CTS 신뢰 채널의 결합 = 블루오션</p>
+
+      <div class="grid4" style="margin-bottom:18px">
+        <div class="kpi-card">
+          <div class="kpi-num text-gold">1,000<span style="font-size:15px">만</span></div>
+          <div class="kpi-label">국내 개신교 신자</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-num text-gold">7.7<span style="font-size:15px">만</span></div>
+          <div class="kpi-label">국내 교회 수</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-num text-gold">68<span style="font-size:15px">%</span></div>
+          <div class="kpi-label">목회자 번아웃 경험률</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-num text-gold">2.1<span style="font-size:15px">조</span></div>
+          <div class="kpi-label">국내 심리상담 시장</div>
+        </div>
+      </div>
+
+      <div class="grid3">
+        <div class="card-navy">
+          <div style="font-size:18px;margin-bottom:8px">😔</div>
+          <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:7px">해결되지 않은 고통</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.55);line-height:1.8">신앙과 정신건강 고민을 어디에도 털어놓지 못함<br><span style="color:var(--gold2);font-weight:600">"기도해야 한다"는 죄책감</span></div>
+        </div>
+        <div class="card-navy">
+          <div style="font-size:18px;margin-bottom:8px">🏥</div>
+          <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:7px">공급 절대 부족</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.55);line-height:1.8">기독교 전문 상담사 부족<br>교회 내 상담 인프라 미비<br><span style="color:var(--gold2);font-weight:600">비용·접근성 장벽 높음</span></div>
+        </div>
+        <div class="card-gold">
+          <div style="font-size:18px;margin-bottom:8px">✝️</div>
+          <div style="font-size:13px;font-weight:700;color:var(--gold2);margin-bottom:7px">총신대 + CTS 신뢰 자산</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.65);line-height:1.8">총신대 학문 권위 + CTS 수십 년 기독교 신뢰<br><span style="color:var(--gold3);font-weight:600">경쟁자가 복제 불가한 공신력</span></div>
+        </div>
+      </div>
+
+      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:12px;padding:12px 18px;margin-top:14px;display:flex;align-items:center;gap:12px">
+        <span style="font-size:20px">🎯</span>
+        <div style="font-size:13px;color:rgba(255,255,255,.8)">
+          <strong style="color:#fff">타겟 고객 우선순위:</strong>
+          <span style="color:rgba(255,255,255,.6)"> ① CTS 시청 성도 → ② 교회 개척·목회자 → ③ 기독교 단체 임직원 → ④ 신학생·교역자</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ④ 서비스 현황 -->
+  <div class="slide s-dark" id="s3">
+    <div class="w-full">
+      <div class="tag tag-gold">Service Overview</div>
+      <h2 class="text-white" style="margin-bottom:6px">현재 구현된 인프라 — 즉시 가동 가능</h2>
+      <p style="color:rgba(255,255,255,.48);margin-bottom:22px">기술 개발은 완료 · 3자 협력으로 바로 서비스 출시 가능한 상태</p>
+      <div class="grid2" style="gap:14px">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div class="card-navy flex items-center gap2">
+            <div class="icon-box icon-gold">📊</div>
+            <div><div style="font-size:13px;font-weight:700;color:#fff">심리검사 8종</div><div style="font-size:11px;color:rgba(255,255,255,.45)">PHQ-9·GAD-7·Big5·LOST·DSI 등 임상 표준</div></div>
+          </div>
+          <div class="card-navy flex items-center gap2">
+            <div class="icon-box icon-gold">🤖</div>
+            <div><div style="font-size:13px;font-weight:700;color:#fff">Claude AI 상담 + 성경 말씀 연동</div><div style="font-size:11px;color:rgba(255,255,255,.45)">검사 기반 개인화 + 52주 말씀 DB (128구절)</div></div>
+          </div>
+          <div class="card-navy flex items-center gap2">
+            <div class="icon-box icon-gold">🎮</div>
+            <div><div style="font-size:13px;font-weight:700;color:#fff">치유 게임 8종 (마음게임)</div><div style="font-size:11px;color:rgba(255,255,255,.45)">호흡·감정인식·감사일기·걱정풍선 등</div></div>
+          </div>
+          <div class="card-navy flex items-center gap2">
+            <div class="icon-box icon-gold">💕</div>
+            <div><div style="font-size:13px;font-weight:700;color:#fff">부부·커플 관계 분석</div><div style="font-size:11px;color:rgba(255,255,255,.45)">BIG5 궁합·AI 리포트·관계 건강도 체크인</div></div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div class="card-navy flex items-center gap2">
+            <div class="icon-box icon-gold">✝️</div>
+            <div><div style="font-size:13px;font-weight:700;color:#fff">기독교 상담사 연결 시스템</div><div style="font-size:11px;color:rgba(255,255,255,.45)">기독교 배지·필터·화상/전화 예약 완비</div></div>
+          </div>
+          <div class="card-navy flex items-center gap2">
+            <div class="icon-box icon-gold">📺</div>
+            <div><div style="font-size:13px;font-weight:700;color:#fff">CTS TV 방송 연동</div><div style="font-size:11px;color:rgba(255,255,255,.45)">?program= 출처 추적·환영 배너 자동 표시</div></div>
+          </div>
+          <div class="card-navy flex items-center gap2">
+            <div class="icon-box icon-gold">📄</div>
+            <div><div style="font-size:13px;font-weight:700;color:#fff">외부 검사결과 AI 해석</div><div style="font-size:11px;color:rgba(255,255,255,.45)">MBTI·MMPI·K-WAIS 결과지 업로드 → AI 해석</div></div>
+          </div>
+          <div class="card-gold">
+            <div style="font-size:11px;font-weight:700;color:var(--gold2);margin-bottom:6px">✅ 독립 인프라 완성</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.6);line-height:1.7">lightoflife-db · 전용 KV · 3개 Worker 분리<br>총신대 교수님 감수 후 즉시 론칭 가능</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑤ 수익 모델 -->
+  <div class="slide s-dark" id="s4">
+    <div class="w-full">
+      <div class="tag tag-gold">Revenue Model</div>
+      <h2 class="text-white" style="margin-bottom:6px">4가지 수익원 구조</h2>
+      <p style="color:rgba(255,255,255,.48);margin-bottom:20px">B2B 안정 수익 + B2C 크레딧의 이중 구조 · CTS 채널로 빠른 스케일업</p>
+
+      <div class="grid2" style="margin-bottom:14px">
+        <div style="background:rgba(201,162,39,.08);border:1px solid rgba(201,162,39,.25);border-radius:14px;padding:20px;position:relative;overflow:hidden">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--gold)"></div>
+          <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--gold2);margin-bottom:8px">① B2B 교회 구독 (핵심)</div>
+          <div style="font-size:22px;font-weight:900;color:#fff;margin-bottom:5px">월 5~20만원 <span style="font-size:12px;color:rgba(255,255,255,.4);font-weight:400">/ 교회</span></div>
+          <div style="font-size:12px;color:rgba(255,255,255,.55);line-height:1.8;margin-bottom:10px">소형(~100명) 5만원 · 중형(~500명) 10만원 · 대형 20만원<br>성도 전원 무제한 사용 포함</div>
+          <div style="background:rgba(201,162,39,.1);border-radius:8px;padding:7px 11px;font-size:11px;color:var(--gold2)">교회 200개 → 월 1,500만원 예상</div>
+          <div class="progress-bar"><div class="progress-fill" style="width:65%;background:var(--gold)"></div></div>
+          <div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:4px">전체 수익 기여 65%</div>
+        </div>
+        <div style="background:rgba(82,183,136,.07);border:1px solid rgba(82,183,136,.22);border-radius:14px;padding:20px;position:relative;overflow:hidden">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--gl)"></div>
+          <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--gl);margin-bottom:8px">② B2C 성도 개인 크레딧</div>
+          <div style="font-size:22px;font-weight:900;color:#fff;margin-bottom:5px">1,000~50,000원 <span style="font-size:12px;color:rgba(255,255,255,.4);font-weight:400">/ 구매</span></div>
+          <div style="font-size:12px;color:rgba(255,255,255,.55);line-height:1.8;margin-bottom:10px">심층 검사(10cr) · AI 상담(2cr) · 마음커플(20~45cr)<br>교회 미가입 성도 개인 구매</div>
+          <div style="background:rgba(82,183,136,.1);border-radius:8px;padding:7px 11px;font-size:11px;color:var(--gl)">MAU 30,000명 × ARPU 2,000원 잠재</div>
+          <div class="progress-bar"><div class="progress-fill" style="width:20%;background:var(--gl)"></div></div>
+          <div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:4px">전체 수익 기여 20%</div>
+        </div>
+      </div>
+      <div class="grid2">
+        <div style="background:rgba(107,33,168,.07);border:1px solid rgba(107,33,168,.2);border-radius:14px;padding:18px;position:relative;overflow:hidden">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:#A855F7"></div>
+          <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;color:#A855F7;margin-bottom:8px">③ 기독교 상담사 중개 수수료</div>
+          <div style="font-size:20px;font-weight:900;color:#fff;margin-bottom:5px">15% 수수료</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.55);line-height:1.7">회기 5~8만원 × 15% · 상담사 20명 × 20세션 → 월 약 300만원</div>
+          <div class="progress-bar"><div class="progress-fill" style="width:10%;background:#A855F7"></div></div>
+          <div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:4px">전체 수익 기여 10%</div>
+        </div>
+        <div style="background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.2);border-radius:14px;padding:18px;position:relative;overflow:hidden">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:#3B82F6"></div>
+          <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;color:#3B82F6;margin-bottom:8px">④ CTS 방송 콘텐츠·광고 제휴</div>
+          <div style="font-size:20px;font-weight:900;color:#fff;margin-bottom:5px">수익 배분 협의</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.55);line-height:1.7">방송 유입 성과 기반 · CTS 콘텐츠 앱 내 유통 · 교단 공동 마케팅</div>
+          <div class="progress-bar"><div class="progress-fill" style="width:5%;background:#3B82F6"></div></div>
+          <div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:4px">전체 수익 기여 5%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑥ CTS 재무 목표 (수익성 확인) -->
+  <div class="slide s-dark" id="s5">
+    <div class="cross-deco" style="right:-20px;bottom:-40px">✝</div>
+    <div class="w-full">
+      <div class="tag tag-gold">CTS Financial Projection</div>
+      <h2 class="text-white" style="margin-bottom:6px">CTS의 수익 시나리오</h2>
+      <p style="color:rgba(255,255,255,.48);margin-bottom:20px">CTS가 60% 기준 배분 수취 · 규모 성장 시 자동으로 비중 확대</p>
+
+      <div class="grid3" style="margin-bottom:18px">
+        <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:22px">
+          <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.45);letter-spacing:1px;margin-bottom:10px">2026년 하반기</div>
+          <div style="font-size:32px;font-weight:900;color:#fff;margin-bottom:3px">300<span style="font-size:16px">만원</span></div>
+          <div style="font-size:12px;color:rgba(255,255,255,.45);margin-bottom:14px">월 순이익 목표</div>
+          <div style="border-top:1px solid rgba(255,255,255,.07);padding-top:12px;display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;justify-content:space-between;font-size:13px">
+              <span style="color:rgba(255,255,255,.55)">🏢 CTS (60%)</span>
+              <span style="color:var(--gold2);font-weight:800">180만원</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px">
+              <span style="color:rgba(255,255,255,.35)">기타 파트너 (40%)</span>
+              <span style="color:rgba(255,255,255,.4);font-weight:600">120만원</span>
+            </div>
+          </div>
+          <div style="margin-top:10px;font-size:10px;color:rgba(255,255,255,.3)">교회 구독 20개 · MAU 5,000</div>
+        </div>
+
+        <div style="background:rgba(201,162,39,.08);border:2px solid rgba(201,162,39,.3);border-radius:16px;padding:22px;position:relative">
+          <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--gold);color:#000;font-size:10px;font-weight:800;padding:3px 12px;border-radius:20px;white-space:nowrap">BEP 달성 후</div>
+          <div style="font-size:11px;font-weight:700;color:var(--gold2);letter-spacing:1px;margin-bottom:10px">2027년</div>
+          <div style="font-size:32px;font-weight:900;color:#fff;margin-bottom:3px">2,000<span style="font-size:16px">만원</span></div>
+          <div style="font-size:12px;color:rgba(255,255,255,.45);margin-bottom:14px">월 순이익 목표</div>
+          <div style="border-top:1px solid rgba(255,255,255,.1);padding-top:12px;display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;justify-content:space-between;font-size:13px">
+              <span style="color:rgba(255,255,255,.55)">🏢 CTS (60%)</span>
+              <span style="color:var(--gold2);font-weight:800">1,200만원</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px">
+              <span style="color:rgba(255,255,255,.35)">기타 파트너 (40%)</span>
+              <span style="color:rgba(255,255,255,.4);font-weight:600">800만원</span>
+            </div>
+          </div>
+          <div style="margin-top:10px;font-size:10px;color:rgba(255,255,255,.3)">교회 구독 200개 · MAU 30,000</div>
+        </div>
+
+        <div style="background:rgba(201,162,39,.1);border:2px solid rgba(201,162,39,.4);border-radius:16px;padding:22px;position:relative">
+          <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,var(--gold),var(--gold2));color:#000;font-size:10px;font-weight:800;padding:3px 12px;border-radius:20px;white-space:nowrap">🔴 수익 상한 작동</div>
+          <div style="font-size:11px;font-weight:700;color:var(--gold2);letter-spacing:1px;margin-bottom:10px">2028년</div>
+          <div style="font-size:32px;font-weight:900;color:#fff;margin-bottom:3px">1<span style="font-size:16px">억원</span></div>
+          <div style="font-size:12px;color:rgba(255,255,255,.45);margin-bottom:14px">월 순이익 목표</div>
+          <div style="border-top:1px solid rgba(201,162,39,.2);padding-top:12px;display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;justify-content:space-between;font-size:13px">
+              <span style="color:rgba(255,255,255,.55)">🏢 CTS (80%)</span>
+              <span style="color:var(--gold2);font-weight:800">8,000만원</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px">
+              <span style="color:rgba(255,255,255,.35)">파트너 각 캡 고정</span>
+              <span style="color:rgba(255,255,255,.4);font-weight:600">각 1,000만원 🔴</span>
+            </div>
+          </div>
+          <div style="margin-top:10px;font-size:10px;color:rgba(255,255,255,.3)">교회 1,000개+ · 해외 진출</div>
+        </div>
+      </div>
+
+      <div style="background:rgba(201,162,39,.08);border:1px solid rgba(201,162,39,.22);border-radius:12px;padding:13px 22px;display:flex;align-items:center;gap:20px">
+        <span style="font-size:22px">📈</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:var(--gold2);margin-bottom:3px">CTS 수익 자동 확대 구조</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.65);line-height:1.7">서비스가 성장할수록 CTS의 배분 비중이 <strong style="color:#fff">60% → 70% → 80% → 90%+</strong>로 자동 확대<br>
+          파트너 수익에 캡이 작동하는 반면, CTS는 상한 없이 성장 수익 전체를 수취</div>
+        </div>
+        <div style="text-align:center;padding:10px 16px;background:rgba(201,162,39,.1);border-radius:10px;flex-shrink:0">
+          <div style="font-size:20px;font-weight:900;color:var(--gold2)">∞</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.45);margin-top:2px">CTS 상한 없음</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑦ 성장 로드맵 -->
+  <div class="slide s-navy" id="s6">
+    <div class="w-full">
+      <div class="tag tag-gold">Growth Roadmap</div>
+      <h2 class="text-white" style="margin-bottom:6px">4단계 성장 로드맵</h2>
+      <p style="color:rgba(255,255,255,.48);margin-bottom:20px">CTS 방송 채널 + 총신대 공신력으로 단계적 확산 → 최종 CTS 완전 내재화</p>
+
+      <div style="display:flex;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:16px;overflow:hidden;margin-bottom:14px">
+        <div class="tl-phase" style="background:rgba(201,162,39,.05)">
+          <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--gold2);margin-bottom:8px">PHASE 1 · 0~6개월</div>
+          <div style="font-size:14px;font-weight:800;color:#fff;margin-bottom:10px">CTS 시청자 온보딩</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.55);line-height:1.9">
+            · 총신대 교수님 AI 감수 완료<br>
+            · 커스텀 도메인 CTS 등록<br>
+            · TV 자막·QR코드 노출 시작<br>
+            · 파일럿 교회 20개 무료 제공<br>
+            · 기독교 상담사 10명 입점<br>
+            <span style="color:var(--gold2);font-weight:700">▶ MAU 목표: 5,000명</span>
+          </div>
+        </div>
+        <div class="tl-phase" style="background:rgba(107,33,168,.05)">
+          <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;color:#A855F7;margin-bottom:8px">PHASE 2 · 6~18개월</div>
+          <div style="font-size:14px;font-weight:800;color:#fff;margin-bottom:10px">교단·기관 단위 확장</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.55);line-height:1.9">
+            · 교회 구독 유료화 (50개 BEP)<br>
+            · 교단 공식 제휴 3건<br>
+            · 목회자 번아웃 케어 프로그램<br>
+            · 신학교 협력 상담 과정<br>
+            · 총신대 학술 검증 논문 발표<br>
+            <span style="color:#A855F7;font-weight:700">▶ MAU 목표: 30,000명</span>
+          </div>
+        </div>
+        <div class="tl-phase" style="background:rgba(82,183,136,.05)">
+          <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--gl);margin-bottom:8px">PHASE 3 · 18개월+</div>
+          <div style="font-size:14px;font-weight:800;color:#fff;margin-bottom:10px">해외 한인교회 진출</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.55);line-height:1.9">
+            · 미국·캐나다 한인교회 공략<br>
+            · 영문 서비스 출시<br>
+            · 해외 선교단체 B2B<br>
+            · CTS 글로벌 방송 연동<br>
+            · AI 엔진 라이선싱 검토<br>
+            <span style="color:var(--gl);font-weight:700">▶ MAU 목표: 100,000명</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:rgba(201,162,39,.06);border:1px solid rgba(201,162,39,.22);border-radius:12px;padding:12px 18px;display:flex;align-items:center;gap:16px">
+        <div style="background:rgba(201,162,39,.18);border-radius:8px;padding:4px 12px;font-size:10px;font-weight:700;color:var(--gold2);white-space:nowrap;letter-spacing:1px">PHASE 4 · 장기</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:3px">서비스 안정화 후 — <span style="color:var(--gold2)">CTS 완전 운영 이전</span></div>
+          <div style="font-size:11px;color:rgba(255,255,255,.55);line-height:1.7">
+            MAU 50,000+ · 수익 안정 구간 진입 시 → <strong style="color:#fff">CTS가 전체 서비스 운영 주체로 전환</strong><br>
+            교수님·개발자는 <span style="color:var(--gold2)">기술 자문 + 수익 배분 수취 역할</span>로 전환 (운영 부담 없음 · 월 캡 수익 지속)
+          </div>
+        </div>
+        <div style="text-align:center;padding:8px 14px;background:rgba(255,255,255,.05);border-radius:10px;white-space:nowrap">
+          <div style="font-size:11px;font-weight:700;color:var(--gold2)">CTS</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.45);margin-top:2px">운영 주체</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑧ 실행 계획 -->
+  <div class="slide s-light" id="s7">
+    <div class="w-full">
+      <div class="tag tag-navy">Execution Plan</div>
+      <h2 class="text-navy" style="margin-bottom:6px">Q2–Q4 2026 즉시 실행 계획</h2>
+      <p style="color:#6B7280;margin-bottom:20px">기술 완성 · 총신대 감수 → CTS 채널 영업 순서로 진행</p>
+
+      <div class="grid3" style="margin-bottom:16px">
+        <div>
+          <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--gold);padding:8px 0;border-bottom:2px solid #F59E0B;margin-bottom:12px">Q2 2026 — 준비 완료</div>
+          <div class="check-item">
+            <div class="check-dot" style="background:#F59E0B;color:#000">1</div>
+            <div style="font-size:13px;color:#374151"><strong>총신대 교수님</strong> AI 상담 감수 완료</div>
+          </div>
+          <div class="check-item">
+            <div class="check-dot" style="background:#F59E0B;color:#000">2</div>
+            <div style="font-size:13px;color:#374151">3자 <strong>MOU 계약서</strong> 체결</div>
+          </div>
+          <div class="check-item">
+            <div class="check-dot" style="background:#F59E0B;color:#000">3</div>
+            <div style="font-size:13px;color:#374151">CTS 명의 <strong>커스텀 도메인</strong> 등록</div>
+          </div>
+          <div class="check-item">
+            <div class="check-dot" style="background:#F59E0B;color:#000">4</div>
+            <div style="font-size:13px;color:#374151">파일럿 교회 <strong>5곳 무료 오픈</strong></div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;color:#7C3AED;padding:8px 0;border-bottom:2px solid #7C3AED;margin-bottom:12px">Q3 2026 — 본격 가동</div>
+          <div class="check-item">
+            <div class="check-dot" style="background:#7C3AED;color:#fff">1</div>
+            <div style="font-size:13px;color:#374151">CTS 방송 자막 <strong>QR코드 노출</strong> 시작</div>
+          </div>
+          <div class="check-item">
+            <div class="check-dot" style="background:#7C3AED;color:#fff">2</div>
+            <div style="font-size:13px;color:#374151">교회 구독 <strong>유료화 출시</strong></div>
+          </div>
+          <div class="check-item">
+            <div class="check-dot" style="background:#7C3AED;color:#fff">3</div>
+            <div style="font-size:13px;color:#374151">기독교 상담사 <strong>10명 입점</strong></div>
+          </div>
+          <div class="check-item">
+            <div class="check-dot" style="background:#7C3AED;color:#fff">4</div>
+            <div style="font-size:13px;color:#374151">BEP <strong>교회 50개</strong> 달성</div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--green);padding:8px 0;border-bottom:2px solid #2D6A4F;margin-bottom:12px">Q4 2026 — 확장</div>
+          <div class="check-item">
+            <div class="check-dot" style="background:#2D6A4F;color:#fff">1</div>
+            <div style="font-size:13px;color:#374151"><strong>교단 제휴</strong> 제안서 5개 교단 발송</div>
+          </div>
+          <div class="check-item">
+            <div class="check-dot" style="background:#2D6A4F;color:#fff">2</div>
+            <div style="font-size:13px;color:#374151"><strong>목회자 번아웃</strong> 전용 케어 론칭</div>
+          </div>
+          <div class="check-item">
+            <div class="check-dot" style="background:#2D6A4F;color:#fff">3</div>
+            <div style="font-size:13px;color:#374151">총신대 <strong>학술 발표</strong> (공신력 강화)</div>
+          </div>
+          <div class="check-item">
+            <div class="check-dot" style="background:#2D6A4F;color:#fff">4</div>
+            <div style="font-size:13px;color:#374151">월 수익 <strong>1,000만원</strong> 달성</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div style="background:linear-gradient(135deg,#0F2044,#1A3366);border-radius:12px;padding:14px 18px">
+          <div style="font-size:11px;font-weight:700;color:var(--gold2);margin-bottom:8px">💰 초기 필요 투자 (최소화)</div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:rgba(255,255,255,.7);margin-bottom:5px"><span>기술 서버 운영비 (월)</span><span style="color:#fff">약 35~85만원</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:rgba(255,255,255,.7);margin-bottom:5px"><span>도메인·SSL 등록 (연)</span><span style="color:#fff">약 10만원</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:rgba(255,255,255,.7)"><span>CTS 마케팅 예산 (별도)</span><span style="color:var(--gold2)">CTS 자체 부담</span></div>
+        </div>
+        <div style="background:linear-gradient(135deg,#0D1F16,#1B4332);border-radius:12px;padding:14px 18px">
+          <div style="font-size:11px;font-weight:700;color:var(--gl);margin-bottom:8px">⚡ CTS — 초기 투자 리스크 없는 신사업</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.65);line-height:1.8">✓ TV·앱라디오 이외 새 사업 확장<br>✓ 기술 인프라 100% 완성 — 추가 개발비 없음<br>✓ 각 참여자 강점 리소스 결합 → 즉시 론칭<br>✓ 총신대 감수만 완료되면 서비스 시작 가능</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑨ 수익 배분 구조 -->
+  <div class="slide s-gold" id="s8">
+    <div class="cross-deco" style="right:-20px;top:-40px">✝</div>
+    <div class="w-full">
+      <div class="tag tag-gold">Revenue Sharing</div>
+      <h2 class="text-white" style="margin-bottom:6px">3자 수익 배분 구조</h2>
+      <p style="color:rgba(255,255,255,.55);margin-bottom:16px">CTS 우선 배분 · 파트너 월 수익 상한 설정 → 규모 성장 시 CTS 비중 자동 확대</p>
+
+      <div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:11px 18px;margin-bottom:14px;display:flex;gap:20px;flex-wrap:wrap">
+        <div style="font-size:12px;color:rgba(255,255,255,.7)">📌 <strong style="color:#fff">배분 기준:</strong> 월 운영비 차감 후 <strong style="color:var(--gold2)">순이익</strong> 기준 · 월 1회 정산</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.7)">📌 <strong style="color:#fff">운영비:</strong> 개발자 선납 후 수익에서 우선 차감</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.7)">🔴 <strong style="color:var(--gold2)">수익 상한:</strong> 개발자·교수님 각 <strong style="color:#fff">월 최대 1,000만원</strong> · 초과분 전액 CTS 귀속</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">
+        <!-- 1단계 -->
+        <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:13px;padding:14px 18px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <div style="background:rgba(255,255,255,.1);border-radius:7px;padding:3px 10px;font-size:10px;font-weight:700;color:rgba(255,255,255,.65)">PHASE 1</div>
+            <div style="font-size:13px;font-weight:700;color:#fff">초기 — 월 순이익 <span style="color:var(--gold2)">5,000만원 미만</span></div>
+            <div style="margin-left:auto;font-size:11px;color:rgba(255,255,255,.4)">파트너 캡 미도달 구간</div>
+          </div>
+          <div class="rev-bar" style="height:26px">
+            <div class="rev-seg" style="width:60%;background:linear-gradient(90deg,#0F2044,#1A3366);font-size:12px">🏢 CTS 60%</div>
+            <div class="rev-seg" style="width:20%;background:linear-gradient(90deg,#7C3800,#C9A227);font-size:11px">🎓 20%</div>
+            <div class="rev-seg" style="width:20%;background:linear-gradient(90deg,#1B4332,#2D6A4F);font-size:11px">💻 20%</div>
+          </div>
+          <div style="display:flex;gap:20px;margin-top:8px;font-size:11px;color:rgba(255,255,255,.55)">
+            <span><strong style="color:#fff">CTS 60%</strong> — 채널·홍보 투자 회수 우선</span>
+            <span><strong style="color:var(--gold2)">교수님 20%</strong> — 학술 자문 대가</span>
+            <span><strong style="color:var(--gl)">개발자 20%</strong> — 운영비+인건비</span>
+          </div>
+        </div>
+
+        <!-- 2단계 -->
+        <div style="background:rgba(201,162,39,.07);border:1px solid rgba(201,162,39,.25);border-radius:13px;padding:14px 18px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <div style="background:rgba(201,162,39,.22);border-radius:7px;padding:3px 10px;font-size:10px;font-weight:700;color:var(--gold2)">PHASE 2</div>
+            <div style="font-size:13px;font-weight:700;color:#fff">성장 — 월 순이익 <span style="color:var(--gold2)">5,000만원 이상</span></div>
+            <div style="margin-left:auto">
+              <span style="font-size:10px;background:rgba(201,162,39,.2);color:var(--gold2);padding:2px 9px;border-radius:20px;font-weight:700">🔴 수익 상한 작동</span>
+            </div>
+          </div>
+          <div class="rev-bar" style="height:26px">
+            <div class="rev-seg" style="width:60%;background:linear-gradient(90deg,#0F2044,#243F80);font-size:12px">🏢 CTS 60%+α</div>
+            <div class="rev-seg" style="width:20%;background:linear-gradient(90deg,#7C3800,#E8BC3A);font-size:11px">🎓 MAX 1,000만</div>
+            <div class="rev-seg" style="width:20%;background:linear-gradient(90deg,#1B4332,#52B788);font-size:11px">💻 MAX 1,000만</div>
+          </div>
+          <div style="margin-top:8px;font-size:11px;color:rgba(255,255,255,.55)">
+            교수님·개발자 배분액이 각 <strong style="color:#fff">1,000만원 도달 시 상한 고정</strong> → 초과 수익은 전액 CTS 추가 귀속<br>
+            <span style="color:var(--gold2)">▶ CTS 실효 비중: 60% → 70% → 80% → 90%+ 로 자동 확대</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 수치 시뮬레이션 -->
+      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:12px;padding:12px 18px">
+        <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.55);letter-spacing:1px;margin-bottom:10px">📊 배분액 시뮬레이션 (월 순이익 기준)</div>
+        <div style="display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:0">
+          <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.4);padding:4px 8px;border-bottom:1px solid rgba(255,255,255,.08)">월 순이익</div>
+          <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.4);padding:4px 8px;border-bottom:1px solid rgba(255,255,255,.08);text-align:center">🏢 CTS</div>
+          <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.4);padding:4px 8px;border-bottom:1px solid rgba(255,255,255,.08);text-align:center">🎓 교수님</div>
+          <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.4);padding:4px 8px;border-bottom:1px solid rgba(255,255,255,.08);text-align:center">💻 개발자</div>
+
+          <div style="font-size:12px;color:rgba(255,255,255,.7);padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05)">500만원</div>
+          <div style="font-size:12px;font-weight:700;color:#fff;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);text-align:center">300만원 <span style="font-size:10px;color:rgba(255,255,255,.4)">(60%)</span></div>
+          <div style="font-size:12px;font-weight:700;color:var(--gold2);padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);text-align:center">100만원</div>
+          <div style="font-size:12px;font-weight:700;color:var(--gl);padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);text-align:center">100만원</div>
+
+          <div style="font-size:12px;color:rgba(255,255,255,.7);padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05)">2,000만원</div>
+          <div style="font-size:12px;font-weight:700;color:#fff;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);text-align:center">1,200만원 <span style="font-size:10px;color:rgba(255,255,255,.4)">(60%)</span></div>
+          <div style="font-size:12px;font-weight:700;color:var(--gold2);padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);text-align:center">400만원</div>
+          <div style="font-size:12px;font-weight:700;color:var(--gl);padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);text-align:center">400만원</div>
+
+          <div style="font-size:12px;color:rgba(255,255,255,.7);padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05)">5,000만원 <span style="font-size:10px;color:var(--gold2)">(캡 발동)</span></div>
+          <div style="font-size:12px;font-weight:700;color:#fff;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);text-align:center">3,000만원 <span style="font-size:10px;color:rgba(255,255,255,.4)">(60%)</span></div>
+          <div style="font-size:12px;font-weight:700;color:var(--gold2);padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);text-align:center">1,000만원 🔴</div>
+          <div style="font-size:12px;font-weight:700;color:var(--gl);padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);text-align:center">1,000만원 🔴</div>
+
+          <div style="font-size:12px;color:rgba(255,255,255,.7);padding:6px 8px">1억원</div>
+          <div style="font-size:12px;font-weight:700;color:var(--gold2);padding:6px 8px;text-align:center">8,000만원 <span style="font-size:10px;color:var(--gold2)">(80%)</span></div>
+          <div style="font-size:12px;font-weight:700;color:var(--gold2);padding:6px 8px;text-align:center">1,000만원 🔴</div>
+          <div style="font-size:12px;font-weight:700;color:var(--gl);padding:6px 8px;text-align:center">1,000만원 🔴</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑩ 3자 파트너십 구조 -->
+  <div class="slide s-navy" id="s9">
+    <div class="cross-deco" style="right:-20px;bottom:-50px">✝</div>
+    <div class="w-full">
+      <div class="tag tag-gold">Partnership Structure</div>
+      <h2 class="text-white" style="margin-bottom:6px">3자 파트너십 — 강점 리소스 결합</h2>
+      <p style="color:rgba(255,255,255,.48);margin-bottom:22px">각자의 강점이 결합되는 구조 — 중복 없는 명확한 분업으로 즉시 론칭 가능</p>
+
+      <div class="grid3" style="margin-bottom:18px">
+        <!-- CTS (첫번째) -->
+        <div class="partner-card" style="background:linear-gradient(135deg,rgba(15,32,68,.6),rgba(26,51,102,.4));border:2px solid rgba(201,162,39,.35)">
+          <div class="role-badge" style="background:rgba(201,162,39,.2);color:var(--gold2)">CHANNEL PARTNER · 주도</div>
+          <div style="font-size:28px;margin-bottom:8px">📺</div>
+          <div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:10px">CTS 기독교TV</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.65);line-height:1.85;margin-bottom:14px">
+            ✓ 방송·미디어 마케팅·홍보<br>
+            ✓ 교회·교단 네트워크 영업<br>
+            ✓ 브랜드 신뢰도 제공<br>
+            ✓ 사이트 채널 도메인 관리
+          </div>
+          <div style="border-top:1px solid rgba(201,162,39,.2);padding-top:12px">
+            <div style="font-size:10px;font-weight:700;letter-spacing:1.2px;color:var(--gold2);margin-bottom:6px">소유권</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <span style="font-size:11px;background:rgba(201,162,39,.15);color:var(--gold2);padding:3px 9px;border-radius:20px;font-weight:600">프로그램 공동소유</span>
+              <span style="font-size:11px;background:rgba(201,162,39,.15);color:var(--gold2);padding:3px 9px;border-radius:20px;font-weight:600">도메인 단독소유</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 총신대 교수님 -->
+        <div class="partner-card" style="background:linear-gradient(135deg,rgba(201,162,39,.12),rgba(245,216,120,.06));border:1px solid rgba(201,162,39,.25)">
+          <div class="role-badge" style="background:rgba(201,162,39,.2);color:var(--gold2)">ACADEMIC ADVISOR</div>
+          <div style="font-size:28px;margin-bottom:8px">🎓</div>
+          <div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:10px">총신대 상담대학원<br><span style="font-size:14px;font-weight:600">교수님</span></div>
+          <div style="font-size:12px;color:rgba(255,255,255,.6);line-height:1.85;margin-bottom:14px">
+            ✓ 기독교 상담 AI 품질 검수<br>
+            ✓ 성경 말씀·상담 콘텐츠 감수<br>
+            ✓ 임상 윤리·전문성 보증<br>
+            ✓ 기독교 상담사 네트워크 연결
+          </div>
+          <div style="border-top:1px solid rgba(255,255,255,.1);padding-top:12px">
+            <div style="font-size:10px;font-weight:700;letter-spacing:1.2px;color:var(--gold2);margin-bottom:6px">소유권</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <span style="font-size:11px;background:rgba(201,162,39,.15);color:var(--gold2);padding:3px 9px;border-radius:20px;font-weight:600">AI 엔진 공동소유</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 개발자 -->
+        <div class="partner-card" style="background:linear-gradient(135deg,rgba(45,106,79,.12),rgba(82,183,136,.06));border:1px solid rgba(82,183,136,.2)">
+          <div class="role-badge" style="background:rgba(82,183,136,.2);color:var(--gl)">DEVELOPER</div>
+          <div style="font-size:28px;margin-bottom:8px">💻</div>
+          <div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:10px">플랫폼 개발자</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.55);line-height:1.85;margin-bottom:14px">
+            ✓ 전체 서비스 개발 및 운영<br>
+            ✓ 서버·DB·AI 인프라 관리<br>
+            ✓ 신규 기능 지속 개발<br>
+            ✓ 기술 장애 대응·유지보수
+          </div>
+          <div style="border-top:1px solid rgba(255,255,255,.1);padding-top:12px">
+            <div style="font-size:10px;font-weight:700;letter-spacing:1.2px;color:var(--gl);margin-bottom:6px">소유권</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <span style="font-size:11px;background:rgba(82,183,136,.15);color:var(--gl);padding:3px 9px;border-radius:20px;font-weight:600">프로그램 공동소유</span>
+              <span style="font-size:11px;background:rgba(82,183,136,.15);color:var(--gl);padding:3px 9px;border-radius:20px;font-weight:600">AI 엔진 공동소유</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 소유권 요약 + 시너지 메시지 -->
+      <div style="background:rgba(201,162,39,.07);border:1px solid rgba(201,162,39,.2);border-radius:12px;padding:14px 20px">
+        <div style="font-size:11px;font-weight:700;color:var(--gold2);letter-spacing:1px;margin-bottom:10px">📋 소유권 요약 — 강점 리소스 결합 구조</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:10px">
+          <div style="font-size:12px;color:rgba(255,255,255,.7)">
+            <span style="color:var(--gold2);font-weight:700">프로그램 소유권</span><br>개발자 + CTS (공동)
+          </div>
+          <div style="font-size:12px;color:rgba(255,255,255,.7)">
+            <span style="color:var(--gold2);font-weight:700">AI 상담 엔진</span><br>개발자 + 총신대 교수님 (공동)
+          </div>
+          <div style="font-size:12px;color:rgba(255,255,255,.7)">
+            <span style="color:var(--gold2);font-weight:700">도메인·채널</span><br>CTS 단독 소유
+          </div>
+        </div>
+        <div style="border-top:1px solid rgba(201,162,39,.15);padding-top:9px;font-size:12px;color:rgba(255,255,255,.65);line-height:1.75">
+          📺 <strong style="color:#fff">CTS</strong>의 방송 채널·교단 네트워크 + 🎓 <strong style="color:var(--gold2)">총신대</strong>의 학술 공신력 + 💻 <strong style="color:var(--gl)">개발자</strong>의 완성형 기술 인프라<br>
+          <span style="color:var(--gold2);font-weight:700">→ 각 참여자의 핵심 강점만을 결합 · 추가 투자 없이 즉시 론칭 가능한 시너지 구조</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑪ 결론 -->
+  <div class="slide s-cover" id="s10">
+    <div class="cross-deco" style="right:-30px;bottom:-50px">✝</div>
+    <div class="text-center w-full">
+      <div class="tag tag-gold" style="margin-bottom:22px">Conclusion</div>
+      <h2 class="text-white" style="font-size:38px;margin-bottom:14px;line-height:1.3">
+        CTS가 이 사명을 감당할 때<br>
+        <span style="color:var(--gold2)">성도의 마음이 치유됩니다</span>
+      </h2>
+      <div class="gold-divider" style="margin:18px auto"></div>
+
+      <div class="grid3" style="margin:22px 0;text-align:left">
+        <div class="card-gold">
+          <div style="font-size:22px;margin-bottom:8px">📺</div>
+          <div style="font-size:13px;font-weight:700;color:var(--gold2);margin-bottom:6px">CTS 기독교TV</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.65);line-height:1.8">수십 년 기독교 신뢰 자산 활용<br>교회·교단 직접 접근 채널<br>가장 큰 수익 배분 · 도메인 보유<br><span style="color:var(--gold2);font-weight:600">안정화 후 전체 운영 주체 전환</span></div>
+        </div>
+        <div class="card-navy">
+          <div style="font-size:22px;margin-bottom:8px">🎓</div>
+          <div style="font-size:13px;font-weight:700;color:var(--gold2);margin-bottom:6px">총신대 교수님</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.6);line-height:1.8">AI 상담 품질의 학문적 보증<br>기독교 상담사 네트워크 연결<br>서비스 신뢰도 극대화</div>
+        </div>
+        <div class="card-navy">
+          <div style="font-size:22px;margin-bottom:8px">💻</div>
+          <div style="font-size:13px;font-weight:700;color:var(--gl);margin-bottom:6px">개발자</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.6);line-height:1.8">완성형 기술 인프라 즉시 가동<br>지속적 운영·개발 역량 보유<br>초기 운영비 수준 수익 → 성장 후 정당한 보상</div>
+        </div>
+      </div>
+
+      <!-- 장기 비전 -->
+      <div style="background:rgba(201,162,39,.08);border:1px solid rgba(201,162,39,.22);border-radius:12px;padding:12px 22px;margin-bottom:16px;display:flex;align-items:center;gap:16px;max-width:680px;margin-left:auto;margin-right:auto">
+        <span style="font-size:20px">🔮</span>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--gold2);margin-bottom:3px">장기 비전 — CTS 완전 내재화</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.65);line-height:1.7">서비스 안정화 후 CTS가 전체 운영 주체 전환 · 교수님·개발자는 자문 + 수익 배분 수취만<br>
+          <span style="color:rgba(255,255,255,.4)">→ CTS 완전 내재화 · 기독교 정신건강 사명의 지속적 구현</span></div>
+        </div>
+      </div>
+
+      <div style="background:rgba(201,162,39,.1);border:1px solid rgba(201,162,39,.28);border-radius:14px;padding:16px 24px;display:inline-block;max-width:620px;margin-bottom:22px">
+        <p style="font-size:14px;color:rgba(255,255,255,.82);line-height:1.85;font-style:italic">
+          "너희는 세상의 빛이라 산 위에 있는 동네가 숨겨지지 못할 것이요" — 마태복음 5:14
+        </p>
+        <div style="margin-top:10px;font-size:12px;color:var(--gold2);font-weight:700">
+          The Light of Life — 말씀으로 회복하는 마음, 세상을 밝히는 빛
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:center;gap:14px;flex-wrap:wrap">
+        <div style="background:var(--gold);color:#000;font-weight:800;font-size:13px;padding:11px 26px;border-radius:50px">
+          다음 단계: 총신대 교수님 미팅 + MOU 체결
+        </div>
+        <div style="background:rgba(255,255,255,.1);color:#fff;font-weight:600;font-size:13px;padding:11px 22px;border-radius:50px;border:1px solid rgba(255,255,255,.2)">
+          lightoflife.limyj007.workers.dev
+        </div>
+      </div>
+      <div style="margin-top:20px;font-size:11px;color:rgba(255,255,255,.25)">CONFIDENTIAL · 내부 보고용 · 2026</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="slide-counter" id="counter">1 / 11</div>
+<div class="logo-mark">✝ THE LIGHT OF LIFE</div>
+
+<div class="nav">
+  <button class="nav-btn" id="prev">←</button>
+  <div class="nav-dots" id="dots"></div>
+  <button class="nav-btn" id="next">→</button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const dotsEl = document.getElementById('dots');
+  const counter = document.getElementById('counter');
+  let cur = 0;
+
+  slides.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.addEventListener('click', () => go(i));
+    dotsEl.appendChild(d);
+  });
+
+  function go(n) {
+    if (n < 0 || n >= slides.length) return;
+    slides[cur].classList.remove('active');
+    slides[cur].classList.add('prev');
+    setTimeout(() => slides[cur].classList.remove('prev'), 500);
+    cur = n;
+    slides[cur].classList.add('active');
+    document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === cur));
+    counter.textContent = (cur + 1) + ' / ' + slides.length;
+  }
+
+  document.getElementById('next').addEventListener('click', () => go(cur + 1));
+  document.getElementById('prev').addEventListener('click', () => go(cur - 1));
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') go(cur + 1);
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   go(cur - 1);
+  });
+
+  let tx = 0, ty = 0;
+  document.addEventListener('touchstart', e => { tx = e.touches[0].clientX; ty = e.touches[0].clientY; }, {passive:true});
+  document.addEventListener('touchend',   e => {
+    const dx = e.changedTouches[0].clientX - tx;
+    const dy = e.changedTouches[0].clientY - ty;
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) go(dx < 0 ? cur + 1 : cur - 1);
+  }, {passive:true});
+</script>
+</body>
+</html>

@@ -201,6 +201,9 @@ function EFMTGame({ onExit }) {
   const [totalTargets, setTotalTargets] = useState(0);
   const [finished, setFinished]  = useState(false);
   const [comboDisplay, setComboDisplay] = useState(0); // UI 표시용
+  const [comboTierAnim, setComboTierAnim] = useState(null); // 배율 변화 팝업 텍스트
+  const [personalBest, setPersonalBest]  = useState(null); // 이전 최고점
+  const [computedScore, setComputedScore] = useState(0);   // done 화면 점수
 
   const timerRef     = useRef(null);
   const sessionRef   = useRef(Date.now());
@@ -208,6 +211,16 @@ function EFMTGame({ onExit }) {
   const maxComboRef  = useRef(0); // 이번 라운드 최대 콤보
 
   const cfg = DIFFICULTY_CONFIG[difficulty];
+
+  // ── 개인 베스트 로드 ──────────────────────────────────────
+  useEffect(() => {
+    GameEngine.getGameStats().then(r => {
+      if (r.success) {
+        const s = (r.data?.perGame || []).find(g => g.game_id === 'efmt');
+        if (s?.best_score) setPersonalBest(s.best_score);
+      }
+    }).catch(() => {});
+  }, []);
 
   // ── 라운드 시작 ───────────────────────────────────────────
   const startRound = useCallback((r, diff) => {
@@ -258,6 +271,17 @@ function EFMTGame({ onExit }) {
       if (round >= cfg.rounds) {
         setFinished(true);
         setSessionSec(Math.round((Date.now() - sessionRef.current) / 1000));
+        // 최종 점수 미리 계산 (done 화면 표시용)
+        const tc = next.reduce((a,s)=>a+s.correct,0);
+        const ti = next.reduce((a,s)=>a+s.incorrect,0);
+        const tt = next.reduce((a,s)=>a+s.totalTargets,0);
+        const ar = next.filter(s=>s.avgReaction>0).reduce((a,s,_,arr)=>a+s.avgReaction/arr.length,0);
+        const bc = Math.max(...next.map(s=>s.maxCombo||0),0);
+        const acc = tt > 0 ? Math.round(tc/tt*100) : 0;
+        const cBonus = bc >= 10 ? bc*15 : bc >= 5 ? bc*10 : bc >= 3 ? bc*6 : 0;
+        const aBonus = acc >= 90 ? 30 : acc >= 75 ? 15 : 0;
+        const sc = Math.max(0, tc*20 - ti*5 + Math.max(0, 50 - Math.round(ar/100)) + cBonus + aBonus);
+        setComputedScore(sc);
         setScreen('done');
       } else {
         setScreen('result');
@@ -281,10 +305,17 @@ function EFMTGame({ onExit }) {
     if (isTarget) {
       setCorrect(n => n + 1);
       setReactionTimes(prev => [...prev, rt]);
-      // 콤보 업데이트
+      // 콤보 배율 티어 감지 (3→×1.5, 5→×2.0, 10→×3.0)
+      const prevTier = comboRef.current >= 10 ? 3 : comboRef.current >= 5 ? 2 : comboRef.current >= 3 ? 1 : 0;
       comboRef.current += 1;
       if (comboRef.current > maxComboRef.current) maxComboRef.current = comboRef.current;
       setComboDisplay(comboRef.current);
+      const newTier = comboRef.current >= 10 ? 3 : comboRef.current >= 5 ? 2 : comboRef.current >= 3 ? 1 : 0;
+      if (newTier > prevTier) {
+        const tLabels = ['', '× 1.5', '× 2.0', '× 3.0'];
+        setComboTierAnim(tLabels[newTier]);
+        setTimeout(() => setComboTierAnim(null), 1400);
+      }
       // 잠시 후 꽃 숨기기
       setTimeout(() => {
         setCells(prev => prev.map(c =>
@@ -312,8 +343,9 @@ function EFMTGame({ onExit }) {
     const avgRT          = roundStats.filter(s=>s.avgReaction>0).reduce((a,s,_,arr) => a + s.avgReaction/arr.length, 0);
     const accuracy       = totalTarget > 0 ? Math.round(totalCorrect / totalTarget * 100) : 0;
     const bestCombo      = Math.max(...roundStats.map(s => s.maxCombo || 0), 0);
-    const comboBonus     = bestCombo >= 5 ? bestCombo * 8 : bestCombo >= 3 ? bestCombo * 5 : 0;
-    const score          = Math.max(0, totalCorrect * 20 - totalIncorrect * 5 + Math.max(0, 50 - Math.round(avgRT/100)) + comboBonus);
+    const comboBonus     = bestCombo >= 10 ? bestCombo*15 : bestCombo >= 5 ? bestCombo*10 : bestCombo >= 3 ? bestCombo*6 : 0;
+    const accuracyBonus  = accuracy >= 90 ? 30 : accuracy >= 75 ? 15 : 0;
+    const score          = Math.max(0, totalCorrect * 20 - totalIncorrect * 5 + Math.max(0, 50 - Math.round(avgRT/100)) + comboBonus + accuracyBonus);
 
     try {
       const res = await GameEngine.saveSession({
@@ -417,6 +449,21 @@ function EFMTGame({ onExit }) {
           감정 인식 능력을 키워줍니다.
         </div>
 
+        {/* 개인 베스트 배지 */}
+        {personalBest !== null && (
+          <div style={{
+            display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+            marginBottom:16, padding:'10px 16px',
+            background:`linear-gradient(135deg, ${GE.amber}15, ${GE.amber}08)`,
+            borderRadius:12, border:`1px solid ${GE.amber}33`,
+          }}>
+            <span style={{ fontSize:16 }}>🏆</span>
+            <span style={{ fontSize:13, fontWeight:700, color:GE.amber }}>
+              내 최고 기록: {personalBest.toLocaleString()}점
+            </span>
+          </div>
+        )}
+
         <button
           onClick={() => startRound(1, difficulty)}
           style={{
@@ -437,16 +484,27 @@ function EFMTGame({ onExit }) {
     const gs = cfg.grid;
     const flowerSize = gs === 4 ? 74 : 60;
 
+    // 콤보 배율 계산
+    const comboMultiplier = comboDisplay >= 10 ? '× 3.0' : comboDisplay >= 5 ? '× 2.0' : comboDisplay >= 3 ? '× 1.5' : null;
+    const comboColor = comboDisplay >= 10 ? '#E53E3E' : comboDisplay >= 5 ? GE.rose : GE.amber;
+
+    // 타이머 긴박감
+    const isCritical = timeLeft <= 3;
+    const isUrgent   = timeLeft <= 5;
+
     return (
       <div style={{
         flex:1, display:'flex', flexDirection:'column',
-        background:`linear-gradient(160deg, #FFFBF0, ${GE.cream})`,
+        background: isCritical
+          ? `linear-gradient(160deg, #FFF0F0, #FFF8E8)`
+          : `linear-gradient(160deg, #FFFBF0, ${GE.cream})`,
+        transition:'background 0.5s',
       }}>
         {/* 라운드 헤더 */}
         <div style={{
           padding:'10px 16px',
           background:'rgba(255,255,255,0.85)', backdropFilter:'blur(8px)',
-          borderBottom:'1px solid rgba(0,0,0,0.06)',
+          borderBottom:`1px solid ${isCritical ? '#FCA5A555' : 'rgba(0,0,0,0.06)'}`,
         }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
             <div style={{ display:'flex', alignItems:'center', gap:8 }}>
@@ -455,11 +513,14 @@ function EFMTGame({ onExit }) {
               </div>
               {comboDisplay >= 3 && (
                 <div style={{
-                  fontSize:12, fontWeight:800, color:GE.amber,
-                  background: GE.amber + '18', borderRadius:100, padding:'2px 9px',
+                  fontSize:12, fontWeight:800, color: comboColor,
+                  background: comboColor + '18', borderRadius:100, padding:'2px 10px',
                   animation:'pulse 0.4s ease',
+                  display:'flex', alignItems:'center', gap:4,
                 }}>
-                  🔥 {comboDisplay} 콤보
+                  {comboDisplay >= 10 ? '🔥🔥🔥' : comboDisplay >= 5 ? '🔥🔥' : '🔥'}
+                  {comboDisplay} 콤보
+                  {comboMultiplier && <span style={{ fontSize:10, opacity:0.8 }}>{comboMultiplier}</span>}
                 </div>
               )}
             </div>
@@ -468,7 +529,8 @@ function EFMTGame({ onExit }) {
               <span style={{ color:GE.warn, fontWeight:700 }}>✗ {incorrect}</span>
               <span style={{
                 color: timerColor, fontWeight:700, minWidth:28, textAlign:'right',
-                fontSize: timeLeft <= 5 ? 16 : 13,
+                fontSize: isUrgent ? 17 : 13,
+                animation: isCritical ? 'pulse 0.5s infinite' : isUrgent ? 'pulse 0.8s infinite' : 'none',
               }}>{timeLeft}s</span>
             </div>
           </div>
@@ -485,13 +547,31 @@ function EFMTGame({ onExit }) {
         {/* 안내 */}
         <div style={{
           textAlign:'center', padding:'8px 0 4px',
-          fontSize:12, color:GE.muted, fontWeight:600,
+          fontSize:12, color: isCritical ? GE.warn : GE.muted, fontWeight:600,
+          transition:'color 0.3s',
         }}>
-          기쁜 꽃 {remaining}개 남았어요 · 다른 꽃은 클릭하지 마세요
+          {isCritical ? '⏰ 서둘러요!' : `기쁜 꽃 ${remaining}개 남았어요 · 다른 꽃은 클릭하지 마세요`}
         </div>
 
-        {/* 꽃 그리드 */}
-        <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', padding:'8px 12px' }}>
+        {/* 꽃 그리드 (상대 위치 컨테이너 — 팝업용) */}
+        <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', padding:'8px 12px', position:'relative' }}>
+          {/* 콤보 배율 변화 팝업 */}
+          {comboTierAnim && (
+            <div style={{
+              position:'absolute', top:'10%', left:'50%', transform:'translateX(-50%)',
+              zIndex:10, pointerEvents:'none',
+              background:'linear-gradient(135deg, #F59E0B, #FCD34D)',
+              color:'white', fontWeight:900, fontSize:22,
+              padding:'10px 24px', borderRadius:100,
+              boxShadow:'0 4px 20px rgba(245,158,11,0.5)',
+              animation:'fadeUp 0.4s ease, pulse 0.6s ease 0.4s',
+              fontFamily:"'Noto Sans KR',sans-serif",
+              whiteSpace:'nowrap',
+            }}>
+              🔥 콤보 {comboTierAnim}
+            </div>
+          )}
+
           <div style={{
             display:'grid',
             gridTemplateColumns:`repeat(${gs}, ${flowerSize}px)`,
@@ -566,8 +646,8 @@ function EFMTGame({ onExit }) {
     const totalT    = roundStats.reduce((a,s)=>a+s.totalTargets,0);
     const totalW    = roundStats.reduce((a,s)=>a+s.incorrect,0);
     const avgAcc    = totalT > 0 ? Math.round(totalC/totalT*100) : 0;
-    const avgRT     = roundStats.filter(s=>s.avgReaction>0).reduce((a,s,_,arr)=>a+s.avgReaction/arr.length,0);
     const bestCombo = Math.max(...roundStats.map(s => s.maxCombo || 0), 0);
+    const isNewRecord = personalBest !== null && computedScore > personalBest;
 
     return (
       <div style={{
@@ -580,9 +660,30 @@ function EFMTGame({ onExit }) {
           <h2 style={{ fontSize:22, fontWeight:700, color:GE.dark, fontFamily:"'Noto Serif KR',serif" }}>
             감정 훈련 완료!
           </h2>
-          <p style={{ fontSize:13, color:GE.muted, marginTop:6, lineHeight:1.7 }}>
-            기쁜 꽃을 찾는 연습이 감정 인식을 키워줍니다
-          </p>
+
+          {/* 이번 점수 + 신기록 */}
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, marginTop:10 }}>
+            <span style={{ fontSize:28, fontWeight:900, color:GE.amber }}>
+              {computedScore.toLocaleString()}점
+            </span>
+            {isNewRecord && (
+              <span style={{
+                fontSize:12, fontWeight:800, color:'white',
+                background:`linear-gradient(135deg, ${GE.amber}, #E8C47A)`,
+                borderRadius:100, padding:'3px 10px',
+                animation:'pulse 0.6s ease',
+              }}>🏆 신기록!</span>
+            )}
+          </div>
+          {personalBest !== null && !isNewRecord && (
+            <div style={{ fontSize:11, color:GE.muted, marginTop:4 }}>
+              최고 기록 {personalBest.toLocaleString()}점
+              {computedScore > 0 && ` · 차이 ${(personalBest - computedScore).toLocaleString()}점`}
+            </div>
+          )}
+          {personalBest === null && (
+            <div style={{ fontSize:11, color:GE.sage, marginTop:4 }}>첫 기록이에요! 🎉</div>
+          )}
         </div>
 
         {/* 종합 스탯 */}
@@ -594,9 +695,9 @@ function EFMTGame({ onExit }) {
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px 20px' }}>
             {[
               { label:'기쁜 꽃 발견', val:`${totalC}개`, color:GE.sage },
-              { label:'전체 정확도', val:`${avgAcc}%`, color:GE.amber },
+              { label:'전체 정확도', val:`${avgAcc}%`, color: avgAcc >= 90 ? GE.sage : avgAcc >= 75 ? GE.amber : GE.warn },
               { label:'오클릭', val:`${totalW}회`, color:GE.warn },
-              { label:'최대 콤보', val:`${bestCombo}연속`, color:GE.amber },
+              { label:'최대 콤보', val:`${bestCombo}연속`, color: bestCombo >= 10 ? '#E53E3E' : bestCombo >= 5 ? GE.rose : GE.amber },
             ].map(({label,val,color})=>(
               <div key={label}>
                 <div style={{ fontSize:11, color:GE.muted, marginBottom:3 }}>{label}</div>
@@ -604,6 +705,23 @@ function EFMTGame({ onExit }) {
               </div>
             ))}
           </div>
+          {/* 보너스 내역 */}
+          {(bestCombo >= 3 || avgAcc >= 75) && (
+            <div style={{ marginTop:12, paddingTop:10, borderTop:'1px solid rgba(0,0,0,0.06)', display:'flex', gap:8, flexWrap:'wrap' }}>
+              {bestCombo >= 3 && (
+                <span style={{ fontSize:11, color:GE.amber, fontWeight:700,
+                  background:GE.amber+'15', borderRadius:6, padding:'2px 8px' }}>
+                  🔥 콤보 보너스 +{bestCombo >= 10 ? bestCombo*15 : bestCombo >= 5 ? bestCombo*10 : bestCombo*6}점
+                </span>
+              )}
+              {avgAcc >= 75 && (
+                <span style={{ fontSize:11, color:GE.sage, fontWeight:700,
+                  background:GE.sage+'15', borderRadius:6, padding:'2px 8px' }}>
+                  🎯 정확도 보너스 +{avgAcc >= 90 ? 30 : 15}점
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* 라운드별 */}

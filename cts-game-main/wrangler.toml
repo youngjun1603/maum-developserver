@@ -1,0 +1,19 @@
+name = "lightoflife-game"
+main = "src/index.tsx"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "./public"
+
+[[d1_databases]]
+binding       = "DB"
+database_name = "lightoflife-db"
+database_id   = "662b3fb9-e46d-4b0e-abfd-2380a9e70fe9"
+
+[[kv_namespaces]]
+binding = "KV"
+id      = "75bddd6da7f1418fad31e1902cda3ae0"
+
+# [triggers]
+# crons = ["0 3 * * 1"]   # 유료 플랜 전환 후 활성화 (cron 5개 무료 제한)

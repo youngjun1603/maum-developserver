@@ -215,10 +215,38 @@ const GameEngine = (() => {
     return res.json();
   }
 
+  // ── 스트릭 복구권 사용 ───────────────────────────────────
+  async function recoverStreak() {
+    const res = await fetch('/api/game/streak/recover', { method: 'POST', headers: authHeader() });
+    return res.json();
+  }
+
+  // ── 캠페인 진행 조회 ─────────────────────────────────────
+  async function getCampaign() {
+    const res = await fetch('/api/game/campaign', { headers: authHeader() });
+    return res.json();
+  }
+
+  // ── 캠페인 챕터 보상 수령 ────────────────────────────────
+  async function claimCampaign(chapterId) {
+    const res = await fetch('/api/game/campaign/claim', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body: JSON.stringify({ chapter_id: chapterId }),
+    });
+    return res.json();
+  }
+
+  // ── 인증 헤더 포함 범용 fetch ────────────────────────────
+  async function apiFetch(path, init = {}) {
+    return fetch(path, { ...init, headers: { ...authHeader(), ...(init.headers || {}) } });
+  }
+
   return {
     getMe, saveSession, transformSentence, updateVisual,
     getCredits, spendCredit, saveScore,
     getLeaderboard, getDailyTip, getMoodHistory, getEmotionReport, getGameStats, getBurnoutHistory,
+    recoverStreak, getCampaign, claimCampaign, apiFetch,
     getLevelInfo, getGardenTheme, getAchievementInfo,
     formatDuration, formatRelativeTime,
     LEVELS,

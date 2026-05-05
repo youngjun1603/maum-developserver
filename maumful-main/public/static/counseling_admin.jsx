@@ -22,6 +22,7 @@ const aApi = {
   async testStats()  { return (await fetch('/api/admin/stats/tests',{headers:this._h()})).json(); },
   async users(page=1,search='') { return (await fetch(`/api/admin/users?page=${page}&limit=20&search=${encodeURIComponent(search)}`,{headers:this._h()})).json(); },
   async grantCredits(id,amount,reason) { return (await fetch(`/api/admin/users/${id}/credits`,{method:'POST',headers:this._h(),body:JSON.stringify({amount,reason})})).json(); },
+  async deleteUser(id) { return (await fetch(`/api/admin/users/${id}`,{method:'DELETE',headers:this._h()})).json(); },
   async errorLogs(service='',limit=50) { return (await fetch(`/api/admin/error-logs?service=${encodeURIComponent(service)}&limit=${limit}`,{headers:this._h()})).json(); },
   async clearErrorLogs() { return (await fetch('/api/admin/error-logs',{method:'DELETE',headers:this._h()})).json(); },
   async reviews(page=1) { return (await fetch(`/api/admin/counseling/reviews?page=${page}`,{headers:this._h()})).json(); },
@@ -38,6 +39,12 @@ const aApi = {
   async deleteCounselor(id)        { return (await fetch(`/api/admin/counseling/counselors/${id}`,{method:'DELETE',headers:this._h()})).json(); },
   async getSchedules(id)           { return (await fetch(`/api/admin/counseling/counselors/${id}/schedules`,{headers:this._h()})).json(); },
   async saveSchedules(id,schedules){ return (await fetch(`/api/admin/counseling/counselors/${id}/schedules`,{method:'POST',headers:this._h(),body:JSON.stringify({schedules})})).json(); },
+  // ── 파트너 채널 관리 ─────────────────────────────────────────
+  async partners()                    { return (await fetch('/api/admin/partners',{headers:this._h()})).json(); },
+  async createPartner(body)           { return (await fetch('/api/admin/partners',{method:'POST',headers:this._h(),body:JSON.stringify(body)})).json(); },
+  async updatePartner(code,body)      { return (await fetch(`/api/admin/partners/${code}`,{method:'PATCH',headers:this._h(),body:JSON.stringify(body)})).json(); },
+  async partnerStats(code,from,to)    { return (await fetch(`/api/admin/partner-stats?code=${code}&from=${from}&to=${to}`,{headers:this._h()})).json(); },
+  async partnerSettlement(code,month) { return (await fetch(`/api/admin/partner-settlement?code=${code}&month=${month}`,{headers:this._h()})).json(); },
 };
 
 const fmtW  = n => Number(n||0).toLocaleString('ko-KR')+'원';
@@ -116,7 +123,16 @@ function AdminOverview(){
       .then(([s,g,d,t])=>{
         if(s.success)setStats(s.data);
         if(g.success)setGStats(g.data);
-        if(d.success)setDaily((d.data||[]).slice(-14));
+        if(d.success){
+          const raw=d.data||{};
+          const m={};
+          const mk=day=>{if(!m[day])m[day]={date:day,signups:0,tests:0,chats:0,charges:0};};
+          (raw.signups||[]).forEach(r=>{mk(r.day);m[r.day].signups=r.cnt;});
+          (raw.tests||[]).forEach(r=>{mk(r.day);m[r.day].tests=r.cnt;});
+          (raw.chats||[]).forEach(r=>{mk(r.day);m[r.day].chats=r.cnt;});
+          (raw.revenue||[]).forEach(r=>{mk(r.day);m[r.day].charges=r.cnt;});
+          setDaily(Object.values(m).sort((a,b)=>a.date>b.date?1:-1).slice(-14));
+        }
         if(t.success)setTestBreakdown(t.data||[]);
       })
       .finally(()=>setLoading(false));
@@ -228,6 +244,8 @@ function AdminUsers(){
   const [grantAmt,setGrantAmt]=useS('');
   const [grantReason,setGrantReason]=useS('');
   const [granting,setGranting]=useS(false);
+  const [deleteModal,setDeleteModal]=useS(null); // {id,email}
+  const [deleting,setDeleting]=useS(false);
 
   const load=(p,s)=>{
     setLoading(true);
@@ -239,6 +257,14 @@ function AdminUsers(){
 
   const handleSearch=()=>{setPage(1);setSearch(searchInput);load(1,searchInput);};
   const handlePage=p=>{setPage(p);load(p,search);};
+
+  const handleDelete=async()=>{
+    setDeleting(true);
+    const r=await aApi.deleteUser(deleteModal.id);
+    setDeleting(false);
+    if(r.success){setDeleteModal(null);load(page,search);}
+    else alert(r.error||'삭제 실패');
+  };
 
   const handleGrant=async()=>{
     if(!grantAmt||isNaN(grantAmt))return;
@@ -267,7 +293,7 @@ function AdminUsers(){
       {loading?<div style={{textAlign:'center',padding:'32px',color:'#9A9A9A'}}>로딩 중...</div>:(
         <>
           <Table
-            cols={['#','이메일','닉네임','크레딧','가입일','검증','크레딧 지급']}
+            cols={['#','이메일','닉네임','크레딧','가입일','검증','크레딧 지급','삭제']}
             rows={users}
             renderRow={(u,i)=>(
               <tr key={u.id} style={{borderBottom:'1px solid rgba(0,0,0,.05)'}}>
@@ -285,6 +311,11 @@ function AdminUsers(){
                     + 지급
                   </button>
                 </td>
+                <td style={{padding:'10px 12px'}}>
+                  <button onClick={()=>setDeleteModal({id:u.id,email:u.email})}
+                    style={{padding:'5px 10px',borderRadius:7,border:'1px solid #CC000033',background:'white',color:'#CC0000',fontSize:13,cursor:'pointer',fontFamily:"'Noto Sans KR',sans-serif"}}
+                    title="회원 삭제">🗑️</button>
+                </td>
               </tr>
             )}
           />
@@ -297,6 +328,23 @@ function AdminUsers(){
               style={{padding:'6px 12px',borderRadius:7,border:'1px solid rgba(0,0,0,.12)',background:page===totalPages?'#F5F5F0':'white',color:page===totalPages?'#C0C0C0':'#1A1A1A',cursor:page===totalPages?'default':'pointer',fontSize:12,fontFamily:"'Noto Sans KR',sans-serif"}}>다음 →</button>
           </div>
         </>
+      )}
+
+      {/* 회원 삭제 확인 모달 */}
+      {deleteModal&&(
+        <Modal title="회원 삭제 확인" onClose={()=>setDeleteModal(null)}>
+          <div style={{padding:'20px 22px',display:'flex',flexDirection:'column',gap:14}}>
+            <div style={{fontSize:13,color:'#5A5A5A',lineHeight:1.7}}>
+              <strong style={{color:'#CC0000'}}>{deleteModal.email}</strong> 계정을 삭제하시겠습니까?<br/>
+              <span style={{fontSize:12,color:'#9A9A9A'}}>삭제 후 이메일 정보는 익명 처리됩니다. 검사 이력은 통계 용도로 유지됩니다.</span>
+            </div>
+            <button onClick={handleDelete} disabled={deleting} style={{
+              padding:'12px',borderRadius:10,border:'none',background:'#CC0000',color:'white',
+              fontWeight:700,fontSize:14,cursor:deleting?'not-allowed':'pointer',
+              fontFamily:"'Noto Sans KR',sans-serif",opacity:deleting?0.6:1,
+            }}>{deleting?'삭제 중...':'삭제 확인'}</button>
+          </div>
+        </Modal>
       )}
 
       {/* 크레딧 지급 모달 */}
@@ -1089,6 +1137,190 @@ function AdminReviews(){
   );
 }
 
+// ── 탭: 파트너 채널 관리 ─────────────────────────────────────
+function AdminPartners(){
+  const {useState:useS,useEffect:useE}=React;
+  const [partners,setPartners]=useS([]);
+  const [loading,setLoading]=useS(true);
+  const [selected,setSelected]=useS(null);   // 선택된 파트너 코드
+  const [stats,setStats]=useS(null);
+  const [settlement,setSettlement]=useS(null);
+  const [statsMonth,setStatsMonth]=useS(()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;});
+  const [showCreate,setShowCreate]=useS(false);
+  const [form,setForm]=useS({code:'',name:'',sso_secret:'',revenue_share_rate:'0',welcome_message:'',featured_tests:'',primary_color:'#2D6A4F',contact_email:''});
+  const [saving,setSaving]=useS(false);
+  const [msg,setMsg]=useS('');
+
+  useE(()=>{ aApi.partners().then(r=>{ if(r.success)setPartners(r.data||[]); }).finally(()=>setLoading(false)); },[]);
+
+  const loadStats=async(code)=>{
+    const [from,to]=[`${statsMonth}-01`, new Date(new Date(statsMonth+'-01').getFullYear(), new Date(statsMonth+'-01').getMonth()+1, 0).toISOString().slice(0,10)];
+    const [s,se]=await Promise.all([aApi.partnerStats(code,from,to),aApi.partnerSettlement(code,statsMonth)]);
+    if(s.success)setStats(s.data);
+    if(se.success)setSettlement(se.data);
+  };
+
+  const handleSelect=async(code)=>{
+    setSelected(code); setStats(null); setSettlement(null);
+    await loadStats(code);
+  };
+
+  const handleCreate=async()=>{
+    setSaving(true);setMsg('');
+    const body={...form, revenue_share_rate:Number(form.revenue_share_rate)};
+    const r=await aApi.createPartner(body);
+    setSaving(false);
+    if(r.success){setMsg('파트너 등록 완료');setShowCreate(false);setForm({code:'',name:'',sso_secret:'',revenue_share_rate:'0',welcome_message:'',featured_tests:'',primary_color:'#2D6A4F',contact_email:''});aApi.partners().then(r2=>{if(r2.success)setPartners(r2.data||[]);});}
+    else setMsg(r.error||'등록 실패');
+  };
+
+  const handleToggleActive=async(code,current)=>{
+    await aApi.updatePartner(code,{is_active:current?0:1});
+    aApi.partners().then(r=>{if(r.success)setPartners(r.data||[]);});
+  };
+
+  if(loading)return React.createElement('div',{style:{padding:32,textAlign:'center',color:'#9A9A9A'}},'로딩 중...');
+
+  const selPartner=partners.find(p=>p.code===selected);
+
+  return(
+    <div>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+        <div style={{fontSize:15,fontWeight:700}}>🤝 파트너 채널 관리 ({partners.length}개)</div>
+        <button onClick={()=>setShowCreate(s=>!s)} style={{padding:'8px 16px',background:'#2D6A4F',color:'white',border:'none',borderRadius:8,fontWeight:600,cursor:'pointer',fontSize:13}}>
+          {showCreate?'✕ 닫기':'+ 파트너 등록'}
+        </button>
+      </div>
+
+      {msg&&<div style={{padding:'10px 16px',borderRadius:8,marginBottom:12,background:msg.includes('완료')?'#D8F3DC':'#FEF2F2',color:msg.includes('완료')?'#1A6B3C':'#991B1B',fontSize:13}}>{msg}</div>}
+
+      {showCreate&&(
+        <div style={{background:'white',border:'1px solid rgba(0,0,0,.08)',borderRadius:12,padding:20,marginBottom:16}}>
+          <div style={{fontWeight:700,marginBottom:12,fontSize:14}}>신규 파트너 등록</div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+            {[['code','파트너 코드 (영문대문자, 예: KAKAO_HEALTH)'],['name','파트너명'],['sso_secret','SSO 시크릿 (없으면 SSO 미지원)'],['revenue_share_rate','수익쉐어율 (0~1, 예: 0.3)'],['welcome_message','환영 메시지'],['featured_tests','추천 검사 (쉼표구분, 예: PHQ9,BURNOUT)'],['primary_color','브랜드 색상'],['contact_email','정산 담당자 이메일']].map(([k,label])=>(
+              <div key={k} style={{gridColumn:['welcome_message','featured_tests','sso_secret'].includes(k)?'1 / -1':'auto'}}>
+                <div style={{fontSize:11,color:'#666',marginBottom:4}}>{label}</div>
+                <input value={form[k]} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))}
+                  style={{width:'100%',padding:'8px 10px',border:'1px solid #E0E0E0',borderRadius:6,fontSize:13,boxSizing:'border-box'}} />
+              </div>
+            ))}
+          </div>
+          <div style={{marginTop:12,display:'flex',gap:8}}>
+            <button onClick={handleCreate} disabled={saving||!form.code||!form.name}
+              style={{padding:'9px 20px',background:'#2D6A4F',color:'white',border:'none',borderRadius:8,fontWeight:600,cursor:'pointer',opacity:(saving||!form.code||!form.name)?0.5:1}}>
+              {saving?'등록 중...':'등록하기'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div style={{display:'grid',gridTemplateColumns:'300px 1fr',gap:16,alignItems:'start'}}>
+        {/* 파트너 목록 */}
+        <div style={{display:'flex',flexDirection:'column',gap:8}}>
+          {partners.length===0&&<div style={{padding:24,textAlign:'center',color:'#9A9A9A',background:'white',borderRadius:12,border:'1px solid rgba(0,0,0,.08)'}}>등록된 파트너가 없습니다</div>}
+          {partners.map(p=>(
+            <div key={p.code} onClick={()=>handleSelect(p.code)}
+              style={{background:'white',border:`2px solid ${selected===p.code?'#2D6A4F':'rgba(0,0,0,.08)'}`,borderRadius:12,padding:'14px 16px',cursor:'pointer',transition:'border-color .15s'}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+                <div style={{fontWeight:700,fontSize:13}}>{p.name}</div>
+                <Chip label={p.is_active?'활성':'비활성'} color={p.is_active?'green':'gray'}/>
+              </div>
+              <div style={{fontSize:11,color:'#888',marginBottom:4}}>코드: {p.code}</div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:4}}>
+                <div style={{fontSize:11,color:'#555'}}><span style={{color:'#9A9A9A'}}>유입 </span>{(p.total_users||0).toLocaleString()}명</div>
+                <div style={{fontSize:11,color:'#555'}}><span style={{color:'#9A9A9A'}}>결제 </span>{(p.total_charges||0).toLocaleString()}건</div>
+                <div style={{fontSize:11,color:'#555'}}><span style={{color:'#9A9A9A'}}>매출 </span>{fmtW(p.total_revenue)}</div>
+              </div>
+              <div style={{marginTop:8}}>
+                <button onClick={e=>{e.stopPropagation();handleToggleActive(p.code,p.is_active);}}
+                  style={{fontSize:11,padding:'3px 10px',border:'1px solid #E0E0E0',borderRadius:6,background:'white',cursor:'pointer',color:'#5A5A5A'}}>
+                  {p.is_active?'비활성화':'활성화'}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* 파트너 상세 통계 */}
+        {selected&&selPartner?(
+          <div style={{background:'white',border:'1px solid rgba(0,0,0,.08)',borderRadius:12,padding:20}}>
+            <div style={{fontWeight:700,fontSize:15,marginBottom:4}}>{selPartner.name}</div>
+            <div style={{fontSize:12,color:'#888',marginBottom:16}}>코드: {selected} · 수익쉐어율: {((selPartner.revenue_share_rate||0)*100).toFixed(0)}%</div>
+
+            <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:16}}>
+              <input type="month" value={statsMonth} onChange={e=>setStatsMonth(e.target.value)}
+                style={{padding:'6px 10px',border:'1px solid #E0E0E0',borderRadius:6,fontSize:13}}/>
+              <button onClick={()=>loadStats(selected)}
+                style={{padding:'7px 14px',background:'#2D6A4F',color:'white',border:'none',borderRadius:8,fontSize:13,cursor:'pointer'}}>
+                조회
+              </button>
+            </div>
+
+            {stats&&(
+              <div>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,marginBottom:16}}>
+                  {[
+                    {label:'기간 신규유입',value:`${(stats.users?.period||0).toLocaleString()}명`,sub:`누적 ${(stats.users?.total||0).toLocaleString()}명`},
+                    {label:'기간 결제',value:`${(stats.charges?.total_charges||0).toLocaleString()}건`,sub:`기간 매출 ${fmtW(stats.charges?.period_revenue)}`},
+                    {label:'마음풀 직접결제 매출',value:fmtW(stats.charges?.period_revenue),sub:'파트너 경유 결제만'},
+                    {label:'정산 예정액',value:fmtW(stats.settlement?.share_amount),sub:`${((selPartner.revenue_share_rate||0)*100).toFixed(0)}% 쉐어`},
+                  ].map(({label,value,sub})=>(
+                    <div key={label} style={{background:'#F8F8F5',borderRadius:10,padding:'12px 14px'}}>
+                      <div style={{fontSize:11,color:'#888',marginBottom:4}}>{label}</div>
+                      <div style={{fontSize:17,fontWeight:700,color:'#2D2D2D'}}>{value}</div>
+                      {sub&&<div style={{fontSize:11,color:'#9A9A9A',marginTop:2}}>{sub}</div>}
+                    </div>
+                  ))}
+                </div>
+
+                {/* 일별 유입 차트 */}
+                {(stats.daily?.signups||[]).length>0&&(
+                  <div style={{marginBottom:16}}>
+                    <div style={{fontSize:12,fontWeight:600,marginBottom:8,color:'#5A5A5A'}}>일별 유입 가입자</div>
+                    <div style={{display:'flex',gap:4,alignItems:'flex-end',height:60}}>
+                      {(stats.daily?.signups||[]).map(d=>{
+                        const max=Math.max(...(stats.daily?.signups||[]).map(x=>x.cnt),1);
+                        return(
+                          <div key={d.day} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
+                            <div style={{width:'100%',background:'#2D6A4F',borderRadius:3,height:`${Math.max((d.cnt/max)*48,4)}px`}}/>
+                            <div style={{fontSize:9,color:'#9A9A9A',transform:'rotate(-45deg)',transformOrigin:'top left',whiteSpace:'nowrap'}}>{d.day.slice(5)}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {settlement&&(
+              <div style={{background:'#FFF9F0',border:'1px solid #F5DFA0',borderRadius:10,padding:16}}>
+                <div style={{fontSize:13,fontWeight:700,marginBottom:10,color:'#92400E'}}>💰 {statsMonth} 정산 내역</div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,fontSize:13}}>
+                  <div><span style={{color:'#9A9A9A'}}>신규 유입: </span><strong>{(settlement.new_users||0).toLocaleString()}명</strong></div>
+                  <div><span style={{color:'#9A9A9A'}}>결제 전환: </span><strong>{(settlement.paid_users||0).toLocaleString()}명</strong></div>
+                  <div><span style={{color:'#9A9A9A'}}>마음풀 직접매출: </span><strong>{fmtW(settlement.total_revenue)}</strong></div>
+                  <div><span style={{color:'#9A9A9A'}}>쉐어율: </span><strong>{((settlement.share_rate||0)*100).toFixed(0)}%</strong></div>
+                  <div style={{gridColumn:'1/-1',borderTop:'1px solid #F5DFA0',paddingTop:8,marginTop:4}}>
+                    <span style={{color:'#92400E',fontWeight:700}}>정산 지급액: </span>
+                    <strong style={{fontSize:16,color:'#92400E'}}>{fmtW(settlement.share_amount)}</strong>
+                    <span style={{fontSize:11,color:'#9A9A9A',marginLeft:8}}>(마음풀 보유: {fmtW(settlement.maumful_revenue)})</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        ):(
+          <div style={{background:'white',border:'1px solid rgba(0,0,0,.08)',borderRadius:12,padding:32,textAlign:'center',color:'#9A9A9A'}}>
+            파트너를 선택하면 상세 통계와 정산 내역을 확인할 수 있습니다
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── 탭: 오류 로그 ───────────────────────────────────────────
 function AdminErrorLogs(){
   const {useState:useS,useEffect:useE}=React;
@@ -1202,7 +1434,7 @@ function CounselingAdminPage({setView}){
     ['overview','📊 대시보드'],['users','👤 사용자 관리'],['onboarding','📨 온보딩 신청'],
     ['centers','🏥 센터 관리'],['counselors','👥 상담사 관리'],
     ['appointments','📅 예약 관리'],['settlements','💰 정산 관리'],
-    ['reviews','⭐ 리뷰 관리'],['errorlogs','🔴 오류 로그'],
+    ['reviews','⭐ 리뷰 관리'],['partners','🤝 파트너 관리'],['errorlogs','🔴 오류 로그'],
   ];
 
   if(!authed)return(
@@ -1263,6 +1495,7 @@ function CounselingAdminPage({setView}){
           {tab==='appointments'&&<AdminAppointments/>}
           {tab==='settlements' &&<AdminSettlements/>}
           {tab==='reviews'     &&<AdminReviews/>}
+          {tab==='partners'    &&<AdminPartners/>}
           {tab==='errorlogs'   &&<AdminErrorLogs/>}
         </div>
       </div>

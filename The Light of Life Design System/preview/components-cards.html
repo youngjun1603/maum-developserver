@@ -1,0 +1,33 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 24px; background: var(--paper); display: flex; gap: 16px; align-items: stretch; }
+  .scripture-card {
+    flex: 1; background: var(--white); border-radius: var(--r-xl);
+    padding: 28px 28px 24px; box-shadow: var(--sh-2), var(--sh-inset-gold);
+    display: flex; flex-direction: column; gap: 14px; align-items: center; text-align: center;
+  }
+  .star { width: 16px; height: 16px; fill: var(--brand-gold); }
+  .scripture { font-size: 19px; line-height: 1.5; margin: 0; }
+  .ref { font-family: var(--font-sans); font-size: 11px; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: var(--brand-gold-700); }
+  .info-card {
+    flex: 1; background: var(--white); border-radius: var(--r-xl);
+    padding: 22px; box-shadow: var(--sh-2), var(--sh-inset-hairline);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .info-card .eyebrow { color: var(--brand-purple-600); }
+  .info-card h3 { margin: 0; font-family: var(--font-display); font-size: 22px; }
+  .info-card p { margin: 0; font-size: 14px; color: var(--ink-500); line-height: 1.55; }
+</style></head>
+<body>
+  <div class="scripture-card">
+    <svg class="star" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M8 0 L9.6 6.4 L16 8 L9.6 9.6 L8 16 L6.4 9.6 L0 8 L6.4 6.4 Z"/></svg>
+    <p class="scripture">"마음의 즐거움은 양약이라도 심령의 근심은 뼈를 마르게 하느니라."</p>
+    <p class="ref">잠언 17:22</p>
+  </div>
+  <div class="info-card">
+    <span class="eyebrow">FOR CHURCHES</span>
+    <h3>교회 단위 도입</h3>
+    <p>교역자 케어와 성도 상담을 한 번에. 교회 규모에 맞춘 도입 안내를 보내 드립니다.</p>
+  </div>
+</body></html>

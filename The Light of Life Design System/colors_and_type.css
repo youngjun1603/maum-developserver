@@ -1,0 +1,238 @@
+/* ============================================================
+   The Light of Life — Colors & Type
+   Christian counseling service, partner of CTS 기독교TV (B2B)
+   ============================================================ */
+
+/* --- Webfonts ------------------------------------------------ */
+/* Korean: Noto Serif KR (display + body) — authoritative, scriptural feel
+   Latin display: Cormorant Garamond — humanist serif w/ ecclesiastical weight
+   UI / numerals: Inter — neutral grotesque for data + UI chrome
+   NOTE: Loaded from Google Fonts CDN. If exact licensed faces (e.g. Sandoll
+   Myungjo, Adobe Garamond Premier Pro) are preferred, swap @font-face below. */
+
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@400;500;600;700&family=Noto+Serif+KR:wght@300;400;500;600;700;900&display=swap');
+
+:root {
+  /* ── Brand Core ─────────────────────────────── */
+  --brand-navy:        #0F2044;   /* Deep Navy — primary, ground */
+  --brand-navy-900:    #081229;
+  --brand-navy-800:    #0B1936;
+  --brand-navy-700:    #0F2044;   /* alias of brand-navy */
+  --brand-navy-600:    #1A2E5C;
+  --brand-navy-500:    #2A4178;
+  --brand-navy-400:    #4A6098;
+  --brand-navy-300:    #7E91BC;
+  --brand-navy-200:    #B6C2DB;
+  --brand-navy-100:    #DCE3EF;
+  --brand-navy-50:     #F1F4FA;
+
+  --brand-gold:        #C9A227;   /* Gold — accent, sacred highlight */
+  --brand-gold-700:    #8F7115;
+  --brand-gold-600:    #A8881C;
+  --brand-gold-500:    #C9A227;
+  --brand-gold-400:    #DCB948;
+  --brand-gold-300:    #E8CE7A;
+  --brand-gold-200:    #F0DEA3;
+  --brand-gold-100:    #F7ECC9;
+  --brand-gold-50:     #FCF7E8;
+
+  --brand-purple:      #6B21A8;   /* Purple — episcopal, supportive */
+  --brand-purple-700:  #4C1480;
+  --brand-purple-600:  #5A1B94;
+  --brand-purple-500:  #6B21A8;
+  --brand-purple-400:  #8642C4;
+  --brand-purple-300:  #A875D6;
+  --brand-purple-200:  #CAA8E5;
+  --brand-purple-100:  #E5D3F1;
+  --brand-purple-50:   #F4ECFA;
+
+  /* ── Neutrals (warm-cool, leaning slightly warm parchment) ── */
+  --ink-1000:          #06080F;
+  --ink-900:           #0E1320;
+  --ink-700:           #2A3142;
+  --ink-500:           #5A6379;
+  --ink-400:           #7C849A;
+  --ink-300:           #A8AFC0;
+  --ink-200:           #D2D6E0;
+  --ink-100:           #E8EAF0;
+  --ink-50:            #F4F5F8;
+
+  --paper:             #FBF9F4;   /* Warm parchment background */
+  --paper-2:           #F5F1E8;   /* Card / section break */
+  --white:             #FFFFFF;
+
+  /* ── Semantic ─────────────────────────────── */
+  --bg:                var(--paper);
+  --bg-elev:           var(--white);
+  --bg-dark:           var(--brand-navy);
+  --bg-dark-2:         var(--brand-navy-800);
+
+  --fg-1:              var(--ink-1000);   /* primary text on light */
+  --fg-2:              var(--ink-700);    /* secondary text */
+  --fg-3:              var(--ink-500);    /* tertiary / meta */
+  --fg-on-dark-1:      #FBF9F4;
+  --fg-on-dark-2:      rgba(251,249,244,0.78);
+  --fg-on-dark-3:      rgba(251,249,244,0.55);
+
+  --accent:            var(--brand-gold);
+  --accent-ink:        var(--brand-navy-900);
+  --link:              var(--brand-purple-500);
+
+  --border-1:          rgba(15,32,68,0.10);
+  --border-2:          rgba(15,32,68,0.18);
+  --border-on-dark-1:  rgba(251,249,244,0.12);
+  --border-on-dark-2:  rgba(251,249,244,0.22);
+  --border-gold:       rgba(201,162,39,0.55);
+
+  /* ── Type families ────────────────────────── */
+  --font-display:      'Cormorant Garamond', 'Noto Serif KR', 'Iowan Old Style', 'Apple Garamond', Garamond, serif;
+  --font-serif:        'Noto Serif KR', 'Cormorant Garamond', 'Iowan Old Style', Garamond, serif;
+  --font-sans:         'Inter', 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Helvetica Neue', sans-serif;
+  --font-scripture:    'Cormorant Garamond', 'Noto Serif KR', Georgia, serif;
+
+  /* ── Type scale ───────────────────────────── */
+  --t-display-2xl:     clamp(56px, 6.4vw, 92px);   /* hero headline */
+  --t-display-xl:      clamp(44px, 4.8vw, 68px);
+  --t-display-lg:      40px;
+  --t-h1:              36px;
+  --t-h2:              28px;
+  --t-h3:              22px;
+  --t-h4:              18px;
+  --t-body-lg:         18px;
+  --t-body:            16px;
+  --t-body-sm:         14px;
+  --t-caption:         13px;
+  --t-eyebrow:         12px;
+
+  /* ── Spacing ──────────────────────────────── */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+  --s-12: 48px;
+  --s-16: 64px;
+  --s-20: 80px;
+  --s-24: 96px;
+  --s-32: 128px;
+
+  /* ── Radii ────────────────────────────────── */
+  --r-xs: 2px;
+  --r-sm: 4px;
+  --r-md: 6px;
+  --r-lg: 10px;
+  --r-xl: 14px;
+  --r-2xl: 20px;
+  --r-pill: 999px;
+
+  /* ── Shadows (restrained, no neon glow) ─── */
+  --sh-1: 0 1px 2px rgba(15,32,68,0.06), 0 1px 1px rgba(15,32,68,0.04);
+  --sh-2: 0 4px 12px rgba(15,32,68,0.08), 0 1px 2px rgba(15,32,68,0.05);
+  --sh-3: 0 12px 32px rgba(15,32,68,0.12), 0 2px 6px rgba(15,32,68,0.06);
+  --sh-4: 0 28px 64px rgba(15,32,68,0.18), 0 4px 12px rgba(15,32,68,0.08);
+  --sh-gold: 0 8px 24px rgba(201,162,39,0.28), 0 2px 6px rgba(201,162,39,0.18);
+  --sh-inset-hairline: inset 0 0 0 1px rgba(15,32,68,0.08);
+  --sh-inset-gold:     inset 0 0 0 1px rgba(201,162,39,0.45);
+
+  /* ── Motion ──────────────────────────────── */
+  --ease-out:   cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in:    cubic-bezier(0.55, 0, 0.78, 0.16);
+  --ease-in-out:cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-1: 120ms;
+  --dur-2: 200ms;
+  --dur-3: 320ms;
+  --dur-4: 520ms;
+}
+
+/* ============================================================
+   Base typography
+   ============================================================ */
+
+html, body {
+  background: var(--bg);
+  color: var(--fg-1);
+  font-family: var(--font-sans);
+  font-size: var(--t-body);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Display / headings — serif, tight, near-black */
+h1, .h1, h2, .h2, h3, .h3, h4, .h4, .display, .display-xl, .display-2xl {
+  font-family: var(--font-display);
+  color: var(--fg-1);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.08;
+  text-wrap: balance;
+}
+
+.display-2xl { font-size: var(--t-display-2xl); font-weight: 500; line-height: 1.04; letter-spacing: -0.018em; }
+.display-xl  { font-size: var(--t-display-xl);  font-weight: 500; line-height: 1.06; letter-spacing: -0.014em; }
+.display-lg  { font-size: var(--t-display-lg);  font-weight: 500; line-height: 1.10; }
+h1, .h1      { font-size: var(--t-h1); font-weight: 500; }
+h2, .h2      { font-size: var(--t-h2); font-weight: 500; line-height: 1.18; }
+h3, .h3      { font-size: var(--t-h3); font-weight: 600; line-height: 1.28; letter-spacing: 0; }
+h4, .h4      { font-size: var(--t-h4); font-weight: 600; line-height: 1.35; font-family: var(--font-sans); letter-spacing: -0.005em; }
+
+/* Korean-aware display class — switches to Noto Serif KR proportions */
+.display-ko {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  line-height: 1.18;
+  word-break: keep-all;
+}
+
+/* Body */
+p, .body { font-size: var(--t-body); line-height: 1.65; color: var(--fg-2); text-wrap: pretty; }
+.body-lg { font-size: var(--t-body-lg); line-height: 1.6; }
+.body-sm { font-size: var(--t-body-sm); line-height: 1.55; }
+
+/* Eyebrow / kicker */
+.eyebrow {
+  font-family: var(--font-sans);
+  font-size: var(--t-eyebrow);
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--brand-gold-600);
+}
+.eyebrow.on-dark { color: var(--brand-gold-400); }
+
+/* Scripture / quote — italic serif, gold rule */
+.scripture {
+  font-family: var(--font-scripture);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 22px;
+  line-height: 1.5;
+  color: var(--fg-1);
+  letter-spacing: 0.005em;
+}
+.scripture-ref {
+  font-family: var(--font-sans);
+  font-size: var(--t-caption);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--brand-gold-700);
+}
+
+/* Numerals / data */
+.num {
+  font-family: var(--font-sans);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  letter-spacing: -0.01em;
+}
+
+/* Caption / meta */
+.caption { font-size: var(--t-caption); color: var(--fg-3); line-height: 1.45; }
+
+/* Links */
+a { color: var(--link); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+a:hover { color: var(--brand-purple-700); }

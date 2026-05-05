@@ -62,9 +62,9 @@ const api = {
   },
 
   // ── 인증 ──────────────────────────────────────────────────
-  async register(email, password, nickname, locale = 'ko') {
+  async register(email, password, nickname, partnerCode, locale = 'ko') {
     const r = await fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json', ...api._authHeader() },
-      body: JSON.stringify({ email, password, nickname, locale }) });
+      body: JSON.stringify({ email, password, nickname, locale, partnerCode: partnerCode || undefined }) });
     return r.json();
   },
   async login(email, password) {
@@ -300,6 +300,7 @@ function PsychologicalTestSystem() {
     return euLangs.includes(lang);
   });
   const [testHistory, setTestHistory] = useState([]);
+  const [dailyCtxCard, setDailyCtxCard] = useState(null); // { greeting, chatContext } — AI 인사말 카드
   const [myPageTab, setMyPageTab]     = useState('credits'); // 'credits' | 'history' | 'settings' | 'appointments'
   const [changePwMsg, setChangePwMsg] = useState({ type: '', text: '' });
   const [pushStatus, setPushStatus]   = useState('unknown'); // 'unknown'|'unsupported'|'denied'|'subscribed'|'idle'
@@ -1354,6 +1355,46 @@ function PsychologicalTestSystem() {
       const startTest     = urlParams.get('start');
       const urlHash       = window.location.hash;
 
+      // ── 제휴 채널 파라미터 처리 (?p=PARTNER_CODE) ──────────────
+      // ?sso_token= 이 함께 오면 파트너 SSO 자동 로그인 시도
+      const channelCode = urlParams.get('p');
+      const ssoToken    = urlParams.get('sso_token');
+      if (channelCode) {
+        const upperCode = channelCode.toUpperCase();
+        try { localStorage.setItem('maumful_partner_code', upperCode); } catch {}
+        window.history.replaceState({}, '', '/');
+
+        // 파트너 설정 조회 → sessionStorage 캐시 (환영 배너용)
+        try {
+          const cfgRes = await fetch(`/api/partner/config?p=${upperCode}`);
+          const cfgData = await cfgRes.json();
+          if (cfgData.success) {
+            sessionStorage.setItem('maumful_partner_cfg', JSON.stringify(cfgData.data));
+          }
+        } catch { /* 설정 조회 실패 무시 */ }
+
+        if (ssoToken && !isAuthenticated) {
+          // 파트너 SSO 자동 로그인
+          try {
+            const r = await fetch('/api/auth/partner-sso', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ partnerCode: upperCode, ssoToken }),
+            });
+            const d = await r.json();
+            if (d.success) {
+              const { accessToken, refreshToken, user } = d.data;
+              tokenStore.setTokens(accessToken, refreshToken);
+              tokenStore.setUser(user);
+              setCurrentUser(user);
+              setCredits(user.credits);
+              setIsLoggedIn(true);
+              isAuthenticated = true;
+            }
+          } catch { /* SSO 실패 시 일반 랜딩으로 진행 */ }
+        }
+      }
+
       // 마음커플 → 비로그인 파트너 검사 링크 (?partner=SESSION_CODE) — 최우선 처리
       const partnerCode = urlParams.get('partner');
       if (partnerCode) {
@@ -1370,6 +1411,19 @@ function PsychologicalTestSystem() {
             setView('landing');
           }
         } catch { setView('landing'); }
+        setInitializing(false);
+        return;
+      }
+
+      // 마음게임 고위험 감지 → 상담 페이지 자동 이동 (?go=counseling)
+      if (urlParams.get('go') === 'counseling') {
+        window.history.replaceState({}, '', '/');
+        if (isAuthenticated) {
+          setView('counseling');
+        } else {
+          sessionStorage.setItem('post_login_view', 'counseling');
+          setView('memberLogin');
+        }
         setInitializing(false);
         return;
       }
@@ -1442,6 +1496,12 @@ function PsychologicalTestSystem() {
       if (refCode) {
         sessionStorage.setItem('pending_ref_code', refCode.toUpperCase());
         window.history.replaceState({}, '', '/');
+      }
+
+      // UTM 파라미터 저장 (마케팅 채널 분석용 — 회원가입 시 서버로 전달하지 않고 분석 참고용)
+      const utmSource = urlParams.get('utm_source');
+      if (utmSource) {
+        try { localStorage.setItem('maumful_utm_source', utmSource); } catch {}
       }
 
       setInitializing(false);
@@ -1535,7 +1595,10 @@ function PsychologicalTestSystem() {
     if (password.length < 8) { setFormMsg({ type: 'error', text: '비밀번호는 8자 이상이어야 합니다.' }); return; }
 
     setFormMsg({ type: 'loading', text: '가입 처리 중...' });
-    const result = await api.register(email, password, nickname || email.split('@')[0]);
+    // 제휴 채널 파트너 코드 전달 (localStorage에서 읽기)
+    let savedPartnerCode = null;
+    try { savedPartnerCode = localStorage.getItem('maumful_partner_code'); } catch {}
+    const result = await api.register(email, password, nickname || email.split('@')[0], savedPartnerCode);
     if (!result.success) { setFormMsg({ type: 'error', text: result.error || '가입에 실패했습니다.' }); return; }
 
     // 가입 성공 → 자동 로그인
@@ -1693,6 +1756,22 @@ function PsychologicalTestSystem() {
     try {
       const r = await api.getTestHistory();
       if (r.success) setTestHistory(r.data);
+    } catch { /* 무시 */ }
+    // daily context — 하루 1회 캐시
+    try {
+      const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+      const cacheKey = `maumful_daily_ctx_${today}`;
+      const dismissed = localStorage.getItem(`maumful_ai_checkin_${today}`);
+      if (dismissed) return;
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) { setDailyCtxCard(JSON.parse(cached)); return; }
+      const res = await api._fetch('/api/user/daily-context');
+      const data = await res.json();
+      if (data.success && data.hasData) {
+        const card = { greeting: data.greeting, chatContext: data.chatContext };
+        localStorage.setItem(cacheKey, JSON.stringify(card));
+        setDailyCtxCard(card);
+      }
     } catch { /* 무시 */ }
   }
 
@@ -2046,7 +2125,7 @@ function PsychologicalTestSystem() {
       const res     = await fetch('/api/ai-chat', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json', ...api._authHeader() },
-        body:    JSON.stringify({ messages: history, testContext: { testType, counselingType: counselingMode || 'psychological', summary, lang } }),
+        body:    JSON.stringify({ messages: history, testContext: { testType, counselingType: counselingMode || 'psychological', summary, lang }, dailyContext: dailyCtxCard?.chatContext || null }),
       });
 
       if (!res.ok) {
@@ -2168,7 +2247,7 @@ function PsychologicalTestSystem() {
           <h2 className="text-xl font-bold text-gray-800 mb-2">AI 상담 횟수를 모두 사용했습니다</h2>
           <p className="text-sm text-gray-500 leading-relaxed">
             {!isLoggedIn
-              ? `지금까지 AI 상담을 ${AI_LIMIT_FREE}회 체험하셨습니다. 회원가입하면 검사 결과 저장 + 추가 크레딧(10)이 지급됩니다!`
+              ? `지금까지 AI 상담을 ${AI_LIMIT_FREE}회 체험하셨습니다. 회원가입하면 검사 결과 저장 + 추가 크레딧(20)이 지급됩니다!`
               : credits <= 0
                 ? `크레딧이 없으면 AI 상담을 ${AI_LIMIT_FREE}회까지 이용할 수 있습니다.`
                 : `크레딧 보유 시 AI 상담을 하루 최대 ${AI_LIMIT_PAID}회 이용할 수 있습니다. 크레딧을 충전하면 더 많이 이용할 수 있어요.`}
@@ -2340,7 +2419,7 @@ function PsychologicalTestSystem() {
             </button>
           )}
           <button
-            onClick={() => { window.location.hash = 'counseling'; window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+            onClick={() => { setView('counseling'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
             className="flex-1 py-3 px-4 rounded-xl font-bold text-sm transition text-white bg-teal-600 hover:bg-teal-700">
             🏠 상담사 찾기
           </button>
@@ -2871,12 +2950,26 @@ function PsychologicalTestSystem() {
           <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
             <div className="flex items-start gap-3 mb-3">
               <span className="text-3xl">🧠</span>
-              <div>
+              <div className="flex-1">
                 <h2 className="font-bold text-gray-800 text-lg mb-1">AI 심리 상담</h2>
                 <p className="text-sm text-gray-500 leading-relaxed">
                   검사 결과를 바탕으로 AI와 심층 상담하세요.<br/>
                   검사 결과가 있으면 AI가 결과를 분석하여 맞춤 상담을 제공합니다.
                 </p>
+                {/* 누적 트렌드 배지 — 3회 이상 측정된 검사가 있을 때 */}
+                {(() => {
+                  const trendTypes = ['PHQ9','GAD7','BURNOUT','DSI'].filter(t => testHistory.filter(h => h.test_type === t && h.score != null).length >= 3);
+                  if (trendTypes.length === 0) return null;
+                  return (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {trendTypes.map(t => (
+                        <span key={t} className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium border border-indigo-200">
+                          📈 {t} 트렌드 분석 활성
+                        </span>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 leading-relaxed">
@@ -3162,7 +3255,7 @@ function PsychologicalTestSystem() {
             <div className="flex items-center gap-2">
               <CreditBadge />
               {/* 마음 게임 진입 — 로그인 상태면 JWT SSO로 자동 연동 */}
-              <button onClick={openMaumGame}
+              <button onClick={() => openMaumGame()}
                 className="text-gray-500 hover:text-green-700 text-sm px-2 py-1.5 rounded-lg hover:bg-green-50 transition flex items-center gap-1"
                 title="마음 게임 — 별도 로그인 없이 바로 이동">
                 🎮 <span className="hidden sm:inline">마음 게임</span>
@@ -3239,6 +3332,41 @@ function PsychologicalTestSystem() {
               );
             }
             return null;
+          })()}
+
+          {/* 파트너 채널 환영 배너 */}
+          {(() => {
+            const dismissKey = 'maumful_partner_banner_dismissed';
+            if (localStorage.getItem(dismissKey)) return null;
+            let cfg = null;
+            try { cfg = JSON.parse(sessionStorage.getItem('maumful_partner_cfg') || 'null'); } catch {}
+            if (!cfg) return null;
+            const borderColor = cfg.primary_color || '#2D6A4F';
+            return (
+              <div className="rounded-2xl p-4 mb-5 border-l-4" style={{ borderColor, backgroundColor: borderColor + '18' }}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    {cfg.logo_url && <img src={cfg.logo_url} alt={cfg.name} className="h-6 mb-2 object-contain" />}
+                    <p className="text-sm font-bold" style={{ color: borderColor }}>{cfg.name}을 통해 오셨군요!</p>
+                    <p className="text-xs text-gray-600 mt-1">
+                      {cfg.welcome_message || '마음풀의 심리검사와 AI 상담 서비스를 자유롭게 이용해 보세요.'}
+                    </p>
+                    {cfg.featured_tests && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {cfg.featured_tests.split(',').map(t => t.trim()).filter(Boolean).map(t => (
+                          <span key={t} className="text-xs px-2 py-0.5 rounded-full text-white font-medium"
+                            style={{ backgroundColor: borderColor }}>
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <button onClick={() => { localStorage.setItem(dismissKey, '1'); setView('memberDashboard'); }}
+                    className="text-xs text-gray-400 hover:text-gray-600 flex-shrink-0">✕</button>
+                </div>
+              </div>
+            );
           })()}
 
           {/* 신규 회원 시작 가이드 */}
@@ -3340,6 +3468,59 @@ function PsychologicalTestSystem() {
               </div>
             );
           })()}
+
+          {/* AI 개인화 인사말 카드 — 3개 서비스 데이터 기반, 하루 1회 */}
+          {dailyCtxCard && !localStorage.getItem(`maumful_ai_checkin_${new Date(Date.now()+9*3600000).toISOString().slice(0,10)}`) && (
+            <div className="bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200 rounded-2xl p-4 mb-6">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-full bg-violet-100 flex items-center justify-center flex-shrink-0 text-lg">🤖</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-violet-500 mb-1 uppercase tracking-wide">AI 상담사</p>
+                  <p className="text-sm text-violet-800 mb-3 leading-relaxed font-medium">"{dailyCtxCard.greeting}"</p>
+                  <div className="flex gap-2 flex-wrap">
+                    <button
+                      onClick={() => {
+                        const today = new Date(Date.now()+9*3600000).toISOString().slice(0,10);
+                        localStorage.setItem(`maumful_ai_checkin_${today}`, '1');
+                        setView('aiCounsel');
+                      }}
+                      className="bg-violet-500 hover:bg-violet-600 text-white text-xs font-bold px-4 py-2 rounded-xl transition flex items-center gap-1.5">
+                      💬 AI와 대화하기
+                    </button>
+                    <button
+                      onClick={() => {
+                        const today = new Date(Date.now()+9*3600000).toISOString().slice(0,10);
+                        localStorage.setItem(`maumful_ai_checkin_${today}`, 'dismissed');
+                        setDailyCtxCard(null);
+                      }}
+                      className="text-xs text-violet-400 hover:text-violet-600 px-3 py-2 rounded-xl hover:bg-violet-100 transition">
+                      나중에
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 장기 트렌드 예측 카드 — 3회 이상 검사한 유형이 있을 때 */}
+          {(() => {
+            const trendTypes = ['PHQ9','GAD7','BURNOUT'].filter(t =>
+              testHistory.filter(h => h.test_type === t && h.score != null).length >= 3
+            );
+            if (!trendTypes.length) return null;
+            return (
+              <TrendPredictionCard
+                testType={trendTypes[0]}
+                onStartTest={() => startSelectedTest(trendTypes[0])}
+              />
+            );
+          })()}
+
+          {/* 맞춤 8주 CBT 자기관리 플랜 */}
+          <CbtPlanCard
+            testHistory={testHistory}
+            onPlay={(gameId) => openMaumGame(gameId)}
+          />
 
           {/* 검사 목록 */}
           <h3 className="font-bold text-gray-700 mb-3">심리검사 선택</h3>
@@ -3446,7 +3627,7 @@ function PsychologicalTestSystem() {
           <button onClick={() => setView('memberDashboard')} className="text-gray-500 hover:text-gray-700 flex items-center gap-1 text-sm">← 뒤로</button>
           <span className="font-bold text-gray-800">마이페이지</span>
           <div className="flex items-center gap-2">
-            <button onClick={openMaumGame}
+            <button onClick={() => openMaumGame()}
               className="text-green-600 hover:text-green-800 text-sm px-2 py-1.5 rounded-lg hover:bg-green-50 transition"
               title="마음 게임">
               🎮
@@ -3623,6 +3804,7 @@ function PsychologicalTestSystem() {
         {/* 검사 이력 */}
         {myPageTab === 'history' && (
           <div>
+            <ExternalResultSection onSaved={loadTestHistory} />
             {testHistory.length === 0 && <p className="text-gray-400 text-sm text-center py-4">검사 이력이 없습니다</p>}
             {/* 점수가 있는 검사의 트렌드 요약 */}
             {(() => {
@@ -4940,63 +5122,125 @@ function PsychologicalTestSystem() {
     const chatContainerRef = React.useRef(null);
     const inputRef = React.useRef(null);
     const prevMsgCountRef = React.useRef(0);
+    const [isListening, setIsListening] = React.useState(false);
+    const [hasMemory, setHasMemory] = React.useState(false);
+    const [speakingMsgId, setSpeakingMsgId] = React.useState(null);
+
+    // 이전 대화 기억 여부 확인
+    React.useEffect(() => {
+      if (!isLoggedIn) return;
+      fetch('/api/ai-chat/memory', { headers: api._authHeader() })
+        .then(r => r.json())
+        .then(d => {
+          if (d.success && d.memories) {
+            const key = testType || 'GENERAL';
+            setHasMemory(!!(d.memories[key] || d.memories['GENERAL']));
+          }
+        }).catch(() => {});
+    }, [testType]);
+
+    async function clearMemory() {
+      await fetch('/api/ai-chat/memory', { method: 'DELETE', headers: api._authHeader() });
+      setHasMemory(false);
+    }
+
+    function speakText(text, msgId) {
+      if (!window.speechSynthesis) return;
+      if (speakingMsgId === msgId) {
+        window.speechSynthesis.cancel();
+        setSpeakingMsgId(null);
+        return;
+      }
+      window.speechSynthesis.cancel();
+      const clean = text.replace(/[*#`_~>]/g, '').replace(/\n+/g, ' ').trim();
+      const utt = new SpeechSynthesisUtterance(clean);
+      utt.lang = 'ko-KR';
+      utt.rate = 1.0;
+      utt.pitch = 1.0;
+      const trySpeak = () => {
+        const voices = window.speechSynthesis.getVoices();
+        const koVoice = voices.find(v => v.lang.startsWith('ko'));
+        if (koVoice) utt.voice = koVoice;
+        utt.onend = () => setSpeakingMsgId(null);
+        utt.onerror = () => setSpeakingMsgId(null);
+        setSpeakingMsgId(msgId);
+        window.speechSynthesis.speak(utt);
+      };
+      if (window.speechSynthesis.getVoices().length) {
+        trySpeak();
+      } else {
+        window.speechSynthesis.onvoiceschanged = trySpeak;
+      }
+    }
+
+    function startVoiceInput() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR || isListening || chatStreaming) return;
+      const recognition = new SR();
+      recognition.lang = 'ko-KR';
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      setIsListening(true);
+      recognition.start();
+      recognition.onresult = (e) => {
+        const text = e.results[0][0].transcript;
+        if (inputRef.current) {
+          inputRef.current.value = inputRef.current.value
+            ? inputRef.current.value + ' ' + text
+            : text;
+        }
+        setIsListening(false);
+      };
+      recognition.onerror = () => setIsListening(false);
+      recognition.onend = () => setIsListening(false);
+    }
 
     React.useEffect(() => {
       const container = chatContainerRef.current;
       if (!container) return;
       const { scrollTop, scrollHeight, clientHeight } = container;
       const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
-      if (!isNearBottom) return; // 사용자가 위로 스크롤 중이면 강제 이동 안 함
       const isNewMessage = chatMessages.length !== prevMsgCountRef.current;
       prevMsgCountRef.current = chatMessages.length;
       if (isNewMessage) {
-        // 새 메시지 추가 시: smooth
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      } else {
-        // 스트리밍 토큰 업데이트 시: instant (애니메이션 충돌 방지)
+        // 새 메시지 추가 시: 컨테이너 내부 + 뷰포트 모두 스크롤
+        container.scrollTop = container.scrollHeight;
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 50);
+      } else if (isNearBottom) {
+        // 스트리밍 토큰 업데이트 시: 사용자가 위로 스크롤 중이 아닐 때만
         container.scrollTop = container.scrollHeight;
       }
     }, [chatMessages]);
 
     return (
-      <div className="mt-6 border-2 border-blue-200 rounded-xl overflow-hidden shadow-md">
-        {/* 헤더 */}
-        <div
-          className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-blue-600 to-green-600 cursor-pointer"
-          onClick={() => { if (!chatOpen) resetChat(); setChatOpen(v => !v); }}
-        >
+      <div className="mt-6 rounded-xl overflow-hidden border border-gray-200">
+        {/* 컴팩트 헤더 */}
+        <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 border-b border-gray-200">
           <div className="flex items-center gap-2">
-            <span className="text-white text-base">💬</span>
-            <span className="text-white font-bold text-sm">AI 상담 대화</span>
-            <span className="text-blue-200 text-xs">검사 결과 활용 방법을 AI와 상담하세요</span>
-          </div>
-          <div className="flex items-center gap-2">
+            <span className="text-base">💬</span>
+            <span className="font-bold text-sm text-gray-800">AI 상담 대화</span>
+            {hasMemory && (
+              <span className="bg-indigo-50 text-indigo-600 text-xs px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                📝 이전 대화 기억 중
+                <button onClick={clearMemory} className="ml-1 text-indigo-300 hover:text-indigo-500" title="기억 초기화">✕</button>
+              </span>
+            )}
             {chatMessages.length > 0 && (
-              <span className="bg-white text-blue-700 text-xs px-2 py-0.5 rounded-full font-bold">
+              <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full font-bold">
                 {chatMessages.filter(m => m.role === 'user').length}회 대화
               </span>
             )}
-            <span className="text-white text-sm">{chatOpen ? '▲' : '▼'}</span>
           </div>
+          <span className="text-xs text-gray-400">
+            오늘 {aiChatUsed}/{isLoggedIn && credits > 0 ? AI_LIMIT_PAID : AI_LIMIT_FREE}회 사용
+          </span>
         </div>
 
-        {chatOpen && (
           <div className="bg-white">
-            {/* ⚠️ 면책 고지 + 횟수 현황 */}
-            <div className="px-4 pt-3 pb-2 bg-amber-50 border-b border-amber-100">
-              <p className="text-xs text-amber-800 leading-relaxed">
-                <strong>⚠️ 참고 안내:</strong> AI 상담은 자기 이해를 돕는 참고 정보입니다. 의학적 진단·치료를 대체하지 않으며, AI의 모든 답변은 확정적 결론이 아닙니다.
-              </p>
-              <div className="flex items-center justify-between mt-1.5">
-                <span className="text-xs text-amber-700">
-                  오늘 AI 상담 {aiChatUsed}/{isLoggedIn && credits > 0 ? AI_LIMIT_PAID : AI_LIMIT_FREE}회 사용
-                </span>
-                <div className="h-1.5 w-28 bg-amber-200 rounded-full overflow-hidden">
-                  <div className="h-full bg-amber-500 rounded-full transition-all"
-                    style={{ width: `${Math.min(100, (aiChatUsed / (isLoggedIn && credits > 0 ? AI_LIMIT_PAID : AI_LIMIT_FREE)) * 100)}%` }} />
-                </div>
-              </div>
-            </div>
+            {/* ⚠️ 한 줄 면책 고지 */}
+            <p className="px-4 pt-2 pb-1 text-xs text-gray-400">⚠️ AI 상담은 참고용이며 의학적 진단을 대체하지 않습니다</p>
             {/* 빠른 질문 버튼 */}
             {chatMessages.length === 0 && (
               <div className="p-4 border-b border-gray-100">
@@ -5090,7 +5334,7 @@ function PsychologicalTestSystem() {
             )}
 
             {/* 메시지 목록 */}
-            <div ref={chatContainerRef} className="h-80 overflow-y-auto p-4 space-y-3 bg-gray-50">
+            <div ref={chatContainerRef} className="h-[50vh] overflow-y-auto p-4 space-y-3 bg-gray-50">
               {chatMessages.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-full text-center">
                   <p className="text-4xl mb-3">🤝</p>
@@ -5108,13 +5352,27 @@ function PsychologicalTestSystem() {
                   {msg.role === 'assistant' && (
                     <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-green-600 flex items-center justify-center text-white text-xs font-bold mr-2 mt-0.5 shrink-0">AI</div>
                   )}
-                  <div className={`max-w-xs lg:max-w-md xl:max-w-lg px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                  <div className={`max-w-[75%] min-w-0 px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
                     msg.role === 'user'
                       ? 'bg-blue-600 text-white rounded-tr-sm'
                       : 'bg-white border border-gray-200 text-gray-800 rounded-tl-sm shadow-sm'
                   }`}>
                     {msg.content
-                      ? <div className="text-sm space-y-0.5">{renderMdText(msg.content)}{msg.streaming && <span className="inline-block w-1.5 h-4 bg-blue-400 animate-pulse ml-0.5 align-middle rounded"></span>}</div>
+                      ? <div className="text-sm space-y-0.5">
+                          {renderMdText(msg.content)}
+                          {msg.streaming && <span className="inline-block w-1.5 h-4 bg-blue-400 animate-pulse ml-0.5 align-middle rounded"></span>}
+                          {!msg.streaming && msg.role === 'assistant' && window.speechSynthesis && (
+                            <div className="flex justify-end mt-2 pt-1.5 border-t border-gray-100">
+                              <button
+                                onClick={() => speakText(msg.content, msg.id)}
+                                className={`text-xs flex items-center gap-1 transition ${speakingMsgId === msg.id ? 'text-blue-500 font-semibold' : 'text-gray-300 hover:text-gray-500'}`}
+                                title={speakingMsgId === msg.id ? '음성 정지' : '음성으로 듣기'}
+                              >
+                                {speakingMsgId === msg.id ? '⏸ 정지' : '🔊 듣기'}
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       : <div className="flex gap-1 items-center py-1">
                           <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay:'0ms'}}></div>
                           <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay:'150ms'}}></div>
@@ -5232,9 +5490,18 @@ function PsychologicalTestSystem() {
                   disabled={chatStreaming}
                   className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm resize-none focus:outline-none focus:border-blue-400 disabled:bg-gray-50"
                 />
+                {(window.SpeechRecognition || window.webkitSpeechRecognition) && (
+                  <button
+                    onClick={startVoiceInput}
+                    disabled={isListening || chatStreaming}
+                    title={isListening ? '듣는 중...' : '음성 입력'}
+                    className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-lg transition ${isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-100 hover:bg-gray-200 text-gray-600 disabled:opacity-40'}`}
+                  >🎤</button>
+                )}
                 <div className="flex flex-col gap-1.5">
                   <button
                     onClick={() => {
+                      if (isAiChatExhausted()) { setShowAiLimitModal(true); return; }
                       const currentValue = inputRef.current?.value || '';
                       if (currentValue.trim() && !chatStreaming) {
                         const userMsg = { role: 'user', content: currentValue.trim(), id: Date.now() };
@@ -5312,11 +5579,10 @@ function PsychologicalTestSystem() {
                         });
                       }
                     }}
-                    disabled={chatStreaming || isAiChatExhausted()}
-                    title={isAiChatExhausted() ? 'AI 상담 횟수를 모두 사용했습니다' : ''}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                    disabled={chatStreaming}
+                    className={`${isAiChatExhausted() ? 'bg-orange-500 hover:bg-orange-600' : 'bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed'} text-white px-4 py-2 rounded-xl text-sm font-bold transition`}
                   >
-                    {chatStreaming ? '•••' : isAiChatExhausted() ? '횟수 초과' : '전송'}
+                    {chatStreaming ? '•••' : isAiChatExhausted() ? '가입하기' : '전송'}
                   </button>
                   {chatMessages.length > 0 && (
                     <button
@@ -5331,7 +5597,7 @@ function PsychologicalTestSystem() {
             {/* 🏥 전문가 상담 연결 버튼 */}
             <div className="px-4 py-3 border-t border-gray-100 bg-gray-50">
               <button
-                onClick={() => { window.location.hash = 'counseling'; window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                onClick={() => { setView('counseling'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                 className="w-full py-2.5 bg-white border border-indigo-200 text-indigo-700 rounded-xl text-sm font-semibold hover:bg-indigo-50 hover:border-indigo-400 transition flex items-center justify-center gap-2 group">
                 <span>🏠</span>
                 <span>전문 상담사와 직접 상담하기</span>
@@ -5340,7 +5606,6 @@ function PsychologicalTestSystem() {
               <p className="text-center text-xs text-gray-400 mt-1">AI 상담은 참고용입니다. 전문 상담사의 도움이 필요하시면 클릭하세요.</p>
             </div>
           </div>
-        )}
       </div>
     );
   }
@@ -5634,7 +5899,7 @@ function PsychologicalTestSystem() {
     }
     const { scales, total } = calcSdri();
     saveCoupleResult('DSI', { scales, total });
-    api.saveTestScore("DSI", total, total >= 90 ? '건강한 분화' : total >= 60 ? '중간 분화' : '낮은 분화').catch(() => {});
+    if (isLoggedIn) api.saveTestScore("DSI", total, total >= 90 ? '건강한 분화' : total >= 60 ? '중간 분화' : '낮은 분화').catch(() => {});
     const data = {
       sessionId, testType: "DSI",
       responses: { scales, total, answers: sdriResponses },
@@ -5652,7 +5917,7 @@ function PsychologicalTestSystem() {
       return;
     }
     const { total, level } = calcPhq9();
-    api.saveTestScore("PHQ9", total, level).catch(() => {});
+    if (isLoggedIn) api.saveTestScore("PHQ9", total, level).catch(() => {});
     const data = {
       sessionId, testType: "PHQ9",
       responses: phq9Responses,
@@ -5670,7 +5935,7 @@ function PsychologicalTestSystem() {
       return;
     }
     const { total, level } = calcGad7();
-    api.saveTestScore("GAD7", total, level).catch(() => {});
+    if (isLoggedIn) api.saveTestScore("GAD7", total, level).catch(() => {});
     const data = {
       sessionId, testType: "GAD7",
       responses: gad7Responses,
@@ -5688,7 +5953,7 @@ function PsychologicalTestSystem() {
       return;
     }
     const { depression } = calcDass21();
-    api.saveTestScore("DASS21", depression.score, depression.level).catch(() => {});
+    if (isLoggedIn) api.saveTestScore("DASS21", depression.score, depression.level).catch(() => {});
     const data = {
       sessionId, testType: "DASS21",
       responses: dass21Responses,
@@ -5731,7 +5996,7 @@ function PsychologicalTestSystem() {
       return;
     }
     const { totalScore, level } = calcBurnout();
-    api.saveTestScore("BURNOUT", totalScore, level).catch(() => {});
+    if (isLoggedIn) api.saveTestScore("BURNOUT", totalScore, level).catch(() => {});
     const data = {
       sessionId, testType: "BURNOUT",
       responses: burnoutResponses,
@@ -5987,7 +6252,529 @@ function PsychologicalTestSystem() {
     }
   }
 
+  // 외부 검사 결과 입력 + PDF AI 분석 (별도 컴포넌트 — hooks 규칙 준수)
+  function ExternalResultSection({ onSaved }) {
+    const [showModal, setShowModal] = React.useState(false);
+    const [tab, setTab] = React.useState('manual'); // 'manual' | 'pdf'
+    // manual tab
+    const [extType, setExtType] = React.useState('PHQ9');
+    const [extScore, setExtScore] = React.useState('');
+    const [extDate, setExtDate] = React.useState(new Date().toISOString().slice(0,10));
+    const [extNote, setExtNote] = React.useState('');
+    const [manualMsg, setManualMsg] = React.useState('');
+    const [manualLoading, setManualLoading] = React.useState(false);
+    // pdf tab
+    const [pdfType, setPdfType] = React.useState('MBTI');
+    const [pdfFile, setPdfFile] = React.useState(null);
+    const [pdfStatus, setPdfStatus] = React.useState(''); // 'extracting' | 'ready' | 'analyzing' | 'done' | 'error'
+    const [pdfText, setPdfText] = React.useState('');
+    const [pdfPageCount, setPdfPageCount] = React.useState(0);
+    const [pdfAnalysis, setPdfAnalysis] = React.useState('');
+    const [pdfGames, setPdfGames] = React.useState([]);
+    const [pdfFollowup, setPdfFollowup] = React.useState([]);
+    const [pdfMsg, setPdfMsg] = React.useState('');
+
+    const manualTypes = [
+      { id:'PHQ9', label:'PHQ-9 우울' }, { id:'GAD7', label:'GAD-7 불안' },
+      { id:'BURNOUT', label:'번아웃' }, { id:'BIG5', label:'Big5 성격' },
+      { id:'DASS21', label:'DASS-21' }, { id:'DSI', label:'자아분화(DSI)' },
+      { id:'LOST', label:'LOST 행동' }, { id:'CUSTOM', label:'기타' },
+    ];
+    const pdfTypes = [
+      { id:'MBTI', label:'MBTI 성격유형' }, { id:'TCI', label:'TCI 기질/성격' },
+      { id:'MMPI', label:'MMPI 다면적인성' }, { id:'RORSCHACH', label:'로샤 검사' },
+      { id:'SCT', label:'문장완성검사(SCT)' }, { id:'HTP', label:'HTP 투사검사' },
+      { id:'WAIS', label:'WAIS 지능검사' }, { id:'K-WISC', label:'K-WISC 아동지능' },
+      { id:'ENNEAGRAM', label:'에니어그램' }, { id:'DISC', label:'DISC 행동유형' },
+      { id:'HOLLAND', label:'홀랜드 진로' }, { id:'OTHER', label:'기타 전문검사' },
+    ];
+    const gamesMeta = {
+      mood: { label:'감정 온도계', emoji:'🌡️' }, garden: { label:'마음 정원', emoji:'🌱' },
+      efmt: { label:'감정꽃', emoji:'🌸' }, gratitude: { label:'감사 일기', emoji:'📖' },
+      tree: { label:'마음나무', emoji:'🌳' }, burnout: { label:'번아웃 측정', emoji:'🔥' },
+      worry: { label:'걱정 풍선', emoji:'🫧' }, focus: { label:'마음 집중력', emoji:'🎯' },
+    };
+    const followupMeta = {
+      PHQ9:'😔 우울 자가점검', GAD7:'😰 불안 자가점검', BURNOUT:'🔥 번아웃', BIG5:'🌟 Big5 성격', LOST:'🧭 LOST', DSI:'🪞 자아분화',
+    };
+
+    const loadPdfJs = () => new Promise((resolve, reject) => {
+      if (window.pdfjsLib) { resolve(window.pdfjsLib); return; }
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      s.onload = () => {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        resolve(window.pdfjsLib);
+      };
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+
+    const handlePdfFile = async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (file.type !== 'application/pdf') { setPdfMsg('PDF 파일만 첨부 가능합니다'); return; }
+      if (file.size > 10 * 1024 * 1024) { setPdfMsg('파일 크기는 10MB 이하여야 합니다'); return; }
+      setPdfFile(file); setPdfStatus('extracting'); setPdfMsg(''); setPdfText(''); setPdfAnalysis(''); setPdfGames([]); setPdfFollowup([]);
+      try {
+        const pdfjs = await loadPdfJs();
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+        setPdfPageCount(pdf.numPages);
+        let fullText = '';
+        for (let i = 1; i <= Math.min(pdf.numPages, 20); i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          fullText += content.items.map(item => item.str).join(' ') + '\n';
+        }
+        if (fullText.trim().length < 50) {
+          setPdfStatus('error');
+          setPdfMsg('텍스트를 읽을 수 없어요. 이 PDF는 이미지로만 구성되어 있습니다.\n\n💡 해결 방법: 검사기관에 "텍스트 PDF"나 "디지털 결과지"를 요청하거나, 결과 내용을 직접 텍스트로 복사해 점수 입력 탭을 이용해 주세요.');
+          return;
+        }
+        setPdfText(fullText);
+        setPdfStatus('ready');
+      } catch(err) {
+        setPdfStatus('error');
+        setPdfMsg('PDF 읽기 오류: ' + (err.message || '알 수 없는 오류'));
+      }
+    };
+
+    const analyzePdf = async () => {
+      if (!pdfText) return;
+      setPdfStatus('analyzing'); setPdfMsg('');
+      try {
+        const res = await api._fetch('/api/test/analyze-pdf', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ testType: pdfType, pdfText, fileName: pdfFile?.name }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setPdfAnalysis(data.analysis);
+          setPdfGames(data.suggestedGames || []);
+          setPdfFollowup(data.followUpTests || []);
+          setPdfStatus('done');
+        } else {
+          setPdfMsg(data.error || '분석 실패');
+          setPdfStatus('error');
+        }
+      } catch(e) {
+        setPdfMsg('오류: ' + e.message);
+        setPdfStatus('error');
+      }
+    };
+
+    const submitManual = async () => {
+      const scoreNum = parseInt(extScore, 10);
+      if (isNaN(scoreNum) || scoreNum < 0) { setManualMsg('올바른 점수를 입력하세요'); return; }
+      setManualLoading(true);
+      try {
+        const res = await api._fetch('/api/test/external-result', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ testType: extType, score: scoreNum, note: extNote || undefined, conductedAt: extDate ? new Date(extDate).toISOString() : undefined }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setManualMsg('저장되었습니다!');
+          setTimeout(() => { setShowModal(false); setManualMsg(''); setExtScore(''); setExtNote(''); onSaved && onSaved(); }, 1200);
+        } else { setManualMsg(data.error || '저장 실패'); }
+      } catch(e) { setManualMsg('오류가 발생했습니다'); }
+      finally { setManualLoading(false); }
+    };
+
+    const closeModal = () => {
+      setShowModal(false); setTab('manual'); setPdfFile(null); setPdfStatus('');
+      setPdfText(''); setPdfAnalysis(''); setPdfGames([]); setPdfFollowup([]); setPdfMsg('');
+      setManualMsg(''); setExtScore(''); setExtNote('');
+      onSaved && onSaved();
+    };
+
+    return (
+      <>
+        <div className="flex justify-end mb-3">
+          <button onClick={() => setShowModal(true)}
+            className="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 font-semibold">
+            📥 외부 검사 결과 입력 · AI 해석
+          </button>
+        </div>
+        {showModal && (
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <div className="bg-white rounded-t-3xl sm:rounded-2xl w-full sm:max-w-md max-h-[92vh] overflow-y-auto">
+              {/* 헤더 */}
+              <div className="sticky top-0 bg-white border-b border-gray-100 px-5 py-4 flex items-center justify-between rounded-t-3xl sm:rounded-t-2xl">
+                <h3 className="font-bold text-gray-800 text-base">📥 외부 검사 결과</h3>
+                <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+              </div>
+              {/* 탭 */}
+              <div className="flex border-b border-gray-100 px-5 pt-3">
+                {[['manual','✏️ 점수 직접 입력'],['pdf','📄 PDF 업로드 + AI 해석']].map(([t,l]) => (
+                  <button key={t} onClick={() => setTab(t)}
+                    className={`pb-2.5 px-3 text-sm font-semibold border-b-2 transition mr-2 ${tab===t ? 'border-indigo-500 text-indigo-700' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+
+              <div className="p-5">
+                {/* ── 수동 입력 탭 ── */}
+                {tab === 'manual' && (
+                  <div className="space-y-3">
+                    <p className="text-xs text-gray-500">검사 점수를 직접 입력하면 트렌드 차트에 기록됩니다.</p>
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600 block mb-1">검사 유형</label>
+                      <select value={extType} onChange={e => setExtType(e.target.value)} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm">
+                        {manualTypes.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600 block mb-1">점수</label>
+                      <input type="number" value={extScore} onChange={e => setExtScore(e.target.value)} placeholder="숫자 입력" min="0" className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600 block mb-1">검사 날짜</label>
+                      <input type="date" value={extDate} onChange={e => setExtDate(e.target.value)} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600 block mb-1">메모 (선택)</label>
+                      <textarea value={extNote} onChange={e => setExtNote(e.target.value)} placeholder="검사 기관, 특이사항 등..." rows={2} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none" />
+                    </div>
+                    {manualMsg && <p className={`text-xs text-center font-semibold ${manualMsg.includes('저장') ? 'text-green-600' : 'text-red-500'}`}>{manualMsg}</p>}
+                    <button onClick={submitManual} disabled={manualLoading || !extScore} className="w-full bg-gray-800 hover:bg-gray-900 disabled:bg-gray-300 text-white text-sm font-bold py-2.5 rounded-xl transition">
+                      {manualLoading ? '저장 중...' : '결과 저장하기'}
+                    </button>
+                  </div>
+                )}
+
+                {/* ── PDF 탭 ── */}
+                {tab === 'pdf' && (
+                  <div>
+                    {pdfStatus !== 'done' && (
+                      <>
+                        <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3 mb-4 text-xs text-indigo-700 leading-relaxed">
+                          <p className="font-bold mb-1">📄 지원 검사 예시</p>
+                          <p>MBTI · TCI · MMPI · 로샤 · SCT · HTP · WAIS · 에니어그램 · DISC · 홀랜드 등</p>
+                          <p className="mt-1 text-indigo-500">※ 병원·검사기관에서 컴퓨터로 출력한 PDF는 대부분 바로 분석됩니다. 종이를 스캔한 PDF는 분석이 어려울 수 있습니다.</p>
+                        </div>
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-xs font-semibold text-gray-600 block mb-1">검사 종류</label>
+                            <select value={pdfType} onChange={e => setPdfType(e.target.value)} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm">
+                              {pdfTypes.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="text-xs font-semibold text-gray-600 block mb-1">PDF 파일 첨부</label>
+                            <label className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl p-5 cursor-pointer transition ${pdfFile ? 'border-indigo-400 bg-indigo-50' : 'border-gray-200 hover:border-indigo-300 hover:bg-gray-50'}`}>
+                              {pdfStatus === 'extracting' ? (
+                                <><span className="text-2xl animate-spin">⚙️</span><span className="text-xs text-gray-500">텍스트 추출 중...</span></>
+                              ) : pdfStatus === 'ready' ? (
+                                <><span className="text-2xl">✅</span><span className="text-xs font-semibold text-indigo-700">{pdfFile?.name}</span><span className="text-xs text-gray-400">{pdfPageCount}페이지 · {Math.round(pdfText.length/1000)}K 자 추출됨</span></>
+                              ) : pdfStatus === 'error' ? (
+                                <><span className="text-2xl">❌</span><span className="text-xs text-red-500 text-center">{pdfMsg}</span><span className="text-xs text-gray-400 mt-1">다른 파일을 선택하려면 여기를 클릭하세요</span></>
+                              ) : (
+                                <><span className="text-3xl">📂</span><span className="text-sm font-semibold text-gray-600">PDF 파일 선택</span><span className="text-xs text-gray-400">최대 10MB</span></>
+                              )}
+                              <input type="file" accept=".pdf,application/pdf" className="hidden" onChange={handlePdfFile} />
+                            </label>
+                          </div>
+                        </div>
+                        {pdfStatus === 'ready' && (
+                          <button onClick={analyzePdf} className="w-full mt-4 bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white text-sm font-bold py-3 rounded-xl transition flex items-center justify-center gap-2">
+                            ✨ AI 해석 시작 (무료)
+                          </button>
+                        )}
+                        {pdfStatus === 'analyzing' && (
+                          <div className="mt-4 bg-indigo-50 border border-indigo-200 rounded-xl p-4 text-center">
+                            <div className="flex items-center justify-center gap-1.5 mb-2">
+                              {[0,150,300].map(d => <div key={d} className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{animationDelay:d+'ms'}}/>)}
+                            </div>
+                            <p className="text-sm text-indigo-700 font-semibold">AI가 검사 결과를 분석 중입니다...</p>
+                            <p className="text-xs text-indigo-400 mt-1">약 20~30초 소요됩니다</p>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {/* 분석 결과 */}
+                    {pdfStatus === 'done' && (
+                      <div>
+                        <div className="bg-gradient-to-br from-indigo-50 to-violet-50 border border-indigo-200 rounded-xl p-4 mb-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className="text-lg">✨</span>
+                            <span className="font-bold text-indigo-800 text-sm">AI 해석 결과 — {pdfTypes.find(t=>t.id===pdfType)?.label}</span>
+                          </div>
+                          <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                            {pdfAnalysis.split('**').map((part, i) =>
+                              i % 2 === 1 ? <strong key={i} className="text-indigo-800">{part}</strong> : part
+                            )}
+                          </div>
+                          <p className="text-xs text-indigo-400 mt-3 border-t border-indigo-100 pt-2">
+                            ⚠️ 이 해석은 비임상적 참고 정보입니다. 정확한 해석은 전문가와 상담하세요.
+                          </p>
+                        </div>
+
+                        {/* 추천 게임 */}
+                        {pdfGames.length > 0 && (
+                          <div className="mb-4">
+                            <p className="text-xs font-bold text-gray-600 mb-2">🎮 결과 맞춤 마음풀 게임</p>
+                            <div className="grid grid-cols-2 gap-2">
+                              {pdfGames.filter(g => gamesMeta[g]).map(g => (
+                                <button key={g} onClick={() => { closeModal(); openMaumGame(g); }}
+                                  className="flex items-center gap-2 bg-white border border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50 rounded-xl px-3 py-2.5 text-left transition">
+                                  <span className="text-xl">{gamesMeta[g]?.emoji}</span>
+                                  <div>
+                                    <div className="text-xs font-semibold text-gray-700">{gamesMeta[g]?.label}</div>
+                                    <div className="text-xs text-emerald-600">바로 시작 →</div>
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 마음풀 검사 연결 */}
+                        {pdfFollowup.length > 0 && (
+                          <div className="mb-4">
+                            <p className="text-xs font-bold text-gray-600 mb-2">📋 연결 검사 (더 깊이 알아보기)</p>
+                            <div className="flex flex-wrap gap-2">
+                              {pdfFollowup.filter(t => followupMeta[t]).map(t => (
+                                <button key={t} onClick={() => { closeModal(); startSelectedTest(t); }}
+                                  className="text-xs bg-amber-50 border border-amber-200 hover:bg-amber-100 text-amber-700 px-3 py-1.5 rounded-xl transition font-semibold">
+                                  {followupMeta[t]}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 재분석 */}
+                        <button onClick={() => { setPdfStatus(''); setPdfFile(null); setPdfText(''); setPdfAnalysis(''); setPdfGames([]); setPdfFollowup([]); }}
+                          className="w-full text-xs text-gray-400 hover:text-gray-600 py-2 border border-gray-200 rounded-xl transition">
+                          다른 파일 분석하기
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
+
+  // 맞춤 8주 CBT 자기관리 플랜 카드
+  function CbtPlanCard({ testHistory, onPlay }) {
+    const [plan, setPlan] = React.useState(null);
+    const [loading, setLoading] = React.useState(false);
+    const [expanded, setExpanded] = React.useState(false);
+    const [doneWeeks, setDoneWeeks] = React.useState(() => {
+      try { return JSON.parse(localStorage.getItem('cbt_done_weeks') || '[]'); } catch { return []; }
+    });
+    const [expandedWeek, setExpandedWeek] = React.useState(null);
+
+    const GAME_NAMES = {
+      mood:'😊 감정 체크인', garden:'🌿 마음의 정원', efmt:'🌸 감정꽃',
+      gratitude:'🙏 감사 일기', burnout:'🔋 번아웃 회복', focus:'🧠 집중력 훈련',
+      worry:'🫧 걱정 풍선', tree:'🌲 마음 나무',
+    };
+
+    const hasEligibleTest = (testHistory || []).some(h =>
+      ['PHQ9','GAD7','BURNOUT','DASS21'].includes(h.test_type)
+    );
+    if (!hasEligibleTest) return null;
+
+    async function loadPlan() {
+      if (plan) { setExpanded(e => !e); return; }
+      setLoading(true); setExpanded(true);
+      try {
+        const r = await fetch('/api/test/cbt-plan', { headers: api._authHeader() });
+        const d = await r.json();
+        if (d.success) setPlan(d);
+      } catch {}
+      setLoading(false);
+    }
+
+    function toggleWeekDone(week) {
+      setDoneWeeks(prev => {
+        const next = prev.includes(week) ? prev.filter(w => w !== week) : [...prev, week];
+        localStorage.setItem('cbt_done_weeks', JSON.stringify(next));
+        return next;
+      });
+    }
+
+    const completedCount = doneWeeks.filter(w => w >= 1 && w <= 8).length;
+    const progress = Math.round((completedCount / 8) * 100);
+
+    return (
+      <div className="bg-white rounded-2xl border border-emerald-200 overflow-hidden mb-4 shadow-sm">
+        <button onClick={loadPlan} className="w-full flex items-center justify-between p-4 hover:bg-emerald-50 transition">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">📅</span>
+            <div className="text-left">
+              <div className="font-bold text-emerald-800 text-sm">맞춤 8주 자기관리 플랜</div>
+              {plan
+                ? <div className="text-xs text-emerald-600 mt-0.5">{completedCount}/8주 진행 중 · {progress}% 완료</div>
+                : <div className="text-xs text-gray-400 mt-0.5">검사 결과 기반 AI 맞춤 8주 플랜</div>
+              }
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {plan && (
+              <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                <div className="h-full bg-emerald-400 rounded-full transition-all" style={{width:`${progress}%`}} />
+              </div>
+            )}
+            <span className="text-gray-400 text-sm">{expanded ? '▲' : '▼'}</span>
+          </div>
+        </button>
+        {expanded && (
+          <div className="border-t border-emerald-100">
+            {loading && (
+              <div className="flex items-center justify-center py-8 gap-2 text-emerald-600">
+                <div className="w-4 h-4 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+                <span className="text-sm">AI가 맞춤 플랜을 생성 중이에요...</span>
+              </div>
+            )}
+            {plan && !loading && (
+              <>
+                {plan.summary && (
+                  <div className="px-4 py-3 bg-emerald-50 text-xs text-emerald-700 leading-relaxed border-b border-emerald-100">
+                    {plan.summary}
+                  </div>
+                )}
+                <div className="divide-y divide-gray-50">
+                  {(plan.plan || []).map(wk => {
+                    const done = doneWeeks.includes(wk.week);
+                    const isOpen = expandedWeek === wk.week;
+                    return (
+                      <div key={wk.week} className={`transition ${done ? 'bg-emerald-50' : 'bg-white'}`}>
+                        <button
+                          onClick={() => setExpandedWeek(isOpen ? null : wk.week)}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition"
+                        >
+                          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${done ? 'bg-emerald-400 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                            {done ? '✓' : wk.week}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className={`font-semibold text-sm ${done ? 'text-emerald-700 line-through opacity-70' : 'text-gray-800'}`}>{wk.title}</div>
+                            <div className="text-xs text-gray-400 truncate">{wk.theme}</div>
+                          </div>
+                          <span className="text-gray-300 text-xs shrink-0">{isOpen ? '▲' : '▼'}</span>
+                        </button>
+                        {isOpen && (
+                          <div className="px-4 pb-4 space-y-2">
+                            <div className="bg-blue-50 rounded-xl px-3 py-2">
+                              <div className="text-xs font-bold text-blue-700 mb-0.5">매일 실천</div>
+                              <div className="text-xs text-blue-800">{wk.practice}</div>
+                            </div>
+                            {wk.game && GAME_NAMES[wk.game] && (
+                              <button
+                                onClick={() => onPlay && onPlay(wk.game)}
+                                className="w-full bg-emerald-50 hover:bg-emerald-100 rounded-xl px-3 py-2 text-left transition"
+                              >
+                                <div className="text-xs font-bold text-emerald-700 mb-0.5">추천 게임</div>
+                                <div className="text-xs text-emerald-800">{GAME_NAMES[wk.game]}</div>
+                              </button>
+                            )}
+                            {wk.tip && (
+                              <div className="text-xs text-gray-500 italic px-1">💚 {wk.tip}</div>
+                            )}
+                            <button
+                              onClick={() => toggleWeekDone(wk.week)}
+                              className={`w-full mt-1 py-2 rounded-xl text-xs font-bold transition ${done ? 'bg-gray-100 text-gray-500 hover:bg-gray-200' : 'bg-emerald-500 text-white hover:bg-emerald-600'}`}
+                            >
+                              {done ? '↩ 완료 취소' : '✅ 이번 주 완료'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                {progress === 100 && (
+                  <div className="px-4 py-4 bg-emerald-500 text-white text-center text-sm font-bold">
+                    🎉 8주 플랜 완주! 꾸준한 실천이 빛났어요!
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   // 결과 공유 버튼 컴포넌트 (Web Share API / clipboard fallback)
+  function TrendPredictionCard({ testType, onStartTest }) {
+    const [pred, setPred] = React.useState(null);
+    const [loading, setLoading] = React.useState(false);
+    const [expanded, setExpanded] = React.useState(false);
+    const labelMap = { PHQ9:'PHQ-9 우울', GAD7:'GAD-7 불안', BURNOUT:'번아웃' };
+    const emojiMap = { PHQ9:'😔', GAD7:'😰', BURNOUT:'🔥' };
+
+    async function load() {
+      if (pred || loading) { setExpanded(e => !e); return; }
+      setLoading(true);
+      setExpanded(true);
+      try {
+        const r = await fetch(`/api/test/trend-prediction?type=${testType}`, { headers: api._authHeader() });
+        const d = await r.json();
+        if (d.success) setPred(d);
+      } catch {}
+      setLoading(false);
+    }
+
+    const trendColor = pred?.trend === '호전' ? '#16a34a' : pred?.trend === '악화' ? '#dc2626' : '#6b7280';
+    const trendEmoji = pred?.trend === '호전' ? '📉' : pred?.trend === '악화' ? '📈' : '➡️';
+
+    return (
+      <div className="bg-gradient-to-r from-sky-50 to-indigo-50 border border-sky-200 rounded-2xl p-4 mb-4">
+        <button onClick={load} className="w-full text-left flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">{emojiMap[testType]}</span>
+            <div>
+              <p className="text-sm font-bold text-sky-800">{labelMap[testType]} 트렌드 예측</p>
+              <p className="text-xs text-sky-500">지금까지의 변화 흐름으로 다음 상태를 예측해요</p>
+            </div>
+          </div>
+          <span className="text-sky-400 text-xs">{expanded ? '▲' : '▼'}</span>
+        </button>
+        {expanded && (
+          <div className="mt-3 pt-3 border-t border-sky-100">
+            {loading && <p className="text-xs text-sky-400 text-center py-2">예측 분석 중...</p>}
+            {pred && (
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="text-center">
+                    <p className="text-xs text-gray-400">예측 점수</p>
+                    <p className="text-2xl font-black" style={{ color: trendColor }}>{pred.predicted}</p>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold" style={{ color: trendColor }}>
+                      {trendEmoji} {pred.trend} 추세 · {pred.diffText}
+                    </p>
+                    {pred.comment && (
+                      <p className="text-xs text-gray-600 mt-1 leading-relaxed">{pred.comment}</p>
+                    )}
+                  </div>
+                </div>
+                <button onClick={onStartTest}
+                  className="w-full mt-1 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-xl text-xs font-bold transition">
+                  📋 {labelMap[testType]} 재검사하기
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   function ShareResultButton({ text }) {
     return (
       <div className="mt-3 flex justify-end">

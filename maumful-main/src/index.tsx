@@ -2870,7 +2870,7 @@ app.get('/.well-known/assetlinks.json', (c) => {
         namespace: 'android_app',
         package_name: 'com.maumful.app',
         sha256_cert_fingerprints: [
-          '1D:7C:67:6D:5A:78:38:E8:CB:F0:1E:7F:7F:A6:96:62:D0:D2:05:24:70:BA:4E:BF:6D:E9:E7:2C:92:41:EE:99'
+          'EA:98:3F:BC:39:E6:FE:EC:83:52:4C:43:6A:7F:0A:F5:CF:40:26:D6:FF:C4:62:0B:1E:19:77:D9:7B:6B:BC:91'
         ]
       }
     }

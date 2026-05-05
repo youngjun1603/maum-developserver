@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>마음풀 — 임직원 마음 건강 관리 솔루션</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --green:#2D6A4F;--green-light:#52B788;--green-pale:#D8F3DC;
+    --navy:#1B2A4A;--gray:#6B7280;--light:#F9FAFB;--white:#FFFFFF;
+    --gold:#C9A227;--red:#EF4444;--amber:#F59E0B;
+  }
+  body{font-family:'Noto Sans KR',sans-serif;background:#111;overflow:hidden;height:100vh;height:100dvh;overscroll-behavior:none}
+  .deck{width:100%;height:100vh;height:100dvh;position:relative}
+  .slide{
+    position:absolute;inset:0;display:flex;flex-direction:column;
+    justify-content:center;align-items:center;padding:60px 80px;
+    opacity:0;pointer-events:none;transition:opacity .5s ease,transform .5s ease;
+    transform:translateX(60px);overflow:hidden;
+  }
+  .slide.active{opacity:1;pointer-events:all;transform:translateX(0)}
+  .slide.prev{opacity:0;transform:translateX(-60px)}
+
+  /* 슬라이드 배경 테마 */
+  .s-dark{background:linear-gradient(135deg,#1B2A4A 0%,#2D4A6B 100%)}
+  .s-green{background:linear-gradient(135deg,#1B4332 0%,#2D6A4F 100%)}
+  .s-light{background:#F9FAFB}
+  .s-white{background:#FFFFFF}
+  .s-accent{background:linear-gradient(135deg,#2D6A4F 0%,#52B788 100%)}
+
+  /* 공통 타이포 */
+  .tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+       padding:4px 12px;border-radius:20px;margin-bottom:16px}
+  .tag-white{background:rgba(255,255,255,.15);color:#fff}
+  .tag-green{background:#D8F3DC;color:#2D6A4F}
+  .tag-navy{background:#EEF2FF;color:#1B2A4A}
+  h1{font-size:52px;font-weight:900;line-height:1.15;letter-spacing:-1px}
+  h2{font-size:38px;font-weight:800;line-height:1.2;letter-spacing:-.5px}
+  h3{font-size:24px;font-weight:700;line-height:1.3}
+  p{font-size:16px;line-height:1.75;color:var(--gray)}
+  .lead{font-size:20px;line-height:1.6;font-weight:400}
+  .text-white{color:#fff!important}
+  .text-green{color:var(--green-light)!important}
+  .text-navy{color:var(--navy)!important}
+  .text-gray{color:#9CA3AF}
+  .mt1{margin-top:8px}.mt2{margin-top:16px}.mt3{margin-top:24px}.mt4{margin-top:32px}.mt5{margin-top:48px}
+  .w-full{width:100%}
+  .text-center{text-align:center}
+
+  /* 카드 */
+  .card{background:#fff;border-radius:16px;padding:28px;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+  .card-dark{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:16px;padding:28px;backdrop-filter:blur(10px)}
+  .card-green{background:rgba(82,183,136,.12);border:1px solid rgba(82,183,136,.3);border-radius:16px;padding:24px}
+
+  /* 그리드 */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px;width:100%}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;width:100%}
+  .grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px;width:100%}
+  .flex{display:flex}.gap2{gap:16px}.gap3{gap:24px}.items-center{align-items:center}
+  .flex-col{flex-direction:column}
+
+  /* 숫자/통계 강조 */
+  .stat-num{font-size:52px;font-weight:900;line-height:1;letter-spacing:-2px}
+  .stat-unit{font-size:18px;font-weight:600;opacity:.8}
+  .stat-label{font-size:13px;font-weight:500;margin-top:6px;opacity:.7}
+
+  /* 아이콘 박스 */
+  .icon-box{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
+  .icon-green{background:#D8F3DC}
+  .icon-navy{background:#EEF2FF}
+  .icon-amber{background:#FEF3C7}
+
+  /* 진행 바 */
+  .progress-bar{height:6px;background:rgba(255,255,255,.2);border-radius:3px;overflow:hidden}
+  .progress-fill{height:100%;background:var(--green-light);border-radius:3px;transition:width .8s ease}
+
+  /* 체크리스트 */
+  .check-item{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px}
+  .check-icon{width:22px;height:22px;background:var(--green-light);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;flex-shrink:0;margin-top:2px}
+
+  /* 플로우 화살표 */
+  .flow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .flow-step{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:12px 18px;text-align:center;flex:1}
+  .flow-arrow{color:var(--green-light);font-size:20px;flex-shrink:0}
+
+  /* 네비게이션 */
+  .nav{position:fixed;bottom:max(28px,env(safe-area-inset-bottom,28px));left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;z-index:100;
+       background:rgba(20,30,20,.72);backdrop-filter:blur(14px);
+       padding:8px 18px;padding-bottom:max(8px,env(safe-area-inset-bottom,8px));border-radius:50px;border:1px solid rgba(255,255,255,.15)}
+  .nav-btn{width:40px;height:40px;border-radius:50%;border:none;cursor:pointer;font-size:16px;
+           background:rgba(255,255,255,.18);color:#fff;
+           transition:all .2s;display:flex;align-items:center;justify-content:center}
+  .nav-btn:hover{background:rgba(255,255,255,.35);transform:scale(1.08)}
+  .nav-dots{display:flex;gap:8px}
+  .dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.35);cursor:pointer;transition:all .2s}
+  .dot.active{background:#fff;width:24px;border-radius:4px}
+  .slide-counter{position:fixed;top:24px;right:32px;font-size:13px;color:rgba(255,255,255,.5);z-index:100;font-weight:600;letter-spacing:1px}
+  .logo-watermark{position:fixed;top:24px;left:32px;font-size:15px;font-weight:800;color:rgba(255,255,255,.4);z-index:100;letter-spacing:.5px}
+
+  /* 표지 특수 */
+  .hero-badge{display:flex;align-items:center;gap:10px;background:rgba(82,183,136,.2);border:1px solid rgba(82,183,136,.4);border-radius:30px;padding:8px 20px;width:fit-content;margin:0 auto 32px}
+  .hero-badge span{font-size:13px;font-weight:700;color:var(--green-light);letter-spacing:1px}
+
+  /* 인용 */
+  .quote{border-left:4px solid var(--green-light);padding:16px 20px;background:rgba(82,183,136,.08);border-radius:0 12px 12px 0}
+
+  /* 반응형 */
+  @media(max-width:900px){
+    .slide{padding:40px 32px}
+    h1{font-size:36px}h2{font-size:28px}
+    .grid3,.grid4{grid-template-columns:1fr 1fr}
+    .stat-num{font-size:36px}
+  }
+</style>
+</head>
+<body>
+<div class="logo-watermark">🌿 마음풀</div>
+<div class="slide-counter" id="counter">1 / 10</div>
+
+<div class="deck" id="deck">
+
+<!-- ① 표지 -->
+<div class="slide s-dark active" id="s1">
+  <div class="text-center" style="max-width:720px">
+    <div class="hero-badge"><span>🏢 B2B 임직원 복지 솔루션</span></div>
+    <h1 class="text-white" style="font-size:58px">직원의 마음이<br><span style="color:#52B788">건강해야</span><br>조직이 성장합니다</h1>
+    <p class="lead text-white mt3" style="opacity:.75">마음풀은 AI 기반 올인원 디지털 정신건강 플랫폼으로<br>임직원의 마음 건강을 과학적으로 관리합니다.</p>
+    <div class="flex gap2 mt5" style="justify-content:center">
+      <div class="card-dark text-center" style="padding:16px 24px">
+        <div class="stat-num text-green" style="font-size:32px">8종</div>
+        <div class="stat-label text-white">과학적 심리검사</div>
+      </div>
+      <div class="card-dark text-center" style="padding:16px 24px">
+        <div class="stat-num text-green" style="font-size:32px">AI</div>
+        <div class="stat-label text-white">24시간 상담</div>
+      </div>
+      <div class="card-dark text-center" style="padding:16px 24px">
+        <div class="stat-num text-green" style="font-size:32px">3개</div>
+        <div class="stat-label text-white">연동 서비스</div>
+      </div>
+    </div>
+    <p class="mt4" style="font-size:13px;color:rgba(255,255,255,.35);letter-spacing:1px">maumful.com</p>
+  </div>
+</div>
+
+<!-- ② 문제 인식 -->
+<div class="slide s-light" id="s2">
+  <div style="max-width:900px;width:100%">
+    <div class="tag tag-navy">📊 현황</div>
+    <h2 class="text-navy">직장인 정신건강, <span style="color:#EF4444">지금이 위기입니다</span></h2>
+    <div class="grid3 mt4">
+      <div class="card text-center" style="border-top:4px solid #EF4444">
+        <div class="stat-num" style="color:#EF4444">67%</div>
+        <div style="font-size:14px;color:#6B7280;margin-top:8px;font-weight:500">직장인 번아웃 경험률<br><span style="font-size:12px">(대한신경정신의학회, 2024)</span></div>
+      </div>
+      <div class="card text-center" style="border-top:4px solid #F59E0B">
+        <div class="stat-num" style="color:#F59E0B">1위</div>
+        <div style="font-size:14px;color:#6B7280;margin-top:8px;font-weight:500">직장인 병가 원인<br><span style="font-size:12px">정신건강 문제 (OECD)</span></div>
+      </div>
+      <div class="card text-center" style="border-top:4px solid #8B5CF6">
+        <div class="stat-num" style="color:#8B5CF6">3배</div>
+        <div style="font-size:14px;color:#6B7280;margin-top:8px;font-weight:500">정신건강 문제 직원<br><span style="font-size:12px">업무 생산성 저하</span></div>
+      </div>
+    </div>
+    <div class="grid2 mt3">
+      <div class="quote">
+        <p style="font-size:15px;color:#374151;font-weight:500">"정신건강 문제로 인한 기업 손실은 연간 <strong style="color:#EF4444">직원 1인당 약 300만 원</strong>에 달하며, 이직률 상승과 직결됩니다."</p>
+      </div>
+      <div class="card-green">
+        <p style="font-size:14px;color:#1B4332;font-weight:600;margin-bottom:10px">🎯 기업이 원하는 것</p>
+        <div class="check-item"><div class="check-icon">✓</div><span style="font-size:14px">조기 발견 — 문제가 커지기 전 감지</span></div>
+        <div class="check-item"><div class="check-icon">✓</div><span style="font-size:14px">비용 효율 — 소규모 예산으로 전 직원 관리</span></div>
+        <div class="check-item"><div class="check-icon">✓</div><span style="font-size:14px">익명성 보장 — 직원이 편하게 이용</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ③ 마음풀 소개 -->
+<div class="slide s-green" id="s3">
+  <div style="max-width:900px;width:100%">
+    <div class="tag tag-white">💡 솔루션</div>
+    <h2 class="text-white">마음풀 — 하나의 플랫폼으로<br>전 직원 마음 건강 관리</h2>
+    <p class="lead text-white mt2" style="opacity:.8">검사 → AI 상담 → 게임형 훈련 → 전문가 연결까지<br>정신건강 관리의 전체 여정을 원스톱으로 제공합니다.</p>
+    <div class="grid4 mt4">
+      <div class="card-dark text-center">
+        <div style="font-size:36px;margin-bottom:10px">🧪</div>
+        <h3 class="text-white" style="font-size:16px">심리검사</h3>
+        <p style="font-size:13px;color:rgba(255,255,255,.6);margin-top:6px">우울·불안·번아웃 등 8종 과학적 검사</p>
+      </div>
+      <div class="card-dark text-center">
+        <div style="font-size:36px;margin-bottom:10px">🤖</div>
+        <h3 class="text-white" style="font-size:16px">AI 상담</h3>
+        <p style="font-size:13px;color:rgba(255,255,255,.6);margin-top:6px">Claude AI 기반 24시간 개인화 상담</p>
+      </div>
+      <div class="card-dark text-center">
+        <div style="font-size:36px;margin-bottom:10px">🎮</div>
+        <h3 class="text-white" style="font-size:16px">마음게임</h3>
+        <p style="font-size:13px;color:rgba(255,255,255,.6);margin-top:6px">게임으로 배우는 감정 관리 훈련</p>
+      </div>
+      <div class="card-dark text-center">
+        <div style="font-size:36px;margin-bottom:10px">👨‍⚕️</div>
+        <h3 class="text-white" style="font-size:16px">전문 상담</h3>
+        <p style="font-size:13px;color:rgba(255,255,255,.6);margin-top:6px">필요 시 전문 상담사 1:1 연결</p>
+      </div>
+    </div>
+    <div class="card-dark mt4" style="padding:20px 28px">
+      <div class="flex items-center gap2">
+        <span style="font-size:22px">✨</span>
+        <p style="font-size:15px;color:rgba(255,255,255,.9);font-weight:500">모든 기능이 <strong style="color:#52B788">회원 계정</strong>으로 연동되어 개인별 마음 건강 데이터가 누적·분석됩니다.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ④ 강점1: 과학적 검사 -->
+<div class="slide s-white" id="s4">
+  <div style="max-width:900px;width:100%">
+    <div class="tag tag-green">강점 01</div>
+    <h2 class="text-navy">8종 과학적 심리검사로<br>조기 발견</h2>
+    <div class="grid2 mt4">
+      <div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="card" style="border-left:3px solid #2D6A4F;padding:14px 16px">
+            <div style="font-size:11px;font-weight:700;color:#2D6A4F;letter-spacing:1px">PHQ-9</div>
+            <div style="font-size:13px;font-weight:600;color:#1B2A4A;margin-top:4px">우울 선별검사</div>
+          </div>
+          <div class="card" style="border-left:3px solid #52B788;padding:14px 16px">
+            <div style="font-size:11px;font-weight:700;color:#52B788;letter-spacing:1px">GAD-7</div>
+            <div style="font-size:13px;font-weight:600;color:#1B2A4A;margin-top:4px">불안 선별검사</div>
+          </div>
+          <div class="card" style="border-left:3px solid #F59E0B;padding:14px 16px">
+            <div style="font-size:11px;font-weight:700;color:#F59E0B;letter-spacing:1px">번아웃</div>
+            <div style="font-size:13px;font-weight:600;color:#1B2A4A;margin-top:4px">직무 번아웃 측정</div>
+          </div>
+          <div class="card" style="border-left:3px solid #8B5CF6;padding:14px 16px">
+            <div style="font-size:11px;font-weight:700;color:#8B5CF6;letter-spacing:1px">BIG5</div>
+            <div style="font-size:13px;font-weight:600;color:#1B2A4A;margin-top:4px">성격 유형 분석</div>
+          </div>
+          <div class="card" style="border-left:3px solid #EC4899;padding:14px 16px">
+            <div style="font-size:11px;font-weight:700;color:#EC4899;letter-spacing:1px">DASS-21</div>
+            <div style="font-size:13px;font-weight:600;color:#1B2A4A;margin-top:4px">스트레스 종합</div>
+          </div>
+          <div class="card" style="border-left:3px solid #14B8A6;padding:14px 16px">
+            <div style="font-size:11px;font-weight:700;color:#14B8A6;letter-spacing:1px">DSI / LOST</div>
+            <div style="font-size:13px;font-weight:600;color:#1B2A4A;margin-top:4px">자아·관계 분화</div>
+          </div>
+        </div>
+        <p style="font-size:12px;color:#9CA3AF;margin-top:10px">+ 외부 검사 결과(MBTI·MMPI 등) PDF 업로드 → AI 해석</p>
+      </div>
+      <div>
+        <div class="card" style="background:linear-gradient(135deg,#F0FDF4,#DCFCE7);border:none;height:100%">
+          <h3 style="font-size:17px;color:#1B4332;margin-bottom:16px">🎯 기업 도입 시 활용법</h3>
+          <div class="check-item"><div class="check-icon">✓</div><div><strong style="color:#1B4332;font-size:14px">정기 검진</strong><br><span style="font-size:13px;color:#374151">분기별 전 직원 번아웃·우울 자가 검사</span></div></div>
+          <div class="check-item"><div class="check-icon">✓</div><div><strong style="color:#1B4332;font-size:14px">온보딩 검사</strong><br><span style="font-size:13px;color:#374151">신입 입사 시 기본 심리 상태 파악</span></div></div>
+          <div class="check-item"><div class="check-icon">✓</div><div><strong style="color:#1B4332;font-size:14px">트렌드 추적</strong><br><span style="font-size:13px;color:#374151">개인별 점수 변화 AI가 자동 분석</span></div></div>
+          <div class="check-item"><div class="check-icon">✓</div><div><strong style="color:#1B4332;font-size:14px">익명 집계</strong><br><span style="font-size:13px;color:#374151">팀/부서 단위 집계로 조직 건강도 파악</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ⑤ 강점2: AI 상담 -->
+<div class="slide s-dark" id="s5">
+  <div style="max-width:900px;width:100%">
+    <div class="tag tag-white">강점 02</div>
+    <h2 class="text-white">Claude AI 기반<br><span style="color:#52B788">24시간 개인화 상담</span></h2>
+    <div class="grid2 mt4">
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card-dark">
+          <div class="flex items-center gap2 mb2">
+            <div class="icon-box icon-green">🧠</div>
+            <h3 class="text-white" style="font-size:17px">검사 결과 연동 상담</h3>
+          </div>
+          <p style="font-size:14px;color:rgba(255,255,255,.7)">PHQ-9·GAD-7 점수를 기반으로 AI가 맥락을 파악하고 개인화된 대화를 시작합니다.</p>
+        </div>
+        <div class="card-dark">
+          <div class="flex items-center gap2 mb2">
+            <div class="icon-box icon-green">📈</div>
+            <h3 class="text-white" style="font-size:17px">트렌드 기반 코칭</h3>
+          </div>
+          <p style="font-size:14px;color:rgba(255,255,255,.7)">3회 이상 검사 데이터가 쌓이면 AI가 변화 추이를 분석해 "최근 2주간 호전 중이에요"처럼 격려합니다.</p>
+        </div>
+        <div class="card-dark">
+          <div class="flex items-center gap2 mb2">
+            <div class="icon-box icon-green">🔒</div>
+            <h3 class="text-white" style="font-size:17px">완전한 익명성</h3>
+          </div>
+          <p style="font-size:14px;color:rgba(255,255,255,.7)">개인 상담 내용은 회사에 공유되지 않습니다. 직원이 안심하고 속마음을 털어놓을 수 있습니다.</p>
+        </div>
+      </div>
+      <div class="card-dark" style="display:flex;flex-direction:column;justify-content:center">
+        <p style="font-size:12px;font-weight:700;color:#52B788;letter-spacing:1px;margin-bottom:16px">CHAT PREVIEW</p>
+        <div style="background:rgba(255,255,255,.05);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px">
+          <div style="background:#2D6A4F;border-radius:0 12px 12px 12px;padding:10px 14px;max-width:85%">
+            <p style="font-size:13px;color:#fff;line-height:1.5">안녕하세요. 최근 번아웃 지수가 조금 높아진 것 같아요. 오늘 어떻게 지내셨나요?</p>
+            <p style="font-size:10px;color:rgba(255,255,255,.5);margin-top:4px">🤖 AI 상담사</p>
+          </div>
+          <div style="background:rgba(255,255,255,.1);border-radius:12px 0 12px 12px;padding:10px 14px;max-width:85%;align-self:flex-end">
+            <p style="font-size:13px;color:rgba(255,255,255,.9);line-height:1.5">요즘 야근이 많아서 너무 지쳐요...</p>
+          </div>
+          <div style="background:#2D6A4F;border-radius:0 12px 12px 12px;padding:10px 14px;max-width:85%">
+            <p style="font-size:13px;color:#fff;line-height:1.5"><strong>공감:</strong> 지속되는 야근은 정말 소진되게 하죠. 잘 버텨오셨어요.<br><strong>탐색:</strong> 지금 가장 힘든 부분이 어떤 건가요?<br><strong>제안:</strong> 오늘 퇴근 후 10분 산책을 해보시겠어요?</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ⑥ 강점3: 마음게임 -->
+<div class="slide s-white" id="s6">
+  <div style="max-width:900px;width:100%">
+    <div class="tag tag-green">강점 03</div>
+    <h2 class="text-navy">마음게임 — 즐기면서 만드는<br>감정 회복력</h2>
+    <p class="lead text-navy mt2" style="opacity:.6">진입 장벽이 높은 상담 대신, 게임으로 자연스럽게 마음 챙기기 습관을 형성합니다.</p>
+    <div class="grid4 mt4">
+      <div class="card text-center" style="border-top:3px solid #52B788">
+        <div style="font-size:28px;margin-bottom:8px">🌡️</div>
+        <strong style="font-size:13px;color:#1B2A4A">감정 온도계</strong>
+        <p style="font-size:12px;color:#6B7280;margin-top:4px">오늘 감정 상태 기록</p>
+      </div>
+      <div class="card text-center" style="border-top:3px solid #52B788">
+        <div style="font-size:28px;margin-bottom:8px">🌿</div>
+        <strong style="font-size:13px;color:#1B2A4A">마음 정원</strong>
+        <p style="font-size:12px;color:#6B7280;margin-top:4px">스트레스 해소 미니게임</p>
+      </div>
+      <div class="card text-center" style="border-top:3px solid #52B788">
+        <div style="font-size:28px;margin-bottom:8px">🌸</div>
+        <strong style="font-size:13px;color:#1B2A4A">감정꽃</strong>
+        <p style="font-size:12px;color:#6B7280;margin-top:4px">감정 인식 훈련 게임</p>
+      </div>
+      <div class="card text-center" style="border-top:3px solid #52B788">
+        <div style="font-size:28px;margin-bottom:8px">📖</div>
+        <strong style="font-size:13px;color:#1B2A4A">감사 일기</strong>
+        <p style="font-size:12px;color:#6B7280;margin-top:4px">긍정 감정 강화 훈련</p>
+      </div>
+      <div class="card text-center" style="border-top:3px solid #F59E0B">
+        <div style="font-size:28px;margin-bottom:8px">🌳</div>
+        <strong style="font-size:13px;color:#1B2A4A">마음나무</strong>
+        <p style="font-size:12px;color:#6B7280;margin-top:4px">CBT 인지 재구성 훈련</p>
+      </div>
+      <div class="card text-center" style="border-top:3px solid #EF4444">
+        <div style="font-size:28px;margin-bottom:8px">🔥</div>
+        <strong style="font-size:13px;color:#1B2A4A">번아웃 테스트</strong>
+        <p style="font-size:12px;color:#6B7280;margin-top:4px">직무 소진 수준 체크</p>
+      </div>
+      <div class="card text-center" style="border-top:3px solid #8B5CF6">
+        <div style="font-size:28px;margin-bottom:8px">🫧</div>
+        <strong style="font-size:13px;color:#1B2A4A">걱정 풍선</strong>
+        <p style="font-size:12px;color:#6B7280;margin-top:4px">ACT 인지 탈융합 기법</p>
+      </div>
+      <div class="card text-center" style="border-top:3px solid #14B8A6">
+        <div style="font-size:28px;margin-bottom:8px">🎯</div>
+        <strong style="font-size:13px;color:#1B2A4A">집중력 게임</strong>
+        <p style="font-size:12px;color:#6B7280;margin-top:4px">n-back 단기기억 훈련</p>
+      </div>
+    </div>
+    <div class="flex gap2 mt4">
+      <div class="card-green flex-1" style="padding:14px 18px">
+        <p style="font-size:14px;color:#1B4332"><strong>🏆 EXP & 레벨 시스템</strong> — 매일 게임 → 경험치 적립 → 레벨업 → 업적 달성. 지속 참여 동기 부여</p>
+      </div>
+      <div class="card-green flex-1" style="padding:14px 18px">
+        <p style="font-size:14px;color:#1B4332"><strong>🔥 연속 출석 스트릭</strong> — 연속 참여 기록 + 복구권 시스템으로 습관 형성 지원</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ⑦ 강점4: 데이터 & AI 분석 -->
+<div class="slide s-dark" id="s7">
+  <div style="max-width:900px;width:100%">
+    <div class="tag tag-white">강점 04</div>
+    <h2 class="text-white">쌓이는 데이터,<br><span style="color:#52B788">깊어지는 개인화</span></h2>
+    <div class="grid2 mt4">
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card-dark">
+          <h3 class="text-white" style="font-size:16px;margin-bottom:10px">📊 검사 트렌드 차트</h3>
+          <p style="font-size:13px;color:rgba(255,255,255,.7)">PHQ-9, GAD-7, 번아웃 점수가 시간축 위에 시각화됩니다. 개선/악화 추이를 한눈에 파악.</p>
+        </div>
+        <div class="card-dark">
+          <h3 class="text-white" style="font-size:16px;margin-bottom:10px">🤖 AI 트렌드 분석</h3>
+          <p style="font-size:13px;color:rgba(255,255,255,.7)">3회 이상 검사 시 AI가 자동으로 변화 맥락을 파악하고 상담 시 "최근 5점 호전" 정보를 활용합니다.</p>
+        </div>
+        <div class="card-dark">
+          <h3 class="text-white" style="font-size:16px;margin-bottom:10px">📋 상담사 사전 공유</h3>
+          <p style="font-size:13px;color:rgba(255,255,255,.7)">전문 상담 예약 시 검사 결과를 사전에 공유해 상담 시간을 더 효율적으로 활용합니다.</p>
+        </div>
+      </div>
+      <div class="card-dark" style="display:flex;flex-direction:column;justify-content:space-between">
+        <p style="font-size:12px;font-weight:700;color:#52B788;letter-spacing:1px;margin-bottom:12px">DATA FLOW</p>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="background:rgba(82,183,136,.15);border:1px solid rgba(82,183,136,.3);border-radius:10px;padding:12px;display:flex;align-items:center;gap:10px">
+            <span style="font-size:18px">🧪</span>
+            <div><strong style="color:#fff;font-size:13px">심리검사 수행</strong><br><span style="color:rgba(255,255,255,.6);font-size:12px">PHQ9, GAD7, BURNOUT 등</span></div>
+          </div>
+          <div style="text-align:center;color:#52B788;font-size:18px">↓</div>
+          <div style="background:rgba(82,183,136,.15);border:1px solid rgba(82,183,136,.3);border-radius:10px;padding:12px;display:flex;align-items:center;gap:10px">
+            <span style="font-size:18px">🎮</span>
+            <div><strong style="color:#fff;font-size:13px">마음게임 일일 기록</strong><br><span style="color:rgba(255,255,255,.6);font-size:12px">감정 온도계, 번아웃 게임</span></div>
+          </div>
+          <div style="text-align:center;color:#52B788;font-size:18px">↓</div>
+          <div style="background:rgba(82,183,136,.3);border:1px solid rgba(82,183,136,.5);border-radius:10px;padding:12px;display:flex;align-items:center;gap:10px">
+            <span style="font-size:18px">🧠</span>
+            <div><strong style="color:#fff;font-size:13px">AI 개인화 컨텍스트 생성</strong><br><span style="color:rgba(255,255,255,.6);font-size:12px">로그인 시 맞춤 인사 + 상담 맥락 자동 주입</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ⑧ 도입 프로세스 -->
+<div class="slide s-light" id="s8">
+  <div style="max-width:900px;width:100%">
+    <div class="tag tag-navy">🚀 도입</div>
+    <h2 class="text-navy">간단한 3단계 도입 프로세스</h2>
+    <div class="grid3 mt4">
+      <div class="card text-center" style="border-top:4px solid #2D6A4F;position:relative">
+        <div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);width:28px;height:28px;background:#2D6A4F;border-radius:50%;color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center">1</div>
+        <div style="font-size:32px;margin:16px 0 10px">📋</div>
+        <h3 style="font-size:17px;color:#1B2A4A;margin-bottom:10px">도입 상담</h3>
+        <p style="font-size:13px;color:#6B7280">회사 규모·니즈 파악<br>맞춤형 플랜 제안<br>관리자 계정 설정</p>
+        <div style="margin-top:14px;padding:8px;background:#F0FDF4;border-radius:8px">
+          <span style="font-size:12px;font-weight:600;color:#2D6A4F">소요 기간: 1~3일</span>
+        </div>
+      </div>
+      <div class="card text-center" style="border-top:4px solid #52B788;position:relative">
+        <div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);width:28px;height:28px;background:#52B788;border-radius:50%;color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center">2</div>
+        <div style="font-size:32px;margin:16px 0 10px">📧</div>
+        <h3 style="font-size:17px;color:#1B2A4A;margin-bottom:10px">임직원 초대</h3>
+        <p style="font-size:13px;color:#6B7280">회사 코드/링크 배포<br>개인 계정 생성 안내<br>초기 검사 실시</p>
+        <div style="margin-top:14px;padding:8px;background:#F0FDF4;border-radius:8px">
+          <span style="font-size:12px;font-weight:600;color:#52B788">소요 기간: 1주</span>
+        </div>
+      </div>
+      <div class="card text-center" style="border-top:4px solid #C9A227;position:relative">
+        <div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);width:28px;height:28px;background:#C9A227;border-radius:50%;color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center">3</div>
+        <div style="font-size:32px;margin:16px 0 10px">📊</div>
+        <h3 style="font-size:17px;color:#1B2A4A;margin-bottom:10px">운영 & 리포트</h3>
+        <p style="font-size:13px;color:#6B7280">월별 사용 현황 리포트<br>고위험군 익명 알림<br>정기 검진 알림 발송</p>
+        <div style="margin-top:14px;padding:8px;background:#FEF9E7;border-radius:8px">
+          <span style="font-size:12px;font-weight:600;color:#C9A227">월 정기 리포트 제공</span>
+        </div>
+      </div>
+    </div>
+    <div class="card mt4" style="background:linear-gradient(135deg,#F0FDF4,#DCFCE7);border:none;padding:20px 28px">
+      <div class="flex items-center gap3">
+        <span style="font-size:28px">💡</span>
+        <div>
+          <strong style="font-size:15px;color:#1B4332">별도 앱 설치 없이 바로 시작</strong>
+          <p style="font-size:13px;color:#374151;margin-top:4px">maumful.com — 모바일·PC 브라우저에서 즉시 사용. IT 부서 협조 불필요.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ⑨ 기대 효과 -->
+<div class="slide s-green" id="s9">
+  <div style="max-width:900px;width:100%">
+    <div class="tag tag-white">🎯 효과</div>
+    <h2 class="text-white">마음풀 도입 기대 효과</h2>
+    <div class="grid2 mt4">
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card-dark">
+          <div class="flex items-center gap2">
+            <div style="font-size:32px">📉</div>
+            <div>
+              <h3 class="text-white" style="font-size:16px">번아웃·이직률 감소</h3>
+              <p style="font-size:13px;color:rgba(255,255,255,.7);margin-top:4px">조기 발견 → 빠른 개입으로 악화 방지. 직원이 "회사가 내 마음을 챙긴다"는 신뢰 형성.</p>
+            </div>
+          </div>
+        </div>
+        <div class="card-dark">
+          <div class="flex items-center gap2">
+            <div style="font-size:32px">⚡</div>
+            <div>
+              <h3 class="text-white" style="font-size:16px">생산성 향상</h3>
+              <p style="font-size:13px;color:rgba(255,255,255,.7);margin-top:4px">정신건강 관리가 된 직원은 집중력·창의성·팀워크가 향상됩니다.</p>
+            </div>
+          </div>
+        </div>
+        <div class="card-dark">
+          <div class="flex items-center gap2">
+            <div style="font-size:32px">💰</div>
+            <div>
+              <h3 class="text-white" style="font-size:16px">비용 절감</h3>
+              <p style="font-size:13px;color:rgba(255,255,255,.7);margin-top:4px">개인 심리상담 1회(10~15만원) 대비 압도적으로 낮은 비용으로 전 직원 관리.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-dark" style="display:flex;flex-direction:column;justify-content:center;gap:20px">
+        <div>
+          <div class="flex items-center gap2 mb1">
+            <span style="font-size:14px;color:rgba(255,255,255,.7)">직원 참여율 목표</span>
+            <span style="font-size:14px;font-weight:700;color:#52B788;margin-left:auto">70%+</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width:70%"></div></div>
+        </div>
+        <div>
+          <div class="flex items-center gap2 mb1">
+            <span style="font-size:14px;color:rgba(255,255,255,.7)">번아웃 조기 발견율</span>
+            <span style="font-size:14px;font-weight:700;color:#52B788;margin-left:auto">85%+</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width:85%"></div></div>
+        </div>
+        <div>
+          <div class="flex items-center gap2 mb1">
+            <span style="font-size:14px;color:rgba(255,255,255,.7)">이직 의향 감소</span>
+            <span style="font-size:14px;font-weight:700;color:#52B788;margin-left:auto">30%↓</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width:30%"></div></div>
+        </div>
+        <p style="font-size:11px;color:rgba(255,255,255,.4)">* 내부 추정치 및 유사 서비스 참고 데이터 기반</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ⑩ 마무리 CTA -->
+<div class="slide s-dark" id="s10">
+  <div class="text-center" style="max-width:700px">
+    <div style="font-size:52px;margin-bottom:24px">🌿</div>
+    <h2 class="text-white" style="font-size:44px">지금 마음풀과 함께<br><span style="color:#52B788">첫 걸음을 시작하세요</span></h2>
+    <p class="lead text-white mt3" style="opacity:.7">임직원 마음 건강은 복리후생이 아닌<br><strong style="color:#52B788">경영 전략</strong>입니다.</p>
+    <div class="grid2 mt5" style="max-width:500px;margin:48px auto 0">
+      <div class="card-dark text-center" style="padding:24px">
+        <div style="font-size:24px;margin-bottom:8px">💬</div>
+        <h3 class="text-white" style="font-size:15px;margin-bottom:6px">도입 문의</h3>
+        <p style="font-size:13px;color:#52B788;font-weight:600">limyj007@gmail.com</p>
+      </div>
+      <div class="card-dark text-center" style="padding:24px">
+        <div style="font-size:24px;margin-bottom:8px">🌐</div>
+        <h3 class="text-white" style="font-size:15px;margin-bottom:6px">서비스 체험</h3>
+        <p style="font-size:13px;color:#52B788;font-weight:600">maumful.com</p>
+      </div>
+    </div>
+    <p class="mt4" style="font-size:13px;color:rgba(255,255,255,.3)">마음풀 — 마음이 풍요로운 삶을 위한 디지털 정신건강 플랫폼</p>
+  </div>
+</div>
+
+</div><!-- /deck -->
+
+<div class="nav">
+  <button class="nav-btn" id="prevBtn" onclick="changeSlide(-1)">←</button>
+  <div class="nav-dots" id="dots"></div>
+  <button class="nav-btn" id="nextBtn" onclick="changeSlide(1)">→</button>
+</div>
+
+<script>
+const slides = document.querySelectorAll('.slide');
+const dotsEl = document.getElementById('dots');
+const counter = document.getElementById('counter');
+let cur = 0;
+
+// dots 생성
+slides.forEach((_, i) => {
+  const d = document.createElement('div');
+  d.className = 'dot' + (i===0?' active':'');
+  d.onclick = () => goTo(i);
+  dotsEl.appendChild(d);
+});
+
+function goTo(n) {
+  slides[cur].classList.remove('active');
+  slides[cur].classList.add('prev');
+  setTimeout(() => slides[cur].classList.remove('prev'), 500);
+  cur = (n + slides.length) % slides.length;
+  slides[cur].classList.add('active');
+  document.querySelectorAll('.dot').forEach((d,i) => d.className = 'dot'+(i===cur?' active':''));
+  counter.textContent = (cur+1) + ' / ' + slides.length;
+}
+
+function changeSlide(dir) { goTo(cur + dir); }
+
+document.addEventListener('keydown', e => {
+  if (e.key==='ArrowRight'||e.key==='ArrowDown'||e.key===' ') changeSlide(1);
+  if (e.key==='ArrowLeft'||e.key==='ArrowUp') changeSlide(-1);
+});
+
+// 터치 스와이프
+let tx=0, ty=0;
+document.addEventListener('touchstart', e => { tx=e.touches[0].clientX; ty=e.touches[0].clientY; }, {passive:true});
+document.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - tx;
+  const dy = e.changedTouches[0].clientY - ty;
+  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) changeSlide(dx<0?1:-1);
+}, {passive:true});
+</script>
+</body>
+</html>

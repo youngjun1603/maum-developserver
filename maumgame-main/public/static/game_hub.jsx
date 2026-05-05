@@ -247,10 +247,70 @@ function TestBadgeRow({ completedTests = [] }) {
 }
 
 // ──────────────────────────────────────────────────────────
+// GameCardSkeleton — 로딩 스켈레톤 (4번: UX 개선)
+// ──────────────────────────────────────────────────────────
+function GameCardSkeleton() {
+  return (
+    <div style={{
+      background:'rgba(255,255,255,0.7)', borderRadius:20,
+      padding:'24px 20px 20px', overflow:'hidden',
+    }}>
+      <div className="skeleton-shimmer" style={{ width:42, height:42, borderRadius:10, marginBottom:12 }}/>
+      <div className="skeleton-shimmer" style={{ width:'65%', height:14, borderRadius:7, marginBottom:8 }}/>
+      <div className="skeleton-shimmer" style={{ width:'90%', height:11, borderRadius:6, marginBottom:4 }}/>
+      <div className="skeleton-shimmer" style={{ width:'70%', height:11, borderRadius:6, marginBottom:16 }}/>
+      <div className="skeleton-shimmer" style={{ width:'50%', height:28, borderRadius:9 }}/>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────
+// GameHubSkeleton — 전체 허브 스켈레톤 (4번: UX 개선)
+// ──────────────────────────────────────────────────────────
+function GameHubSkeleton() {
+  return (
+    <div style={{
+      minHeight:'100vh',
+      background:`linear-gradient(160deg, ${C.sagePale}, ${C.cream})`,
+    }}>
+      <div className="hub-top-bar"/>
+      {/* 헤더 스켈레톤 */}
+      <div style={{
+        height:60, background:'rgba(255,255,255,0.6)', backdropFilter:'blur(8px)',
+        borderBottom:`1px solid ${C.sagePale}`,
+        display:'flex', alignItems:'center', padding:'0 20px', gap:12,
+      }}>
+        <div className="skeleton-shimmer" style={{ width:32, height:32, borderRadius:'50%' }}/>
+        <div className="skeleton-shimmer" style={{ width:120, height:14, borderRadius:7 }}/>
+        <div style={{ flex:1 }}/>
+        <div className="skeleton-shimmer" style={{ width:60, height:28, borderRadius:9 }}/>
+      </div>
+      <div style={{ maxWidth:480, margin:'0 auto', padding:'20px 20px 40px' }}>
+        {/* 정원 카드 스켈레톤 */}
+        <div style={{ background:'rgba(255,255,255,0.6)', borderRadius:24, padding:'20px 20px', marginBottom:20, height:160 }}>
+          <div className="skeleton-shimmer" style={{ width:'60%', height:18, borderRadius:9, marginBottom:12 }}/>
+          <div className="skeleton-shimmer" style={{ width:'80%', height:12, borderRadius:6, marginBottom:8 }}/>
+          <div className="skeleton-shimmer" style={{ width:'40%', height:12, borderRadius:6 }}/>
+        </div>
+        {/* 게임 카드 그리드 스켈레톤 */}
+        <div style={{ fontSize:15, fontWeight:700, color:C.dark, marginBottom:16, display:'flex', alignItems:'center', gap:6 }}>
+          <span style={{ fontSize:18 }}>🎮</span>
+          <div className="skeleton-shimmer" style={{ width:70, height:14, borderRadius:7 }}/>
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:14 }}>
+          {[0,1,2,3].map(i => <GameCardSkeleton key={i}/>)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────
 // GameCard — 개별 게임 카드
 // ──────────────────────────────────────────────────────────
-function GameCard({ game, onPlay }) {
+function GameCard({ game, onPlay, enterDelay = 0 }) {
   const [hovered, setHovered] = useState(false);
+  const [pressed, setPressed] = useState(false);
   const locked = !game.canPlay;
   const comingSoon = !game.isAvailable;
 
@@ -264,14 +324,20 @@ function GameCard({ game, onPlay }) {
     <div
       onClick={() => !locked && onPlay(game.id)}
       onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onMouseLeave={() => { setHovered(false); setPressed(false); }}
+      onMouseDown={() => !locked && setPressed(true)}
+      onMouseUp={() => setPressed(false)}
+      onTouchStart={() => !locked && setPressed(true)}
+      onTouchEnd={() => setPressed(false)}
+      className="game-card-enter"
       style={{
         background: cardBg,
         borderRadius: 20,
         padding: '24px 20px 20px',
         cursor: locked ? 'not-allowed' : 'pointer',
-        transition: 'all 0.25s ease',
-        transform: !locked && hovered ? 'translateY(-4px)' : 'none',
+        animationDelay: `${enterDelay}ms`,
+        transition: 'all 0.22s ease',
+        transform: pressed ? 'scale(0.96)' : (!locked && hovered ? 'translateY(-4px)' : 'none'),
         boxShadow: !locked && hovered ? `0 12px 32px ${C.sage}22` : '0 2px 12px rgba(0,0,0,0.06)',
         border: `1px solid ${!locked && hovered ? C.sage+'44' : 'rgba(255,255,255,0.6)'}`,
         backdropFilter: 'blur(8px)',
@@ -372,7 +438,9 @@ function GameCard({ game, onPlay }) {
 // ──────────────────────────────────────────────────────────
 // StreakCalendar — 최근 7일 출석 캘린더
 // ──────────────────────────────────────────────────────────
-function StreakCalendar({ recentPlayDates = [], streakDays = 0 }) {
+function StreakCalendar({ recentPlayDates = [], streakDays = 0, streakRecover = 0, onRecover }) {
+  const [recovering, setRecovering] = useState(false);
+
   const days = [];
   for (let i = 6; i >= 0; i--) {
     const d = new Date();
@@ -382,6 +450,23 @@ function StreakCalendar({ recentPlayDates = [], streakDays = 0 }) {
     days.push({ iso, dow, played: recentPlayDates.includes(iso) });
   }
 
+  const MILESTONES = [3, 7, 14, 30, 60, 90];
+  const nextMilestone = MILESTONES.find(m => m > streakDays);
+  const prevMilestone = [...MILESTONES].reverse().find(m => m <= streakDays) || 0;
+  const milestoneProgress = nextMilestone
+    ? Math.round(((streakDays - prevMilestone) / (nextMilestone - prevMilestone)) * 100)
+    : 100;
+
+  const fireEmoji = streakDays >= 30 ? '🔥🔥🔥' : streakDays >= 14 ? '🔥🔥' : streakDays >= 3 ? '🔥' : '';
+
+  const handleRecover = async () => {
+    if (recovering || streakRecover <= 0) return;
+    setRecovering(true);
+    const r = await GameEngine.recoverStreak().catch(() => ({ success: false }));
+    setRecovering(false);
+    if (r.success) onRecover?.();
+  };
+
   return (
     <div style={{ padding:'16px 20px', background:'rgba(255,255,255,0.7)', borderRadius:16, backdropFilter:'blur(8px)' }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
@@ -390,30 +475,63 @@ function StreakCalendar({ recentPlayDates = [], streakDays = 0 }) {
         </div>
         {streakDays > 0 && (
           <div style={{ fontSize:12, fontWeight:700, color:C.amber, display:'flex', alignItems:'center', gap:4 }}>
-            🔥 {streakDays}일 연속
+            {fireEmoji} {streakDays}일 연속
           </div>
         )}
       </div>
-      <div style={{ display:'flex', gap:6, justifyContent:'space-between' }}>
+
+      <div style={{ display:'flex', gap:6, justifyContent:'space-between', marginBottom:12 }}>
         {days.map(({ iso, dow, played }) => (
           <div key={iso} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
             <div style={{ fontSize:10, color:C.muted, fontWeight:500 }}>{dow}</div>
             <div style={{
-              width:'100%', aspectRatio:'1',
-              borderRadius:8,
-              background: played
-                ? `linear-gradient(135deg, ${C.sage}, ${C.sageL})`
-                : 'rgba(0,0,0,0.06)',
-              display:'flex', alignItems:'center', justifyContent:'center',
-              fontSize:13,
-              boxShadow: played ? `0 2px 8px ${C.sage}40` : 'none',
-              transition:'all 0.3s',
+              width:'100%', aspectRatio:'1', borderRadius:8,
+              background: played ? `linear-gradient(135deg, ${C.sage}, ${C.sageL})` : 'rgba(0,0,0,0.06)',
+              display:'flex', alignItems:'center', justifyContent:'center', fontSize:13,
+              boxShadow: played ? `0 2px 8px ${C.sage}40` : 'none', transition:'all 0.3s',
             }}>
               {played ? '🌿' : ''}
             </div>
           </div>
         ))}
       </div>
+
+      {/* 마일스톤 프로그레스 */}
+      {nextMilestone && (
+        <div style={{ marginBottom: streakRecover > 0 && streakDays === 0 ? 10 : 0 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', fontSize:10, color:C.muted, marginBottom:4 }}>
+            <span>다음 목표: {nextMilestone}일 연속 🏅</span>
+            <span>{streakDays} / {nextMilestone}일</span>
+          </div>
+          <div style={{ height:5, borderRadius:10, background:'rgba(0,0,0,0.07)', overflow:'hidden' }}>
+            <div style={{
+              height:'100%', borderRadius:10, transition:'width 0.5s',
+              width: `${milestoneProgress}%`,
+              background: `linear-gradient(90deg, ${C.amber}, ${C.amberL})`,
+            }}/>
+          </div>
+          {hitMilestone => null /* milestone 달성 시 배지는 서버에서 처리 */}
+        </div>
+      )}
+
+      {/* 복구권 사용 버튼 (streak=0 && recover>0) */}
+      {streakRecover > 0 && streakDays === 0 && (
+        <button onClick={handleRecover} disabled={recovering} style={{
+          width:'100%', marginTop:10, padding:'8px 0', borderRadius:10, border:'none',
+          background:`linear-gradient(135deg, ${C.amber}CC, ${C.amberL})`,
+          color:'white', fontSize:12, fontWeight:700, cursor: recovering ? 'not-allowed' : 'pointer',
+          fontFamily:"'Noto Sans KR',sans-serif",
+        }}>
+          {recovering ? '복구 중...' : `🛡️ 복구권 사용하여 스트릭 복원 (${streakRecover}개 보유)`}
+        </button>
+      )}
+
+      {/* 복구권 보유 안내 (streak>0 상태) */}
+      {streakRecover > 0 && streakDays > 0 && (
+        <div style={{ marginTop:8, fontSize:10, color:C.amber, fontWeight:600, textAlign:'right' }}>
+          🛡️ 복구권 {streakRecover}개 보유 (연속 끊길 때 자동 사용 가능)
+        </div>
+      )}
     </div>
   );
 }
@@ -644,14 +762,355 @@ const ALL_ACHIEVEMENT_IDS = [
   'all_games',
 ];
 
+// ──────────────────────────────────────────────────────────
+// CampaignSection — 스토리 캠페인 모드
+// ──────────────────────────────────────────────────────────
+const CAMPAIGN_DEF = [
+  {
+    id: 'ch1',
+    title: '첫 발걸음',
+    subtitle: '마음 챙기기',
+    emoji: '🌱',
+    color: '#4A7C59',
+    colorLight: '#EAF2EC',
+    desc: '나의 감정을 알아채고 마음을 돌보는 첫 여정을 시작해요',
+    steps: [
+      { game:'mood',      module:'checkin',         name:'감정 수채화 — 오늘 감정 기록하기',    emoji:'🎨' },
+      { game:'garden',    module:'breathing',        name:'마음의 정원 — 호흡 훈련 완료하기',    emoji:'💧' },
+      { game:'gratitude', module:'gratitude_write',  name:'별빛 감사 일기 — 감사 일기 쓰기',    emoji:'⭐' },
+    ],
+    rewardCredits: 30,
+    rewardBadge: '🌱',
+    rewardName: '마음 씨앗',
+    unlockLevel: 1,
+  },
+  {
+    id: 'ch2',
+    title: '마음 교정',
+    subtitle: '인지 훈련',
+    emoji: '🌸',
+    color: '#C97B8A',
+    colorLight: '#FAE8EC',
+    desc: '부정적인 생각 패턴을 인식하고 감정 인지 능력을 키워요',
+    steps: [
+      { game:'garden',  module:'cbt',       name:'마음의 정원 — 생각 교정 완료하기',         emoji:'🌱' },
+      { game:'efmt',    module:null,        name:'감정꽃 찾기 — 감정 인식 훈련 완료하기',    emoji:'🌸' },
+      { game:'burnout', module:'missions',  name:'번아웃 회복 — 회복 미션 완료하기',          emoji:'⚡' },
+    ],
+    rewardCredits: 50,
+    rewardBadge: '🌸',
+    rewardName: '마음 꽃봉오리',
+    unlockLevel: 2,
+  },
+  {
+    id: 'ch3',
+    title: '깊은 성장',
+    subtitle: '자아 탐험',
+    emoji: '🌳',
+    color: '#5A9BBF',
+    colorLight: '#E8F4FA',
+    desc: '집중력과 내면의 나무를 통해 자아를 깊이 탐험해요',
+    steps: [
+      { game:'focus', module:null, name:'마음 집중력 — 집중력 훈련 완료하기',  emoji:'🧠' },
+      { game:'tree',  module:null, name:'내면의 나무 — 자아 탐험하기',         emoji:'🌳' },
+      { game:'efmt',  module:null, name:'감정꽃 찾기 — 감정 인식 재도전하기',  emoji:'💭' },
+    ],
+    rewardCredits: 80,
+    rewardBadge: '🌳',
+    rewardName: '마음 만개',
+    unlockLevel: 3,
+  },
+];
+
+function CampaignSection({ onPlay }) {
+  const [expanded, setExpanded] = React.useState(false);
+  const [data, setData]         = React.useState(null);
+  const [loading, setLoading]   = React.useState(false);
+  const [claiming, setClaiming] = React.useState(null);
+  const [claimResult, setClaimResult] = React.useState(null); // { chapterId, credits }
+
+  const load = React.useCallback(() => {
+    if (data) return;
+    setLoading(true);
+    GameEngine.getCampaign()
+      .then(res => { if (res.success) setData(res.data); })
+      .finally(() => setLoading(false));
+  }, [data]);
+
+  const handleToggle = () => {
+    if (!expanded) load();
+    setExpanded(v => !v);
+  };
+
+  const handleClaim = async (chapterId) => {
+    if (claiming) return;
+    setClaiming(chapterId);
+    try {
+      const res = await GameEngine.claimCampaign(chapterId);
+      if (res.success) {
+        setClaimResult({ chapterId, credits: res.data.credits });
+        // 데이터 갱신
+        const fresh = await GameEngine.getCampaign();
+        if (fresh.success) setData(fresh.data);
+      } else {
+        alert(res.error || '보상 수령 실패');
+      }
+    } finally {
+      setClaiming(null);
+    }
+  };
+
+  // 챕터 잠금 여부: 이전 챕터 rewarded 여부 기준
+  const isChapterLocked = (idx) => {
+    if (idx === 0) return false;
+    if (!data) return true;
+    return !data.chapters[idx - 1]?.rewarded;
+  };
+
+  // 완료된 챕터 수 (로컬 계산용 — 데이터 없으면 0)
+  const rewardedCount = data?.chapters?.filter(ch => ch.rewarded).length || 0;
+
+  return (
+    <div style={{ marginBottom:24 }}>
+      <button onClick={handleToggle} style={{
+        width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between',
+        background:'rgba(255,255,255,0.7)', backdropFilter:'blur(8px)',
+        borderRadius: expanded ? '20px 20px 0 0' : 20,
+        padding:'16px 20px', border:'1px solid rgba(255,255,255,0.6)',
+        borderBottom: expanded ? '1px solid rgba(0,0,0,0.06)' : undefined,
+        cursor:'pointer', fontFamily:"'Noto Sans KR',sans-serif",
+        transition:'border-radius 0.2s',
+      }}>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <span style={{ fontSize:16 }}>📖</span>
+          <span style={{ fontSize:14, fontWeight:700, color:C.dark }}>스토리 캠페인</span>
+          {rewardedCount > 0 && (
+            <span style={{
+              fontSize:11, fontWeight:700,
+              background:`linear-gradient(135deg, ${C.amber}, ${C.amberL})`,
+              color:'white', borderRadius:100, padding:'2px 9px',
+            }}>
+              {rewardedCount} / {CAMPAIGN_DEF.length} 완료
+            </span>
+          )}
+        </div>
+        <span style={{ fontSize:12, color:C.muted }}>{expanded ? '접기 ▲' : '펼치기 ▼'}</span>
+      </button>
+
+      {expanded && (
+        <div style={{
+          background:'rgba(255,255,255,0.65)', backdropFilter:'blur(8px)',
+          borderRadius:'0 0 20px 20px', padding:'4px 20px 20px',
+          border:'1px solid rgba(255,255,255,0.6)', borderTop:'none',
+        }}>
+          {loading && (
+            <div style={{ textAlign:'center', padding:'24px', color:C.muted, fontSize:13 }}>
+              불러오는 중...
+            </div>
+          )}
+
+          {/* 보상 수령 성공 배너 */}
+          {claimResult && (
+            <div style={{
+              margin:'12px 0 16px',
+              background:`linear-gradient(135deg, ${C.amber}22, ${C.amberL}22)`,
+              border:`1px solid ${C.amber}44`, borderRadius:14, padding:'12px 16px',
+              display:'flex', alignItems:'center', gap:10,
+              animation:'fadeUp 0.3s ease',
+            }}>
+              <span style={{ fontSize:24 }}>🎉</span>
+              <div>
+                <div style={{ fontSize:13, fontWeight:700, color:C.amber }}>
+                  챕터 보상 수령 완료!
+                </div>
+                <div style={{ fontSize:12, color:C.muted }}>
+                  +{claimResult.credits} 크레딧이 지급됐어요
+                </div>
+              </div>
+              <button onClick={() => setClaimResult(null)} style={{
+                marginLeft:'auto', background:'none', border:'none',
+                cursor:'pointer', fontSize:14, color:C.muted,
+              }}>✕</button>
+            </div>
+          )}
+
+          {!loading && data && (
+            <div style={{ display:'flex', flexDirection:'column', gap:12, paddingTop:16 }}>
+              {CAMPAIGN_DEF.map((ch, idx) => {
+                const serverCh = data.chapters[idx];
+                const locked   = isChapterLocked(idx);
+                const rewarded = serverCh?.rewarded || false;
+                const allDone  = serverCh?.allDone || false;
+                const stepsDone = serverCh?.stepsDone || ch.steps.map(() => false);
+                const doneCount = stepsDone.filter(Boolean).length;
+                const canClaim  = allDone && !rewarded && !locked;
+
+                return (
+                  <div key={ch.id} style={{
+                    borderRadius:18, overflow:'hidden',
+                    border: rewarded ? `2px solid ${ch.color}44` : locked ? '1px solid rgba(0,0,0,0.06)' : `1px solid ${ch.color}28`,
+                    background: rewarded ? `${ch.colorLight}` : locked ? 'rgba(0,0,0,0.02)' : 'white',
+                    opacity: locked ? 0.6 : 1,
+                    transition:'all 0.3s',
+                  }}>
+                    {/* 챕터 헤더 */}
+                    <div style={{
+                      padding:'14px 16px',
+                      background: rewarded
+                        ? `linear-gradient(135deg, ${ch.color}22, ${ch.colorLight})`
+                        : locked
+                          ? 'rgba(0,0,0,0.02)'
+                          : `linear-gradient(135deg, ${ch.color}12, white)`,
+                      display:'flex', alignItems:'center', gap:12,
+                    }}>
+                      {/* 챕터 아이콘 */}
+                      <div style={{
+                        width:44, height:44, borderRadius:14, flexShrink:0,
+                        background: locked
+                          ? 'rgba(0,0,0,0.08)'
+                          : `linear-gradient(135deg, ${ch.color}33, ${ch.color}11)`,
+                        border: `1.5px solid ${locked ? 'rgba(0,0,0,0.1)' : ch.color + '33'}`,
+                        display:'flex', alignItems:'center', justifyContent:'center',
+                        fontSize: locked ? 18 : 22,
+                        filter: locked ? 'grayscale(1)' : 'none',
+                      }}>
+                        {locked ? '🔒' : rewarded ? '✅' : ch.emoji}
+                      </div>
+
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:7, marginBottom:2 }}>
+                          <span style={{ fontSize:14, fontWeight:700, color: locked ? C.muted : C.dark }}>
+                            {ch.title}
+                          </span>
+                          <span style={{
+                            fontSize:10, fontWeight:700, padding:'1px 7px', borderRadius:100,
+                            background: rewarded ? `${ch.color}22` : `rgba(0,0,0,0.06)`,
+                            color: rewarded ? ch.color : C.muted,
+                          }}>
+                            {ch.subtitle}
+                          </span>
+                        </div>
+                        <div style={{ fontSize:11, color:C.muted, lineHeight:1.4 }}>{ch.desc}</div>
+                      </div>
+
+                      {/* 스텝 진행 배지 */}
+                      {!locked && !rewarded && (
+                        <div style={{
+                          fontSize:11, fontWeight:700, flexShrink:0,
+                          color: allDone ? ch.color : C.muted,
+                        }}>
+                          {doneCount}/{ch.steps.length}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 스텝 목록 */}
+                    {!locked && (
+                      <div style={{ padding:'10px 16px', display:'flex', flexDirection:'column', gap:7 }}>
+                        {ch.steps.map((step, si) => {
+                          const done = stepsDone[si] || false;
+                          return (
+                            <div key={step.game + si} style={{
+                              display:'flex', alignItems:'center', gap:10,
+                              padding:'8px 10px', borderRadius:10,
+                              background: done ? `${ch.color}12` : 'rgba(0,0,0,0.03)',
+                              border: `1px solid ${done ? ch.color + '28' : 'transparent'}`,
+                            }}>
+                              <span style={{
+                                fontSize:16,
+                                filter: done ? 'none' : 'grayscale(0.5) opacity(0.6)',
+                              }}>{step.emoji}</span>
+                              <div style={{ flex:1, minWidth:0 }}>
+                                <div style={{
+                                  fontSize:12, fontWeight: done ? 600 : 400,
+                                  color: done ? C.dark : C.muted,
+                                  textDecoration: done ? 'none' : 'none',
+                                }}>
+                                  {step.name}
+                                </div>
+                              </div>
+                              {done ? (
+                                <span style={{ fontSize:14, color:ch.color }}>✓</span>
+                              ) : (
+                                <button onClick={() => onPlay?.(step.game)} style={{
+                                  fontFamily:"'Noto Sans KR',sans-serif",
+                                  background:`linear-gradient(135deg, ${ch.color}CC, ${ch.color}99)`,
+                                  color:'white', border:'none', borderRadius:8,
+                                  padding:'4px 10px', fontSize:10, fontWeight:700, cursor:'pointer',
+                                }}>
+                                  하기 →
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+
+                        {/* 보상 섹션 */}
+                        <div style={{
+                          marginTop:4, padding:'10px 12px', borderRadius:12,
+                          background: rewarded
+                            ? `${ch.color}15`
+                            : canClaim
+                              ? `linear-gradient(135deg, ${C.amber}18, ${C.amberL}18)`
+                              : 'rgba(0,0,0,0.03)',
+                          border: `1px solid ${rewarded ? ch.color + '30' : canClaim ? C.amber + '44' : 'rgba(0,0,0,0.06)'}`,
+                          display:'flex', alignItems:'center', justifyContent:'space-between', gap:10,
+                        }}>
+                          <div>
+                            <div style={{ fontSize:11, fontWeight:700, color: rewarded ? ch.color : canClaim ? C.amber : C.muted }}>
+                              {rewarded ? `✅ ${ch.rewardBadge} ${ch.rewardName} 획득!` : `🎁 챕터 완료 보상: +${ch.rewardCredits} 크레딧 · ${ch.rewardBadge} ${ch.rewardName}`}
+                            </div>
+                            {rewarded && (
+                              <div style={{ fontSize:10, color:C.muted, marginTop:2 }}>보상이 지급됐어요</div>
+                            )}
+                          </div>
+                          {canClaim && (
+                            <button
+                              onClick={() => handleClaim(ch.id)}
+                              disabled={claiming === ch.id}
+                              style={{
+                                fontFamily:"'Noto Sans KR',sans-serif",
+                                background:`linear-gradient(135deg, ${C.amber}, ${C.amberL})`,
+                                color:'white', border:'none', borderRadius:10,
+                                padding:'7px 14px', fontSize:11, fontWeight:700,
+                                cursor: claiming === ch.id ? 'not-allowed' : 'pointer',
+                                flexShrink:0,
+                                boxShadow:`0 4px 12px ${C.amber}44`,
+                              }}>
+                              {claiming === ch.id ? '...' : '보상 받기 🎁'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 잠금 안내 */}
+                    {locked && (
+                      <div style={{ padding:'10px 16px 14px', textAlign:'center', fontSize:12, color:C.muted }}>
+                        이전 챕터를 완료하면 해금돼요
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── 게임 통계 섹션 ───────────────────────────────────────
-const GAME_META = {
+const STATS_GAME_META = {
   garden:    { name:'마음 정원', emoji:'🌿' },
   mood:      { name:'감정 체크인', emoji:'🎨' },
   efmt:      { name:'감정 탐색', emoji:'💭' },
   gratitude: { name:'감사 일기', emoji:'⭐' },
   tree:      { name:'생각 나무', emoji:'🌳' },
   burnout:   { name:'번아웃 체크', emoji:'🔥' },
+  focus:     { name:'마음 집중력', emoji:'🧠' },
+  worry:     { name:'걱정 풍선', emoji:'🫧' },
 };
 
 function GameStatsSection() {
@@ -724,7 +1183,7 @@ function GameStatsSection() {
               )}
               <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                 {perGame.map(g => {
-                  const meta = GAME_META[g.game_id] || { name:g.game_id, emoji:'🎮' };
+                  const meta = STATS_GAME_META[g.game_id] || { name:g.game_id, emoji:'🎮' };
                   const lastDate = g.last_played ? new Date(g.last_played).toLocaleDateString('ko-KR',{month:'short',day:'numeric'}) : '-';
                   return (
                     <div key={g.game_id} style={{
@@ -1089,6 +1548,106 @@ function AIDiarySection() {
   );
 }
 
+// ──────────────────────────────────────────────────────────
+// WeekMoodSummaryCard — 이번 주 감정 흐름 요약 (5번: 인사이트 강화)
+// ──────────────────────────────────────────────────────────
+const MOOD_EMOJI_MAP = {
+  happy:'😊', calm:'😌', tired:'😴', anxious:'😰', sad:'😢',
+  angry:'😤', hopeful:'🌟', bored:'😑',
+};
+const DAY_LABELS = ['일','월','화','수','목','금','토'];
+
+function WeekMoodSummaryCard() {
+  const [entries, setEntries] = useState(null);
+  const [loaded, setLoaded]   = useState(false);
+
+  useEffect(() => {
+    GameEngine.getMoodHistory(7)
+      .then(res => { if (res.success) setEntries(res.data || []); })
+      .catch(() => {})
+      .finally(() => setLoaded(true));
+  }, []);
+
+  if (!loaded || !entries || entries.length === 0) return null;
+
+  // 요일별 최신 감정 매핑
+  const byDay = {};
+  entries.forEach(e => {
+    const d = new Date(e.recorded_at);
+    const day = d.getDay();
+    if (!byDay[day]) byDay[day] = e;
+  });
+
+  // 이번 주 시작 (일요일)
+  const today = new Date();
+  const weekDays = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() - (today.getDay() - i + 7) % 7 - (today.getDay() < i ? 7 : 0));
+    return { dayIdx: d.getDay(), date: d, entry: byDay[d.getDay()] };
+  });
+
+  // 주요 감정 집계
+  const emotionCount = {};
+  entries.forEach(e => { emotionCount[e.emotion] = (emotionCount[e.emotion] || 0) + 1; });
+  const dominant = Object.entries(emotionCount).sort((a, b) => b[1] - a[1])[0];
+  const dominantEmoji = dominant ? (MOOD_EMOJI_MAP[dominant[0]] || '🎨') : '🎨';
+
+  return (
+    <div style={{
+      background:'rgba(255,255,255,0.72)', backdropFilter:'blur(8px)',
+      borderRadius:20, padding:'16px 20px', marginBottom:16,
+      border:'1px solid rgba(255,255,255,0.6)',
+      animation:'cardEnter .4s ease both',
+    }}>
+      <div style={{
+        display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12,
+      }}>
+        <div style={{ fontSize:13, fontWeight:700, color:C.dark, display:'flex', alignItems:'center', gap:6 }}>
+          {dominantEmoji} 이번 주 감정 흐름
+        </div>
+        <div style={{ fontSize:11, color:C.muted }}>{entries.length}일 기록</div>
+      </div>
+
+      {/* 7일 도트 차트 */}
+      <div style={{ display:'flex', gap:6, justifyContent:'space-between' }}>
+        {weekDays.map(({ dayIdx, date, entry }, i) => {
+          const isToday = date.toDateString() === today.toDateString();
+          const emoji = entry ? (MOOD_EMOJI_MAP[entry.emotion] || '🎨') : null;
+          const intensity = entry ? (entry.intensity || 3) : 0;
+          return (
+            <div key={i} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
+              <div style={{
+                width: 34, height: 34, borderRadius: '50%',
+                background: entry
+                  ? `hsla(${140 + (intensity - 1) * 20}, 50%, ${85 - intensity * 4}%, 0.9)`
+                  : 'rgba(0,0,0,0.05)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 16,
+                border: isToday ? `2px solid ${C.sage}` : '2px solid transparent',
+                transition: 'all .2s',
+              }}>{emoji || (isToday ? '·' : '')}</div>
+              <span style={{
+                fontSize: 9, color: isToday ? C.sage : C.muted,
+                fontWeight: isToday ? 700 : 400,
+              }}>{DAY_LABELS[dayIdx]}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      {dominant && (
+        <div style={{ fontSize:12, color:C.muted, marginTop:10, textAlign:'center' }}>
+          이번 주 주요 감정:{' '}
+          <span style={{ color:C.dark, fontWeight:600 }}>
+            {dominantEmoji} {dominant[0] === 'happy' ? '행복' : dominant[0] === 'calm' ? '평온' : dominant[0] === 'tired' ? '피곤' : dominant[0] === 'anxious' ? '불안' : dominant[0] === 'sad' ? '슬픔' : dominant[0]}
+          </span>{' '}
+          ({dominant[1]}일)
+        </div>
+      )}
+    </div>
+  );
+}
+
 // EmotionWeeklyReport — AI 감정 주간 분석 (접기/펼치기)
 // ──────────────────────────────────────────────────────────
 const EMOTION_DISPLAY = {
@@ -1230,6 +1789,8 @@ const GAME_META = {
   gratitude: { name:'별빛 감사 일기',   emoji:'⭐' },
   tree:      { name:'내면의 나무',      emoji:'🌳' },
   burnout:   { name:'번아웃 회복',      emoji:'⚡' },
+  focus:     { name:'마음 집중력',      emoji:'🧠' },
+  worry:     { name:'걱정 풍선',        emoji:'🫧' },
 };
 
 function TodayRecommendCard({ hubData, onPlay }) {
@@ -1243,16 +1804,24 @@ function TodayRecommendCard({ hubData, onPlay }) {
 
   let rec = null;
 
-  if (phq9 !== undefined && phq9 >= 10) {
+  const gad7 = userTestScores.GAD7;
+
+  if (phq9 !== undefined && phq9 >= 15) {
     rec = { gameId:'garden', reason:`PHQ-9 ${phq9}점 — 지금 호흡 훈련이 마음을 안정시켜줘요`, color:C.dusty };
+  } else if (gad7 !== undefined && gad7 >= 10) {
+    rec = { gameId:'worry', reason:`GAD-7 ${gad7}점 — 불안한 생각을 풍선에 담아 내려놓아요 🫧`, color:'#7B9ED9' };
   } else if (burnout !== undefined && burnout >= 60 && level >= 2) {
     rec = { gameId:'burnout', reason:`번아웃 지수 ${burnout}점 — 오늘 회복 미션을 시작해보세요`, color:C.amber };
   } else if (!recentIds.includes('mood')) {
     rec = { gameId:'mood', reason:'오늘 감정 기록을 아직 안 했어요 ✍️', color:C.sage };
+  } else if (phq9 !== undefined && phq9 >= 5) {
+    rec = { gameId:'worry', reason:'마음속 걱정을 풍선에 담아 날려 보낼까요? 🫧', color:'#7B9ED9' };
   } else if (level >= 2 && !recentIds.includes('efmt')) {
     rec = { gameId:'efmt', reason:'감정꽃 찾기로 감정 인식력을 키워보세요 🌸', color:'#C97B8A' };
   } else if (level >= 2 && !recentIds.includes('gratitude')) {
     rec = { gameId:'gratitude', reason:'오늘의 감사 일기를 써볼까요? ⭐', color:C.amber };
+  } else if (!recentIds.includes('worry')) {
+    rec = { gameId:'worry', reason:'걱정 풍선으로 마음속 짐을 가볍게 해보세요 🫧', color:'#7B9ED9' };
   } else {
     rec = { gameId:'garden', reason:'잠깐 호흡을 가다듬고 정원을 가꿔볼까요? 🌿', color:C.sage };
   }
@@ -1302,14 +1871,16 @@ const QUEST_POOL = [
   { id:'play_efmt',      game:'efmt',      module:'efmt_easy',      text:'감정꽃 찾기 한 번 완료하기',     emoji:'🌸', exp:20, minLevel:2 },
   { id:'play_burnout',   game:'burnout',   module:'missions',       text:'번아웃 회복 미션 완료하기',      emoji:'⚡', exp:20, minLevel:2 },
   { id:'play_tree',      game:'tree',      module:'roots',          text:'내면의 나무 탐험하기',           emoji:'🌳', exp:25, minLevel:4 },
+  { id:'play_focus',     game:'focus',     module:'focus_training', text:'집중력 훈련 한 번 완료하기',      emoji:'🧠', exp:20, minLevel:3 },
   { id:'play_any',       game:null,        module:null,             text:'아무 게임이나 한 번 플레이하기',  emoji:'🎮', exp:10 },
 ];
 
-function getDailyQuests(level = 1) {
+function getDailyQuests(level = 1, userId = 0) {
   const now = new Date();
-  const seed = now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
-  let s = seed;
-  const rand = () => { s = ((s * 1103515245) + 12345) & 0x7fffffff; return s / 0x7fffffff; };
+  // userId 포함 시드 → 유저마다 다른 퀘스트 배정
+  const dateSeed = now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
+  let s = dateSeed * 31337 + (userId || 1);
+  const rand = () => { s = ((s * 1103515245) + 1013904223) & 0x7fffffff; return s / 0x7fffffff; };
 
   const eligible = QUEST_POOL.filter(q => !q.minLevel || level >= q.minLevel);
   const pool = [...eligible];
@@ -1321,12 +1892,12 @@ function getDailyQuests(level = 1) {
   return picked;
 }
 
-function DailyQuestCard({ todaySessions = [], level = 1, onPlay, onBonusClaimed }) {
+function DailyQuestCard({ todaySessions = [], level = 1, userId = 0, streakRecover = 0, onPlay, onBonusClaimed }) {
   const todayKey = new Date().toISOString().slice(0, 10);
   const [bonusDone, setBonusDone] = useState(() => localStorage.getItem('quest_bonus_' + todayKey) === '1');
   const [bonusClaiming, setBonusClaiming] = useState(false);
 
-  const quests = getDailyQuests(level);
+  const quests = getDailyQuests(level, userId);
 
   const isQuestDone = (q) => {
     if (!q.game) return todaySessions.length > 0;
@@ -1378,7 +1949,11 @@ function DailyQuestCard({ todaySessions = [], level = 1, onPlay, onBonusClaimed 
             {bonusClaiming ? '...' : '🎁 +50 EXP'}
           </button>
         )}
-        {bonusDone && <span style={{ fontSize:11, color:C.sage, fontWeight:700 }}>✓ 보너스 획득!</span>}
+        {bonusDone && (
+          <span style={{ fontSize:11, color:C.sage, fontWeight:700 }}>
+            ✓ 보너스 획득!{streakRecover > 0 && ` 🛡️${streakRecover}`}
+          </span>
+        )}
       </div>
 
       <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
@@ -1517,6 +2092,7 @@ function GameHubApp() {
   const [spendLoading, setSpendLoading] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [counselingPrompt, setCounselingPrompt] = useState(null); // { gameId, score, level, msg }
 
   const isLoggedIn = !!localStorage.getItem('game_token');
 
@@ -1541,7 +2117,7 @@ function GameHubApp() {
     const params = new URLSearchParams(window.location.search);
     const gameParam = params.get('game');
     if (!gameParam) return;
-    const valid = ['garden', 'efmt', 'gratitude', 'tree', 'burnout', 'mood'];
+    const valid = ['garden', 'efmt', 'gratitude', 'tree', 'burnout', 'mood', 'focus'];
     if (!valid.includes(gameParam)) return;
     // 로딩 완료 후 자동 실행 (약간 딜레이로 데이터 로드 대기)
     const timer = setTimeout(() => {
@@ -1577,14 +2153,36 @@ function GameHubApp() {
   }, [data]);
 
   const handleGameExit = useCallback((result) => {
+    const gid = activeGame;
     setActiveGame(null);
     setCreditModal(null);
+    // 고위험 감지 → 상담 연결 팝업 (이전 검사 점수 기반)
+    const burnoutTestScore = data?.userTestScores?.BURNOUT ?? 0;
+    const phq9TestScore    = data?.userTestScores?.PHQ9    ?? 0;
+    if (gid === 'burnout' && burnoutTestScore >= 60) {
+      const lvl = getBurnoutLevel(burnoutTestScore);
+      setCounselingPrompt({
+        emoji: '🔥', level: lvl.label, color: lvl.color,
+        msg: `번아웃 점수가 ${burnoutTestScore}점(${lvl.label})이에요. 전문 상담사와 이야기해보세요.`,
+      });
+    } else if (gid === 'mood' && result?.metadata?.intensity >= 4
+      && ['angry','anxious','sad'].includes(result?.metadata?.mood)) {
+      setCounselingPrompt({
+        emoji: '💙', level: '감정 주의', color: '#6366F1',
+        msg: `강한 부정 감정이 감지됐어요. 전문 상담사와 대화해보는 건 어떨까요?`,
+      });
+    } else if (phq9TestScore >= 10 && ['burnout','mood','garden'].includes(gid)) {
+      setCounselingPrompt({
+        emoji: '🌱', level: 'PHQ-9 주의', color: '#0EA5E9',
+        msg: `PHQ-9 점수(${phq9TestScore}점)로 보아 전문 상담이 도움이 될 수 있어요.`,
+      });
+    }
     // 허브 데이터 새로고침 (경험치 + 크레딧 잔액 반영)
     GameEngine.getMe().then(res => {
       if (res.success) setData(res.data);
       if (result?.newAchievements?.length) setNewAchievements(result.newAchievements);
     });
-  }, []);
+  }, [activeGame, data]);
 
   // 크레딧 차감 확인 후 게임 시작
   const handleCreditConfirm = useCallback(async () => {
@@ -1613,16 +2211,7 @@ function GameHubApp() {
 
   if (!isLoggedIn) return <LoginGate />;
 
-  if (loading) return (
-    <div style={{
-      minHeight:'100vh', display:'flex', flexDirection:'column',
-      alignItems:'center', justifyContent:'center',
-      background:`linear-gradient(160deg, ${C.sagePale}, ${C.cream})`,
-    }}>
-      <div style={{ fontSize:56, marginBottom:16, animation:'float 2s ease-in-out infinite' }}>🌿</div>
-      <div style={{ fontSize:14, color:C.muted, animation:'pulse 1.5s infinite' }}>정원을 불러오는 중...</div>
-    </div>
-  );
+  if (loading) return <GameHubSkeleton />;
 
   // 게임 실행 중
   if (activeGame === 'mood') return (
@@ -1661,6 +2250,18 @@ function GameHubApp() {
     </div>
   );
 
+  if (activeGame === 'focus') return (
+    <div style={{ display:'flex', flexDirection:'column', height:'100vh', overflow:'hidden' }}>
+      <FocusGame onExit={handleGameExit}/>
+    </div>
+  );
+
+  if (activeGame === 'worry') return (
+    <div style={{ display:'flex', flexDirection:'column', height:'100vh', overflow:'hidden' }}>
+      <WorryGame onExit={handleGameExit}/>
+    </div>
+  );
+
   if (error) return (
     <div style={{
       minHeight:'100vh', display:'flex', flexDirection:'column',
@@ -1687,6 +2288,52 @@ function GameHubApp() {
 
   return (
     <div style={{ minHeight:'100vh', background:`linear-gradient(160deg, ${C.sagePale} 0%, ${C.cream} 40%, #EBF4FA 100%)` }}>
+
+      {/* ── 상담 연결 팝업 ── */}
+      {counselingPrompt && (
+        <div style={{
+          position:'fixed', inset:0, background:'rgba(0,0,0,0.55)',
+          display:'flex', alignItems:'center', justifyContent:'center',
+          zIndex:3000, padding:20,
+        }} onClick={() => setCounselingPrompt(null)}>
+          <div style={{
+            background:'white', borderRadius:20, padding:28, maxWidth:340, width:'100%',
+            boxShadow:'0 20px 60px rgba(0,0,0,0.2)',
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ textAlign:'center', marginBottom:16 }}>
+              <div style={{ fontSize:48, marginBottom:8 }}>{counselingPrompt.emoji}</div>
+              <div style={{
+                display:'inline-block', fontSize:12, fontWeight:700,
+                color: counselingPrompt.color,
+                background: counselingPrompt.color + '18',
+                borderRadius:100, padding:'3px 12px', marginBottom:12,
+              }}>{counselingPrompt.level}</div>
+              <p style={{ fontSize:15, color:'#1A1A1A', lineHeight:1.6, margin:0 }}>
+                {counselingPrompt.msg}
+              </p>
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+              <a href={PHYWEB_URL + '?go=counseling'}
+                style={{
+                  display:'block', textAlign:'center',
+                  padding:'13px', background: counselingPrompt.color,
+                  color:'white', borderRadius:12, fontSize:14, fontWeight:700,
+                  textDecoration:'none', fontFamily:"'Noto Sans KR',sans-serif",
+                }}>
+                🏠 전문 상담사 연결하기
+              </a>
+              <button onClick={() => setCounselingPrompt(null)}
+                style={{
+                  padding:'11px', background:'#F5F5F5', color:'#666',
+                  border:'none', borderRadius:12, fontSize:13, fontWeight:600,
+                  cursor:'pointer', fontFamily:"'Noto Sans KR',sans-serif",
+                }}>
+                괜찮아요, 계속 게임할게요
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── 네비게이션 ── */}
       <nav style={{
@@ -1763,7 +2410,12 @@ function GameHubApp() {
             </div>
             <DailyTip hubData={data} />
             <LevelBar levelInfo={levelInfo} />
-            <StreakCalendar recentPlayDates={data?.recentPlayDates || []} streakDays={gameStatus?.streak_days || 0} />
+            <StreakCalendar
+              recentPlayDates={data?.recentPlayDates || []}
+              streakDays={gameStatus?.streak_days || 0}
+              streakRecover={gameStatus?.streak_recover || 0}
+              onRecover={() => GameEngine.getMe().then(res => { if (res.success) setData(res.data); })}
+            />
           </div>
         </div>
 
@@ -1779,6 +2431,9 @@ function GameHubApp() {
         {/* ── 번아웃 트렌드 ── */}
         <BurnoutTrendSection userTestScores={data?.userTestScores} />
 
+        {/* ── 이번 주 감정 흐름 요약 ── */}
+        <WeekMoodSummaryCard />
+
         {/* ── 오늘의 AI 마음 일기 ── */}
         <AIDiarySection />
 
@@ -1792,6 +2447,8 @@ function GameHubApp() {
         <DailyQuestCard
           todaySessions={data?.todaySessions || []}
           level={levelInfo.level}
+          userId={user?.id || 0}
+          streakRecover={gameStatus?.streak_recover || 0}
           onPlay={handlePlay}
           onBonusClaimed={() => GameEngine.getMe().then(res => { if (res.success) setData(res.data); })}
         />
@@ -1802,11 +2459,14 @@ function GameHubApp() {
             <span style={{ fontSize:18 }}>🎮</span> 치유 게임
           </div>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:14 }} className="game-grid">
-            {games.map(game => (
-              <GameCard key={game.id} game={game} onPlay={handlePlay} />
+            {games.map((game, i) => (
+              <GameCard key={game.id} game={game} onPlay={handlePlay} enterDelay={i * 50} />
             ))}
           </div>
         </div>
+
+        {/* ── 스토리 캠페인 ── */}
+        <CampaignSection onPlay={handlePlay} />
 
         {/* ── 게임 통계 ── */}
         <GameStatsSection />
