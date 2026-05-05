@@ -121,9 +121,12 @@ jobs:
           KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
 
       # ── Bubblewrap 빌드 ─────────────────────────────────────
+      # 대화형 프롬프트 응답 순서:
+      # 1) "Do you want Bubblewrap to install the Android SDK?" → No
+      # 2) "Path to your existing Android SDK:"                → $ANDROID_HOME
       - name: Build TWA APK
         working-directory: android
-        run: printf "No\n" | bubblewrap build --skipPwaValidation
+        run: printf "No\n$ANDROID_HOME\n" | bubblewrap build --skipPwaValidation
 
       # ── 빌드 결과물 업로드 ──────────────────────────────────
       - name: Upload APK artifact
