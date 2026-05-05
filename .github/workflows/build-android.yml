@@ -42,6 +42,10 @@ jobs:
       - name: Install Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
 
+      # ── expect 설치 (TTY 시뮬레이션으로 대화형 프롬프트 처리) ──
+      - name: Install expect
+        run: sudo apt-get install -y expect
+
       # ── Bubblewrap 설정 ───────────────────────────────────────
       - name: Configure Bubblewrap
         run: |
@@ -124,10 +128,37 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
 
-      # ── Bubblewrap 빌드 ─────────────────────────────────────
+      # ── 체크섬 파일 생성 (bubblewrap 프롬프트 사전 차단) ────
+      # bubblewrap은 MD5(JSON.stringify(manifest))를 체크섬으로 사용
+      - name: Create twa-manifest checksum
+        working-directory: android
+        run: |
+          node -e "
+          const crypto = require('crypto');
+          const fs = require('fs');
+          const content = fs.readFileSync('twa-manifest.json', 'utf-8');
+          const manifest = JSON.parse(content);
+          const checksum = crypto.createHash('md5').update(JSON.stringify(manifest)).digest('hex');
+          fs.writeFileSync('twa-manifest.json.checksum', checksum);
+          console.log('Checksum created:', checksum);
+          "
+
+      # ── Bubblewrap 빌드 (expect로 남은 대화형 프롬프트 처리) ─
       - name: Build TWA APK
         working-directory: android
-        run: echo "no" | bubblewrap build --skipPwaValidation
+        run: |
+          expect << 'EXPECT_SCRIPT'
+          set timeout 300
+          log_user 1
+          spawn bubblewrap build --skipPwaValidation
+          expect {
+            -re {[Yy]/[Nn]\)?} { send "n\r"; exp_continue }
+            -re {[Yy]es/[Nn]o}  { send "no\r"; exp_continue }
+            eof
+          }
+          lassign [wait] _ _ _ rc
+          exit $rc
+          EXPECT_SCRIPT
 
       # ── 빌드 결과물 업로드 ──────────────────────────────────
       - name: Upload APK artifact
