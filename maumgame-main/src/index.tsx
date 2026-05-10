@@ -615,11 +615,17 @@ app.post('/api/game/ai-transform', async (c) => {
   try {
     const res = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-beta': 'prompt-caching-2024-07-31' },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 200,
-        system: `당신은 인지행동치료(CBT) 전문가입니다. 사용자의 부정적인 문장을 받으면, 인지적 왜곡이 교정된 건강하고 현실적인 자기 확언 문장 하나로 변환해 주세요. 너무 낙관적이지 않고 수용적이며 따뜻한 어조여야 합니다. 변환된 문장만 출력하세요.`,
+        system: [
+          {
+            type: 'text',
+            text: `당신은 인지행동치료(CBT) 전문가입니다. 사용자의 부정적인 문장을 받으면, 인지적 왜곡이 교정된 건강하고 현실적인 자기 확언 문장 하나로 변환해 주세요. 너무 낙관적이지 않고 수용적이며 따뜻한 어조여야 합니다. 변환된 문장만 출력하세요.`,
+            cache_control: { type: 'ephemeral' },
+          },
+        ],
         messages: [{ role: 'user', content: `다음 문장을 긍정적인 자기 확언으로 바꿔주세요: "${text.trim()}"` }],
       }),
     })
