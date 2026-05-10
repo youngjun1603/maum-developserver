@@ -16,9 +16,11 @@ const tokenStore = {
 // 검사·AI 정책 상수
 // ============================================================
 const FREE_TESTS      = ['PHQ9', 'GAD7'];            // 무료 검사 2종 (PHQ-9·GAD-7)
-const AI_LIMIT_FREE   = 5;   // 비로그인/크레딧 없음: 하루 5회
-const AI_LIMIT_PAID   = 10;   // 크레딧 보유: 하루 10회 (회당 5크레딧)
-const AI_LIMIT_KEY    = 'ai_chat_used_v2';           // localStorage 키
+const AI_LIMIT_FREE   = 5;   // 로그인(크레딧 없음): 하루 5회
+const AI_LIMIT_PAID   = 10;  // 로그인(크레딧 보유): 하루 10회 (회당 5크레딧)
+const AI_LIMIT_KEY    = 'ai_chat_used_v2';           // localStorage 키 (로그인 사용자 일일 카운터)
+const AI_GUEST_TOTAL  = 3;   // 비회원 평생 체험 횟수
+const AI_GUEST_KEY    = 'maumful_guest_ai_total';    // localStorage 키 (비회원 누적, 절대 초기화 안 함)
 const AI_DISCLAIMER   = '⚠️ 이 분석은 AI가 생성한 참고 정보입니다. 의학적 진단이나 치료를 대체하지 않습니다. 심리적 어려움이 지속된다면 반드시 전문가와 상담하세요.';
 
 // ============================================================
@@ -62,9 +64,9 @@ const api = {
   },
 
   // ── 인증 ──────────────────────────────────────────────────
-  async register(email, password, nickname, partnerCode, locale = 'ko') {
+  async register(email, password, nickname, partnerCode, marketingAgreed = false, locale = 'ko') {
     const r = await fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json', ...api._authHeader() },
-      body: JSON.stringify({ email, password, nickname, locale, partnerCode: partnerCode || undefined }) });
+      body: JSON.stringify({ email, password, nickname, locale, partnerCode: partnerCode || undefined, marketingAgreed }) });
     return r.json();
   },
   async login(email, password) {
@@ -75,6 +77,11 @@ const api = {
   async loginGoogle(idToken) {
     const r = await fetch('/api/auth/google', { method: 'POST', headers: { 'Content-Type': 'application/json', ...api._authHeader() },
       body: JSON.stringify({ idToken }) });
+    return r.json();
+  },
+  async loginKakao(accessToken) {
+    const r = await fetch('/api/auth/kakao', { method: 'POST', headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+      body: JSON.stringify({ accessToken }) });
     return r.json();
   },
   async logout() {
@@ -201,6 +208,66 @@ function GoogleSignInBtn({ onLogin, btnText = 'signin_with' }) {
   return <div ref={ref} className="w-full" style={{ minHeight: 44 }} />;
 }
 
+// 카카오 로그인 버튼 (App 외부에 정의해야 Hook 규칙 준수)
+function KakaoLoginBtn({ onLogin }) {
+  const handleClick = () => {
+    if (!window.Kakao || !window.KAKAO_APP_KEY) return;
+    if (!window.Kakao.isInitialized()) window.Kakao.init(window.KAKAO_APP_KEY);
+    window.Kakao.Auth.login({
+      success: (auth) => onLogin(auth.access_token),
+      fail: (err) => console.error('카카오 로그인 실패', err),
+    });
+  };
+  if (!window.KAKAO_APP_KEY) return null;
+  return (
+    <button onClick={handleClick}
+      style={{ background: '#FEE500', border: 'none', borderRadius: 8, width: '100%', height: 44,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+        cursor: 'pointer', fontWeight: 'bold', fontSize: 14, color: '#3C1E1E' }}>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="#3C1E1E">
+        <path d="M12 3C7.03 3 3 6.36 3 10.5c0 2.67 1.67 5.02 4.2 6.43L6.2 20.5l4.03-2.66c.57.08 1.17.12 1.77.12 4.97 0 9-3.36 9-7.5S16.97 3 12 3z"/>
+      </svg>
+      카카오로 계속하기
+    </button>
+  );
+}
+
+// 네이버 로그인 버튼 (App 외부에 정의 — Hook 규칙 준수)
+function NaverLoginBtn({ onLogin }) {
+  const handleClick = async () => {
+    if (!window.NAVER_CLIENT_ID) return;
+    try {
+      const { url } = await fetch('/api/auth/naver/url').then(r => r.json());
+      if (!url) return;
+      const popup = window.open(url, 'naver_login', 'width=500,height=640,top=100,left=200');
+      const handler = (e) => {
+        if (e.origin !== window.location.origin) return;
+        if (e.data?.type === 'naver_login') {
+          window.removeEventListener('message', handler);
+          onLogin(e.data);
+        } else if (e.data?.type === 'naver_error') {
+          window.removeEventListener('message', handler);
+          console.error('네이버 로그인 오류:', e.data.error);
+        }
+      };
+      window.addEventListener('message', handler);
+      const timer = setInterval(() => { if (popup?.closed) { clearInterval(timer); window.removeEventListener('message', handler); } }, 500);
+    } catch {}
+  };
+  if (!window.NAVER_CLIENT_ID) return null;
+  return (
+    <button onClick={handleClick}
+      style={{ background: '#03C75A', border: 'none', borderRadius: 8, width: '100%', height: 44,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+        cursor: 'pointer', fontWeight: 'bold', fontSize: 14, color: '#fff', fontFamily: "'Noto Sans KR',sans-serif" }}>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+        <path d="M16.273 12.845L7.376 0H0v24h7.727V11.155L16.624 24H24V0h-7.727z"/>
+      </svg>
+      네이버로 계속하기
+    </button>
+  );
+}
+
 // ============================================================
 // 메인 컴포넌트
 // ============================================================
@@ -270,11 +337,16 @@ function PsychologicalTestSystem() {
 
   // ── B2C 전용 상태 ────────────────────────────────────────
   const [signupForm, setSignupForm] = useState({ email: '', password: '', pwConfirm: '', nickname: '' });
+  const [signupConsents, setSignupConsents] = useState({ terms: false, privacy: false, sensitive: false, overseas: false, age: false, marketing: false });
   const [pendingVerifyEmail, setPendingVerifyEmail] = useState(''); // 이메일 인증 대기 중인 계정
 
   // ── AI 상담 횟수 제한 상태 ────────────────────────────────
   const [aiChatUsed, setAiChatUsed] = useState(() => {
     try { return parseInt(localStorage.getItem(AI_LIMIT_KEY) || '0', 10); } catch { return 0; }
+  });
+  // 비회원 평생 누적 카운터 (로그아웃해도 초기화 안 함)
+  const [guestAiTotal, setGuestAiTotal] = useState(() => {
+    try { return parseInt(localStorage.getItem(AI_GUEST_KEY) || '0', 10); } catch { return 0; }
   });
   const [showAiLimitModal, setShowAiLimitModal] = useState(false);
 
@@ -1587,6 +1659,43 @@ function PsychologicalTestSystem() {
     loadTestHistory();
   }
 
+  // 카카오 로그인 콜백
+  async function handleKakaoLogin(accessToken) {
+    setLoginMsg({ type: 'loading', text: '카카오 로그인 중...' });
+    const result = await api.loginKakao(accessToken);
+    if (!result.success) {
+      setLoginMsg({ type: 'error', text: result.error || '카카오 로그인에 실패했습니다.' });
+      return;
+    }
+    const { accessToken: at, refreshToken: rt, user } = result.data;
+    tokenStore.setTokens(at, rt);
+    tokenStore.setUser(user);
+    setCurrentUser(user);
+    setCredits(user.credits);
+    setIsLoggedIn(true);
+    setLoginMsg({ type: '', text: '' });
+    const postLoginView = sessionStorage.getItem('post_login_view');
+    if (postLoginView) { sessionStorage.removeItem('post_login_view'); setView(postLoginView); }
+    else setView('memberDashboard');
+    loadTestHistory();
+  }
+
+  // 네이버 로그인 콜백 (팝업 postMessage로 받은 JWT 데이터 처리)
+  async function handleNaverLogin(data) {
+    if (!data?.accessToken) { setLoginMsg({ type: 'error', text: '네이버 로그인에 실패했습니다.' }); return; }
+    const { accessToken, refreshToken, user } = data;
+    tokenStore.setTokens(accessToken, refreshToken);
+    tokenStore.setUser(user);
+    setCurrentUser(user);
+    setCredits(user.credits || 0);
+    setIsLoggedIn(true);
+    setLoginMsg({ type: '', text: '' });
+    const postLoginView = sessionStorage.getItem('post_login_view');
+    if (postLoginView) { sessionStorage.removeItem('post_login_view'); setView(postLoginView); }
+    else setView('memberDashboard');
+    loadTestHistory();
+  }
+
   async function handleSignup(e) {
     if (e) e.preventDefault();
     const { email, password, pwConfirm, nickname } = signupForm;
@@ -1594,11 +1703,17 @@ function PsychologicalTestSystem() {
     if (password !== pwConfirm) { setFormMsg({ type: 'error', text: '비밀번호가 일치하지 않습니다.' }); return; }
     if (password.length < 8) { setFormMsg({ type: 'error', text: '비밀번호는 8자 이상이어야 합니다.' }); return; }
 
+    // 필수 동의 확인 (개인정보보호법 제22조)
+    const { terms, privacy, sensitive, overseas, age } = signupConsents;
+    if (!terms || !privacy || !sensitive || !overseas || !age) {
+      setFormMsg({ type: 'error', text: '모든 필수 항목에 동의해 주세요.' }); return;
+    }
+
     setFormMsg({ type: 'loading', text: '가입 처리 중...' });
     // 제휴 채널 파트너 코드 전달 (localStorage에서 읽기)
     let savedPartnerCode = null;
     try { savedPartnerCode = localStorage.getItem('maumful_partner_code'); } catch {}
-    const result = await api.register(email, password, nickname || email.split('@')[0], savedPartnerCode);
+    const result = await api.register(email, password, nickname || email.split('@')[0], savedPartnerCode, signupConsents.marketing);
     if (!result.success) { setFormMsg({ type: 'error', text: result.error || '가입에 실패했습니다.' }); return; }
 
     // 가입 성공 → 자동 로그인
@@ -1617,6 +1732,7 @@ function PsychologicalTestSystem() {
     setIsLoggedIn(true);
     setFormMsg({ type: '', text: '' });
     setSignupForm({ email: '', password: '', pwConfirm: '', nickname: '' });
+    setSignupConsents({ terms: false, privacy: false, sensitive: false, overseas: false, age: false, marketing: false });
 
     // 초대 코드 자동 적용
     const pendingRef = sessionStorage.getItem('pending_ref_code');
@@ -2085,6 +2201,13 @@ function PsychologicalTestSystem() {
 
   // AI 채팅 횟수 증가 + localStorage 저장
   function incrementAiChatUsed() {
+    if (!isLoggedIn) {
+      // 비회원: 평생 누적 카운터 증가
+      const next = guestAiTotal + 1;
+      setGuestAiTotal(next);
+      try { localStorage.setItem(AI_GUEST_KEY, String(next)); } catch {}
+      return next;
+    }
     const next = aiChatUsed + 1;
     setAiChatUsed(next);
     try { localStorage.setItem(AI_LIMIT_KEY, String(next)); } catch {}
@@ -2093,7 +2216,7 @@ function PsychologicalTestSystem() {
 
   // AI 채팅 한도 초과 여부
   function isAiChatExhausted() {
-    if (!isLoggedIn) return aiChatUsed >= AI_LIMIT_FREE;
+    if (!isLoggedIn) return guestAiTotal >= AI_GUEST_TOTAL;
     if (credits <= 0) return aiChatUsed >= AI_LIMIT_FREE;
     return aiChatUsed >= AI_LIMIT_PAID;
   }
@@ -2140,7 +2263,12 @@ function PsychologicalTestSystem() {
         if (res.status === 429) {
           setChatMessages(prev => prev.filter(m => m.id !== assistantId));
           setChatStreaming(false);
-          setAiChatUsed(AI_LIMIT_FREE);
+          if (!isLoggedIn) {
+            setGuestAiTotal(AI_GUEST_TOTAL);
+            try { localStorage.setItem(AI_GUEST_KEY, String(AI_GUEST_TOTAL)); } catch {}
+          } else {
+            setAiChatUsed(AI_LIMIT_FREE);
+          }
           setShowAiLimitModal(true);
           return;
         }
@@ -2242,32 +2370,63 @@ function PsychologicalTestSystem() {
   const AiLimitModal = () => !showAiLimitModal ? null : (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl p-7 w-full max-w-sm">
-        <div className="text-center mb-5">
-          <div className="text-4xl mb-3">💬</div>
-          <h2 className="text-xl font-bold text-gray-800 mb-2">AI 상담 횟수를 모두 사용했습니다</h2>
-          <p className="text-sm text-gray-500 leading-relaxed">
-            {!isLoggedIn
-              ? `지금까지 AI 상담을 ${AI_LIMIT_FREE}회 체험하셨습니다. 회원가입하면 검사 결과 저장 + 추가 크레딧(20)이 지급됩니다!`
-              : credits <= 0
-                ? `크레딧이 없으면 AI 상담을 ${AI_LIMIT_FREE}회까지 이용할 수 있습니다.`
-                : `크레딧 보유 시 AI 상담을 하루 최대 ${AI_LIMIT_PAID}회 이용할 수 있습니다. 크레딧을 충전하면 더 많이 이용할 수 있어요.`}
-          </p>
-        </div>
-        <div className="space-y-3 mb-4">
-          {isLoggedIn ? (
-            <button onClick={() => { setShowAiLimitModal(false); setShowChargeView(true); }}
-              className="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition text-sm">
-              ✦ 크레딧 충전하여 계속 상담하기
-            </button>
-          ) : (
-            <button onClick={() => { setShowAiLimitModal(false); setView('memberSignup'); }}
-              className="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition text-sm">
-              무료 회원가입 후 계속하기
-            </button>
-          )}
-        </div>
-        <button onClick={() => setShowAiLimitModal(false)}
-          className="w-full text-gray-400 text-sm py-2 hover:text-gray-600 transition">닫기</button>
+        {!isLoggedIn ? (
+          <>
+            <div className="text-center mb-5">
+              <div className="text-4xl mb-3">🌿</div>
+              <h2 className="text-xl font-bold text-gray-800 mb-2">무료 체험이 끝났습니다</h2>
+              <p className="text-sm text-gray-500 leading-relaxed">
+                AI 상담 <strong>{AI_GUEST_TOTAL}회</strong>를 모두 사용했어요.<br/>
+                회원가입하면 <span className="text-green-700 font-bold">20 크레딧 즉시 지급</span> +<br/>
+                검사 결과 저장 · 하루 5회 AI 상담이 제공됩니다.
+              </p>
+            </div>
+            <div className="space-y-2 mb-4">
+              {window.KAKAO_APP_KEY && (
+                <button onClick={() => { setShowAiLimitModal(false); handleKakaoLogin && window.Kakao?.Auth?.login({ success: (a) => handleKakaoLogin(a.access_token), fail: () => {} }); }}
+                  style={{ background:'#FEE500', border:'none', borderRadius:10, width:'100%', height:44,
+                    display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+                    cursor:'pointer', fontWeight:'bold', fontSize:14, color:'#3C1E1E' }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="#3C1E1E"><path d="M12 3C7.03 3 3 6.36 3 10.5c0 2.67 1.67 5.02 4.2 6.43L6.2 20.5l4.03-2.66c.57.08 1.17.12 1.77.12 4.97 0 9-3.36 9-7.5S16.97 3 12 3z"/></svg>
+                  카카오로 1초 가입
+                </button>
+              )}
+              {window.GOOGLE_CLIENT_ID && (
+                <div onClick={() => setShowAiLimitModal(false)}>
+                  <GoogleSignInBtn onLogin={handleGoogleLogin} btnText="signup_with" />
+                </div>
+              )}
+              <button onClick={() => { setShowAiLimitModal(false); setView('memberSignup'); }}
+                className="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition text-sm">
+                이메일로 무료 가입하기
+              </button>
+            </div>
+            <button onClick={() => { setShowAiLimitModal(false); setView('memberLogin'); }}
+              className="w-full text-green-700 text-sm py-1 hover:underline">이미 계정이 있어요 → 로그인</button>
+            <button onClick={() => setShowAiLimitModal(false)}
+              className="w-full text-gray-300 text-xs py-1 hover:text-gray-500 mt-1">닫기</button>
+          </>
+        ) : (
+          <>
+            <div className="text-center mb-5">
+              <div className="text-4xl mb-3">💬</div>
+              <h2 className="text-xl font-bold text-gray-800 mb-2">AI 상담 횟수를 모두 사용했습니다</h2>
+              <p className="text-sm text-gray-500 leading-relaxed">
+                {credits <= 0
+                  ? `크레딧이 없으면 AI 상담을 하루 ${AI_LIMIT_FREE}회까지 이용할 수 있습니다.`
+                  : `크레딧 보유 시 AI 상담을 하루 최대 ${AI_LIMIT_PAID}회 이용할 수 있습니다.`}
+              </p>
+            </div>
+            <div className="space-y-3 mb-4">
+              <button onClick={() => { setShowAiLimitModal(false); setShowChargeView(true); }}
+                className="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition text-sm">
+                ✦ 크레딧 충전하여 계속 상담하기
+              </button>
+            </div>
+            <button onClick={() => setShowAiLimitModal(false)}
+              className="w-full text-gray-400 text-sm py-2 hover:text-gray-600 transition">닫기</button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -2393,7 +2552,8 @@ function PsychologicalTestSystem() {
 
   // ── 상담 연결 CTA (결과 화면 하단 공통) ──────────────────────
   function ExpertCTA({ testType, score, level, onContinueAI }) {
-    const limit = isLoggedIn && credits > 0 ? AI_LIMIT_PAID : AI_LIMIT_FREE;
+    const limit = !isLoggedIn ? AI_GUEST_TOTAL : (credits > 0 ? AI_LIMIT_PAID : AI_LIMIT_FREE);
+    const usedCount = !isLoggedIn ? guestAiTotal : aiChatUsed;
     return (
       <div className="rounded-2xl border-2 border-teal-100 bg-gradient-to-br from-teal-50 to-green-50 p-5 mt-4">
         {/* 헤더 */}
@@ -2414,14 +2574,14 @@ function PsychologicalTestSystem() {
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   : 'bg-white border border-teal-200 text-teal-700 hover:bg-teal-50'}`}>
               {isAiChatExhausted()
-                ? `💬 AI 상담 ${aiChatUsed}/${limit}회 완료`
-                : `💬 AI와 더 이야기하기 (${aiChatUsed}/${limit}회)`}
+                ? `💬 AI 상담 ${usedCount}/${limit}회 완료`
+                : `💬 AI와 더 이야기하기 (${usedCount}/${limit}회)`}
             </button>
           )}
           <button
             onClick={() => { setView('counseling'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
             className="flex-1 py-3 px-4 rounded-xl font-bold text-sm transition text-white bg-teal-600 hover:bg-teal-700">
-            🏠 상담사 찾기
+            🏥 상담센터 찾기
           </button>
         </div>
 
@@ -2605,8 +2765,6 @@ function PsychologicalTestSystem() {
       />
       <CounselingPage
         setView={setView}
-        isLoggedIn={isLoggedIn}
-        currentUser={currentUser}
       />
     </>
   );
@@ -2643,7 +2801,7 @@ function PsychologicalTestSystem() {
   // 뷰: 로그인
   // ============================================================
   if (!isLoggedIn && view === 'memberLogin') return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-green-100 flex items-center justify-center p-4">
+    <div className="bg-gradient-to-br from-slate-50 to-green-100 flex flex-col items-center px-4 py-10" style={{minHeight:'100dvh'}}>
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
         <button onClick={() => setView('landing')}
           className="flex items-center gap-1 text-gray-400 hover:text-green-700 text-sm mb-4 transition">
@@ -2692,9 +2850,11 @@ function PsychologicalTestSystem() {
           className="w-full bg-green-700 text-white py-3 rounded-xl font-bold hover:bg-green-800 transition mb-4 text-base">
           로그인
         </button>
-        {window.GOOGLE_CLIENT_ID && (
-          <div className="mb-4">
-            <GoogleSignInBtn onLogin={handleGoogleLogin} btnText="signin_with" />
+        {(window.KAKAO_APP_KEY || window.GOOGLE_CLIENT_ID || window.NAVER_CLIENT_ID) && (
+          <div className="space-y-2 mb-4">
+            {window.NAVER_CLIENT_ID && <NaverLoginBtn onLogin={handleNaverLogin} />}
+            {window.KAKAO_APP_KEY && <KakaoLoginBtn onLogin={handleKakaoLogin} />}
+            {window.GOOGLE_CLIENT_ID && <GoogleSignInBtn onLogin={handleGoogleLogin} btnText="signin_with" />}
           </div>
         )}
         <div className="relative mb-4">
@@ -2739,7 +2899,7 @@ function PsychologicalTestSystem() {
   // 뷰: 회원가입
   // ============================================================
   if (!isLoggedIn && view === 'memberSignup') return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-green-100 flex items-center justify-center p-4">
+    <div className="bg-gradient-to-br from-slate-50 to-green-100 flex flex-col items-center px-4 py-10" style={{minHeight:'100dvh'}}>
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
         <button onClick={() => { setView('memberLogin'); setFormMsg({ type: '', text: '' }); setSignupForm({ email: '', password: '', pwConfirm: '', nickname: '' }); }}
           className="text-gray-400 hover:text-gray-600 text-sm mb-5 flex items-center gap-1">← 뒤로</button>
@@ -2769,48 +2929,107 @@ function PsychologicalTestSystem() {
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm"
             onKeyDown={e => e.key === 'Enter' && handleSignup()} />
         </div>
-        {/* 필수 동의 항목 */}
-        <div className="space-y-2 mb-4 text-xs text-gray-600 bg-gray-50 rounded-xl p-3">
-          <p className="text-xs font-semibold text-gray-700 mb-2">서비스 이용을 위한 필수 동의</p>
+        {/* 약관 동의 (개인정보보호법 제22조 준수) */}
+        <div className="mb-4 text-xs text-gray-600 bg-gray-50 rounded-xl p-3 space-y-2">
+          {/* 전체 동의 */}
+          {(() => {
+            const allRequired = signupConsents.terms && signupConsents.privacy && signupConsents.sensitive && signupConsents.overseas && signupConsents.age;
+            const allIncMarketing = allRequired && signupConsents.marketing;
+            return (
+              <label className="flex items-center gap-2 cursor-pointer pb-2 border-b border-gray-200">
+                <input type="checkbox" className="w-4 h-4 accent-green-600"
+                  checked={allIncMarketing}
+                  onChange={e => {
+                    const v = e.target.checked;
+                    setSignupConsents({ terms: v, privacy: v, sensitive: v, overseas: v, age: v, marketing: v });
+                  }} />
+                <span className="font-bold text-gray-800 text-sm">전체 동의 (필수 + 선택 포함)</span>
+              </label>
+            );
+          })()}
+
+          {/* 필수 항목 */}
+          <p className="text-gray-400 font-semibold pt-1">— 필수 동의 항목 —</p>
+
           <label className="flex items-start gap-2 cursor-pointer">
-            <input type="checkbox" id="agree-terms" className="mt-0.5 accent-green-600" />
+            <input type="checkbox" className="mt-0.5 w-3.5 h-3.5 accent-green-600 flex-shrink-0"
+              checked={signupConsents.terms}
+              onChange={e => setSignupConsents(p => ({ ...p, terms: e.target.checked }))} />
             <span>
-              <button type="button" onClick={() => setView('terms')} className="text-green-600 underline font-semibold">이용약관</button>
-              {' '}및{' '}
-              <button type="button" onClick={() => setView('privacy')} className="text-green-600 underline font-semibold">개인정보 처리방침</button>
-              에 동의합니다. <span className="text-red-500">(필수)</span>
+              <button type="button" onClick={() => setView('terms')} className="text-green-600 underline font-semibold">이용약관</button> 동의
+              <span className="text-red-500 ml-1">(필수)</span>
             </span>
           </label>
+
           <label className="flex items-start gap-2 cursor-pointer">
-            <input type="checkbox" id="agree-sensitive" className="mt-0.5 accent-green-600" />
-            <span>심리검사·AI 상담 내용 등 <strong>민감정보(정신건강 정보) 수집·처리</strong>에 동의합니다. <span className="text-red-500">(필수)</span></span>
+            <input type="checkbox" className="mt-0.5 w-3.5 h-3.5 accent-green-600 flex-shrink-0"
+              checked={signupConsents.privacy}
+              onChange={e => setSignupConsents(p => ({ ...p, privacy: e.target.checked }))} />
+            <span>
+              <button type="button" onClick={() => setView('privacy')} className="text-green-600 underline font-semibold">개인정보 수집·이용</button> 동의
+              <span className="text-gray-400 ml-1">(이메일·닉네임·이용기록 / 서비스 제공 / 탈퇴 시까지)</span>
+              <span className="text-red-500 ml-1">(필수)</span>
+            </span>
           </label>
+
           <label className="flex items-start gap-2 cursor-pointer">
-            <input type="checkbox" id="agree-overseas" className="mt-0.5 accent-green-600" />
-            <span>AI 상담 시 채팅 내용이 <strong>Anthropic(미국) 서버로 전송</strong>됨에 동의합니다. <span className="text-red-500">(필수)</span></span>
+            <input type="checkbox" className="mt-0.5 w-3.5 h-3.5 accent-green-600 flex-shrink-0"
+              checked={signupConsents.sensitive}
+              onChange={e => setSignupConsents(p => ({ ...p, sensitive: e.target.checked }))} />
+            <span><strong>민감정보(정신건강 정보)</strong> 수집·처리 동의
+              <span className="text-gray-400 ml-1">(심리검사·AI 상담 내용)</span>
+              <span className="text-red-500 ml-1">(필수)</span>
+            </span>
           </label>
+
           <label className="flex items-start gap-2 cursor-pointer">
-            <input type="checkbox" id="agree-age" className="mt-0.5 accent-green-600" />
-            <span>본인은 <strong>만 14세 이상</strong>임을 확인합니다. <span className="text-red-500">(필수)</span></span>
+            <input type="checkbox" className="mt-0.5 w-3.5 h-3.5 accent-green-600 flex-shrink-0"
+              checked={signupConsents.overseas}
+              onChange={e => setSignupConsents(p => ({ ...p, overseas: e.target.checked }))} />
+            <span><strong>개인정보 제3자 제공</strong> 동의
+              <span className="text-gray-400 ml-1">(Anthropic Inc., 미국 / AI 상담 기능 제공)</span>
+              <span className="text-red-500 ml-1">(필수)</span>
+            </span>
+          </label>
+
+          <label className="flex items-start gap-2 cursor-pointer">
+            <input type="checkbox" className="mt-0.5 w-3.5 h-3.5 accent-green-600 flex-shrink-0"
+              checked={signupConsents.age}
+              onChange={e => setSignupConsents(p => ({ ...p, age: e.target.checked }))} />
+            <span>본인은 <strong>만 14세 이상</strong>임을 확인합니다.
+              <span className="text-red-500 ml-1">(필수)</span>
+            </span>
+          </label>
+
+          {/* 선택 항목 */}
+          <p className="text-gray-400 font-semibold pt-2">— 선택 동의 항목 —</p>
+
+          <label className="flex items-start gap-2 cursor-pointer">
+            <input type="checkbox" className="mt-0.5 w-3.5 h-3.5 accent-green-600 flex-shrink-0"
+              checked={signupConsents.marketing}
+              onChange={e => setSignupConsents(p => ({ ...p, marketing: e.target.checked }))} />
+            <span>마케팅 정보 수신 동의
+              <span className="text-gray-400 ml-1">(신규 기능·이벤트·혜택 안내, 이메일)</span>
+              <span className="text-gray-400 ml-1">(선택 — 미동의 시에도 서비스 이용 가능)</span>
+            </span>
           </label>
         </div>
-        <button onClick={() => {
-          const ids = ['agree-terms','agree-sensitive','agree-overseas','agree-age'];
-          if (!ids.every(id => document.getElementById(id)?.checked)) {
-            setFormMsg({ type:'error', text:'모든 필수 항목에 동의해 주세요.' }); return;
-          }
-          handleSignup();
-        }}
+
+        <button onClick={handleSignup}
           className="w-full bg-green-700 text-white py-3 rounded-xl font-bold hover:bg-green-800 transition mb-4">
           가입하기
         </button>
-        {window.GOOGLE_CLIENT_ID && (
+        {(window.KAKAO_APP_KEY || window.GOOGLE_CLIENT_ID || window.NAVER_CLIENT_ID) && (
           <>
             <div className="relative mb-4">
               <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"/></div>
               <div className="relative flex justify-center"><span className="px-3 bg-white text-gray-400 text-xs">또는 소셜 계정으로 시작</span></div>
             </div>
-            <GoogleSignInBtn onLogin={handleGoogleLogin} btnText="signup_with" />
+            <div className="space-y-2">
+              {window.NAVER_CLIENT_ID && <NaverLoginBtn onLogin={handleNaverLogin} />}
+              {window.KAKAO_APP_KEY && <KakaoLoginBtn onLogin={handleKakaoLogin} />}
+              {window.GOOGLE_CLIENT_ID && <GoogleSignInBtn onLogin={handleGoogleLogin} btnText="signup_with" />}
+            </div>
           </>
         )}
       </div>
@@ -3081,16 +3300,56 @@ function PsychologicalTestSystem() {
 
       <h3>4. 개인정보 처리 위탁 및 국외 이전</h3>
       <p><strong>국내 위탁</strong></p>
-      <ul>
-        <li>토스페이먼츠 (주): 국내 결제 처리 — 이메일, 결제 금액</li>
-      </ul>
+      <table style={{width:'100%', borderCollapse:'collapse', fontSize:'12px', marginBottom:'8px'}}>
+        <thead>
+          <tr style={{background:'#F9FAFB'}}>
+            <th style={{border:'1px solid #E5E7EB', padding:'6px 8px', textAlign:'left'}}>수탁업체</th>
+            <th style={{border:'1px solid #E5E7EB', padding:'6px 8px', textAlign:'left'}}>위탁 목적</th>
+            <th style={{border:'1px solid #E5E7EB', padding:'6px 8px', textAlign:'left'}}>이전 항목</th>
+            <th style={{border:'1px solid #E5E7EB', padding:'6px 8px', textAlign:'left'}}>보유·이용기간</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style={{border:'1px solid #E5E7EB', padding:'6px 8px'}}>토스페이먼츠(주)</td>
+            <td style={{border:'1px solid #E5E7EB', padding:'6px 8px'}}>국내 결제 처리</td>
+            <td style={{border:'1px solid #E5E7EB', padding:'6px 8px'}}>이메일, 결제금액, 주문번호</td>
+            <td style={{border:'1px solid #E5E7EB', padding:'6px 8px'}}>결제 완료 후 5년 (전자상거래법)</td>
+          </tr>
+        </tbody>
+      </table>
       <p><strong>국외 이전 (개인정보 보호법 제28조의8)</strong></p>
-      <ul>
-        <li><strong>Anthropic, Inc. (미국)</strong> — AI 상담 채팅 처리. 이전 항목: 채팅 내용(비식별화). 이전 국가: 미국. 목적: Claude AI API 서비스 제공</li>
-        <li><strong>Cloudflare, Inc. (미국)</strong> — 서버 인프라 및 DB 운영. 이전 항목: 이메일, 닉네임 등 가입 정보. 이전 국가: 미국·EU. 목적: 서비스 인프라 운영</li>
-        <li><strong>Resend, Inc. (미국)</strong> — 이메일 발송. 이전 항목: 이메일 주소. 목적: 인증·안내 메일 발송</li>
-      </ul>
-      <p style={{color:'#dc2626', fontSize:'13px'}}>※ 이용자는 국외 이전에 동의하지 않을 권리가 있으나, 미동의 시 서비스 이용이 불가합니다.</p>
+      <table style={{width:'100%', borderCollapse:'collapse', fontSize:'12px', marginBottom:'8px'}}>
+        <thead>
+          <tr style={{background:'#F9FAFB'}}>
+            <th style={{border:'1px solid #E5E7EB', padding:'6px 8px', textAlign:'left'}}>업체 (국가)</th>
+            <th style={{border:'1px solid #E5E7EB', padding:'6px 8px', textAlign:'left'}}>목적</th>
+            <th style={{border:'1px solid #E5E7EB', padding:'6px 8px', textAlign:'left'}}>이전 항목</th>
+            <th style={{border:'1px solid #E5E7EB', padding:'6px 8px', textAlign:'left'}}>보유기간</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style={{border:'1px solid #E5E7EB', padding:'6px 8px'}}>Anthropic, Inc. (미국)</td>
+            <td style={{border:'1px solid #E5E7EB', padding:'6px 8px'}}>Claude AI API 서비스 제공</td>
+            <td style={{border:'1px solid #E5E7EB', padding:'6px 8px'}}>채팅 내용 (비식별화, 저장 안 됨)</td>
+            <td style={{border:'1px solid #E5E7EB', padding:'6px 8px'}}>처리 후 즉시 파기</td>
+          </tr>
+          <tr>
+            <td style={{border:'1px solid #E5E7EB', padding:'6px 8px'}}>Cloudflare, Inc. (미국·EU)</td>
+            <td style={{border:'1px solid #E5E7EB', padding:'6px 8px'}}>서버 인프라·DB 운영</td>
+            <td style={{border:'1px solid #E5E7EB', padding:'6px 8px'}}>이메일, 닉네임 등 가입 정보</td>
+            <td style={{border:'1px solid #E5E7EB', padding:'6px 8px'}}>회원 탈퇴 시까지</td>
+          </tr>
+          <tr>
+            <td style={{border:'1px solid #E5E7EB', padding:'6px 8px'}}>Resend, Inc. (미국)</td>
+            <td style={{border:'1px solid #E5E7EB', padding:'6px 8px'}}>인증·안내 이메일 발송</td>
+            <td style={{border:'1px solid #E5E7EB', padding:'6px 8px'}}>이메일 주소</td>
+            <td style={{border:'1px solid #E5E7EB', padding:'6px 8px'}}>발송 완료 후 파기</td>
+          </tr>
+        </tbody>
+      </table>
+      <p style={{color:'#dc2626', fontSize:'13px'}}>※ 이용자는 국외 이전에 동의하지 않을 권리가 있으나, 미동의 시 해당 서비스(AI 상담 등) 이용이 불가합니다.</p>
 
       <h3>5. 자동화된 의사결정</h3>
       <p>AI 분석 기능은 알고리즘에 의해 자동으로 결과를 생성합니다. 이는 <strong>참고용 정보</strong>이며 의료적 진단이 아닙니다. 이용자는 AI 분석 결과에 이의를 제기하거나 사람에 의한 재검토를 요청할 수 있습니다.</p>
@@ -3107,10 +3366,15 @@ function PsychologicalTestSystem() {
 
       <h3>8. 개인정보 보호책임자 및 문의</h3>
       <ul>
-        <li>이메일: support@maumful.com</li>
+        <li><strong>상호:</strong> 마음서비스</li>
+        <li><strong>대표자:</strong> 김근혜</li>
+        <li><strong>사업자등록번호:</strong> 780-31-01832</li>
+        <li><strong>통신판매업 신고번호:</strong> 제 2026-서울영등포-1157 호</li>
+        <li><strong>사업장 소재지:</strong> 서울특별시 영등포구 문래로26길 6 (문래동3가)</li>
+        <li><strong>이메일:</strong> support@maumful.com</li>
         <li>개인정보 침해 신고: 개인정보보호위원회 (privacy.go.kr / 182)</li>
       </ul>
-      <p style={{color:'#9ca3af', fontSize:'12px'}}>최종 업데이트: 2026년 4월</p>
+      <p style={{color:'#9ca3af', fontSize:'12px'}}>최종 업데이트: 2026년 5월</p>
     </LegalPage>
   );
 
@@ -3119,9 +3383,10 @@ function PsychologicalTestSystem() {
     <LegalPage title="이용약관" onBack={() => setView(isLoggedIn ? 'memberDashboard' : 'memberLogin')}>
       <h2>이용약관</h2>
       <p>마음풀(이하 "서비스") 이용 전 반드시 읽어주세요.</p>
+      <p style={{fontSize:'13px', color:'#6b7280'}}>운영사: 마음서비스 | 대표자: 김근혜 | 사업자등록번호: 780-31-01832 | 통신판매업 신고번호: 제 2026-서울영등포-1157 호 | 서울특별시 영등포구 문래로26길 6</p>
 
       <h3>제1조 (목적)</h3>
-      <p>본 약관은 마음풀 서비스의 이용 조건, 절차 및 이용자와 운영자 간의 권리·의무를 규정합니다.</p>
+      <p>본 약관은 마음서비스(이하 "회사")가 운영하는 마음풀 서비스의 이용 조건, 절차 및 이용자와 회사 간의 권리·의무를 규정합니다.</p>
 
       <h3>제2조 (서비스의 성격 및 의료 면책)</h3>
       <p><strong>본 서비스는 자기이해 및 정보 제공 목적의 콘텐츠 서비스입니다.</strong></p>
@@ -3139,13 +3404,44 @@ function PsychologicalTestSystem() {
         <li>만 14세 미만의 경우 법정대리인의 동의가 필요하며, 동의 없이 가입한 사실이 확인되면 계정을 즉시 삭제합니다.</li>
       </ul>
 
-      <h3>제4조 (크레딧 및 결제)</h3>
+      <h3>제4조 (크레딧 운영 정책)</h3>
+      <p style={{fontSize:'12px',color:'#6b7280',marginBottom:'8px'}}>「전자상거래 등에서의 소비자보호에 관한 법률」 제17조, 제19조 및 「콘텐츠산업 진흥법」 제28조에 근거합니다.</p>
+      <h4 style={{fontSize:'13px',fontWeight:600,margin:'8px 0 4px'}}>① 크레딧의 성격</h4>
       <ul>
-        <li>크레딧은 서비스 내 가상 화폐로, 현금 환급이 원칙적으로 불가합니다.</li>
-        <li>유료 구매 크레딧은 구매일로부터 30일 이내, 미사용 시에 한해 환불 신청 가능합니다.</li>
-        <li>가입 보너스·이벤트 지급 크레딧은 환불 대상에서 제외됩니다.</li>
-        <li>서비스 오류로 크레딧이 소실된 경우 동일 크레딧으로 보상합니다.</li>
-        <li>청약철회는 「전자상거래 등에서의 소비자보호에 관한 법률」에 따릅니다. 단, 디지털 콘텐츠(검사 결과 열람 후)는 청약철회가 제한됩니다.</li>
+        <li>크레딧은 마음풀 서비스 내에서만 사용 가능한 선불 전자적 수단입니다.</li>
+        <li>크레딧은 타인에게 양도·거래·환전할 수 없습니다.</li>
+        <li><strong>유료 구매 크레딧</strong>: 토스페이먼츠(KRW) 또는 Stripe(USD)를 통해 구매한 크레딧</li>
+        <li><strong>무상 지급 크레딧</strong>: 가입 보너스, 이벤트·프로모션, 추천 보상으로 지급된 크레딧 (환불 제외)</li>
+      </ul>
+      <h4 style={{fontSize:'13px',fontWeight:600,margin:'8px 0 4px'}}>② 크레딧 유효기간</h4>
+      <ul>
+        <li>유료 구매 크레딧: 구매일로부터 <strong>5년</strong> (「콘텐츠산업 진흥법」 제28조 기준)</li>
+        <li>무상 지급 크레딧: 지급일로부터 <strong>1년</strong> (별도 안내 시 해당 기간 적용)</li>
+        <li>유효기간 만료 시 자동 소멸되며, 소멸 30일 전 이메일로 사전 고지합니다.</li>
+      </ul>
+      <h4 style={{fontSize:'13px',fontWeight:600,margin:'8px 0 4px'}}>③ 청약철회 및 환불</h4>
+      <ul>
+        <li>유료 구매 크레딧은 구매일로부터 <strong>7일 이내</strong>, 미사용 크레딧에 한해 청약철회 및 전액 환불이 가능합니다. (「전자상거래법」 제17조)</li>
+        <li>단, 구매한 크레딧의 <strong>일부라도 사용한 경우</strong>에는 「전자상거래법」 제17조 제2항 제5호에 따라 청약철회가 제한됩니다. 이 사실은 결제 시 화면에 명시됩니다.</li>
+        <li>결제 후 7일 초과 시, 잔여 크레딧의 10%를 위약금으로 공제 후 환불합니다. (단, 회사 귀책 사유로 인한 경우 전액 환불)</li>
+        <li>무상 지급 크레딧(보너스·이벤트·추천 보상)은 환불 대상에서 제외됩니다.</li>
+        <li>서비스 오류로 크레딧이 소실된 경우 동일 수량을 보상합니다.</li>
+      </ul>
+      <h4 style={{fontSize:'13px',fontWeight:600,margin:'8px 0 4px'}}>④ 환불 신청 방법</h4>
+      <ul>
+        <li>환불 신청: <strong>support@maumful.com</strong> (제목: "[환불신청] 이메일 / 구매일자 / 환불 사유")</li>
+        <li>처리 기간: 신청 접수 후 영업일 기준 <strong>3~5일</strong> 이내</li>
+        <li>환불 수단: 원칙적으로 결제 수단과 동일한 방법으로 환불 (카드 결제 → 카드사 취소)</li>
+      </ul>
+      <h4 style={{fontSize:'13px',fontWeight:600,margin:'8px 0 4px'}}>⑤ 서비스 종료 시 처리</h4>
+      <ul>
+        <li>서비스 종료 시 최소 <strong>30일 전</strong> 이메일·공지사항으로 사전 고지합니다.</li>
+        <li>고지 후 잔여 유료 구매 크레딧은 환불 신청 기간(30일) 내 환불 가능합니다.</li>
+        <li>환불 신청 기간 경과 후 남은 크레딧은 소멸됩니다.</li>
+      </ul>
+      <h4 style={{fontSize:'13px',fontWeight:600,margin:'8px 0 4px'}}>⑥ 부정 사용 처리</h4>
+      <ul>
+        <li>비정상적 방법(중복 가입, 시스템 오류 악용 등)으로 취득한 크레딧은 회수하며, 해당 계정을 이용 정지할 수 있습니다.</li>
       </ul>
 
       <h3>제5조 (AI 서비스 책임 제한)</h3>
@@ -3167,13 +3463,31 @@ function PsychologicalTestSystem() {
       <h3>제7조 (서비스 변경 및 중단)</h3>
       <p>서비스는 운영상 필요에 따라 변경·중단될 수 있으며, 7일 전 사전 고지를 원칙으로 합니다. 긴급한 경우 사후 고지할 수 있습니다.</p>
 
-      <h3>제8조 (분쟁 해결 및 준거법)</h3>
+      <h3>제8조 (약관의 효력 및 개정)</h3>
+      <ul>
+        <li>본 약관은 서비스 가입 시 동의함으로써 효력이 발생합니다.</li>
+        <li>회사는 「전자상거래 등에서의 소비자보호에 관한 법률」, 「약관의 규제에 관한 법률」 등 관련 법령을 위반하지 않는 범위에서 약관을 개정할 수 있습니다.</li>
+        <li>약관 개정 시 적용일 및 개정 내용을 <strong>시행 7일 전</strong>(이용자에게 불리한 개정의 경우 30일 전) 서비스 공지사항 및 가입 이메일로 고지합니다.</li>
+        <li>고지 기간 내 이의를 제기하지 않으면 개정 약관에 동의한 것으로 간주합니다.</li>
+        <li>개정 약관에 동의하지 않는 경우 서비스 탈퇴 및 환불(해당 시)을 신청할 수 있습니다.</li>
+      </ul>
+
+      <h3>제9조 (분쟁 해결 및 준거법)</h3>
       <ul>
         <li>본 약관은 대한민국 법률에 따라 해석됩니다.</li>
         <li>분쟁 발생 시 서울중앙지방법원을 제1심 관할 법원으로 합니다.</li>
         <li>문의: support@maumful.com</li>
       </ul>
-      <p style={{color:'#9ca3af', fontSize:'12px'}}>최종 업데이트: 2026년 4월</p>
+      <h3>운영사 정보</h3>
+      <ul>
+        <li><strong>상호:</strong> 마음서비스</li>
+        <li><strong>대표자:</strong> 김근혜</li>
+        <li><strong>사업자등록번호:</strong> 780-31-01832</li>
+        <li><strong>통신판매업 신고번호:</strong> 제 2026-서울영등포-1157 호</li>
+        <li><strong>사업장 소재지:</strong> 서울특별시 영등포구 문래로26길 6 (문래동3가)</li>
+        <li><strong>이메일:</strong> support@maumful.com</li>
+      </ul>
+      <p style={{color:'#9ca3af', fontSize:'12px'}}>최종 업데이트: 2026년 5월</p>
     </LegalPage>
   );
 
@@ -3221,14 +3535,14 @@ function PsychologicalTestSystem() {
   if (isLoggedIn && view === 'memberDashboard') {
     const allTests = regionConfig?.availableTests || ['PHQ9','GAD7','DASS21','BIG5','LOST','SCT','DSI','BURNOUT'];
     const testMeta = {
-      PHQ9:    { label: 'PHQ-9', desc: '우울 자가점검', emoji: '😔', view: 'phq9Test' },
-      GAD7:    { label: 'GAD-7', desc: '불안 자가점검', emoji: '😰', view: 'gad7Test' },
-      DASS21:  { label: 'DASS-21', desc: '우울/불안/스트레스', emoji: '📊', view: 'dass21Test' },
-      BIG5:    { label: 'Big5', desc: '성격 5요인', emoji: '🌟', view: 'big5Test' },
-      LOST:    { label: 'LOST', desc: '행동 운영체계', emoji: '🧭', view: 'lostTest' },
-      SCT:     { label: 'SRCI', desc: '자기반응 완성', emoji: '✍️', view: 'sctTest' },
-      DSI:     { label: 'SDRI', desc: '자기분화 반응성', emoji: '🪞', view: 'dsiTest' },
-      BURNOUT: { label: 'K-MBI+', desc: '번아웃 증후군', emoji: '🔥', view: 'burnoutTest' },
+      PHQ9:    { label: 'PHQ-9',   desc: '우울 자가점검',    emoji: '😔', view: 'phq9Test',    summary: '최근 2주간 기분·수면·의욕의 변화를 점검합니다',              questions: 9,  time: '2분'  },
+      GAD7:    { label: 'GAD-7',   desc: '불안 자가점검',    emoji: '😰', view: 'gad7Test',    summary: '일상 속 걱정·긴장·불안의 정도를 확인합니다',                  questions: 7,  time: '2분'  },
+      DASS21:  { label: 'DASS-21', desc: '우울/불안/스트레스', emoji: '📊', view: 'dass21Test',  summary: '우울·불안·스트레스 세 가지를 한 번에 측정합니다',               questions: 21, time: '5분'  },
+      BIG5:    { label: 'Big5',    desc: '성격 5요인',       emoji: '🌟', view: 'big5Test',    summary: '나만의 성격 패턴 5가지를 심층 분석합니다',                     questions: 44, time: '10분' },
+      LOST:    { label: 'LOST',    desc: '행동 운영체계',    emoji: '🧭', view: 'lostTest',    summary: '내 행동이 감정 vs 이성 중 어느 쪽에 기반하는지 파악합니다',     questions: 40, time: '8분'  },
+      SCT:     { label: 'SRCI',    desc: '자기반응 완성',    emoji: '✍️', view: 'sctTest',     summary: '문장 완성으로 나도 몰랐던 내면의 자아 반응을 탐색합니다',        questions: 30, time: '8분'  },
+      DSI:     { label: 'SDRI',    desc: '자기분화 반응성',  emoji: '🪞', view: 'dsiTest',     summary: '가족·연인 관계에서 감정 반응성과 자아 독립 정도를 측정합니다',   questions: 35, time: '8분'  },
+      BURNOUT: { label: 'K-MBI+',  desc: '번아웃 증후군',   emoji: '🔥', view: 'burnoutTest', summary: '직장·일상에서 쌓인 신체·정서적 소진을 점검합니다',               questions: 22, time: '5분'  },
     };
 
     async function startSelectedTest(testType) {
@@ -3278,6 +3592,14 @@ function PsychologicalTestSystem() {
         </header>
 
         <main className="max-w-2xl mx-auto px-4 py-6">
+          {/* 모바일: 검사 목록 빠른 이동 */}
+          <div className="sm:hidden flex justify-end mb-3">
+            <a href="#test-list"
+              className="text-xs text-green-700 font-semibold bg-green-50 border border-green-200 px-3 py-1.5 rounded-full hover:bg-green-100 transition flex items-center gap-1">
+              📋 검사 목록 바로가기 ↓
+            </a>
+          </div>
+
           {/* 3일 재방문 알림 배너 */}
           {(() => {
             const checkinDate = localStorage.getItem('maumful_checkin_date');
@@ -3523,8 +3845,11 @@ function PsychologicalTestSystem() {
           />
 
           {/* 검사 목록 */}
-          <h3 className="font-bold text-gray-700 mb-3">심리검사 선택</h3>
-          <div className="grid grid-cols-2 gap-3 mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 id="test-list" className="font-bold text-gray-700">심리검사 선택</h3>
+            <span className="text-xs text-gray-400">총 {allTests.length}종</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
             {allTests.map(type => {
               const m = testMeta[type];
               if (!m) return null;
@@ -3532,18 +3857,26 @@ function PsychologicalTestSystem() {
                 <button
                   key={type}
                   onClick={() => startSelectedTest(type)}
-                  className="bg-white rounded-2xl p-4 text-left border-2 border-gray-100 hover:border-green-300 hover:shadow-md transition group relative overflow-hidden"
+                  className="bg-white rounded-2xl p-4 text-left border-2 border-gray-100 hover:border-green-300 hover:shadow-md transition group relative overflow-hidden flex sm:flex-col items-start gap-3 sm:gap-0"
                 >
                   <div className={`absolute top-2 right-2 text-xs font-bold px-2 py-0.5 rounded-full ${
                     FREE_TESTS.includes(type) ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
                   }`}>
                     {FREE_TESTS.includes(type) ? '✓ 무료' : '10 크레딧'}
                   </div>
-                  <div className="text-3xl mb-2">{m.emoji}</div>
-                  <div className="font-bold text-gray-800 text-sm">{m.label}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">{m.desc}</div>
-                  <div className="mt-2 text-xs text-green-600 font-semibold opacity-0 group-hover:opacity-100 transition">
-                    {FREE_TESTS.includes(type) ? '바로 시작 →' : '크레딧으로 이용 →'}
+                  <div className="text-3xl sm:mb-2 shrink-0 mt-0.5">{m.emoji}</div>
+                  <div className="flex-1 min-w-0 pr-14 sm:pr-0">
+                    <div className="font-bold text-gray-800 text-sm">{m.label}</div>
+                    <div className="text-xs text-gray-400 mt-0.5">{m.desc}</div>
+                    <div className="text-xs text-gray-500 mt-1.5 leading-relaxed">{m.summary}</div>
+                    <div className="text-xs text-gray-300 mt-1.5 flex items-center gap-1">
+                      <span>📋 {m.questions}문항</span>
+                      <span>·</span>
+                      <span>⏱ 약 {m.time}</span>
+                    </div>
+                    <div className="mt-2 text-xs text-green-600 font-semibold sm:opacity-0 sm:group-hover:opacity-100 transition">
+                      {FREE_TESTS.includes(type) ? '바로 시작 →' : '크레딧으로 이용 →'}
+                    </div>
                   </div>
                 </button>
               );
@@ -4044,10 +4377,22 @@ function PsychologicalTestSystem() {
 
         {/* 설정 */}
         {myPageTab === 'appointments' && (
-                  <div className="space-y-4">
-                    <MyAppointments setView={setView} />
-                  </div>
-                )}
+          <div className="bg-white rounded-2xl p-6 border border-gray-100 text-center space-y-4">
+            <div className="text-5xl">🏥</div>
+            <div>
+              <h3 className="font-bold text-gray-800 text-lg mb-1">전문 상담 기관 안내</h3>
+              <p className="text-sm text-gray-500 leading-relaxed">
+                마음풀은 심리검사 및 AI 상담 서비스를 제공합니다.<br/>
+                전문 상담사와의 상담은 각 기관에 직접 연락하시거나<br/>
+                아래 버튼을 눌러 가까운 상담센터를 찾아보세요.
+              </p>
+            </div>
+            <button onClick={() => { setView('counseling'); window.scrollTo({ top:0, behavior:'smooth' }); }}
+              className="inline-block bg-teal-600 hover:bg-teal-700 text-white font-bold text-sm px-6 py-3 rounded-xl transition">
+              🏥 상담센터 찾기 →
+            </button>
+          </div>
+        )}
                 {myPageTab === 'settings' && (
           <div className="space-y-3">
             <div className="bg-white rounded-2xl p-5 border border-gray-100">
@@ -4335,10 +4680,20 @@ function PsychologicalTestSystem() {
               </div>
               {selPkg && (
                 <div style={{ background:'#F9FAFB', borderRadius:12, padding:'12px 16px',
-                  marginBottom:16, border:'1px solid rgba(0,0,0,0.07)' }}>
+                  marginBottom:10, border:'1px solid rgba(0,0,0,0.07)' }}>
                   <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'#6B7280' }}>
                     <span>{selPkg.label} · ✦ {selPkg.credits} 크레딧</span>
-                    <span style={{ fontWeight:700, color:'#111', fontSize:15 }}>{fmt(selPkg.amount)}</span>
+                    <div style={{ textAlign:'right' }}>
+                      <div style={{ fontWeight:700, color:'#111', fontSize:15 }}>
+                        {fmt(selPkg.amount)}
+                        <span style={{ fontSize:10, color:'#9CA3AF', fontWeight:400, marginLeft:4 }}>(VAT 포함)</span>
+                      </div>
+                      {isKorea && (
+                        <div style={{ fontSize:10, color:'#9CA3AF', marginTop:2 }}>
+                          공급가 {Math.round(selPkg.amount / 1.1).toLocaleString('ko-KR')}원 + 부가세 {Math.round(selPkg.amount - selPkg.amount / 1.1).toLocaleString('ko-KR')}원
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div style={{ marginTop:6, fontSize:11, color:'#9CA3AF' }}>
                     충전 후 잔액: ✦ {credits + selPkg.credits} 크레딧
@@ -4346,20 +4701,32 @@ function PsychologicalTestSystem() {
                   </div>
                 </div>
               )}
-              {errMsg && (
-                <div style={{ background:'#FEF2F2', border:'1px solid #FCA5A5', borderRadius:9,
-                  padding:'8px 12px', fontSize:12, color:'#991B1B', marginBottom:12 }}>
-                  {errMsg}
+
+              {/* 결제 전 법적 고지 (전자상거래법 제17조 제2항) */}
+              <div style={{ background:'#FEF9EC', border:'1px solid #FDE68A', borderRadius:10,
+                padding:'11px 14px', marginBottom:10, fontSize:11, color:'#78350F', lineHeight:1.8 }}>
+                <div style={{ fontWeight:700, marginBottom:4, color:'#92400E' }}>⚠ 결제 전 확인하세요</div>
+                <ul style={{ margin:0, paddingLeft:14 }}>
+                  <li>크레딧을 <strong>1개라도 사용한 경우</strong> 청약철회가 제한됩니다. (전자상거래법 제17조 제2항 제5호)</li>
+                  <li>미사용 크레딧은 구매일로부터 <strong>7일 이내</strong> 전액 환불 가능합니다.</li>
+                  {isKorea && <li>결제 시 이메일·결제금액이 <strong>토스페이먼츠(주)</strong>에 제공됩니다. (결제 처리 목적)</li>}
+                  <li>환불 문의: support@maumful.com</li>
+                </ul>
+              </div>
+
+              <div style={{ background:'#FFF7ED', border:'1px solid #FED7AA', borderRadius:12,
+                padding:'14px 16px', marginBottom:4 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
+                  <span style={{ fontSize:16 }}>🔧</span>
+                  <span style={{ fontSize:13, fontWeight:700, color:'#92400E' }}>결제 시스템 준비 중</span>
                 </div>
-              )}
-              <button onClick={handlePay} disabled={loading}
-                style={{ width:'100%', padding:'15px', background: loading ? '#9CA3AF' : '#2D6A4F',
-                  color:'white', border:'none', borderRadius:14, fontSize:16, fontWeight:700,
-                  cursor: loading ? 'not-allowed' : 'pointer', transition:'background 0.2s', fontFamily:F }}>
-                {loading ? '결제 준비 중...' : (isKorea ? '토스페이먼츠로 결제 ' : 'Pay with Card ') + (selPkg ? fmt(selPkg.amount) : '')}
-              </button>
+                <p style={{ fontSize:12, color:'#78350F', lineHeight:1.6, margin:0 }}>
+                  현재 결제 서비스를 준비하고 있습니다.<br />
+                  오픈 후 support@maumful.com으로 문의하시면 크레딧을 우선 지급해 드립니다.
+                </p>
+              </div>
               <div style={{ textAlign:'center', marginTop:10, fontSize:11, color:'#9CA3AF' }}>
-                {isKorea ? '카드 · 카카오페이 · 네이버페이 · 토스페이 지원' : 'Visa · Mastercard · American Express'}
+                {isKorea ? '토스페이먼츠 연동 준비 중' : 'Payment coming soon'}
               </div>
             </>)}
 
@@ -4418,8 +4785,10 @@ function PsychologicalTestSystem() {
                   </div>
                 </div>
               ))}
-              <div style={{ textAlign:'center', fontSize:11, color:'#9CA3AF', marginTop:4 }}>
-                * 구독 플랜은 사업자 등록 후 정식 출시됩니다
+              <div style={{ fontSize:11, color:'#9CA3AF', marginTop:4, lineHeight:1.8 }}>
+                <div>* 구독 플랜은 사업자 등록 후 정식 출시됩니다</div>
+                <div>* 모든 금액은 부가가치세(VAT 10%) 포함 가격입니다</div>
+                <div>* 만 19세 미만 미성년자의 구독 결제는 법정대리인 동의가 필요합니다 (민법 제5조)</div>
               </div>
             </>)}
           </div>
@@ -5275,7 +5644,12 @@ function PsychologicalTestSystem() {
                             setChatStreaming(false);
                             // 429: 비로그인 한도 초과 or 로그인 한도 초과 → 모달
                             if (res.status === 429) {
-                              setAiChatUsed(AI_LIMIT_FREE); // 클라이언트 카운터 동기화
+                              if (!isLoggedIn) {
+                                setGuestAiTotal(AI_GUEST_TOTAL);
+                                try { localStorage.setItem(AI_GUEST_KEY, String(AI_GUEST_TOTAL)); } catch {}
+                              } else {
+                                setAiChatUsed(AI_LIMIT_FREE);
+                              }
                               setShowAiLimitModal(true);
                               return;
                             }
@@ -5434,7 +5808,12 @@ function PsychologicalTestSystem() {
                             setChatStreaming(false);
                             // 429: 비로그인 한도 초과 or 로그인 한도 초과 → 모달
                             if (res.status === 429) {
-                              setAiChatUsed(AI_LIMIT_FREE); // 클라이언트 카운터 동기화
+                              if (!isLoggedIn) {
+                                setGuestAiTotal(AI_GUEST_TOTAL);
+                                try { localStorage.setItem(AI_GUEST_KEY, String(AI_GUEST_TOTAL)); } catch {}
+                              } else {
+                                setAiChatUsed(AI_LIMIT_FREE);
+                              }
                               setShowAiLimitModal(true);
                               return;
                             }
@@ -5529,7 +5908,12 @@ function PsychologicalTestSystem() {
                             setChatStreaming(false);
                             // 429: 비로그인 한도 초과 or 로그인 한도 초과 → 모달
                             if (res.status === 429) {
-                              setAiChatUsed(AI_LIMIT_FREE); // 클라이언트 카운터 동기화
+                              if (!isLoggedIn) {
+                                setGuestAiTotal(AI_GUEST_TOTAL);
+                                try { localStorage.setItem(AI_GUEST_KEY, String(AI_GUEST_TOTAL)); } catch {}
+                              } else {
+                                setAiChatUsed(AI_LIMIT_FREE);
+                              }
                               setShowAiLimitModal(true);
                               return;
                             }
@@ -5598,10 +5982,10 @@ function PsychologicalTestSystem() {
             <div className="px-4 py-3 border-t border-gray-100 bg-gray-50">
               <button
                 onClick={() => { setView('counseling'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                className="w-full py-2.5 bg-white border border-indigo-200 text-indigo-700 rounded-xl text-sm font-semibold hover:bg-indigo-50 hover:border-indigo-400 transition flex items-center justify-center gap-2 group">
-                <span>🏠</span>
-                <span>전문 상담사와 직접 상담하기</span>
-                <span className="text-indigo-300 group-hover:text-indigo-500 transition">→</span>
+                className="w-full py-2.5 bg-white border border-teal-200 text-teal-700 rounded-xl text-sm font-semibold hover:bg-teal-50 hover:border-teal-400 transition flex items-center justify-center gap-2 group">
+                <span>🏥</span>
+                <span>전문 상담 기관 찾기</span>
+                <span className="text-teal-300 group-hover:text-teal-500 transition">→</span>
               </button>
               <p className="text-center text-xs text-gray-400 mt-1">AI 상담은 참고용입니다. 전문 상담사의 도움이 필요하시면 클릭하세요.</p>
             </div>
@@ -6351,7 +6735,10 @@ function PsychologicalTestSystem() {
           body: JSON.stringify({ testType: pdfType, pdfText, fileName: pdfFile?.name }),
         });
         const data = await res.json();
-        if (data.success) {
+        if (res.status === 402) {
+          setPdfMsg(data.error || '크레딧이 부족합니다. 충전 후 이용해 주세요.');
+          setPdfStatus('error');
+        } else if (data.success) {
           setPdfAnalysis(data.analysis);
           setPdfGames(data.suggestedGames || []);
           setPdfFollowup(data.followUpTests || []);
@@ -6483,7 +6870,7 @@ function PsychologicalTestSystem() {
                         </div>
                         {pdfStatus === 'ready' && (
                           <button onClick={analyzePdf} className="w-full mt-4 bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white text-sm font-bold py-3 rounded-xl transition flex items-center justify-center gap-2">
-                            ✨ AI 해석 시작 (무료)
+                            ✨ AI 해석 시작 (2 크레딧)
                           </button>
                         )}
                         {pdfStatus === 'analyzing' && (
@@ -6775,20 +7162,102 @@ function PsychologicalTestSystem() {
     );
   }
 
-  function ShareResultButton({ text }) {
-    return (
-      <div className="mt-3 flex justify-end">
-        <button
-          onClick={() => {
-            if (navigator.share) {
-              navigator.share({ title: '마음풀 검사 결과', text }).catch(() => {});
-            } else {
-              navigator.clipboard?.writeText(text).then(() => alert('클립보드에 복사됐어요!')).catch(() => {});
+  function ShareResultButton({ text, testLabel, scoreText, levelText, colorHex }) {
+    async function shareAsImage() {
+      try {
+        const W = 800, H = 450;
+        const canvas = document.createElement('canvas');
+        canvas.width = W; canvas.height = H;
+        const ctx = canvas.getContext('2d');
+
+        // 배경 그라디언트
+        const bg = ctx.createLinearGradient(0, 0, W, H);
+        bg.addColorStop(0, colorHex || '#1B4332');
+        bg.addColorStop(1, '#2D6A4F');
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, W, H);
+
+        // 반투명 카드
+        ctx.fillStyle = 'rgba(255,255,255,0.10)';
+        ctx.beginPath();
+        const [cx, cy, cw, ch, cr] = [40, 40, W - 80, H - 80, 20];
+        ctx.moveTo(cx + cr, cy);
+        ctx.lineTo(cx + cw - cr, cy); ctx.quadraticCurveTo(cx + cw, cy, cx + cw, cy + cr);
+        ctx.lineTo(cx + cw, cy + ch - cr); ctx.quadraticCurveTo(cx + cw, cy + ch, cx + cw - cr, cy + ch);
+        ctx.lineTo(cx + cr, cy + ch); ctx.quadraticCurveTo(cx, cy + ch, cx, cy + ch - cr);
+        ctx.lineTo(cx, cy + cr); ctx.quadraticCurveTo(cx, cy, cx + cr, cy);
+        ctx.closePath(); ctx.fill();
+
+        // 브랜드
+        ctx.font = 'bold 26px "Noto Sans KR", sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.90)';
+        ctx.fillText('마음풀', 72, 108);
+
+        // 검사명
+        ctx.font = '20px "Noto Sans KR", sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.72)';
+        ctx.fillText(testLabel || '심리검사 결과', 72, 150);
+
+        // 점수 (크게)
+        ctx.font = 'bold 80px "Noto Sans KR", sans-serif';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(scoreText || '', 72, 265);
+
+        // 레벨
+        if (levelText) {
+          ctx.font = 'bold 26px "Noto Sans KR", sans-serif';
+          ctx.fillStyle = 'rgba(255,255,255,0.85)';
+          ctx.fillText(levelText, 72, 315);
+        }
+
+        // 하단 구분선
+        ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(72, 345); ctx.lineTo(W - 72, 345); ctx.stroke();
+
+        // 푸터
+        ctx.font = '16px "Noto Sans KR", sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.55)';
+        ctx.fillText('maumful.com  |  AI 마음 상담 플랫폼', 72, 378);
+
+        await new Promise((resolve) => {
+          canvas.toBlob(async (blob) => {
+            if (!blob) { resolve(); return; }
+            // 네이티브 파일 공유 시도
+            if (navigator.share && navigator.canShare?.({ files: [new File([blob], 'x.png', { type: 'image/png' })] })) {
+              try {
+                await navigator.share({ title: '마음풀 검사 결과', files: [new File([blob], 'maumful-result.png', { type: 'image/png' })], text });
+                resolve(); return;
+              } catch {}
             }
-          }}
-          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-emerald-700 px-3 py-1.5 rounded-lg hover:bg-emerald-50 transition border border-gray-200 hover:border-emerald-300"
-        >
-          🔗 결과 공유
+            // fallback: 이미지 다운로드
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = 'maumful-result.png'; a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            resolve();
+          }, 'image/png');
+        });
+      } catch {
+        // Canvas 실패 시 텍스트 공유 fallback
+        if (navigator.share) navigator.share({ title: '마음풀 검사 결과', text }).catch(() => {});
+        else navigator.clipboard?.writeText(text).then(() => alert('클립보드에 복사됐어요!')).catch(() => {});
+      }
+    }
+
+    function shareText() {
+      if (navigator.share) navigator.share({ title: '마음풀 검사 결과', text }).catch(() => {});
+      else navigator.clipboard?.writeText(text).then(() => alert('클립보드에 복사됐어요!')).catch(() => {});
+    }
+
+    return (
+      <div className="mt-3 flex justify-end gap-2">
+        <button onClick={shareAsImage}
+          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-emerald-700 px-3 py-1.5 rounded-lg hover:bg-emerald-50 transition border border-gray-200 hover:border-emerald-300">
+          🖼️ 카드 공유
+        </button>
+        <button onClick={shareText}
+          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-emerald-700 px-3 py-1.5 rounded-lg hover:bg-emerald-50 transition border border-gray-200 hover:border-emerald-300">
+          🔗 링크 공유
         </button>
       </div>
     );
@@ -8350,7 +8819,7 @@ function PsychologicalTestSystem() {
               });
             }}
           />
-          {(() => { const r = calcPhq9(); return <ShareResultButton text={`😔 PHQ-9 우울 검사 결과\n총점: ${r.total}/27 (${r.level})\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #심리검사`} />; })()}
+          {(() => { const r = calcPhq9(); return <ShareResultButton text={`😔 PHQ-9 우울 검사 결과\n총점: ${r.total}/27 (${r.level})\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #심리검사`} testLabel="PHQ-9 우울 자가점검" scoreText={`${r.total}/27점`} levelText={r.level} colorHex="#1B4332" />; })()}
 
 
           {/* 🤝 전문가 상담 CTA */}
@@ -8431,7 +8900,7 @@ function PsychologicalTestSystem() {
               });
             }}
           />
-          {(() => { const r = calcGad7(); return <ShareResultButton text={`😰 GAD-7 불안 검사 결과\n총점: ${r.total}/21 (${r.level})\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #심리검사`} />; })()}
+          {(() => { const r = calcGad7(); return <ShareResultButton text={`😰 GAD-7 불안 검사 결과\n총점: ${r.total}/21 (${r.level})\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #심리검사`} testLabel="GAD-7 불안 자가점검" scoreText={`${r.total}/21점`} levelText={r.level} colorHex="#1a3a5c" />; })()}
 
 
           {/* 🤝 전문가 상담 CTA */}
@@ -8522,7 +8991,7 @@ function PsychologicalTestSystem() {
               });
             }}
           />
-          {(() => { const r = calcDass21(); return <ShareResultButton text={`📊 DASS-21 결과\n우울: ${r.depression.score}점 / 불안: ${r.anxiety.score}점 / 스트레스: ${r.stress.score}점\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #심리검사`} />; })()}
+          {(() => { const r = calcDass21(); return <ShareResultButton text={`📊 DASS-21 결과\n우울: ${r.depression.score}점 / 불안: ${r.anxiety.score}점 / 스트레스: ${r.stress.score}점\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #심리검사`} testLabel="DASS-21 종합 정서검사" scoreText={`우울 ${r.depression.score} / 불안 ${r.anxiety.score}`} levelText={`스트레스 ${r.stress.score}점`} colorHex="#2c5364" />; })()}
 
 
           {/* 🤝 전문가 상담 CTA */}
@@ -8753,7 +9222,7 @@ function PsychologicalTestSystem() {
               });
             }}
           />
-          {(() => { const r = calcBurnout(); return <ShareResultButton text={`🔥 K-MBI+ 번아웃 검사 결과\n${r.level} (${r.percentage}%)\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #번아웃`} />; })()}
+          {(() => { const r = calcBurnout(); return <ShareResultButton text={`🔥 K-MBI+ 번아웃 검사 결과\n${r.level} (${r.percentage}%)\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #번아웃`} testLabel="K-MBI+ 번아웃 검사" scoreText={`${r.percentage}%`} levelText={r.level} colorHex="#4a1942" />; })()}
 
 
           {/* 🤝 전문가 상담 CTA */}
@@ -8850,7 +9319,7 @@ function PsychologicalTestSystem() {
           {(() => {
             const r = calcBig5();
             const top = Object.entries(r).sort(([,a],[,b]) => b-a)[0];
-            return <ShareResultButton text={`🌟 Big5 성격검사 결과\n가장 높은 특성: ${top?.[0]} (${top?.[1]}/5)\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #성격검사`} />;
+            return <ShareResultButton text={`🌟 Big5 성격검사 결과\n가장 높은 특성: ${top?.[0]} (${top?.[1]}/5)\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #성격검사`} testLabel="Big5 성격 5요인 검사" scoreText={top?.[0] || ''} levelText={`${top?.[1]}/5점`} colorHex="#3b1f8c" />;
           })()}
 
 
@@ -9064,7 +9533,7 @@ function PsychologicalTestSystem() {
               }}
             />
           </div>
-          {(() => { const r = calcLost(); return <ShareResultButton text={`🧭 LOST 행동 유형 검사 결과\n유형: ${r.typeCode} ${r.typeInfo.name}\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #LOST`} />; })()}
+          {(() => { const r = calcLost(); return <ShareResultButton text={`🧭 LOST 행동 유형 검사 결과\n유형: ${r.typeCode} ${r.typeInfo.name}\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #LOST`} testLabel="LOST 행동 운영체계 검사" scoreText={r.typeCode} levelText={r.typeInfo?.name} colorHex="#7c4f1e" />; })()}
 
 
           {/* 🤝 전문가 상담 CTA */}

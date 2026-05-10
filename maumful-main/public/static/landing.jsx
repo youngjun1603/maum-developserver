@@ -125,7 +125,7 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView }) {
     { label: '검사 소개',  view: 'testsIntro' },
     { label: '심리검사',   view: 'memberDashboard', requireLogin: true },
     { label: 'AI 상담',   view: 'aiCounsel',       requireLogin: true },
-    { label: '상담 예약',  view: 'counseling' },
+    { label: '상담센터',   view: 'counseling' },
     { label: '마음 게임',  view: 'gameIntro', isGame: true },
     { label: '마음커플',   view: 'couple',    isCouple: true },
   ];
@@ -928,7 +928,7 @@ function LandingPage({ setView, isLoggedIn }) {
               }}>
                 <span>📄</span> NEW FEATURE
               </div>
-              <h3 style={{ fontSize: 26, fontWeight: 700, color: 'white', marginBottom: 12, lineHeight: 1.4 }}>
+              <h3 style={{ fontSize: 26, fontWeight: 700, color: 'white', marginBottom: 12, lineHeight: 1.4, wordBreak: 'keep-all' }}>
                 MBTI, MMPI, K-WAIS…<br />외부 검사결과도 AI가 해석해 드립니다
               </h3>
               <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, marginBottom: 20 }}>
@@ -946,7 +946,7 @@ function LandingPage({ setView, isLoggedIn }) {
                 ))}
               </div>
             </div>
-            <div style={{ textAlign: 'center', flexShrink: 0 }}>
+            <div style={{ textAlign: 'center', flexShrink: 0 }} className="pdf-banner-btn-wrap">
               <button
                 onClick={() => setView(isLoggedIn ? 'memberDashboard' : 'testsIntro')}
                 style={{
@@ -1082,28 +1082,28 @@ function LandingPage({ setView, isLoggedIn }) {
       </section>
 
 
-      {/* ── ⑦-2 상담센터 섹션 ─────────────────────────── */}
+      {/* ── ⑦-2 상담센터 안내 섹션 ─────────────────────────── */}
       <section style={{ padding: '80px 24px', background: 'white' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }} className="ai-grid">
             <div>
               <div style={{
-                display: 'inline-block', background: '#EEF0FF', color: '#5B21B6',
+                display: 'inline-block', background: '#D8F3DC', color: '#2D6A4F',
                 fontSize: 12, fontWeight: 700, letterSpacing: '1.5px',
                 textTransform: 'uppercase', padding: '5px 14px', borderRadius: 100, marginBottom: 20,
               }}>Counseling Centers</div>
               <h2 style={{ fontSize: 36, fontWeight: 700, lineHeight: 1.3, marginBottom: 16 }}>
-                전문 상담사와<br /><span style={{ color: '#2D6A4F' }}>직접 연결</span>하세요
+                가까운 상담센터를<br /><span style={{ color: '#2D6A4F' }}>바로 찾아보세요</span>
               </h2>
               <p style={{ fontSize: 16, color: '#5A5A5A', lineHeight: 1.8, marginBottom: 28 }}>
-                검사 결과를 바탕으로 나에게 맞는 전문 상담사를 찾고,<br />
-                화상·전화·방문 상담을 간편하게 예약하세요.
+                검사 결과를 상담사에게 보여주면 첫 상담부터<br />
+                더 깊이 있는 대화를 시작할 수 있습니다.
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
                 {[
-                  { icon: '📋', text: '심리검사 결과 기반 상담사 매칭' },
-                  { icon: '📹', text: '화상·전화·방문 상담 선택' },
-                  { icon: '💳', text: '안전한 결제 · 24시간 전 전액 환불' },
+                  { icon: '📍', text: '카카오맵으로 내 근처 상담센터 즉시 검색' },
+                  { icon: '🧠', text: '정신건강의학과 · 심리상담센터 · 복지센터' },
+                  { icon: '📞', text: '24시간 무료 상담전화 바로 연결' },
                 ].map(item => (
                   <div key={item.text} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span style={{ fontSize: 18 }}>{item.icon}</span>
@@ -1114,47 +1114,41 @@ function LandingPage({ setView, isLoggedIn }) {
               <button
                 onClick={() => setView('counseling')}
                 style={{
-                  background: '#7C3AED', color: 'white', border: 'none',
+                  background: '#2D6A4F', color: 'white', border: 'none',
                   borderRadius: 12, padding: '14px 32px', fontSize: 16, fontWeight: 700,
                   cursor: 'pointer', fontFamily: "'Noto Sans KR', sans-serif", transition: 'all 0.2s',
                 }}
-                onMouseEnter={e => { e.currentTarget.style.background = '#5B21B6'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = '#7C3AED'; e.currentTarget.style.transform = 'none'; }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#1B4332'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = '#2D6A4F'; e.currentTarget.style.transform = 'none'; }}
               >
-                상담센터 보기 →
+                🏥 상담센터 찾기 →
               </button>
             </div>
 
-            {/* 센터 미리보기 카드들 */}
+            {/* 검색 카드 미리보기 */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {[
-                { emoji: '🌲', name: '마음숲 심리상담센터', tags: ['우울', '불안', '대인관계'], color: '#2D6A4F', bg: '#D8F3DC', counselors: 2 },
-                { emoji: '🌻', name: '행복한마음 심리치유센터', tags: ['가족', '부부', '트라우마'], color: '#F59E0B', bg: '#FFFBEB', counselors: 2 },
-                { emoji: '🧩', name: '서울 인지행동 상담클리닉', tags: ['번아웃', '강박', 'CBT'], color: '#7C3AED', bg: '#F5F3FF', counselors: 1 },
-              ].map(center => (
-                <div key={center.name}
-                  onClick={() => setView('counseling')}
+                { emoji: '🏥', name: '심리상담센터', desc: '우울·불안·대인관계·번아웃 전문', color: '#2D6A4F', bg: '#D8F3DC', query: '심리상담센터' },
+                { emoji: '🧠', name: '정신건강의학과', desc: '전문의 진료 · 건강보험 적용', color: '#0284C7', bg: '#E0F2FE', query: '정신건강의학과' },
+                { emoji: '🏢', name: '정신건강복지센터', desc: '시·군·구 운영 · 무료 방문 상담', color: '#D97706', bg: '#FEF3C7', query: '정신건강복지센터' },
+              ].map(card => (
+                <div key={card.name}
+                  onClick={() => window.open(`https://map.kakao.com/?q=${encodeURIComponent(card.query)}`, '_blank', 'noopener')}
                   style={{
                     background: 'white', border: '1px solid rgba(0,0,0,0.08)',
                     borderRadius: 14, padding: '16px 18px', cursor: 'pointer',
-                    transition: 'all 0.2s', borderLeft: `4px solid ${center.color}`,
+                    transition: 'all 0.2s', borderLeft: `4px solid ${card.color}`,
                     display: 'flex', alignItems: 'center', gap: 14,
                   }}
                   onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)'; e.currentTarget.style.transform = 'translateX(4px)'; }}
                   onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'none'; }}
                 >
-                  <span style={{ fontSize: 30 }}>{center.emoji}</span>
+                  <span style={{ fontSize: 28, width: 44, height: 44, background: card.bg, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{card.emoji}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
-                      <span style={{ fontSize: 14, fontWeight: 700 }}>{center.name}</span>
-                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 100, background: '#FEF3C7', color: '#B45309', whiteSpace: 'nowrap' }}>⏳ 제휴 진행중</span>
-                    </div>
-                    <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                      {center.tags.map(t => <span key={t} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 100, background: center.bg, color: center.color, fontWeight: 600 }}>{t}</span>)}
-                      <span style={{ fontSize: 11, color: '#9A9A9A' }}>상담사 {center.counselors}명</span>
-                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{card.name}</div>
+                    <div style={{ fontSize: 12, color: '#6B7280' }}>{card.desc}</div>
                   </div>
-                  <span style={{ color: '#CACACA', fontSize: 18 }}>›</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: card.color, background: card.bg, padding: '3px 9px', borderRadius: 100, whiteSpace: 'nowrap', flexShrink: 0 }}>지도 검색</span>
                 </div>
               ))}
             </div>
@@ -1386,7 +1380,7 @@ function LandingPage({ setView, isLoggedIn }) {
       </div>
 
       {/* ── FOOTER ──────────────────────────────────────── */}
-      <footer style={{ background: '#141414', color: 'rgba(255,255,255,0.55)', padding: '56px 40px 32px' }}>
+      <footer className="landing-footer" style={{ background: '#141414', color: 'rgba(255,255,255,0.55)', padding: '56px 40px 32px' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 48, marginBottom: 40 }}
             className="footer-grid">
@@ -1408,7 +1402,7 @@ function LandingPage({ setView, isLoggedIn }) {
               },
               {
                 title: '고객지원',
-                links: ['이용약관', '개인정보처리방침', 'FAQ', '문의하기', '어드민'],
+                links: ['이용약관', '개인정보처리방침', 'FAQ', '문의하기'],
               },
             ].map(col => (
               <div key={col.title}>
@@ -1448,12 +1442,17 @@ function LandingPage({ setView, isLoggedIn }) {
             <p style={{ marginBottom: 6 }}>
               본 서비스는 자기이해 및 정보 제공 목적의 콘텐츠 서비스입니다. 심리검사 결과 및 AI 상담은 의료적 진단·치료를 대체하지 않습니다. 마음이 많이 힘드실 땐 아래 무료 상담을 이용해 보세요. 자살예방상담전화 109 · 정신건강위기상담전화 1577-0199 (24시간)
             </p>
+            <p style={{ marginBottom: 4 }}>
+              상호: 마음서비스 · 대표자: 김근혜 · 사업자등록번호: 780-31-01832 · 통신판매업 신고번호: 제 2026-서울영등포-1157 호
+            </p>
             <p style={{ marginBottom: 6 }}>
-              개인정보 처리 문의: support@maumful.com · 개인정보 침해신고: 개인정보보호위원회 182
+              사업장: 서울특별시 영등포구 문래로26길 6 (문래동3가) · 이메일: support@maumful.com
+            </p>
+            <p style={{ marginBottom: 6 }}>
+              개인정보 침해신고: 개인정보보호위원회 182 · 호스팅: Cloudflare, Inc.
             </p>
             <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
-              <span>© 2026 마음풀. All rights reserved. · Powered by Cloudflare</span>
-              <span>사업자등록 준비 중</span>
+              <span>© 2026 마음서비스(마음풀). All rights reserved.</span>
             </div>
           </div>
         </div>

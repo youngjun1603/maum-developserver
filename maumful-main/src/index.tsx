@@ -27,6 +27,9 @@ type Bindings = {
   VAPID_PUBLIC_KEY?: string
   VAPID_PRIVATE_KEY?: string
   KAKAO_REST_API_KEY?: string
+  KAKAO_APP_KEY?: string         // 카카오 JavaScript 앱 키 (프론트엔드용)
+  NAVER_CLIENT_ID?: string       // 네이버 로그인 클라이언트 ID
+  NAVER_CLIENT_SECRET?: string   // 네이버 로그인 클라이언트 시크릿 (wrangler secret put)
 }
 
 type User = {
@@ -320,7 +323,7 @@ app.post('/api/auth/register', async (c) => {
   if (!rl.allowed) return c.json({ success: false, error: '잠시 후 다시 시도해주세요.' }, 429)
 
   const body = await c.req.json()
-  const { email, password, nickname, locale = 'ko', partnerCode } = body
+  const { email, password, nickname, locale = 'ko', partnerCode, marketingAgreed = false } = body
 
   if (!email || !password)
     return c.json({ success: false, error: '이메일과 비밀번호는 필수입니다.' }, 400)
@@ -334,6 +337,7 @@ app.post('/api/auth/register', async (c) => {
 
   const passwordHash = await hashPassword(password)
   const country      = (c.req.header('cf-ipcountry') ?? 'KR').toUpperCase()
+  const consentIp    = c.req.header('cf-connecting-ip') || ip
 
   // 파트너 코드 검증 (있는 경우에만)
   const validPartner = partnerCode
@@ -341,11 +345,21 @@ app.post('/api/auth/register', async (c) => {
     : null
   const resolvedPartnerCode = validPartner?.code ?? null
 
-  // 가입 보너스: 20 크레딧
+  const now = new Date().toISOString()
+
+  // 가입 보너스: 20 크레딧 + 동의 기록 저장
   const result = await DB.prepare(`
-    INSERT INTO users (email, password_hash, nickname, locale, country_code, credits, is_email_verified, partner_code)
-    VALUES (?, ?, ?, ?, ?, 20, 0, ?)
-  `).bind(email.toLowerCase(), passwordHash, nickname ?? email.split('@')[0], locale, country, resolvedPartnerCode).run()
+    INSERT INTO users (email, password_hash, nickname, locale, country_code, credits, is_email_verified, partner_code,
+                       terms_agreed_at, privacy_agreed_at, marketing_agreed, marketing_agreed_at, consent_ip)
+    VALUES (?, ?, ?, ?, ?, 20, 0, ?, ?, ?, ?, ?, ?)
+  `).bind(
+    email.toLowerCase(), passwordHash, nickname ?? email.split('@')[0], locale, country, resolvedPartnerCode,
+    now,                         // terms_agreed_at
+    now,                         // privacy_agreed_at
+    marketingAgreed ? 1 : 0,     // marketing_agreed
+    marketingAgreed ? now : null, // marketing_agreed_at
+    consentIp                    // consent_ip
+  ).run()
 
   const userId = result.meta.last_row_id as number
 
@@ -658,6 +672,159 @@ app.post('/api/auth/google', async (c) => {
   return c.json({ success: true, data: { accessToken, refreshToken, user: { id: user.id, email: user.email, nickname: user.nickname, locale: user.locale, credits: user.credits } } })
 })
 
+// 카카오 로그인
+app.post('/api/auth/kakao', async (c) => {
+  const { DB, KV } = c.env
+  const { accessToken } = await c.req.json()
+  if (!accessToken) return c.json({ success: false, error: 'accessToken 필요' }, 400)
+
+  const userRes = await fetch('https://kapi.kakao.com/v2/user/me', {
+    headers: { Authorization: `Bearer ${accessToken}` }
+  })
+  if (!userRes.ok) return c.json({ success: false, error: '카카오 토큰 검증 실패' }, 401)
+  const info = await userRes.json() as {
+    id: number
+    kakao_account?: { email?: string; profile?: { nickname?: string } }
+  }
+
+  const kakaoId  = String(info.id)
+  const email    = info.kakao_account?.email
+  const nickname = info.kakao_account?.profile?.nickname
+
+  let user = await DB.prepare('SELECT * FROM users WHERE social_provider = ? AND social_id = ?')
+    .bind('kakao', kakaoId).first<User>()
+
+  if (!user) {
+    if (email) {
+      const existing = await DB.prepare('SELECT * FROM users WHERE email = ?')
+        .bind(email.toLowerCase()).first<User>()
+      if (existing) {
+        await DB.prepare('UPDATE users SET social_provider=?,social_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=?')
+          .bind('kakao', kakaoId, existing.id).run()
+        user = { ...existing, social_provider: 'kakao', social_id: kakaoId }
+      }
+    }
+    if (!user) {
+      const country  = (c.req.header('cf-ipcountry') ?? 'KR').toUpperCase()
+      const emailVal = email?.toLowerCase() ?? `kakao_${kakaoId}@kakao.local`
+      const r = await DB.prepare(
+        'INSERT INTO users (email,social_provider,social_id,nickname,locale,country_code,is_email_verified,credits) VALUES (?,?,?,?,?,?,?,20)'
+      ).bind(emailVal, 'kakao', kakaoId, nickname ?? '카카오사용자', 'ko', country, email ? 1 : 0).run()
+      const newId = r.meta.last_row_id as number
+      await DB.batch([
+        DB.prepare('INSERT INTO credit_transactions (user_id,type,amount,reason,balance_after) VALUES (?,?,?,?,?)').bind(newId, 'gain', 20, 'signup_bonus', 20),
+      ])
+      user = await DB.prepare('SELECT * FROM users WHERE id = ?').bind(newId).first<User>() as User
+    }
+  }
+
+  const secret       = await getJwtSecret(KV)
+  const now          = Math.floor(Date.now() / 1000)
+  const accessTok    = await signJwt({ sub: user.id, email: user.email, iat: now, exp: now + 3600 }, secret)
+  const refreshTok   = await signJwt({ sub: user.id, type: 'refresh', iat: now, exp: now + 30 * 86400 }, secret)
+  await KV.put(`refresh:${user.id}`, refreshTok, { expirationTtl: 30 * 86400 })
+
+  return c.json({ success: true, data: { accessToken: accessTok, refreshToken: refreshTok, user: { id: user.id, email: user.email, nickname: user.nickname, locale: user.locale, credits: user.credits } } })
+})
+
+// 네이버 로그인 — OAuth 2.0 Authorization URL 반환
+app.get('/api/auth/naver/url', (c) => {
+  const clientId = c.env.NAVER_CLIENT_ID
+  if (!clientId) return c.json({ success: false, error: '네이버 로그인 미설정' }, 500)
+  const serviceUrl = (c.env as unknown as Record<string,string>).SERVICE_URL || ''
+  const redirectUri = `${serviceUrl}/api/auth/naver/callback`
+  const state = Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2,'0')).join('')
+  const url = `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`
+  return c.json({ success: true, url, state })
+})
+
+// 네이버 로그인 — OAuth 콜백 (code → token → user → JWT → postMessage)
+app.get('/api/auth/naver/callback', async (c) => {
+  const { DB, KV } = c.env
+  const code      = c.req.query('code')
+  const clientId  = c.env.NAVER_CLIENT_ID
+  const clientSecret = c.env.NAVER_CLIENT_SECRET
+
+  const errPage = (msg: string) => new Response(
+    `<!DOCTYPE html><html><body><script>window.opener?.postMessage({type:'naver_error',error:${JSON.stringify(msg)}},window.location.origin);window.close();</script></body></html>`,
+    { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+  )
+
+  if (!code || !clientId || !clientSecret) return errPage('설정 오류')
+
+  // code → access_token
+  const serviceUrl = (c.env as unknown as Record<string,string>).SERVICE_URL || ''
+  const redirectUri = `${serviceUrl}/api/auth/naver/callback`
+  const tokenRes = await fetch(
+    `https://nid.naver.com/oauth2.0/token?grant_type=authorization_code&client_id=${clientId}&client_secret=${clientSecret}&code=${code}&state=${c.req.query('state') || ''}`,
+    { method: 'GET', headers: { 'X-Naver-Client-Id': clientId, 'X-Naver-Client-Secret': clientSecret } }
+  ).catch(() => null)
+  if (!tokenRes?.ok) return errPage('토큰 발급 실패')
+
+  const tokenData = await tokenRes.json() as { access_token?: string; error?: string }
+  if (!tokenData.access_token) return errPage('액세스 토큰 없음')
+
+  // access_token → user info
+  const userRes = await fetch('https://openapi.naver.com/v1/nid/me', {
+    headers: { Authorization: `Bearer ${tokenData.access_token}` }
+  }).catch(() => null)
+  if (!userRes?.ok) return errPage('사용자 정보 조회 실패')
+
+  const userData = await userRes.json() as {
+    resultcode: string
+    response?: { id: string; email?: string; name?: string; nickname?: string }
+  }
+  if (userData.resultcode !== '00' || !userData.response) return errPage('사용자 정보 오류')
+
+  const naverId  = userData.response.id
+  const email    = userData.response.email
+  const nickname = userData.response.name || userData.response.nickname
+
+  let user = await DB.prepare('SELECT * FROM users WHERE social_provider=? AND social_id=?')
+    .bind('naver', naverId).first<User>()
+
+  if (!user) {
+    if (email) {
+      const existing = await DB.prepare('SELECT * FROM users WHERE email=?')
+        .bind(email.toLowerCase()).first<User>()
+      if (existing) {
+        await DB.prepare('UPDATE users SET social_provider=?,social_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=?')
+          .bind('naver', naverId, existing.id).run()
+        user = { ...existing, social_provider: 'naver', social_id: naverId }
+      }
+    }
+    if (!user) {
+      const country  = (c.req.header('cf-ipcountry') ?? 'KR').toUpperCase()
+      const emailVal = email?.toLowerCase() ?? `naver_${naverId}@naver.local`
+      const r = await DB.prepare(
+        'INSERT INTO users (email,social_provider,social_id,nickname,locale,country_code,is_email_verified,credits) VALUES (?,?,?,?,?,?,?,20)'
+      ).bind(emailVal, 'naver', naverId, nickname ?? '네이버사용자', 'ko', country, email ? 1 : 0).run()
+      const newId = r.meta.last_row_id as number
+      await DB.prepare('INSERT INTO credit_transactions (user_id,type,amount,reason,balance_after) VALUES (?,?,?,?,?)')
+        .bind(newId, 'gain', 20, 'signup_bonus', 20).run()
+      user = await DB.prepare('SELECT * FROM users WHERE id=?').bind(newId).first<User>() as User
+    }
+  }
+
+  const secret       = await getJwtSecret(KV)
+  const now          = Math.floor(Date.now() / 1000)
+  const accessToken  = await signJwt({ sub: user.id, email: user.email, iat: now, exp: now + 3600 }, secret)
+  const refreshToken = await signJwt({ sub: user.id, type: 'refresh', iat: now, exp: now + 30 * 86400 }, secret)
+  await KV.put(`refresh:${user.id}`, refreshToken, { expirationTtl: 30 * 86400 })
+
+  const loginData = JSON.stringify({
+    type: 'naver_login',
+    accessToken,
+    refreshToken,
+    user: { id: user.id, email: user.email, nickname: user.nickname, locale: user.locale, credits: user.credits },
+  })
+
+  return new Response(
+    `<!DOCTYPE html><html><body><script>window.opener?.postMessage(${loginData},window.location.origin);window.close();</script></body></html>`,
+    { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+  )
+})
+
 // 비밀번호 찾기 — 재설정 메일 요청
 app.post('/api/auth/forgot-password', async (c) => {
   const { DB, KV } = c.env
@@ -679,7 +846,7 @@ app.post('/api/auth/forgot-password', async (c) => {
 
   // 비밀번호 재설정 메일 발송
   const userForEmail = await DB.prepare('SELECT nickname FROM users WHERE id=?').bind(user.id).first<{ nickname: string | null }>()
-  sendPasswordResetEmail(c.env, email.toLowerCase(), userForEmail?.nickname || '', resetToken)
+  await sendPasswordResetEmail(c.env, email.toLowerCase(), userForEmail?.nickname || '', resetToken)
     .catch(e => console.error('[ForgotPw] 메일 발송 실패:', e))
 
   return c.json({
@@ -1036,7 +1203,6 @@ app.post('/api/ai-analyze', async (c) => {
 
   const prompt = buildAnalysisPrompt(body)
   const ANALYZE_FALLBACKS = [
-    getAiModel(c.env),
     'claude-haiku-4-5-20251001',
     'claude-sonnet-4-6',
   ]
@@ -1293,6 +1459,12 @@ app.post('/api/test/analyze-pdf', async (c) => {
   const apiKey = await getAnthropicKey(DB, c.env)
   if (!apiKey) return c.json({ error: 'AI 서비스 미설정' }, 500)
 
+  const PDF_COST = 2
+  const creditResult = await spendCredits(DB, userId, PDF_COST, 'pdf_analyze')
+  if (!creditResult.ok) {
+    return c.json({ error: `크레딧이 부족합니다. (필요: ${PDF_COST}cr, 보유: ${creditResult.balance}cr)`, needsCharge: true }, 402)
+  }
+
   const systemPrompt = `당신은 심리검사 결과를 일반인이 이해하기 쉽게 설명하는 전문 해설가입니다.
 
 ⚠️ 절대 준수 원칙:
@@ -1332,11 +1504,13 @@ FOLLOWUP:["PHQ9","GAD7"]
       }),
     })
   } catch (e: unknown) {
+    await gainCredits(DB, userId, PDF_COST, 'pdf_analyze_refund')
     return c.json({ error: 'AI 연결 오류: ' + String(e) }, 500)
   }
 
   if (!aiRes.ok) {
     const errText = await aiRes.text().catch(() => '(응답 없음)')
+    await gainCredits(DB, userId, PDF_COST, 'pdf_analyze_refund')
     return c.json({ error: `AI 분석 실패 (${aiRes.status}): ${errText.slice(0, 200)}` }, 500)
   }
 
@@ -1344,6 +1518,7 @@ FOLLOWUP:["PHQ9","GAD7"]
   try {
     aiJson = await aiRes.json() as { content: Array<{ text: string }> }
   } catch (e: unknown) {
+    await gainCredits(DB, userId, PDF_COST, 'pdf_analyze_refund')
     return c.json({ error: 'AI 응답 파싱 오류: ' + String(e) }, 500)
   }
   const rawText = aiJson.content?.[0]?.text || ''
@@ -1457,9 +1632,9 @@ app.get('/api/test/cbt-plan', async (c) => {
   const cacheKey = `cbt_plan:${userId}`
   const todayKST = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10)
 
-  // 7일 캐시 확인
+  // 30일 캐시 확인
   const cached = await KV.get(cacheKey, 'json') as { plan: unknown[]; summary: string; scores: Record<string, number>; generatedAt: string } | null
-  if (cached && cached.generatedAt >= new Date(Date.now() - 7 * 86400 * 1000).toISOString().slice(0, 10)) {
+  if (cached && cached.generatedAt >= new Date(Date.now() - 30 * 86400 * 1000).toISOString().slice(0, 10)) {
     return c.json({ success: true, ...cached, cached: true })
   }
 
@@ -1510,7 +1685,7 @@ JSON만 반환하세요. 형식:
     const parsed = JSON.parse(jsonStr) as { summary: string; plan: unknown[] }
 
     const result = { plan: parsed.plan, summary: parsed.summary, scores: scoreMap, generatedAt: todayKST }
-    await KV.put(cacheKey, JSON.stringify(result), { expirationTtl: 7 * 86400 })
+    await KV.put(cacheKey, JSON.stringify(result), { expirationTtl: 30 * 86400 })
 
     return c.json({ success: true, ...result, cached: false })
   } catch (e: unknown) {
@@ -1552,21 +1727,21 @@ app.post('/api/ai-chat', async (c) => {
   let chatIsMaster = false
 
   if (isGuest) {
-    // 비로그인: IP 기반 하루 5회 체험
+    // 비로그인: IP 기반 평생 2회 체험 (TTL 없음 — 누적 추적)
     const ip = c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For') || 'unknown'
-    const guestKey = `ai_guest:${ip}:${today}`
+    const guestKey = `ai_guest_total:${ip}`
     const guestUsed = parseInt(await KV.get(guestKey) || '0', 10)
-    const GUEST_LIMIT = 5
-    if (guestUsed >= GUEST_LIMIT) {
+    const GUEST_TOTAL_LIMIT = 3
+    if (guestUsed >= GUEST_TOTAL_LIMIT) {
       return c.json({
         success: false,
-        error: `비로그인 AI 상담은 하루 ${GUEST_LIMIT}회까지 가능합니다. 회원가입하면 더 많이 이용할 수 있어요.`,
-        dailyUsed: guestUsed, dailyLimit: GUEST_LIMIT,
+        error: `비로그인 AI 상담은 ${GUEST_TOTAL_LIMIT}회까지 체험할 수 있습니다. 회원가입하면 매일 5회 무료 + 가입 보너스 20 크레딧이 지급됩니다!`,
+        totalUsed: guestUsed, totalLimit: GUEST_TOTAL_LIMIT,
         needsSignup: true,
         errorCode: 'guest_limit_exceeded',
       }, 429)
     }
-    await KV.put(guestKey, String(guestUsed + 1), { expirationTtl: 86400 })
+    await KV.put(guestKey, String(guestUsed + 1))  // TTL 없음 — 평생 누적
     // 비로그인은 크레딧 차감 없이 바로 AI 호출로 진행
   } else {
     // 로그인: 마스터 계정 무제한
@@ -1669,11 +1844,8 @@ app.post('/api/ai-chat', async (c) => {
     return c.json({ error: 'API 키 미설정' }, 500)
   }
 
-  const systemKo = counselingType === 'biblical'
-    ? `당신은 기독교 상담 전문가입니다. 따뜻하고 공감적인 태도로 상담하세요.
-
-검사 결과 맥락:
-${summary ?? '검사 결과 없음 — 일반적인 마음 돌봄 상담으로 진행하세요.'}${trendContext}${memoryContext}${dailyCtxPart}
+  // 프롬프트 캐싱: 정적 지침(cache_control 마킹) + 동적 검사결과 분리
+  const staticKoBiblical = `당신은 기독교 상담 전문가입니다. 따뜻하고 공감적인 태도로 상담하세요.
 
 상담 원칙:
 - 진단명이나 병명을 절대 단정하지 마세요
@@ -1686,10 +1858,8 @@ ${summary ?? '검사 결과 없음 — 일반적인 마음 돌봄 상담으로 �
 **공감** - 감정을 1~2문장으로 따뜻하게 반영
 **말씀** - 위로가 되는 짧은 성경 구절 1개 (선택)
 **제안** - 지금 바로 할 수 있는 작은 것 1가지`
-    : `당신은 따뜻하고 전문적인 마음 돌봄 상담사입니다.
 
-검사 결과 맥락:
-${summary ?? '검사 결과 없음 — 일반적인 마음 돌봄 상담으로 진행하세요.'}${trendContext}${memoryContext}${dailyCtxPart}
+  const staticKoGeneral = `당신은 따뜻하고 전문적인 마음 돌봄 상담사입니다.
 
 상담 원칙:
 - 진단명이나 병명을 절대 단정하지 마세요 (예: "우울증입니다" 금지)
@@ -1702,6 +1872,21 @@ ${summary ?? '검사 결과 없음 — 일반적인 마음 돌봄 상담으로 �
 **공감** - 감정을 1~2문장으로 따뜻하게 반영
 **탐색** - 마음을 열 수 있는 열린 질문 1개
 **제안** - 지금 바로 실천 가능한 작은 것 1가지`
+
+  const dynamicKo = `검사 결과 맥락:
+${summary ?? (counselingType === 'biblical' ? '검사 결과 없음 — 신앙 안에서의 마음 돌봄 상담으로 진행하세요.' : '검사 결과 없음 — 일반적인 마음 돌봄 상담으로 진행하세요.')}${trendContext}${memoryContext}${dailyCtxPart}`
+
+  const systemContentKo = [
+    {
+      type: 'text' as const,
+      text: counselingType === 'biblical' ? staticKoBiblical : staticKoGeneral,
+      cache_control: { type: 'ephemeral' as const },
+    },
+    {
+      type: 'text' as const,
+      text: dynamicKo,
+    },
+  ]
   const systemEn = `You are a licensed mental health counselor.\n\nTest summary:\n${summary ?? 'N/A'}\n\nAlways reply in this format (under 300 chars):\n**Empathy** - reflect feelings in 1-2 sentences\n**Explore** - one open question\n**Suggest** - one small actionable step`
 
   // messages 기본 검증
@@ -1715,16 +1900,23 @@ ${summary ?? '검사 결과 없음 — 일반적인 마음 돌봄 상담으로 �
     'claude-haiku-4-5-20251001',
     'claude-sonnet-4-6',
   ]
-  const reqBody = { max_tokens: 1500, stream: true, system: lang === 'ko' ? systemKo : systemEn, messages }
+  const reqBody = { max_tokens: 800, stream: true, system: lang === 'ko' ? systemContentKo : systemEn, messages }
 
   let res!: Response
   let usedModel = MODEL_FALLBACKS[0]
   for (const model of [...new Set(MODEL_FALLBACKS)]) {
-    res = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model, ...reqBody }),
-    })
+    let retries = 0
+    while (true) {
+      res = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-beta': 'prompt-caching-2024-07-31' },
+        body: JSON.stringify({ model, ...reqBody }),
+      })
+      const isOverloaded = res.status === 529 || res.status === 500
+      if (res.ok || !isOverloaded || retries >= 2) break
+      retries++
+      await new Promise(r => setTimeout(r, retries * 1500))
+    }
     if (res.ok || (res.status !== 404 && res.status !== 403)) { usedModel = model; break }
     usedModel = model
   }
@@ -2248,7 +2440,7 @@ async function sendEmail(env: Bindings, to: string, subject: string, html: strin
       // 발신자: RESEND_FROM_EMAIL 환경변수 없으면 기본값 사용
       // wrangler secret put RESEND_FROM_EMAIL 으로 등록 (예: noreply@your-domain.com)
       body:    JSON.stringify({
-        from: (env as unknown as Record<string,string>).RESEND_FROM_EMAIL || 'noreply@maumful.kr',
+        from: (env as unknown as Record<string,string>).RESEND_FROM_EMAIL || '마음풀 <noreply@maumful.com>',
         to: [to], subject, html
       }),
     })
@@ -2883,9 +3075,11 @@ app.get('/.well-known/assetlinks.json', (c) => {
 // ============================================================
 app.get('/', (c) => {
   const v = Date.now()
-  const googleClientId = c.env.GOOGLE_CLIENT_ID || ''
-  const gaId           = c.env.GA_MEASUREMENT_ID || ''
-  const naverKey       = c.env.NAVER_SITE_KEY || ''
+  const googleClientId  = c.env.GOOGLE_CLIENT_ID || ''
+  const kakaoAppKey     = c.env.KAKAO_APP_KEY || ''
+  const gaId            = c.env.GA_MEASUREMENT_ID || ''
+  const naverKey        = c.env.NAVER_SITE_KEY || ''
+  const naverClientId   = c.env.NAVER_CLIENT_ID || ''
   const siteUrl        = 'https://maumful.com'
   const res = c.html(`<!DOCTYPE html>
 <html lang="ko">
@@ -2975,6 +3169,9 @@ app.get('/', (c) => {
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   ${googleClientId ? `<script src="https://accounts.google.com/gsi/client" async defer></script>` : ''}
   <script>window.GOOGLE_CLIENT_ID = ${JSON.stringify(googleClientId)};</script>
+  ${kakaoAppKey ? `<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js" crossorigin="anonymous"></script>` : ''}
+  <script>window.KAKAO_APP_KEY = ${JSON.stringify(kakaoAppKey)};</script>
+  <script>window.NAVER_CLIENT_ID = ${JSON.stringify(naverClientId)};</script>
   ${gaId ? `
   <!-- Google Analytics 4 -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=${gaId}"></script>
@@ -3925,6 +4122,138 @@ app.patch('/api/admin/counseling/reviews/:id/visibility', async (c) => {
   return c.json({ success: true })
 })
 
+// ============================================================
+// Web Push 유틸리티 — RFC 8291 (aes128gcm) + VAPID ES256
+// ============================================================
+
+function b64urlDecode(s: string): Uint8Array {
+  const padded = s.replace(/-/g, '+').replace(/_/g, '/') + '=='.slice(0, (4 - s.length % 4) % 4)
+  return Uint8Array.from(atob(padded), c => c.charCodeAt(0))
+}
+
+function b64urlEncode(buf: ArrayBuffer | Uint8Array): string {
+  const bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf)
+  let str = ''
+  for (const b of bytes) str += String.fromCharCode(b)
+  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
+}
+
+function concatBytes(...arrays: Uint8Array[]): Uint8Array {
+  const len = arrays.reduce((s, a) => s + a.length, 0)
+  const out = new Uint8Array(len)
+  let off = 0
+  for (const a of arrays) { out.set(a, off); off += a.length }
+  return out
+}
+
+async function hkdfDerive(ikm: Uint8Array, salt: Uint8Array, info: Uint8Array, length: number): Promise<Uint8Array> {
+  const key  = await crypto.subtle.importKey('raw', ikm, { name: 'HKDF' }, false, ['deriveBits'])
+  const bits = await crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt, info }, key, length * 8)
+  return new Uint8Array(bits)
+}
+
+// RFC 8291 payload 암호화 → aes128gcm 인코딩 바이너리 반환
+async function encryptWebPush(plaintext: string, p256dhB64: string, authB64: string): Promise<Uint8Array> {
+  const enc             = new TextEncoder()
+  const receiverPubRaw  = b64urlDecode(p256dhB64)   // 65 bytes (0x04 + x + y)
+  const authSecret      = b64urlDecode(authB64)       // 16 bytes
+  const salt            = crypto.getRandomValues(new Uint8Array(16))
+
+  // 임시 발신자 ECDH 키 쌍
+  const senderKP       = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits'])
+  const senderPubRaw   = new Uint8Array(await crypto.subtle.exportKey('raw', senderKP.publicKey))
+
+  // ECDH 공유 비밀
+  const receiverKey    = await crypto.subtle.importKey('raw', receiverPubRaw, { name: 'ECDH', namedCurve: 'P-256' }, false, [])
+  const dh             = new Uint8Array(await crypto.subtle.deriveBits({ name: 'ECDH', public: receiverKey }, senderKP.privateKey, 256))
+
+  // PRK = HKDF(salt=authSecret, ikm=dh, info="WebPush: info\0"+ua_pub+as_pub)
+  const keyInfo = concatBytes(enc.encode('WebPush: info\x00'), receiverPubRaw, senderPubRaw)
+  const prk     = await hkdfDerive(dh, authSecret, keyInfo, 32)
+
+  // CEK / NONCE 도출
+  const cek   = await hkdfDerive(prk, salt, concatBytes(enc.encode('Content-Encoding: aes128gcm\x00'), new Uint8Array([0, 1])), 16)
+  const nonce = await hkdfDerive(prk, salt, concatBytes(enc.encode('Content-Encoding: nonce\x00'), new Uint8Array([0, 1])), 12)
+
+  // AES-128-GCM 암호화 (0x02 = record delimiter)
+  const record    = concatBytes(enc.encode(plaintext), new Uint8Array([2]))
+  const cekKey    = await crypto.subtle.importKey('raw', cek, 'AES-GCM', false, ['encrypt'])
+  const ciphertext = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, cekKey, record))
+
+  // RFC 8188 헤더: salt(16) + rs(4) + idlen(1) + senderPub(65) + ciphertext
+  const rs = new Uint8Array(4)
+  new DataView(rs.buffer).setUint32(0, 4096, false)
+  return concatBytes(salt, rs, new Uint8Array([65]), senderPubRaw, ciphertext)
+}
+
+// VAPID JWT (ES256) 서명
+async function signVapidJwt(endpoint: string, vapidPubB64: string, vapidPrivB64: string): Promise<string> {
+  const enc     = new TextEncoder()
+  const origin  = new URL(endpoint).origin
+  const now     = Math.floor(Date.now() / 1000)
+
+  const header  = b64urlEncode(enc.encode(JSON.stringify({ alg: 'ES256', typ: 'JWT' })))
+  const payload = b64urlEncode(enc.encode(JSON.stringify({ aud: origin, exp: now + 43200, sub: 'mailto:noreply@maumful.com' })))
+  const unsigned = `${header}.${payload}`
+
+  // raw 32바이트 private key → JWK (x, y는 public key에서 파싱)
+  const pubBytes  = b64urlDecode(vapidPubB64)   // 65 bytes: 0x04 + 32 x + 32 y
+  const privBytes = b64urlDecode(vapidPrivB64)  // 32 bytes
+  const jwk = {
+    kty: 'EC', crv: 'P-256',
+    x: b64urlEncode(pubBytes.slice(1, 33)),
+    y: b64urlEncode(pubBytes.slice(33, 65)),
+    d: b64urlEncode(privBytes),
+  }
+  const privKey = await crypto.subtle.importKey('jwk', jwk, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign'])
+  const sigBuf  = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, privKey, enc.encode(unsigned))
+
+  return `${unsigned}.${b64urlEncode(new Uint8Array(sigBuf))}`
+}
+
+// Web Push 메시지 단건 발송
+async function sendWebPushMessage(
+  sub: { endpoint: string; p256dh: string; auth_key: string },
+  notification: { title: string; body: string; url?: string },
+  vapidPubB64: string, vapidPrivB64: string
+): Promise<boolean> {
+  try {
+    const encrypted  = await encryptWebPush(JSON.stringify(notification), sub.p256dh, sub.auth_key)
+    const jwt        = await signVapidJwt(sub.endpoint, vapidPubB64, vapidPrivB64)
+    const res = await fetch(sub.endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'Content-Encoding': 'aes128gcm',
+        'Authorization': `vapid t=${jwt},k=${vapidPubB64}`,
+        'TTL': '86400',
+      },
+      body: encrypted,
+    })
+    return res.ok || res.status === 201
+  } catch (e) {
+    console.error('[WebPush] 발송 실패:', e)
+    return false
+  }
+}
+
+// 특정 사용자에게 푸시 알림 발송 (DB에서 구독 정보 조회)
+async function sendPushToUser(
+  db: D1Database, env: Bindings, userId: number,
+  notification: { title: string; body: string; url?: string }
+): Promise<boolean> {
+  const vapidPub  = env.VAPID_PUBLIC_KEY
+  const vapidPriv = env.VAPID_PRIVATE_KEY
+  if (!vapidPub || !vapidPriv) return false
+
+  const sub = await db.prepare(
+    "SELECT endpoint, p256dh, auth_key FROM push_subscriptions WHERE user_id=? AND service='maumful' LIMIT 1"
+  ).bind(userId).first<{ endpoint: string; p256dh: string; auth_key: string }>()
+  if (!sub) return false
+
+  return sendWebPushMessage(sub, notification, vapidPub, vapidPriv)
+}
+
 // ── Web Push: VAPID 공개 키 ────────────────────────────────
 app.get('/api/push/vapid-key', (c) => {
   const key = c.env.VAPID_PUBLIC_KEY || ''
@@ -3960,6 +4289,23 @@ app.post('/api/counseling/onboarding', async (c) => {
     INSERT INTO center_onboarding_requests (user_id,center_name,contact_name,contact_email,contact_phone,address,specialty_tags,description,counselor_count,website_url,business_reg_num)
     VALUES (?,?,?,?,?,?,?,?,?,?,?)
   `).bind(userId || null, center_name, contact_name, contact_email, contact_phone||null, address||null, specialty_tags||'[]', description||null, counselor_count||1, website_url||null, business_reg_num||null).run()
+
+  // 운영자 알림 이메일 발송
+  const notifyEmail = (c.env as unknown as Record<string,string>).COUNSELING_NOTIFY_EMAIL
+  if (notifyEmail) {
+    sendEmail(c.env, notifyEmail, `[마음풀] 상담센터 입점 신청 — ${center_name}`,
+      `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
+        <h2 style="color:#2D6A4F">🌿 상담센터 입점 신청</h2>
+        <p><strong>센터명:</strong> ${center_name}</p>
+        <p><strong>담당자:</strong> ${contact_name}</p>
+        <p><strong>이메일:</strong> ${contact_email}</p>
+        <p><strong>전화:</strong> ${contact_phone || '-'}</p>
+        <p><strong>주소:</strong> ${address || '-'}</p>
+        <p><strong>상담사 수:</strong> ${counselor_count || 1}명</p>
+        <p style="color:#888;font-size:12px">신청 ID: ${r.meta.last_row_id}</p>
+      </div>`
+    ).catch(() => {})
+  }
 
   return c.json({ success: true, data: { request_id: r.meta.last_row_id } })
 })
@@ -4034,15 +4380,61 @@ async function handleScheduled(env: Bindings) {
             .bind(sub.user_id, sub.id, sub.plan_key, plan.price, 'paid', result.paymentKey),
         ])
         console.log(`[Cron] 구독 갱신 성공: user_id=${sub.user_id}, plan=${sub.plan_key}`)
+        // 구독 갱신 성공 푸시 알림
+        sendPushToUser(DB, env, sub.user_id as number, {
+          title: '마음풀 구독 갱신 완료',
+          body: `${plan.name} 플랜이 갱신되고 ${plan.monthlyCredits} 크레딧이 지급됐어요!`,
+          url: '/',
+        }).catch(() => {})
       } else {
         // 결제 실패 — past_due 처리
         await DB.prepare("UPDATE user_subscriptions SET status='past_due' WHERE id=?").bind(sub.id).run()
         await DB.prepare("INSERT INTO subscription_invoices (user_id,subscription_id,plan_key,amount,status) VALUES (?,?,?,?,'failed')")
           .bind(sub.user_id, sub.id, sub.plan_key, plan.price).run()
         console.error(`[Cron] 구독 갱신 실패: user_id=${sub.user_id}, code=${result.code}`)
+        // 구독 갱신 실패 푸시 알림
+        sendPushToUser(DB, env, sub.user_id as number, {
+          title: '마음풀 구독 결제 실패',
+          body: '이번 달 결제에 문제가 생겼어요. 결제 수단을 확인해주세요.',
+          url: '/',
+        }).catch(() => {})
       }
     } catch (e) { console.error('[Cron] 오류:', e) }
   }
+}
+
+// ── Cron: 매일 09:00 KST — 6주 경과 검사 재알림 ────────────
+async function handleDailyReminder(env: Bindings) {
+  const DB       = env.DB
+  const vapidPub = env.VAPID_PUBLIC_KEY
+  if (!vapidPub) return
+
+  // 마지막 검사일이 42일 이상 지난 구독 사용자 조회 (중요 검사 PHQ9/GAD7)
+  const rows = await DB.prepare(`
+    SELECT DISTINCT ps.user_id
+    FROM push_subscriptions ps
+    WHERE ps.service = 'maumful'
+      AND NOT EXISTS (
+        SELECT 1 FROM test_history th
+        WHERE th.user_id = ps.user_id
+          AND th.test_type IN ('PHQ9','GAD7')
+          AND th.performed_at > datetime('now', '-42 days')
+      )
+      AND EXISTS (
+        SELECT 1 FROM test_history th2
+        WHERE th2.user_id = ps.user_id
+          AND th2.test_type IN ('PHQ9','GAD7')
+      )
+  `).all<{ user_id: number }>()
+
+  for (const row of (rows.results || [])) {
+    await sendPushToUser(DB, env, row.user_id, {
+      title: '마음풀 — 마음 체크할 시간이에요',
+      body: '마지막 검사로부터 6주가 지났어요. 지금 마음 상태를 확인해볼까요?',
+      url: '/',
+    }).catch(() => {})
+  }
+  console.log(`[DailyReminder] 재알림 발송: ${rows.results?.length ?? 0}명`)
 }
 
 // ============================================================
@@ -4231,6 +4623,14 @@ app.get('/api/admin/partner-settlement', async (c) => {
   })
 })
 
+// ── POST /api/admin/push/reminder — 6주 재검사 알림 수동 트리거 ─
+app.post('/api/admin/push/reminder', async (c) => {
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+  await handleDailyReminder(c.env)
+  return c.json({ success: true })
+})
+
 // ── POST /api/user/cookie-consent ─────────────────────────
 // 마케팅 쿠키 동의/거부를 KV에 저장 (LocalStorage 보완)
 app.post('/api/user/cookie-consent', async (c) => {
@@ -4255,6 +4655,6 @@ app.get('/api/user/cookie-consent', async (c) => {
 export default {
   fetch: app.fetch.bind(app),
   async scheduled(_event: ScheduledEvent, env: Bindings) {
-    await handleScheduled(env)
+    await handleScheduled(env)  // 월 1일: 구독 자동 갱신 + 푸시 알림
   },
 }

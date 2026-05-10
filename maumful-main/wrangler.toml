@@ -15,5 +15,8 @@ database_id   = "f8046693-876a-4ae4-b734-20c515f9994f"
 binding = "KV"
 id      = "9f7426807e924916be4dec75793422d9"
 
+[vars]
+SERVICE_URL = "https://maumful.com"
+
 [triggers]
 crons = ["0 0 1 * *"]

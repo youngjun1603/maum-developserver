@@ -627,6 +627,7 @@ function NearbyMapModal({onClose, affiliatedCounselors=[]}){
       const s=document.createElement('script');
       s.src=`//dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_JS_KEY}&autoload=false`;
       s.onload=loadMap;
+      s.onerror=()=>{setError('지도를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.');setLoading(false);};
       document.head.appendChild(s);
     }
   },[]);
@@ -705,7 +706,11 @@ function NearbyMapModal({onClose, affiliatedCounselors=[]}){
 // ============================================================
 // CounselingPage — 메인 페이지
 // ============================================================
-function CounselingPage({setView,isLoggedIn,currentUser}){
+// ============================================================
+// _CounselingPageBooking — 예약·결제 통합 버전 (향후 재활성화용)
+// 현재 비활성: 소개 전용 CounselingPage 사용 중
+// ============================================================
+function _CounselingPageBooking({setView,isLoggedIn,currentUser}){
   const {useState:useS,useEffect:useE}=React;
   const [centers,setCenters]=useS([]);
   const [counselors,setCounselors]=useS([]);
@@ -999,6 +1004,264 @@ function CounselingPage({setView,isLoggedIn,currentUser}){
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ============================================================
+// CounselingPage — 인근 상담센터·병원 지도 표시
+// Kakao Maps SDK + /api/nearby-counseling (카카오 로컬 API)
+// ============================================================
+function CounselingPage({setView}){
+  const {useState:useS, useEffect:useE, useRef} = React;
+  const mapContainerRef = useRef(null);
+  const mapInstanceRef  = useRef(null);
+  const s = {fontFamily:"'Noto Sans KR',sans-serif"};
+
+  // phase: init | loading | done | nogeo | error | nokey
+  const [phase, setPhase]         = useS('init');
+  const [places, setPlaces]       = useS([]);
+  const [userPos, setUserPos]     = useS(null);
+  const [activeFilter, setFilter] = useS('all');
+
+  const CATS = {
+    psych:  { label:'정신건강의학과',   color:'#0284C7', bg:'#EFF6FF', border:'#BAE6FD', emoji:'🧠' },
+    center: { label:'정신건강복지센터', color:'#D97706', bg:'#FFFBEB', border:'#FCD34D', emoji:'🏢' },
+    counsel:{ label:'심리상담센터',     color:'#2D6A4F', bg:'#F0FDF4', border:'#86EFAC', emoji:'🏥' },
+  };
+
+  const getCat = (p) => {
+    const c = p.category_name || '';
+    if (c.includes('정신건강의학과') || c.includes('정신과')) return CATS.psych;
+    if (c.includes('복지센터') || c.includes('정신건강센터')) return CATS.center;
+    return CATS.counsel;
+  };
+
+  const HOTLINES = [
+    { name:'자살예방상담전화',      tel:'109',       desc:'24시간 무료 · 보건복지부', color:'#EF4444', bg:'#FEF2F2', border:'#FCA5A5' },
+    { name:'정신건강위기상담전화',   tel:'1577-0199', desc:'24시간 무료 · 전국 연결',  color:'#3B82F6', bg:'#EFF6FF', border:'#BFDBFE' },
+    { name:'청소년상담전화',        tel:'1388',      desc:'24시간 무료 · 여성가족부', color:'#8B5CF6', bg:'#F5F3FF', border:'#C4B5FD' },
+  ];
+
+  // 1. Kakao Maps SDK 로드
+  useE(() => {
+    if (!window.KAKAO_APP_KEY) { setPhase('nokey'); return; }
+    setPhase('loading');
+    if (window.kakao && window.kakao.maps) { initGeo(); return; }
+    const sc = document.createElement('script');
+    sc.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${window.KAKAO_APP_KEY}&libraries=services&autoload=false`;
+    sc.onload  = () => window.kakao.maps.load(initGeo);
+    sc.onerror = () => setPhase('error');
+    document.head.appendChild(sc);
+  }, []);
+
+  // 2. 위치 권한 요청
+  const initGeo = () => {
+    if (!navigator.geolocation) { setPhase('nogeo'); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const lat = pos.coords.latitude, lng = pos.coords.longitude;
+        setUserPos({lat, lng});
+        fetchPlaces(lat, lng);
+      },
+      () => setPhase('nogeo'),
+      { timeout: 10000 }
+    );
+  };
+
+  // 3. 주변 기관 조회
+  const fetchPlaces = async (lat, lng) => {
+    try {
+      const r = await fetch(`/api/nearby-counseling?lat=${lat}&lng=${lng}&radius=3000`);
+      const d = await r.json();
+      setPlaces(d.external || []);
+      setPhase('done');
+    } catch { setPhase('error'); }
+  };
+
+  // 4. 지도 초기화 (phase=done 후 DOM 렌더링 완료 시점)
+  useE(() => {
+    if (phase !== 'done' || !userPos || !mapContainerRef.current) return;
+    const {kakao} = window;
+    const map = new kakao.maps.Map(mapContainerRef.current, {
+      center: new kakao.maps.LatLng(userPos.lat, userPos.lng),
+      level: 5,
+    });
+    mapInstanceRef.current = map;
+
+    // 내 위치 표시
+    new kakao.maps.CustomOverlay({
+      map,
+      position: new kakao.maps.LatLng(userPos.lat, userPos.lng),
+      content: '<div style="background:#1B4332;color:white;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.3)">📍 내 위치</div>',
+      yAnchor: 1.6,
+    });
+
+    // 기관 핀 표시
+    places.forEach(p => {
+      const cat = getCat(p);
+      new kakao.maps.CustomOverlay({
+        map,
+        position: new kakao.maps.LatLng(Number(p.y), Number(p.x)),
+        content: `<div style="background:${cat.color};color:white;padding:3px 8px;border-radius:10px;font-size:10px;font-weight:700;white-space:nowrap;box-shadow:0 2px 4px rgba(0,0,0,.2);cursor:pointer">${cat.emoji} ${p.place_name}</div>`,
+        yAnchor: 1.5,
+      });
+    });
+  }, [phase, userPos, places]);
+
+  // 검색 버튼 폴백 (위치 권한 없거나 키 없을 때)
+  const SearchFallback = () => (
+    <div style={{padding:'28px 16px 0'}}>
+      <div style={{background:'#FEF3C7', border:'1px solid #FCD34D', borderRadius:12, padding:'12px 14px', marginBottom:20, fontSize:13, color:'#92400E', ...s}}>
+        {phase === 'nogeo'
+          ? '📍 위치 권한을 허용하면 지도에서 바로 확인할 수 있습니다. 아래 버튼으로 카카오맵에서 검색하세요.'
+          : '🔍 카카오맵에서 주변 상담 기관을 검색해 보세요.'}
+      </div>
+      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8}}>
+        {[{q:'심리상담센터',e:'🏥'},{q:'정신건강의학과',e:'🧠'},{q:'정신건강복지센터',e:'🏢'},{q:'청소년상담복지센터',e:'👨‍👩‍👧'}].map(({q,e})=>(
+          <button key={q} onClick={()=>window.open(`https://map.kakao.com/?q=${encodeURIComponent(q)}`,'_blank','noopener')}
+            style={{...s, padding:'12px 8px', background:'white', border:'1px solid #E5E7EB', borderRadius:12,
+              cursor:'pointer', fontSize:12, fontWeight:600, color:'#374151'}}>
+            {e} {q}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const filtered = activeFilter === 'all'
+    ? places
+    : places.filter(p => getCat(p).label === activeFilter);
+
+  return (
+    <div style={{...s, minHeight:'100vh', background:'#F8FAF9', paddingBottom:48}}>
+      <div style={{maxWidth:640, margin:'0 auto'}}>
+
+        {/* 헤더 */}
+        <div style={{padding:'16px 16px 12px'}}>
+          <button onClick={()=>setView('landing')}
+            style={{...s, background:'none', border:'none', color:'#9A9A9A', fontSize:14, cursor:'pointer', marginBottom:10, display:'flex', alignItems:'center', gap:4}}>
+            ← 홈으로
+          </button>
+          <h1 style={{...s, fontSize:20, fontWeight:700, color:'#1A1A1A', marginBottom:3}}>🏥 인근 상담 기관 찾기</h1>
+          <p style={{...s, fontSize:13, color:'#6B7280'}}>내 위치 기준 3km 이내 심리상담센터·정신건강의학과·복지센터</p>
+        </div>
+
+        {/* 지도 */}
+        {(phase === 'init' || phase === 'loading') && (
+          <div style={{height:320, background:'#E5E7EB', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:10}}>
+            <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+            <div style={{width:32, height:32, border:'3px solid #2D6A4F', borderTopColor:'transparent', borderRadius:'50%', animation:'spin .8s linear infinite'}}/>
+            <p style={{...s, fontSize:13, color:'#6B7280'}}>위치 확인 중...</p>
+          </div>
+        )}
+        {phase === 'done' && (
+          <div ref={mapContainerRef} style={{width:'100%', height:340}}/>
+        )}
+        {(phase === 'nogeo' || phase === 'error' || phase === 'nokey') && (
+          <SearchFallback/>
+        )}
+
+        {/* 카테고리 필터 */}
+        {phase === 'done' && places.length > 0 && (
+          <div style={{padding:'10px 16px', display:'flex', gap:7, overflowX:'auto'}}>
+            {[
+              {key:'all', label:`전체 (${places.length})`, color:'#374151', bg:'#F3F4F6', border:'#D1D5DB'},
+              ...Object.values(CATS).map(c=>({
+                key: c.label,
+                label: `${c.emoji} ${c.label} (${places.filter(p=>getCat(p).label===c.label).length})`,
+                color: c.color, bg: c.bg, border: c.border,
+              }))
+            ].map(f=>(
+              <button key={f.key} onClick={()=>setFilter(f.key)}
+                style={{...s, padding:'6px 13px', borderRadius:100, border:`1.5px solid ${activeFilter===f.key ? f.color : '#E5E7EB'}`,
+                  background: activeFilter===f.key ? f.bg : 'white',
+                  color: activeFilter===f.key ? f.color : '#6B7280',
+                  fontWeight: activeFilter===f.key ? 700 : 400,
+                  fontSize:11, cursor:'pointer', whiteSpace:'nowrap', flexShrink:0}}>
+                {f.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* 기관 목록 */}
+        {phase === 'done' && (
+          <div style={{padding:'4px 16px 0'}}>
+            {filtered.length === 0
+              ? <div style={{...s, textAlign:'center', padding:'24px 0', color:'#9A9A9A', fontSize:13}}>해당 카테고리 기관이 없습니다</div>
+              : filtered.map(p => {
+                const cat = getCat(p);
+                const dist = p.distance >= 1000 ? `${(p.distance/1000).toFixed(1)}km` : `${p.distance}m`;
+                return (
+                  <div key={p.id} style={{background:'white', border:'1px solid #E5E7EB', borderLeft:`4px solid ${cat.color}`,
+                    borderRadius:14, padding:'14px 16px', marginBottom:9, display:'flex', alignItems:'flex-start', gap:12}}>
+                    <div style={{fontSize:22, width:40, height:40, background:cat.bg, borderRadius:10,
+                      display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>{cat.emoji}</div>
+                    <div style={{flex:1, minWidth:0}}>
+                      <div style={{display:'flex', alignItems:'center', gap:6, marginBottom:4, flexWrap:'wrap'}}>
+                        <span style={{...s, fontSize:14, fontWeight:700, color:'#1A1A1A'}}>{p.place_name}</span>
+                        <span style={{fontSize:10, fontWeight:700, padding:'2px 7px', borderRadius:100, background:cat.bg, color:cat.color, flexShrink:0}}>{cat.label}</span>
+                      </div>
+                      <div style={{...s, fontSize:12, color:'#6B7280', marginBottom:8}}>
+                        📍 {p.road_address_name || p.address_name}&nbsp;·&nbsp;
+                        <span style={{color:cat.color, fontWeight:600}}>{dist}</span>
+                      </div>
+                      <div style={{display:'flex', gap:7, flexWrap:'wrap'}}>
+                        {p.phone && (
+                          <a href={`tel:${p.phone.replace(/-/g,'')}`}
+                            style={{...s, fontSize:12, fontWeight:700, color:'white', background:cat.color,
+                              padding:'5px 13px', borderRadius:8, textDecoration:'none'}}>
+                            📞 {p.phone}
+                          </a>
+                        )}
+                        {p.place_url && (
+                          <a href={p.place_url} target="_blank" rel="noopener noreferrer"
+                            style={{...s, fontSize:12, fontWeight:600, color:cat.color,
+                              background:cat.bg, padding:'5px 13px', borderRadius:8,
+                              textDecoration:'none', border:`1px solid ${cat.border}`}}>
+                            지도 보기
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            }
+          </div>
+        )}
+
+        {/* 안내 문구 */}
+        {phase === 'done' && (
+          <div style={{...s, margin:'8px 16px 16px', background:'#ECFDF5', border:'1px solid #6EE7B7',
+            borderRadius:11, padding:'10px 14px', fontSize:12, color:'#065F46', lineHeight:1.7}}>
+            ℹ️ 상담 예약과 비용 결제는 각 기관에 직접 문의해 주세요. 마음풀은 정보 안내만 제공합니다.
+          </div>
+        )}
+
+        {/* 무료 상담전화 */}
+        <div style={{padding:'8px 16px 0'}}>
+          <h2 style={{...s, fontSize:14, fontWeight:700, color:'#374151', marginBottom:10}}>📞 24시간 무료 상담전화</h2>
+          <div style={{display:'flex', flexDirection:'column', gap:8}}>
+            {HOTLINES.map(h => (
+              <div key={h.name} style={{background:h.bg, border:`1px solid ${h.border}`, borderRadius:12,
+                padding:'12px 16px', display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+                <div>
+                  <div style={{...s, fontSize:13, fontWeight:700, color:'#1A1A1A'}}>{h.name}</div>
+                  <div style={{...s, fontSize:11, color:'#6B7280', marginTop:2}}>{h.desc}</div>
+                </div>
+                <a href={`tel:${h.tel.replace(/-/g,'')}`}
+                  style={{...s, background:h.color, color:'white', fontWeight:700, fontSize:15,
+                    padding:'7px 16px', borderRadius:10, textDecoration:'none', whiteSpace:'nowrap', flexShrink:0}}>
+                  {h.tel}
+                </a>
+              </div>
+            ))}
+          </div>
+        </div>
+
+      </div>
     </div>
   );
 }
