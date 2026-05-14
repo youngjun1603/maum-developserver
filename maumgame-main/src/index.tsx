@@ -567,7 +567,7 @@ app.post('/api/game/campaign/claim', async (c) => {
     'INSERT OR IGNORE INTO game_campaign_progress (user_id, chapter_id) VALUES (?,?)'
   ).bind(userId, chapter_id).run()
 
-  if (result.changes === 0) {
+  if ((result.meta?.changes ?? 0) === 0) {
     return c.json({ success: false, error: '이미 보상을 받으셨어요', errorCode: 'already_claimed' }, 400)
   }
 
@@ -999,6 +999,68 @@ app.get('/api/game/emotion-report', async (c) => {
     return c.json({ success: true, data: { report, entries, cached: false } })
   } catch (e: unknown) {
     return c.json({ success: false, error: (e as Error)?.message || '실패' }, 500)
+  }
+})
+
+// ── GET /api/game/sessions ────────────────────────────────
+// 최근 게임 세션 이력 조회
+app.get('/api/game/sessions', async (c) => {
+  const { DB } = c.env
+  const userId = await getGameUserId(c.req.raw, c.env)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+
+  const limit = Math.min(50, parseInt(c.req.query('limit') || '20'))
+  const rows = await DB.prepare(
+    `SELECT game_id, module_type, score, exp_gained, duration_sec, created_at
+     FROM game_session_logs WHERE user_id=? ORDER BY created_at DESC LIMIT ?`
+  ).bind(userId, limit).all<{ game_id: string; module_type: string; score: number; exp_gained: number; duration_sec: number; created_at: string }>()
+
+  return c.json({ success: true, data: rows.results || [] })
+})
+
+// ── POST /api/game/session-feedback ───────────────────────
+// 게임 완료 후 AI 격려 메시지 (일 1회·게임별 캐시)
+app.post('/api/game/session-feedback', async (c) => {
+  const { DB } = c.env
+  const userId = await getGameUserId(c.req.raw, c.env)
+  if (!userId) return c.json({ success: true, data: { feedback: '' } })
+
+  const { game_id, score, module_type } = await c.req.json() as { game_id: string; score: number; module_type?: string }
+  const todayKST = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10)
+  const cacheKey = `sfb_${game_id}_${todayKST}`
+
+  const cached = await DB.prepare(
+    `SELECT result_text FROM game_ai_cache WHERE user_id=? AND source_text=? LIMIT 1`
+  ).bind(userId, cacheKey).first<{ result_text: string }>().catch(() => null)
+  if (cached) return c.json({ success: true, data: { feedback: cached.result_text, cached: true } })
+
+  const apiKey = c.env.ANTHROPIC_API_KEY
+  if (!apiKey) return c.json({ success: true, data: { feedback: '' } })
+
+  const GAME_NAMES: Record<string, string> = {
+    mood:'감정 수채화', garden:'마음의 정원', efmt:'감정꽃', gratitude:'감사 일기',
+    burnout:'번아웃 회복', focus:'집중력 훈련', worry:'걱정 풍선', tree:'마음 나무',
+  }
+  const gameName = GAME_NAMES[game_id] || game_id
+  const scoreText = score > 0 ? `${score}점` : '완료'
+  const prompt = `사용자가 '${gameName}' 치유 게임을 ${scoreText}으로 완료했습니다. 따뜻하고 짧은 격려 메시지를 2문장으로 작성하세요. 비임상적 언어만 사용, 진단명 금지.`
+
+  try {
+    const aiRes = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 120,
+        messages: [{ role: 'user', content: prompt }] })
+    })
+    const aiData = await aiRes.json() as any
+    const feedback = (aiData?.content?.[0]?.text || '').trim()
+    if (feedback) {
+      DB.prepare(`INSERT INTO game_ai_cache (user_id, source_text, result_text, game_id) VALUES (?,?,?,?)`)
+        .bind(userId, cacheKey, feedback, game_id).run().catch(() => {})
+    }
+    return c.json({ success: true, data: { feedback, cached: false } })
+  } catch {
+    return c.json({ success: true, data: { feedback: '' } })
   }
 })
 
