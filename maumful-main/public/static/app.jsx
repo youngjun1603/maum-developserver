@@ -4571,6 +4571,7 @@ function PsychologicalTestSystem() {
     const [selected, setSelected]   = useS(pkgs[1].key); // 표준 기본선택
     const [loading,  setLoading]    = useS(false);
     const [errMsg,   setErrMsg]     = useS('');
+    const [billingCycle, setBillingCycle] = useS('monthly'); // 'monthly' | 'annual'
     const selPkg = pkgs.find(p => p.key === selected);
 
     const handlePay = async () => {
@@ -4744,21 +4745,43 @@ function PsychologicalTestSystem() {
             {/* ── 멤버십 플랜 탭 ── */}
             {activeTab === 'plans' && (<>
               <div style={{ background:'#FFF8E7', borderRadius:12, padding:'10px 14px',
-                marginBottom:16, border:'1px solid #FDE68A', fontSize:12, color:'#92400E' }}>
+                marginBottom:12, border:'1px solid #FDE68A', fontSize:12, color:'#92400E' }}>
                 🚀 사업자 등록 완료 후 정식 오픈 예정입니다. 관심 등록하시면 오픈 시 알려드려요!
+              </div>
+              <div style={{ display:'flex', justifyContent:'center', marginBottom:14 }}>
+                <div style={{ background:'#F3F4F6', borderRadius:12, padding:3, display:'inline-flex', gap:2 }}>
+                  {[['monthly','월간'],['annual','연간 🎉 20% 할인']].map(([cyc, lbl]) => (
+                    <button key={cyc} onClick={() => setBillingCycle(cyc)} style={{
+                      padding:'6px 14px', borderRadius:10, fontSize:12, fontWeight:700, border:'none', cursor:'pointer', fontFamily:F,
+                      background: billingCycle===cyc ? 'white' : 'transparent',
+                      color: billingCycle===cyc ? '#1F2937' : '#9CA3AF',
+                      boxShadow: billingCycle===cyc ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    }}>{lbl}</button>
+                  ))}
+                </div>
               </div>
               {[
                 {
-                  name: '마음풀 Plus', price: isKorea ? '월 5,900원' : '$5.99/mo',
+                  name: '마음풀 Plus', priceKrw: 5900, priceUsd: 5.99,
                   color: '#2D6A4F', colorL: '#F0FAF4', emoji: '🧠',
                   features: ['월 100 크레딧 지급', 'AI 채팅 무제한', '검사 이력 무제한 보관', '우선 고객 지원'],
                 },
                 {
-                  name: '마음커플 Plus', price: isKorea ? '월 9,900원' : '$9.99/mo',
+                  name: '마음커플 Plus', priceKrw: 9900, priceUsd: 9.99,
                   color: '#B5556A', colorL: '#FCF0F3', emoji: '💕',
                   features: ['월 150 크레딧 지급', '월 1회 커플 리포트 포함', 'AI 관계 코치 무제한', '데이트 코스 무제한'],
                 },
-              ].map(plan => (
+              ].map(plan => {
+                const isAnnual = billingCycle === 'annual';
+                const monthlyKrw = isAnnual ? Math.round(plan.priceKrw * 0.8) : plan.priceKrw;
+                const monthlyUsd = isAnnual ? Math.round(plan.priceUsd * 0.8 * 100) / 100 : plan.priceUsd;
+                const priceLabel = isKorea
+                  ? `월 ${monthlyKrw.toLocaleString('ko-KR')}원`
+                  : `$${monthlyUsd.toFixed(2)}/mo`;
+                const billingLabel = isAnnual
+                  ? (isKorea ? `연 ${(monthlyKrw*12).toLocaleString('ko-KR')}원 일시결제` : `$${(monthlyUsd*12).toFixed(2)}/yr`)
+                  : '월 자동 결제';
+                return (
                 <div key={plan.name} style={{
                   borderRadius:16, border:`2px solid ${plan.color}22`,
                   marginBottom:14, overflow:'hidden', fontFamily:F,
@@ -4770,8 +4793,13 @@ function PsychologicalTestSystem() {
                       <div style={{ fontSize:17, fontWeight:800 }}>{plan.name}</div>
                     </div>
                     <div style={{ textAlign:'right' }}>
-                      <div style={{ fontSize:18, fontWeight:800 }}>{plan.price}</div>
-                      <div style={{ fontSize:10, opacity:0.8, marginTop:2 }}>월 자동 결제</div>
+                      <div style={{ fontSize:18, fontWeight:800 }}>{priceLabel}</div>
+                      <div style={{ fontSize:10, opacity:0.8, marginTop:2 }}>{billingLabel}</div>
+                      {isAnnual && (
+                        <div style={{ fontSize:10, background:'rgba(255,255,255,0.25)', borderRadius:6, padding:'1px 6px', marginTop:3 }}>
+                          {isKorea ? `월 ${plan.priceKrw.toLocaleString()}원 대비 20% 절약` : `vs $${plan.priceUsd}/mo save 20%`}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div style={{ background:plan.colorL, padding:'12px 18px' }}>
@@ -4795,9 +4823,9 @@ function PsychologicalTestSystem() {
                     </button>
                   </div>
                 </div>
-              ))}
+              ); })}
               <div style={{ fontSize:11, color:'#9CA3AF', marginTop:4, lineHeight:1.8 }}>
-                <div>* 구독 플랜은 사업자 등록 후 정식 출시됩니다</div>
+                <div>* 구독 플랜은 토스페이먼츠 심사 완료 후 정식 출시됩니다</div>
                 <div>* 모든 금액은 부가가치세(VAT 10%) 포함 가격입니다</div>
                 <div>* 만 19세 미만 미성년자의 구독 결제는 법정대리인 동의가 필요합니다 (민법 제5조)</div>
               </div>
@@ -7041,8 +7069,22 @@ function PsychologicalTestSystem() {
             {plan && !loading && (
               <>
                 {plan.summary && (
-                  <div className="px-4 py-3 bg-emerald-50 text-xs text-emerald-700 leading-relaxed border-b border-emerald-100">
-                    {plan.summary}
+                  <div className="px-4 py-3 bg-emerald-50 border-b border-emerald-100">
+                    <div className="text-xs text-emerald-700 leading-relaxed mb-2">{plan.summary}</div>
+                    {plan.scores && Object.keys(plan.scores).length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {Object.entries(plan.scores).map(([type, score]) => {
+                          const cMap = { PHQ9:'#0EA5E9', GAD7:'#8B5CF6', BURNOUT:'#F97316', DASS21:'#EC4899' };
+                          const nMap = { PHQ9:'우울', GAD7:'불안', BURNOUT:'번아웃', DASS21:'스트레스' };
+                          const c = cMap[type] || '#6B7280';
+                          return (
+                            <span key={type} style={{ background:`${c}18`, border:`1px solid ${c}35`, borderRadius:6, padding:'2px 7px', fontSize:10, color:c, fontWeight:700 }}>
+                              {nMap[type]||type} {score}점
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 )}
                 <div className="divide-y divide-gray-50">
@@ -7075,8 +7117,12 @@ function PsychologicalTestSystem() {
                                 onClick={() => onPlay && onPlay(wk.game)}
                                 className="w-full bg-emerald-50 hover:bg-emerald-100 rounded-xl px-3 py-2 text-left transition"
                               >
-                                <div className="text-xs font-bold text-emerald-700 mb-0.5">추천 게임</div>
+                                <div className="flex items-center justify-between">
+                                  <div className="text-xs font-bold text-emerald-700 mb-0.5">추천 게임</div>
+                                  <div className="text-xs text-emerald-400">▶ 시작</div>
+                                </div>
                                 <div className="text-xs text-emerald-800">{GAME_NAMES[wk.game]}</div>
+                                <div className="text-xs text-emerald-500 mt-0.5 opacity-70">검사 결과 기반 · {wk.week}주차 맞춤</div>
                               </button>
                             )}
                             {wk.tip && (
@@ -7104,6 +7150,42 @@ function PsychologicalTestSystem() {
           </div>
         )}
       </div>
+    );
+  }
+
+  function TrendSparkline({ data, predicted, testType }) {
+    if (!data || data.length < 2) return null;
+    const allS = [...data.map(d => d.score), predicted];
+    const maxS = Math.max(...allS, 10);
+    const minS = Math.max(0, Math.min(...allS) - 5);
+    const rng = maxS - minS || 10;
+    const W = 255, H = 60, LX = 28, TY = 8;
+    const cols = { PHQ9:'#0EA5E9', GAD7:'#8B5CF6', BURNOUT:'#F97316' };
+    const col = cols[testType] || '#0EA5E9';
+    const toX = (i) => LX + (i / data.length) * W;
+    const toY = (s) => TY + ((maxS - s) / rng) * H;
+    const pts = data.map((d, i) => ({ x: toX(i), y: toY(d.score), s: d.score, date: d.performed_at }));
+    const predX = toX(data.length), predY = toY(predicted);
+    const pathD = pts.map((p, i) => `${i===0?'M':'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+    return (
+      React.createElement('svg', { viewBox:'0 0 300 88', width:'100%', height:'80', style:{ display:'block', marginTop:8, marginBottom:2 } },
+        [0.25, 0.5, 0.75].map(t =>
+          React.createElement('line', { key:t, x1:LX, x2:LX+W+18, y1:TY+t*H, y2:TY+t*H, stroke:'#E0F2FE', strokeWidth:1 })
+        ),
+        React.createElement('path', { d:pathD, fill:'none', stroke:col, strokeWidth:'2.5', strokeLinejoin:'round' }),
+        React.createElement('line', { x1:pts[pts.length-1].x, y1:pts[pts.length-1].y, x2:predX, y2:predY,
+          stroke:col, strokeWidth:'1.5', strokeDasharray:'4,3', opacity:'0.5' }),
+        pts.map((p, i) =>
+          React.createElement(React.Fragment, { key:i },
+            React.createElement('circle', { cx:p.x, cy:p.y, r:4, fill:col }),
+            React.createElement('text', { x:p.x, y:p.y-8, textAnchor:'middle', fontSize:9, fill:'#475569' }, p.s),
+            (i===0 || i===pts.length-1) && React.createElement('text', { x:p.x, y:86, textAnchor:'middle', fontSize:8, fill:'#94A3B8' }, p.date.slice(5,10))
+          )
+        ),
+        React.createElement('circle', { cx:predX, cy:predY, r:5, fill:'white', stroke:col, strokeWidth:2, opacity:'0.8' }),
+        React.createElement('text', { x:predX, y:predY-9, textAnchor:'middle', fontSize:9, fill:col, fontWeight:'700' }, predicted+'?'),
+        React.createElement('text', { x:predX, y:86, textAnchor:'middle', fontSize:8, fill:col, opacity:'0.8' }, '예측')
+      )
     );
   }
 
@@ -7161,6 +7243,7 @@ function PsychologicalTestSystem() {
                     )}
                   </div>
                 </div>
+                <TrendSparkline data={pred.data} predicted={pred.predicted} testType={testType} />
                 <button onClick={onStartTest}
                   className="w-full mt-1 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-xl text-xs font-bold transition">
                   📋 {labelMap[testType]} 재검사하기

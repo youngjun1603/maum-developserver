@@ -1813,9 +1813,12 @@ app.post('/api/ai-chat', async (c) => {
     }
     // 현재 대화 저장 (4번 이상 주고받은 경우 — 이 요청 이전의 히스토리 기반)
     if (messages.length >= 4) {
-      const userPts = (messages as Array<{role:string;content:string}>)
-        .filter(m => m.role === 'user').slice(-3)
-        .map(m => String(m.content).slice(0, 100))
+      const msgArr = messages as Array<{role:string;content:string}>
+      const userPts = msgArr
+        .filter(m => m.role === 'user').slice(-5)
+        .map(m => String(m.content).slice(0, 120))
+      const lastAi = msgArr.filter(m => m.role === 'assistant').slice(-1)[0]
+      if (lastAi) userPts.push(`[AI요약] ${String(lastAi.content).slice(0, 200)}`)
       const updated = { ...(memStore || {}), [typeKey]: { date: today, points: userPts } }
       const saveP = KV.put(memKey, JSON.stringify(updated), { expirationTtl: 30 * 86400 })
       try { c.executionCtx.waitUntil(saveP) } catch { saveP.catch(() => {}) }
