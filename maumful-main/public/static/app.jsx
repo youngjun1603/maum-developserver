@@ -2122,6 +2122,17 @@ function PsychologicalTestSystem() {
     }
   }
 
+  async function processRefund(chargeId) {
+    if (!confirm(`결제 ID ${chargeId} 환불 처리하시겠습니까?\n크레딧이 회수되고 PG 취소는 별도 처리가 필요합니다.`)) return;
+    const r = await adminFetch(`/api/admin/payments/${chargeId}/refund`, { method: 'POST' });
+    if (r.success) {
+      setAdminMsg({ type:'success', text: r.message });
+      loadAdminPayments();
+    } else {
+      setAdminMsg({ type:'error', text: r.error });
+    }
+  }
+
   // ============================================================
   // 기존 검사 로직 유지용 함수들 (하위 호환)
   // ============================================================
@@ -8790,6 +8801,12 @@ function PsychologicalTestSystem() {
             }}
           />
           <ShareResultButton text={`✍️ SRCI 자기반응완성 검사 결과\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #심리검사`} />
+          <button
+            onClick={() => generateSctPdf({ sessionId, createdAt: new Date().toISOString(), userPhone: userInfo?.phone, responses: srciResponses })}
+            className="w-full mb-3 py-3 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-bold transition flex items-center justify-center gap-2"
+          >
+            📄 PDF 보고서 다운로드
+          </button>
           <RecoveryCard testType="SCT" score={0} level="low" />
           <ExpertCTA testType="SCT" score={0} level="low"
             onContinueAI={() => { setChatOpen(true); window.scrollTo(0,document.body.scrollHeight); }} />
@@ -8879,6 +8896,12 @@ function PsychologicalTestSystem() {
             }}
           />
           <ShareResultButton text={`🪞 SDRI 자기분화 검사 결과\n총점: ${calcSdri().total}점\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #심리검사`} />
+          <button
+            onClick={() => generateDsiPdf({ sessionId, createdAt: new Date().toISOString(), userPhone: userInfo?.phone, scales, total })}
+            className="w-full mb-3 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition flex items-center justify-center gap-2"
+          >
+            📄 PDF 보고서 다운로드
+          </button>
           <RecoveryCard testType="DSI" score={0} level="low" />
           <ExpertCTA testType="DSI" score={0} level="low"
             onContinueAI={() => { setChatOpen(true); window.scrollTo(0,document.body.scrollHeight); }} />
@@ -9688,6 +9711,222 @@ function PsychologicalTestSystem() {
             </button>
           )}
         </div>
+      </div>
+    );
+  }
+
+  // ── 관리자 대시보드 ─────────────────────────────────────────
+  if (view === 'admin') {
+    const S = { card:'bg-white rounded-xl border border-gray-100 shadow-sm p-5', tabBtn:(active) => `px-4 py-2 text-sm font-semibold rounded-lg transition ${active?'bg-indigo-600 text-white':'bg-gray-100 text-gray-600 hover:bg-gray-200'}` };
+    if (!adminAuthenticated) {
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-sm">
+            <div className="text-center mb-6">
+              <div className="text-3xl mb-2">🔐</div>
+              <h1 className="text-xl font-bold text-gray-800">관리자 로그인</h1>
+            </div>
+            <input type="password" placeholder="관리자 비밀번호"
+              value={adminSecretInput} onChange={e => setAdminSecretInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && (setAdminAuthenticated(true), loadAdminOverview())}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+            <button onClick={() => { setAdminAuthenticated(true); loadAdminOverview(); }}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold transition">
+              로그인
+            </button>
+            <button onClick={() => setView('memberDashboard')} className="w-full text-sm text-gray-400 hover:text-gray-600 mt-3 text-center">← 돌아가기</button>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+          <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🛠️</span>
+              <span className="font-bold text-gray-800">마음풀 관리자</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {adminLoading && <div className="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />}
+              <button onClick={() => setView('memberDashboard')} className="text-sm text-gray-500 hover:text-gray-700 px-3 py-1.5 bg-gray-100 rounded-lg">← 대시보드</button>
+            </div>
+          </div>
+        </header>
+        <main className="max-w-5xl mx-auto px-4 py-6">
+          {adminMsg.text && (
+            <div className={`mb-4 px-4 py-3 rounded-xl text-sm font-medium ${adminMsg.type==='success'?'bg-emerald-50 text-emerald-700 border border-emerald-200':'bg-red-50 text-red-700 border border-red-200'}`}>
+              {adminMsg.text}
+              <button onClick={() => setAdminMsg({type:'',text:''})} className="ml-3 opacity-60 hover:opacity-100">✕</button>
+            </div>
+          )}
+          <div className="flex gap-2 mb-6 flex-wrap">
+            {[['overview','📊 개요'],['users','👥 사용자'],['payments','💳 결제'],['tests','📋 검사']].map(([tab, label]) => (
+              <button key={tab} onClick={() => { setAdminTab(tab); if(tab==='overview') loadAdminOverview(); else if(tab==='users') loadAdminUsers(); else if(tab==='payments') loadAdminPayments(); }}
+                className={S.tabBtn(adminTab===tab)}>{label}</button>
+            ))}
+          </div>
+
+          {adminTab === 'overview' && adminStats && (
+            <div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                {[
+                  { label:'총 가입자', val:adminStats.users?.total?.toLocaleString(), sub:`오늘 +${adminStats.users?.today}`, color:'text-indigo-600' },
+                  { label:'이번달 매출', val:`₩${adminStats.revenue?.monthly?.toLocaleString()}`, sub:`결제 ${adminStats.payments?.monthly}건`, color:'text-emerald-600' },
+                  { label:'총 검사 수', val:adminStats.tests?.total?.toLocaleString(), sub:`오늘 ${adminStats.tests?.today}건`, color:'text-orange-600' },
+                  { label:'AI 상담', val:adminStats.chats?.total?.toLocaleString(), sub:`오늘 ${adminStats.chats?.today}건`, color:'text-purple-600' },
+                ].map(c => (
+                  <div key={c.label} className={S.card}>
+                    <div className="text-xs text-gray-400 mb-1">{c.label}</div>
+                    <div className={`text-2xl font-black ${c.color}`}>{c.val ?? '—'}</div>
+                    <div className="text-xs text-gray-400 mt-1">{c.sub}</div>
+                  </div>
+                ))}
+              </div>
+              <div className={S.card + ' mb-4'}>
+                <h3 className="font-bold text-gray-700 mb-3 text-sm">크레딧 지급</h3>
+                <div className="flex flex-wrap gap-2">
+                  {[['userId','사용자 ID'],['amount','금액']].map(([key, ph]) => (
+                    <input key={key} placeholder={ph} value={creditGrantForm[key]}
+                      onChange={e => setCreditGrantForm(f => ({...f, [key]:e.target.value}))}
+                      className="border border-gray-200 rounded-lg px-3 py-2 text-sm flex-1 min-w-24 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                  ))}
+                  <select value={creditGrantForm.type} onChange={e => setCreditGrantForm(f=>({...f, type:e.target.value}))}
+                    className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
+                    <option value="gain">지급</option><option value="loss">회수</option>
+                  </select>
+                  <button onClick={grantCredits} className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-indigo-700 transition">실행</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {adminTab === 'users' && (
+            <div>
+              <div className="flex gap-2 mb-4">
+                <input placeholder="이메일 또는 닉네임 검색" value={adminSearch}
+                  onChange={e => setAdminSearch(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && loadAdminUsers()}
+                  className="flex-1 border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                <button onClick={() => loadAdminUsers()} className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-indigo-700 transition">검색</button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead><tr className="bg-gray-50 text-xs text-gray-500">
+                    <th className="px-3 py-2 text-left">ID</th>
+                    <th className="px-3 py-2 text-left">이메일</th>
+                    <th className="px-3 py-2 text-left">닉네임</th>
+                    <th className="px-3 py-2 text-right">크레딧</th>
+                    <th className="px-3 py-2 text-right">검사</th>
+                    <th className="px-3 py-2 text-right">결제합계</th>
+                    <th className="px-3 py-2 text-left">가입일</th>
+                  </tr></thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {(adminUsers.users || []).map(u => (
+                      <tr key={u.id} className="hover:bg-gray-50">
+                        <td className="px-3 py-2 text-gray-400 text-xs">{u.id}</td>
+                        <td className="px-3 py-2">{u.email}</td>
+                        <td className="px-3 py-2">{u.nickname || '—'}</td>
+                        <td className="px-3 py-2 text-right font-semibold text-indigo-600">✦ {u.credits}</td>
+                        <td className="px-3 py-2 text-right text-gray-500">{u.test_count}</td>
+                        <td className="px-3 py-2 text-right text-emerald-600">₩{(u.total_paid||0).toLocaleString()}</td>
+                        <td className="px-3 py-2 text-xs text-gray-400">{u.created_at?.slice(0,10)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {adminUsers.pagination && (
+                <div className="flex items-center justify-between mt-4 text-sm text-gray-500">
+                  <span>총 {adminUsers.pagination.total}명</span>
+                  <div className="flex gap-1">
+                    {adminUsers.pagination.page > 1 && <button onClick={() => loadAdminUsers(adminUsers.pagination.page-1)} className="px-3 py-1 bg-gray-100 rounded-lg hover:bg-gray-200">이전</button>}
+                    <span className="px-3 py-1">{adminUsers.pagination.page}/{adminUsers.pagination.pages}</span>
+                    {adminUsers.pagination.page < adminUsers.pagination.pages && <button onClick={() => loadAdminUsers(adminUsers.pagination.page+1)} className="px-3 py-1 bg-gray-100 rounded-lg hover:bg-gray-200">다음</button>}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {adminTab === 'payments' && (
+            <div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead><tr className="bg-gray-50 text-xs text-gray-500">
+                    <th className="px-3 py-2 text-left">ID</th>
+                    <th className="px-3 py-2 text-left">이메일</th>
+                    <th className="px-3 py-2 text-right">금액</th>
+                    <th className="px-3 py-2 text-right">크레딧</th>
+                    <th className="px-3 py-2 text-center">상태</th>
+                    <th className="px-3 py-2 text-left">날짜</th>
+                    <th className="px-3 py-2 text-center">작업</th>
+                  </tr></thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {(adminPayments.payments || []).map(p => (
+                      <tr key={p.id} className="hover:bg-gray-50">
+                        <td className="px-3 py-2 text-gray-400 text-xs">{p.id}</td>
+                        <td className="px-3 py-2 text-xs">{p.email}</td>
+                        <td className="px-3 py-2 text-right font-semibold">₩{(p.amount||0).toLocaleString()}</td>
+                        <td className="px-3 py-2 text-right text-indigo-600">✦ {p.credits}</td>
+                        <td className="px-3 py-2 text-center">
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${p.status==='completed'?'bg-emerald-100 text-emerald-700':p.status==='refunded'?'bg-orange-100 text-orange-700':'bg-gray-100 text-gray-500'}`}>
+                            {p.status==='completed'?'완료':p.status==='refunded'?'환불':p.status}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 text-xs text-gray-400">{p.created_at?.slice(0,10)}</td>
+                        <td className="px-3 py-2 text-center">
+                          {p.status === 'completed' && (
+                            <button onClick={() => processRefund(p.id)}
+                              className="text-xs text-red-600 hover:text-red-800 border border-red-200 hover:bg-red-50 px-2 py-1 rounded-lg transition">
+                              환불
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {adminPayments.pagination && (
+                <div className="flex items-center justify-between mt-4 text-sm text-gray-500">
+                  <span>총 {adminPayments.pagination.total}건</span>
+                  <div className="flex gap-1">
+                    {adminPayments.pagination.page > 1 && <button onClick={() => loadAdminPayments(adminPayments.pagination.page-1)} className="px-3 py-1 bg-gray-100 rounded-lg hover:bg-gray-200">이전</button>}
+                    <span className="px-3 py-1">{adminPayments.pagination.page}/{adminPayments.pagination.pages}</span>
+                    {adminPayments.pagination.page < adminPayments.pagination.pages && <button onClick={() => loadAdminPayments(adminPayments.pagination.page+1)} className="px-3 py-1 bg-gray-100 rounded-lg hover:bg-gray-200">다음</button>}
+                  </div>
+                </div>
+              )}
+              <div className="mt-4 text-xs text-gray-400 bg-yellow-50 border border-yellow-200 rounded-xl p-3">
+                ⚠️ 환불 버튼은 DB 크레딧만 회수합니다. PG(토스페이먼츠) 실제 취소는 토스 파트너센터에서 별도 처리하세요.
+              </div>
+            </div>
+          )}
+
+          {adminTab === 'tests' && (
+            <div>
+              <table className="w-full text-sm">
+                <thead><tr className="bg-gray-50 text-xs text-gray-500">
+                  <th className="px-3 py-2 text-left">검사 유형</th>
+                  <th className="px-3 py-2 text-left">언어</th>
+                  <th className="px-3 py-2 text-right">건수</th>
+                  <th className="px-3 py-2 text-right">크레딧 소비</th>
+                </tr></thead>
+                <tbody className="divide-y divide-gray-100">
+                  {adminTestStats.map(t => (
+                    <tr key={t.test_type+t.lang} className="hover:bg-gray-50">
+                      <td className="px-3 py-2 font-medium">{t.test_type}</td>
+                      <td className="px-3 py-2 text-gray-400">{t.lang}</td>
+                      <td className="px-3 py-2 text-right font-semibold text-indigo-600">{t.cnt?.toLocaleString()}</td>
+                      <td className="px-3 py-2 text-right text-emerald-600">✦ {(t.credits||0).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </main>
       </div>
     );
   }

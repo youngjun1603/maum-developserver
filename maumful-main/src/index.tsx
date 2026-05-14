@@ -2949,6 +2949,33 @@ app.get('/api/admin/payments', async (c) => {
   }
 })
 
+// ── 관리자 환불 처리 ─────────────────────────────────────────
+app.post('/api/admin/payments/:id/refund', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  const chargeId = parseInt(c.req.param('id'))
+  if (!chargeId) return c.json({ success: false, error: '유효하지 않은 chargeId' }, 400)
+
+  const charge = await DB.prepare(
+    `SELECT id, user_id, credits, amount, currency, status FROM credit_charges WHERE id=?`
+  ).bind(chargeId).first<{ id:number; user_id:number; credits:number; amount:number; currency:string; status:string }>()
+
+  if (!charge) return c.json({ success: false, error: '결제 내역 없음' }, 404)
+  if (charge.status !== 'completed') return c.json({ success: false, error: `환불 불가 — 현재 상태: ${charge.status}` }, 400)
+
+  await DB.batch([
+    DB.prepare(`UPDATE credit_charges SET status='refunded', completed_at=CURRENT_TIMESTAMP WHERE id=?`).bind(chargeId),
+    DB.prepare(`UPDATE users SET credits = credits - ? WHERE id=? AND credits >= ?`).bind(charge.credits, charge.user_id, charge.credits),
+    DB.prepare(`INSERT INTO credit_transactions (user_id, type, amount, reason, ref_id) VALUES (?,?,?,?,?)`).bind(
+      charge.user_id, 'loss', charge.credits, 'admin_refund', chargeId
+    ),
+  ])
+
+  return c.json({ success: true, message: `환불 처리 완료 — ${charge.credits} 크레딧 회수, ${charge.amount.toLocaleString()} ${charge.currency} 환불 필요` })
+})
+
 // ============================================================
 // 관리자 API 설정
 // ============================================================
