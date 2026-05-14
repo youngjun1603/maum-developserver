@@ -123,7 +123,7 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView }) {
 
   const navItems = [
     { label: '검사 소개',  view: 'testsIntro' },
-    { label: '심리검사',   view: 'memberDashboard', requireLogin: true },
+    { label: '심리검사',   view: 'memberDashboard', guestView: 'testsIntro' },
     { label: 'AI 상담',   view: 'aiCounsel',       requireLogin: true },
     { label: '상담센터',   view: 'counseling' },
     { label: '마음 게임',  view: 'gameIntro', isGame: true },
@@ -163,6 +163,10 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView }) {
     }
     if (item.requireLogin && !isLoggedIn) {
       setView('memberLogin');
+      return;
+    }
+    if (item.guestView && !isLoggedIn) {
+      setView(item.guestView);
       return;
     }
     setView(item.view);
@@ -442,7 +446,7 @@ function LandingPage({ setView, isLoggedIn }) {
 
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
               <button
-                onClick={() => setView(isLoggedIn ? 'memberDashboard' : 'testsIntro')}
+                onClick={() => setView(isLoggedIn ? 'memberDashboard' : 'startTest:PHQ9')}
                 style={{
                   background: '#2D6A4F', color: 'white', border: 'none',
                   padding: '14px 32px', borderRadius: 12,

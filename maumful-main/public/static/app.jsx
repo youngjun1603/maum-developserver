@@ -290,6 +290,7 @@ function PsychologicalTestSystem() {
   const [creditTxns, setCreditTxns]       = useState([]);
   const [showCreditModal, setShowCreditModal] = useState(false);   // 크레딧 부족 모달
   const [showChargeView, setShowChargeView]   = useState(false);   // 충전 화면
+  const [pendingTestAfterCharge, setPendingTestAfterCharge] = useState(null); // 충전 후 자동 재시작할 검사
 
   // ── 메시지 & 폼 ─────────────────────────────────────────
   const [loginMsg, setLoginMsg]     = useState({ type: '', text: '' });
@@ -1348,7 +1349,9 @@ function PsychologicalTestSystem() {
       }).then(() => {
         // 결과 저장 후 2.5초 뒤 자동 복귀 (버튼으로 수동 이동도 가능)
         if (returnToCouple) setTimeout(() => goBackToCouple(), 2500);
-      }).catch(() => {});
+      }).catch(() => {
+        setSaveStatus('⚠️ 결과 저장에 실패했습니다. 페이지를 새로고침하면 재시도됩니다.');
+      });
     } catch { /* 결과 계산 실패 시 무시 */ }
   }, [view, isLoggedIn]);
 
@@ -1779,7 +1782,7 @@ function PsychologicalTestSystem() {
     // 유료 검사: 크레딧 10 차감
     const result = await api.startTest(testType, currentUser?.locale || 'ko');
     if (!result.success) {
-      if (result.needsCharge) setShowCreditModal(true);
+      if (result.needsCharge) { setPendingTestAfterCharge(testType); setShowCreditModal(true); }
       return false;
     }
     setCredits(result.data.balance);
@@ -2383,7 +2386,7 @@ function PsychologicalTestSystem() {
             </div>
             <div className="space-y-2 mb-4">
               {window.KAKAO_APP_KEY && (
-                <button onClick={() => { setShowAiLimitModal(false); handleKakaoLogin && window.Kakao?.Auth?.login({ success: (a) => handleKakaoLogin(a.access_token), fail: () => {} }); }}
+                <button onClick={() => { sessionStorage.setItem('post_login_view', 'aiCounsel'); setShowAiLimitModal(false); handleKakaoLogin && window.Kakao?.Auth?.login({ success: (a) => handleKakaoLogin(a.access_token), fail: () => {} }); }}
                   style={{ background:'#FEE500', border:'none', borderRadius:10, width:'100%', height:44,
                     display:'flex', alignItems:'center', justifyContent:'center', gap:8,
                     cursor:'pointer', fontWeight:'bold', fontSize:14, color:'#3C1E1E' }}>
@@ -2392,11 +2395,11 @@ function PsychologicalTestSystem() {
                 </button>
               )}
               {window.GOOGLE_CLIENT_ID && (
-                <div onClick={() => setShowAiLimitModal(false)}>
+                <div onClick={() => { sessionStorage.setItem('post_login_view', 'aiCounsel'); setShowAiLimitModal(false); }}>
                   <GoogleSignInBtn onLogin={handleGoogleLogin} btnText="signup_with" />
                 </div>
               )}
-              <button onClick={() => { setShowAiLimitModal(false); setView('memberSignup'); }}
+              <button onClick={() => { sessionStorage.setItem('post_login_view', 'aiCounsel'); setShowAiLimitModal(false); setView('memberSignup'); }}
                 className="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition text-sm">
                 이메일로 무료 가입하기
               </button>
@@ -3945,7 +3948,15 @@ function PsychologicalTestSystem() {
         <CreditModal />
         <AiLimitModal />
         <CookieBanner />
-        {showChargeView && <ChargeView onClose={() => { setShowChargeView(false); refreshCredits(); }} credits={credits} regionConfig={regionConfig} />}
+        {showChargeView && <ChargeView onClose={async () => {
+          setShowChargeView(false);
+          await refreshCredits();
+          if (pendingTestAfterCharge) {
+            const t = pendingTestAfterCharge;
+            setPendingTestAfterCharge(null);
+            setView('startTest:' + t);
+          }
+        }} credits={credits} regionConfig={regionConfig} />}
       </div>
     );
   }
@@ -8581,6 +8592,38 @@ function PsychologicalTestSystem() {
               </button>
             </div>
           )}
+
+          {/* 다음 검사 추천 */}
+          {(() => {
+            const NEXT = {
+              PHQ9:    [{ id:'GAD7',    name:'불안 자가점검',     emoji:'💙', free:true  }, { id:'DASS21',  name:'우울·불안·스트레스', emoji:'🌊', free:false }],
+              GAD7:    [{ id:'PHQ9',    name:'우울 자가점검',     emoji:'🌱', free:true  }, { id:'DASS21',  name:'우울·불안·스트레스', emoji:'🌊', free:false }],
+              DASS21:  [{ id:'BIG5',    name:'성격 5요인',        emoji:'🧠', free:false }, { id:'BURNOUT', name:'번아웃 자가점검',     emoji:'🔥', free:false }],
+              BIG5:    [{ id:'LOST',    name:'행동 운영체계',     emoji:'🧭', free:false }, { id:'DSI',     name:'자기분화 반응성',    emoji:'🪞', free:false }],
+              LOST:    [{ id:'BIG5',    name:'성격 5요인',        emoji:'🧠', free:false }, { id:'BURNOUT', name:'번아웃 자가점검',     emoji:'🔥', free:false }],
+              BURNOUT: [{ id:'PHQ9',    name:'우울 자가점검',     emoji:'🌱', free:true  }, { id:'DASS21',  name:'우울·불안·스트레스', emoji:'🌊', free:false }],
+              SCT:     [{ id:'DSI',     name:'자기분화 반응성',   emoji:'🪞', free:false }, { id:'BIG5',    name:'성격 5요인',         emoji:'🧠', free:false }],
+              DSI:     [{ id:'SCT',     name:'자기반응 완성',     emoji:'✍️', free:false }, { id:'BIG5',    name:'성격 5요인',         emoji:'🧠', free:false }],
+            };
+            const suggestions = NEXT[completedTest];
+            if (!suggestions) return null;
+            return (
+              <div className="mb-4">
+                <p className="text-xs font-bold text-gray-500 mb-2 text-left">📋 이런 검사도 해보세요</p>
+                <div className="flex gap-2">
+                  {suggestions.map(s => (
+                    <button key={s.id}
+                      onClick={() => setView('startTest:' + s.id)}
+                      className="flex-1 bg-green-50 border border-green-200 rounded-xl py-2.5 px-3 text-left hover:bg-green-100 transition">
+                      <div className="text-base mb-0.5">{s.emoji}</div>
+                      <div className="text-xs font-bold text-green-800">{s.name}</div>
+                      <div className="text-xs text-green-600">{s.free ? '무료' : '10 cr'}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           {returnToCouple && (
             <button onClick={goBackToCouple}
