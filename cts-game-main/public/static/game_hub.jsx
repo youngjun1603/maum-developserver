@@ -1340,6 +1340,79 @@ function AchievementToast({ achievements = [], onDismiss }) {
 }
 
 // ──────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────
+// GameHistorySection — 최근 게임 플레이 이력
+// ──────────────────────────────────────────────────────────
+const HISTORY_GAME_META = {
+  mood:     { name:'감정 수채화', emoji:'😊', color:'#6366F1' },
+  garden:   { name:'마음의 정원', emoji:'🌿', color:'#22C55E' },
+  efmt:     { name:'감정꽃',     emoji:'🌸', color:'#EC4899' },
+  gratitude:{ name:'감사 일기',  emoji:'🌟', color:'#F59E0B' },
+  burnout:  { name:'번아웃 회복',emoji:'⚡', color:'#F97316' },
+  focus:    { name:'집중력 훈련',emoji:'🎯', color:'#0EA5E9' },
+  worry:    { name:'걱정 풍선',  emoji:'🎈', color:'#8B5CF6' },
+  tree:     { name:'마음 나무',  emoji:'🌲', color:'#16A34A' },
+  qt:       { name:'QT 묵상',    emoji:'✝️', color:'#7C3AED' },
+};
+function GameHistorySection() {
+  const [sessions, setSessions] = React.useState(null);
+  const [loading, setLoading] = React.useState(false);
+  const [expanded, setExpanded] = React.useState(false);
+
+  const handleToggle = () => {
+    if (!expanded && !sessions) {
+      setLoading(true);
+      GameEngine.getRecentSessions(20)
+        .then(res => { if (res.success) setSessions(res.data); })
+        .finally(() => setLoading(false));
+    }
+    setExpanded(v => !v);
+  };
+
+  return (
+    <div style={{ background:'rgba(255,255,255,0.7)', backdropFilter:'blur(8px)', borderRadius:20, padding:'16px 20px', marginBottom:24, border:'1px solid rgba(255,255,255,0.6)' }}>
+      <button onClick={handleToggle} style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between', background:'none', border:'none', cursor:'pointer', fontFamily:"'Noto Sans KR',sans-serif" }}>
+        <div style={{ fontSize:14, fontWeight:700, color:C.dark, display:'flex', alignItems:'center', gap:6 }}>
+          <span>📅</span> 게임 플레이 이력
+        </div>
+        <span style={{ fontSize:12, color:C.muted }}>{expanded ? '접기 ▲' : '펼치기 ▼'}</span>
+      </button>
+      {expanded && (
+        <div style={{ marginTop:14 }}>
+          {loading && <div style={{ textAlign:'center', padding:16, color:C.muted, fontSize:12 }}>불러오는 중...</div>}
+          {!loading && sessions && sessions.length === 0 && (
+            <div style={{ textAlign:'center', padding:16, color:C.muted, fontSize:12 }}>아직 플레이 기록이 없어요</div>
+          )}
+          {!loading && sessions && sessions.length > 0 && (
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              {sessions.map((s, i) => {
+                const meta = HISTORY_GAME_META[s.game_id] || { name:s.game_id, emoji:'🎮', color:'#6B7280' };
+                const date = new Date(s.created_at);
+                const dateStr = date.toLocaleDateString('ko-KR', { month:'short', day:'numeric' });
+                const timeStr = date.toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit' });
+                const dur = s.duration_sec > 0 ? (s.duration_sec >= 60 ? `${Math.floor(s.duration_sec/60)}분` : `${s.duration_sec}초`) : null;
+                return (
+                  <div key={i} style={{ display:'flex', alignItems:'center', gap:12, background:'white', borderRadius:12, padding:'10px 14px', borderLeft:`3px solid ${meta.color}` }}>
+                    <span style={{ fontSize:20, flexShrink:0 }}>{meta.emoji}</span>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:13, fontWeight:700, color:C.dark }}>{meta.name}</div>
+                      <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>{dateStr} {timeStr}{dur ? ` · ${dur}` : ''}</div>
+                    </div>
+                    <div style={{ textAlign:'right', flexShrink:0 }}>
+                      {s.score > 0 && <div style={{ fontSize:14, fontWeight:700, color:meta.color }}>{s.score}점</div>}
+                      <div style={{ fontSize:11, color:C.muted }}>+{s.exp_gained || 0} EXP</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // BurnoutTrendSection — 번아웃 점수 이력 차트
 // ──────────────────────────────────────────────────────────
 const BURNOUT_LEVELS = [
@@ -2092,6 +2165,7 @@ function GameHubApp() {
   const [spendLoading, setSpendLoading] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [sessionFeedback, setSessionFeedback] = useState(null); // { gameId, score, feedback, emoji }
 
   const isLoggedIn = !!localStorage.getItem('game_token');
 
@@ -2152,6 +2226,7 @@ function GameHubApp() {
   }, [data]);
 
   const handleGameExit = useCallback((result) => {
+    const gid = activeGame;
     setActiveGame(null);
     setCreditModal(null);
     // 허브 데이터 새로고침 (경험치 + 크레딧 잔액 반영)
@@ -2159,7 +2234,18 @@ function GameHubApp() {
       if (res.success) setData(res.data);
       if (result?.newAchievements?.length) setNewAchievements(result.newAchievements);
     });
-  }, []);
+    // 게임 완료 AI 피드백 요청 (비동기, 실패해도 무방)
+    if (gid && result?.score !== undefined) {
+      const meta = HISTORY_GAME_META[gid] || { emoji:'🎮' };
+      GameEngine.getSessionFeedback(gid, result.score || 0, result.moduleType || gid)
+        .then(res => {
+          if (res.success && res.data?.feedback) {
+            setSessionFeedback({ gameId: gid, score: result.score, feedback: res.data.feedback, emoji: meta.emoji });
+            setTimeout(() => setSessionFeedback(null), 8000);
+          }
+        }).catch(() => {});
+    }
+  }, [activeGame]);
 
   // 크레딧 차감 확인 후 게임 시작
   const handleCreditConfirm = useCallback(async () => {
@@ -2408,6 +2494,9 @@ function GameHubApp() {
         {/* ── 스토리 캠페인 ── */}
         <CampaignSection onPlay={handlePlay} />
 
+        {/* ── 게임 플레이 이력 ── */}
+        <GameHistorySection />
+
         {/* ── 게임 통계 ── */}
         <GameStatsSection />
 
@@ -2545,6 +2634,35 @@ function GameHubApp() {
       {/* 업적 토스트 */}
       {newAchievements.length > 0 && (
         <AchievementToast achievements={newAchievements} onDismiss={() => setNewAchievements([])} />
+      )}
+
+      {/* 게임 완료 AI 피드백 플로팅 카드 */}
+      {sessionFeedback && (
+        <div style={{
+          position:'fixed', bottom:80, left:'50%', transform:'translateX(-50%)',
+          background:'white', borderRadius:20, padding:'16px 20px',
+          boxShadow:'0 8px 30px rgba(0,0,0,0.15)',
+          maxWidth:340, width:'calc(100% - 48px)', zIndex:1000,
+          border:'1px solid rgba(124,58,237,0.15)',
+          animation:'fadeUp 0.4s ease',
+        }}>
+          <div style={{ display:'flex', gap:12, alignItems:'flex-start' }}>
+            <span style={{ fontSize:24, flexShrink:0, lineHeight:1.2 }}>{sessionFeedback.emoji}</span>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:12, fontWeight:700, color:'#7C3AED', marginBottom:4 }}>
+                게임 완료! 🎉
+              </div>
+              <div style={{ fontSize:13, color:'#374151', lineHeight:1.6 }}>
+                {sessionFeedback.feedback}
+              </div>
+            </div>
+            <button
+              onClick={() => setSessionFeedback(null)}
+              style={{ fontSize:16, color:'#9CA3AF', background:'none', border:'none', cursor:'pointer', padding:'0 4px', flexShrink:0 }}>
+              ✕
+            </button>
+          </div>
+        </div>
       )}
 
       {/* 온보딩 튜토리얼 */}

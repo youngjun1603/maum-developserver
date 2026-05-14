@@ -215,6 +215,22 @@ const GameEngine = (() => {
     return res.json();
   }
 
+  // ── 게임 세션 이력 조회 ─────────────────────────────────
+  async function getRecentSessions(limit = 20) {
+    const res = await fetch(`/api/game/sessions?limit=${limit}`, { headers: authHeader() });
+    return res.json();
+  }
+
+  // ── 게임 완료 AI 피드백 ──────────────────────────────────
+  async function getSessionFeedback(gameId, score, moduleType) {
+    const res = await fetch('/api/game/session-feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body: JSON.stringify({ game_id: gameId, score, module_type: moduleType }),
+    });
+    return res.json();
+  }
+
   // ── 스트릭 복구권 사용 ───────────────────────────────────
   async function recoverStreak() {
     const res = await fetch('/api/game/streak/recover', { method: 'POST', headers: authHeader() });
@@ -246,6 +262,7 @@ const GameEngine = (() => {
     getMe, saveSession, transformSentence, updateVisual,
     getCredits, spendCredit, saveScore,
     getLeaderboard, getDailyTip, getMoodHistory, getEmotionReport, getGameStats, getBurnoutHistory,
+    getRecentSessions, getSessionFeedback,
     recoverStreak, getCampaign, claimCampaign, apiFetch,
     getLevelInfo, getGardenTheme, getAchievementInfo,
     formatDuration, formatRelativeTime,
