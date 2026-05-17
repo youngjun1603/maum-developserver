@@ -93,6 +93,28 @@ const TEST_META = [
     count: '22문항',
     free: false,
   },
+  {
+    id: 'RIASEC',
+    label: 'Holland RIASEC',
+    name: '직업 흥미 유형 검사',
+    desc: '나의 직업적 적성과 흥미를 실재형·탐구형·예술형·사회형·진취형·관습형 6가지 유형으로 분석합니다.',
+    icon: '🔍',
+    color: 'violet',
+    time: '8분',
+    count: '30문항',
+    free: false,
+  },
+  {
+    id: 'VALUES',
+    label: '직업가치관',
+    name: '직업가치관 검사',
+    desc: '일에서 무엇을 중시하는지 성취·봉사·안정·자율·창의·영향력 등 10가지 가치요인으로 측정합니다.',
+    icon: '💎',
+    color: 'gold',
+    time: '8분',
+    count: '30문항',
+    free: false,
+  },
 ];
 
 const COLOR_MAP = {
@@ -104,6 +126,8 @@ const COLOR_MAP = {
   coral:  { bar: '#F97316', bg: '#FFF7ED', text: '#C2410C' },
   pink:   { bar: '#EC4899', bg: '#FDF2F8', text: '#9D174D' },
   red:    { bar: '#EF4444', bg: '#FEF2F2', text: '#991B1B' },
+  violet: { bar: '#6D28D9', bg: '#EDE9FE', text: '#5B21B6' },
+  gold:   { bar: '#D97706', bg: '#FEF3C7', text: '#92400E' },
 };
 
 // ============================================================
@@ -427,7 +451,7 @@ function LandingPage({ setView, isLoggedIn }) {
               fontSize: 13, fontWeight: 600, marginBottom: 24,
             }}>
               <span style={{ fontSize: 8, animation: 'pulse 2s infinite' }}>●</span>
-              전문 심리검사 8종 제공
+              전문 심리검사 10종 제공
             </div>
 
             <h1 style={{
@@ -480,7 +504,7 @@ function LandingPage({ setView, isLoggedIn }) {
               paddingTop: 36, borderTop: '1px solid rgba(0,0,0,0.08)',
             }}>
               {[
-                { num: '8종', label: '전문 심리검사' },
+                { num: '10종', label: '전문 심리검사' },
                 { num: '10', label: '가입 즉시 크레딧' },
                 { num: 'AI', label: '결과 분석 상담' },
               ].map(s => (
@@ -562,7 +586,7 @@ function LandingPage({ setView, isLoggedIn }) {
                   fontFamily: "'Noto Sans KR', sans-serif",
                 }}
               >
-                전체 검사 8종 보기 →
+                전체 검사 10종 보기 →
               </button>
             </div>
 
@@ -593,7 +617,7 @@ function LandingPage({ setView, isLoggedIn }) {
               textTransform: 'uppercase', padding: '5px 14px', borderRadius: 100, marginBottom: 14,
             }}>Psychological Tests</div>
             <h2 style={{ fontSize: 36, fontWeight: 700, lineHeight: 1.3, marginBottom: 12 }}>
-              8가지 전문 <span style={{ color: '#2D6A4F' }}>심리검사</span>
+              10가지 전문 <span style={{ color: '#2D6A4F' }}>심리·진로 검사</span>
             </h2>
             <p style={{ fontSize: 16, color: '#5A5A5A', maxWidth: 480, margin: '0 auto' }}>
               정신건강 전문가들이 실제 임상에서 사용하는 표준화된 검사 도구를 제공합니다
@@ -1027,7 +1051,7 @@ function LandingPage({ setView, isLoggedIn }) {
         <div style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)' }}
           className="stats-grid">
           {[
-            { num: '8종', label: '전문 심리검사' },
+            { num: '10종', label: '전문 심리·진로 검사' },
             { num: '10', label: '가입 즉시 무료 크레딧' },
             { num: '5분~', label: '최소 검사 소요시간' },
             { num: '100%', label: '데이터 프라이버시' },
@@ -1601,6 +1625,8 @@ function TestsIntroPage({ setView, isLoggedIn }) {
                     {t.id === 'SCT' && '자기입장 유지 · 정서반응성 · 정서적 단절 · 융합·관계의존 등 4개 영역의 자기반응 패턴을 문장완성으로 탐색합니다'}
                     {t.id === 'DSI' && '자기입장 유지 · 정서반응성 · 정서적 단절 · 융합·관계의존 — 4개 소척도 평정형 25문항으로 자기분화 수준을 측정합니다'}
                     {t.id === 'BURNOUT' && '정서적 고갈 · 냉소 · 효능감 저하 3가지 소진 신호 자가점검 — 직장인·교육·서비스직 특화'}
+                    {t.id === 'RIASEC' && '실재형(R) · 탐구형(I) · 예술형(A) · 사회형(S) · 진취형(E) · 관습형(C) — 6가지 Holland 유형별 점수와 우세 직업 흥미 코드(2자리)를 도출합니다'}
+                    {t.id === 'VALUES' && '성취 · 봉사 · 안정 · 자율 · 창의 · 영향력 · 지식추구 · 워라밸 · 사회인정 · 경제적 보상 — 10가지 가치요인의 중요도를 100점 척도로 환산해 순위를 제시합니다'}
                   </div>
                 </div>
 
