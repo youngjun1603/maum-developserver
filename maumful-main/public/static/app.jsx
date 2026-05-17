@@ -3657,7 +3657,7 @@ function PsychologicalTestSystem() {
                   <p className="text-xs text-amber-700 mb-3">이전 결과와 비교해 마음의 변화를 확인하세요</p>
                   <button
                     onClick={async () => {
-                      const testViews = { PHQ9:'phq9Test', GAD7:'gad7Test', DASS21:'dass21Test', BIG5:'big5Test', BURNOUT:'burnoutTest', LOST:'lostTest', SCT:'sctTest', DSI:'dsiTest' };
+                      const testViews = { PHQ9:'phq9Test', GAD7:'gad7Test', DASS21:'dass21Test', BIG5:'big5Test', BURNOUT:'burnoutTest', LOST:'lostTest', SCT:'sctTest', DSI:'dsiTest', RIASEC:'riasecTest', VALUES:'valuesTest' };
                       const ok = await chargeForTest(checkinTest);
                       if (!ok) return;
                       setPendingTests([checkinTest]);
@@ -5370,8 +5370,9 @@ function PsychologicalTestSystem() {
     
     // 첫 번째 검사 화면으로 이동
     const testViews = {
-      "SCT": "sctTest", "DSI": "sctTest", "PHQ9": "phq9Test",
-      "GAD7": "gad7Test", "DASS21": "dass21Test", "BIG5": "big5Test", "BURNOUT": "burnoutTest"
+      "SCT": "sctTest", "DSI": "dsiTest", "PHQ9": "phq9Test",
+      "GAD7": "gad7Test", "DASS21": "dass21Test", "BIG5": "big5Test",
+      "BURNOUT": "burnoutTest", "LOST": "lostTest", "RIASEC": "riasecTest", "VALUES": "valuesTest"
     };
     setView(testViews[tests[0]] || "sctTest");
   }

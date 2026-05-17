@@ -283,7 +283,7 @@ app.get('/api/config/region', (c) => {
   const lang    = (c.req.header('accept-language') ?? 'ko').slice(0, 2).toLowerCase()
   const isKorea = country === 'KR' || lang === 'ko'
 
-  const globalTests = ['PHQ9', 'GAD7', 'DASS21', 'BIG5', 'LOST']
+  const globalTests = ['PHQ9', 'GAD7', 'DASS21', 'BIG5', 'LOST', 'RIASEC', 'VALUES']
   const koreaTests  = ['SCT', 'DSI', ...globalTests, 'BURNOUT']
 
   return c.json({
@@ -1177,6 +1177,24 @@ function buildAnalysisPrompt(req: AnalyzeRequest): string {
     const domains    = r.domains as Array<{name:string;score:number;max:number;percentage:number;level:string}>
     const domainText = (domains ?? []).map(d => d.name + ': ' + d.score + '/' + d.max + ' (' + d.percentage + '%) - ' + d.level).join(NL)
     return ctx + NL + NL + 'K-MBI+ 소진 자가점검 결과' + NL + '전체 소진 지수: ' + totalScore + '/240 (' + level + ')' + NL + NL + '영역별 결과:' + NL + domainText + NL + fmt
+  }
+
+  // Holland RIASEC 직업 흥미
+  if (req.testType === 'RIASEC') {
+    const dominantType = r.dominant_type as string
+    const scores       = r.scores as Record<string, number>
+    const typeNames: Record<string, string> = { R:'실재형', I:'탐구형', A:'예술형', S:'사회형', E:'진취형', C:'관습형' }
+    const scoresText = Object.entries(scores).sort(([,a],[,b]) => b - a).map(([t,s]) => typeNames[t] + '(' + t + '): ' + s + '/25').join(', ')
+    return ctx + NL + NL + 'Holland RIASEC 직업 흥미 검사 결과' + NL + '우세 유형: ' + dominantType + '형 (' + dominantType.split('').map(t => typeNames[t]).join('·') + ')' + NL + '유형별 점수: ' + scoresText + NL + fmt
+  }
+
+  // 직업가치관
+  if (req.testType === 'VALUES') {
+    const scores  = r.scores as Record<string, number>
+    const sorted  = Object.entries(scores).sort(([,a],[,b]) => b - a)
+    const top3    = sorted.slice(0, 3).map(([k,s]) => k + ': ' + s + '점').join(', ')
+    const allText = sorted.map(([k,s]) => k + ': ' + s + '점').join(NL)
+    return ctx + NL + NL + '직업가치관 검사 결과' + NL + '상위 3개 가치: ' + top3 + NL + NL + '전체 가치요인:' + NL + allText + NL + fmt
   }
 
   return ctx + NL + NL + '검사: ' + req.testType + NL + '결과: ' + JSON.stringify(r, null, 2) + NL + fmt
