@@ -162,6 +162,8 @@ const PROTECTED_VIEWS = new Set([
   'lostTest','lostResult',
   'sctTest','sctResult',
   'dsiTest','dsiResult',
+  'riasecTest','riasecResult',
+  'valuesTest','valuesResult',
 ]);
 
 // 워터마크 오버레이 — SVG 반복 패턴 (캡처 추적용)
@@ -313,6 +315,8 @@ function PsychologicalTestSystem() {
   const [loadingRec, setLoadingRec]             = useState(false);
   const [phq9Responses, setPhq9Responses]       = useState({});
   const [gad7Responses, setGad7Responses]       = useState({});
+  const [riasecResponses, setRiasecResponses]   = useState({});
+  const [valuesResponses, setValuesResponses]   = useState({});
   const [dass21Responses, setDass21Responses]   = useState({});
   const [big5Responses, setBig5Responses]       = useState({});
   const [burnoutResponses, setBurnoutResponses] = useState({});
@@ -1246,9 +1250,9 @@ function PsychologicalTestSystem() {
   useEffect(() => {
     const TEST_VIEWS = [
       'sctTest','dsiTest','phq9Test','gad7Test','dass21Test',
-      'burnoutTest','big5Test','lostTest',
+      'burnoutTest','big5Test','lostTest','riasecTest','valuesTest',
       'sctResult','dsiResult','phq9Result','gad7Result','dass21Result',
-      'burnoutResult','big5Result','lostResult',
+      'burnoutResult','big5Result','lostResult','riasecResult','valuesResult',
       'memberDashboard','counseling',
     ];
 
@@ -3549,7 +3553,7 @@ function PsychologicalTestSystem() {
   // 뷰: 메인 대시보드 (검사 선택)
   // ============================================================
   if (isLoggedIn && view === 'memberDashboard') {
-    const allTests = regionConfig?.availableTests || ['PHQ9','GAD7','DASS21','BIG5','LOST','SCT','DSI','BURNOUT'];
+    const allTests = regionConfig?.availableTests || ['PHQ9','GAD7','DASS21','BIG5','LOST','SCT','DSI','BURNOUT','RIASEC','VALUES'];
     const testMeta = {
       PHQ9:    { label: 'PHQ-9',   desc: '우울 자가점검',    emoji: '😔', view: 'phq9Test',    summary: '최근 2주간 기분·수면·의욕의 변화를 점검합니다',              questions: 9,  time: '2분'  },
       GAD7:    { label: 'GAD-7',   desc: '불안 자가점검',    emoji: '😰', view: 'gad7Test',    summary: '일상 속 걱정·긴장·불안의 정도를 확인합니다',                  questions: 7,  time: '2분'  },
@@ -3559,6 +3563,8 @@ function PsychologicalTestSystem() {
       SCT:     { label: 'SRCI',    desc: '자기반응 완성',    emoji: '✍️', view: 'sctTest',     summary: '문장 완성으로 나도 몰랐던 내면의 자아 반응을 탐색합니다',        questions: 30, time: '8분'  },
       DSI:     { label: 'SDRI',    desc: '자기분화 반응성',  emoji: '🪞', view: 'dsiTest',     summary: '가족·연인 관계에서 감정 반응성과 자아 독립 정도를 측정합니다',   questions: 35, time: '8분'  },
       BURNOUT: { label: 'K-MBI+',  desc: '번아웃 증후군',   emoji: '🔥', view: 'burnoutTest', summary: '직장·일상에서 쌓인 신체·정서적 소진을 점검합니다',               questions: 22, time: '5분'  },
+      RIASEC:  { label: 'Holland RIASEC', desc: '직업 흥미 유형', emoji: '🔍', view: 'riasecTest', summary: '나의 직업적 적성과 흥미를 6가지 유형으로 분석합니다',          questions: 30, time: '8분'  },
+      VALUES:  { label: '직업가치관', desc: '일의 의미 탐색',  emoji: '💎', view: 'valuesTest',  summary: '일에서 무엇을 중시하는지 10가지 가치요인으로 측정합니다',        questions: 30, time: '8분'  },
     };
 
     async function startSelectedTest(testType) {
@@ -3624,7 +3630,7 @@ function PsychologicalTestSystem() {
             const target = new Date(checkinDate);
             const now = new Date();
             const diffDays = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
-            const testMeta2 = { PHQ9:'우울 자가점검', GAD7:'불안 자가점검', DASS21:'DASS-21', BIG5:'Big5', BURNOUT:'K-MBI+', LOST:'LOST', SCT:'SRCI', DSI:'SDRI' };
+            const testMeta2 = { PHQ9:'우울 자가점검', GAD7:'불안 자가점검', DASS21:'DASS-21', BIG5:'Big5', BURNOUT:'K-MBI+', LOST:'LOST', SCT:'SRCI', DSI:'SDRI', RIASEC:'Holland RIASEC', VALUES:'직업가치관' };
             const testLabel = testMeta2[checkinTest] || checkinTest;
             if (diffDays > 0) {
               return (
@@ -3911,7 +3917,7 @@ function PsychologicalTestSystem() {
                   // 같은 검사 이전 기록 찾기 (변화 비교용)
                   const prevSame = testHistory.slice(i + 1).find(p => p.test_type === h.test_type);
                   const daysSince = Math.floor((new Date() - new Date(h.performed_at)) / (1000 * 60 * 60 * 24));
-                  const testEmoji2 = { PHQ9:'😔', GAD7:'😰', DASS21:'📊', BIG5:'🌟', LOST:'🧭', SCT:'✍️', DSI:'🪞', BURNOUT:'🔥' };
+                  const testEmoji2 = { PHQ9:'😔', GAD7:'😰', DASS21:'📊', BIG5:'🌟', LOST:'🧭', SCT:'✍️', DSI:'🪞', BURNOUT:'🔥', RIASEC:'🔍', VALUES:'💎' };
                   return (
                     <div key={i} className="bg-white rounded-xl p-3 border border-gray-100 hover:border-emerald-200 transition">
                       <div className="flex items-center justify-between">
@@ -3936,7 +3942,7 @@ function PsychologicalTestSystem() {
                       {daysSince >= 3 && !prevSame && (
                         <button
                           onClick={async () => {
-                            const testViews = { PHQ9:'phq9Test', GAD7:'gad7Test', DASS21:'dass21Test', BIG5:'big5Test', BURNOUT:'burnoutTest', LOST:'lostTest', SCT:'sctTest', DSI:'dsiTest' };
+                            const testViews = { PHQ9:'phq9Test', GAD7:'gad7Test', DASS21:'dass21Test', BIG5:'big5Test', BURNOUT:'burnoutTest', LOST:'lostTest', SCT:'sctTest', DSI:'dsiTest', RIASEC:'riasecTest', VALUES:'valuesTest' };
                             const ok = await chargeForTest(h.test_type);
                             if (!ok) return;
                             setPendingTests([h.test_type]);
@@ -6284,9 +6290,10 @@ function PsychologicalTestSystem() {
       setSessionId(newSessionId);
       setSrciResponses({}); setSdriResponses({}); setDsiRec("");
       setPhq9Responses({}); setGad7Responses({});
+      setRiasecResponses({}); setValuesResponses({});
       setDass21Responses({}); setBig5Responses({});
       setBurnoutResponses({}); setLostResponses({}); setSaveStatus("");
-      const testViews = { "SCT":"sctTest","DSI":"dsiTest","PHQ9":"phq9Test","GAD7":"gad7Test","DASS21":"dass21Test","BIG5":"big5Test","BURNOUT":"burnoutTest","LOST":"lostTest" };
+      const testViews = { "SCT":"sctTest","DSI":"dsiTest","PHQ9":"phq9Test","GAD7":"gad7Test","DASS21":"dass21Test","BIG5":"big5Test","BURNOUT":"burnoutTest","LOST":"lostTest","RIASEC":"riasecTest","VALUES":"valuesTest" };
       console.log("nextTest: " + nextType + " (" + (nextIndex+1) + "/" + pendingTests.length + ")");
       setView(testViews[nextType] || "sctTest");
     } else {
@@ -6294,7 +6301,8 @@ function PsychologicalTestSystem() {
         const ld = loadLink(activeLinkId);
         if (ld) { ld.status = "completed"; ld.completedSessionIds = completedIds; storeLink(ld); }
       }
-      setView("complete");
+      const singleResultViews = { RIASEC: "riasecResult", VALUES: "valuesResult" };
+      setView(singleResultViews[currentTestType] || "complete");
     }
   }
 
@@ -6379,6 +6387,148 @@ function PsychologicalTestSystem() {
     };
     console.log('📝 GAD-7 검사 제출:', sessionId);
     advanceToNextTest("GAD7", data);
+  }
+
+  // ============================================================
+  // Holland RIASEC — 문항·유형 정보·calc·submit
+  // ============================================================
+  const RIASEC_Q = [
+    { id:1,  type:'R', text:'손으로 직접 물건을 만들거나 수리하는 것을 좋아한다' },
+    { id:2,  type:'R', text:'기계나 도구를 다루는 작업이 즐겁다' },
+    { id:3,  type:'R', text:'정원 가꾸기, 목공예 등 실용적인 활동에 흥미가 있다' },
+    { id:4,  type:'R', text:'야외 활동이나 신체적 작업을 즐긴다' },
+    { id:5,  type:'R', text:'설계도, 도면, 지도를 읽고 이해하는 것이 어렵지 않다' },
+    { id:6,  type:'I', text:'복잡한 문제를 분석하고 해결책을 찾는 것이 흥미롭다' },
+    { id:7,  type:'I', text:'새로운 지식이나 이론을 탐구하는 것을 즐긴다' },
+    { id:8,  type:'I', text:'데이터나 수치를 분석하는 작업이 재미있다' },
+    { id:9,  type:'I', text:'궁금한 것이 있으면 끝까지 파헤치는 편이다' },
+    { id:10, type:'I', text:'논리적이고 체계적으로 생각하는 것을 좋아한다' },
+    { id:11, type:'A', text:'글쓰기, 강연, 창작 등 자신을 표현하는 활동을 즐긴다' },
+    { id:12, type:'A', text:'나만의 독창적인 방식으로 아이디어를 표현하고 싶다' },
+    { id:13, type:'A', text:'틀에 박힌 방식보다 자유롭게 일하는 것이 좋다' },
+    { id:14, type:'A', text:'새로운 아이디어를 생각해내는 것이 즐겁다' },
+    { id:15, type:'A', text:'예술, 문화, 콘텐츠 분야에 관심이 많다' },
+    { id:16, type:'S', text:'어려움에 처한 사람을 돕는 것이 보람 있다' },
+    { id:17, type:'S', text:'무언가를 가르치거나 코칭하는 역할이 즐겁다' },
+    { id:18, type:'S', text:'사람들의 이야기를 듣고 조언해 주는 것을 좋아한다' },
+    { id:19, type:'S', text:'봉사활동이나 사회 기여 활동에 관심이 있다' },
+    { id:20, type:'S', text:'혼자보다 다른 사람과 함께 협력하며 일하는 것이 좋다' },
+    { id:21, type:'E', text:'새로운 사업 아이디어를 실행에 옮기는 것이 즐겁다' },
+    { id:22, type:'E', text:'사람들을 설득하거나 협상하는 것이 자신 있다' },
+    { id:23, type:'E', text:'리더십을 발휘하여 팀을 이끄는 역할이 좋다' },
+    { id:24, type:'E', text:'도전적인 목표를 세우고 성취하는 것에서 동기부여를 받는다' },
+    { id:25, type:'E', text:'경쟁적인 환경에서도 적극적으로 참여하는 편이다' },
+    { id:26, type:'C', text:'정해진 절차와 규칙을 따르는 것이 편하다' },
+    { id:27, type:'C', text:'데이터를 정리하고 문서를 체계적으로 관리하는 것이 즐겁다' },
+    { id:28, type:'C', text:'꼼꼼하고 정확한 작업을 선호한다' },
+    { id:29, type:'C', text:'숫자나 문서를 다루는 사무적인 업무가 어렵지 않다' },
+    { id:30, type:'C', text:'일관성 있고 체계적으로 업무를 처리하는 편이다' },
+  ];
+  const RIASEC_TYPE_INFO = {
+    R: { name:'실재형', emoji:'🔧', desc:'도구·기계·자연을 다루는 실용적이고 구체적인 활동을 좋아합니다. 현장감 있는 환경에서 직접 만들고 운영하는 일에서 보람을 느낍니다.', careers:['기술교육강사','시설·안전관리','원예·농업 전문가','제조·품질관리'] },
+    I: { name:'탐구형', emoji:'🔬', desc:'연구·분석·지식 탐구를 즐깁니다. 쌓아온 노하우를 분석하고 체계화하는 일에서 성취감을 느낍니다.', careers:['경영컨설턴트','데이터분석가','교육과정개발자','연구·기획전문가'] },
+    A: { name:'예술형', emoji:'🎨', desc:'창의적 표현과 자유로운 환경을 선호합니다. 강의, 글쓰기, 콘텐츠 창작에서 두각을 나타냅니다.', careers:['강사·교육전문가','작가·칼럼니스트','콘텐츠크리에이터','기업교육전문가'] },
+    S: { name:'사회형', emoji:'🤝', desc:'사람을 돕고 가르치고 상담하는 것을 좋아합니다. 풍부한 경험과 노하우를 나누는 멘토·코치 역할에 잘 맞습니다.', careers:['커리어코치·멘토','심리상담사','사회복지사','직업훈련강사'] },
+    E: { name:'진취형', emoji:'🚀', desc:'리더십·설득·사업 도전을 즐깁니다. 업무 경험을 바탕으로 한 창업, 영업·컨설팅에 적합합니다.', careers:['창업가·소상공인','영업컨설턴트','HR·조직관리','비즈니스개발'] },
+    C: { name:'관습형', emoji:'📋', desc:'체계적이고 정확한 데이터 처리를 선호합니다. 행정·관리·감리 분야에서 강점을 발휘합니다.', careers:['세무·회계전문가','품질·인증관리','행정·기획관리자','감리·안전감독'] },
+  };
+  function calcRiasec() {
+    const scores = { R:0, I:0, A:0, S:0, E:0, C:0 };
+    for (const q of RIASEC_Q) scores[q.type] += (riasecResponses[q.id] || 3);
+    const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+    return { scores, sorted, dominantType: sorted[0][0] + sorted[1][0] };
+  }
+  function submitRiasec() {
+    if (Object.keys(riasecResponses).length < 30) {
+      setSaveStatus("⚠️ " + (30 - Object.keys(riasecResponses).length) + "개 문항이 남아있습니다.");
+      return;
+    }
+    const { scores, sorted, dominantType } = calcRiasec();
+    if (isLoggedIn) {
+      api.saveTestScore("RIASEC", sorted[0][1], dominantType).catch(() => {});
+      fetch('/api/test/save-result', {
+        method:'POST', headers:{ 'Content-Type':'application/json', ...api._authHeader() },
+        body: JSON.stringify({ test_type:'RIASEC', result_json:{ scores, dominant_type:dominantType } }),
+      }).catch(() => {});
+    }
+    const data = { sessionId, testType:"RIASEC", responses:{ scores, dominant_type:dominantType }, createdAt:new Date().toISOString(), userPhone:userInfo.phone||"미확인", linkId:activeLinkId||null };
+    advanceToNextTest("RIASEC", data);
+  }
+
+  // ============================================================
+  // 직업가치관 — 문항·도메인 정보·calc·submit
+  // ============================================================
+  const VALUES_Q = [
+    { id:1,  domain:'achievement', text:'어렵고 도전적인 목표를 달성했을 때 가장 큰 보람을 느낀다.' },
+    { id:2,  domain:'achievement', text:'내 분야에서 최고 수준의 성과를 내는 것이 중요하다.' },
+    { id:3,  domain:'achievement', text:'뚜렷한 성과와 결과물이 있는 일에서 동기부여를 받는다.' },
+    { id:4,  domain:'service',     text:'내 일이 다른 사람들의 삶에 긍정적인 영향을 미치는 것이 중요하다.' },
+    { id:5,  domain:'service',     text:'사회적으로 의미 있는 일을 하고 싶다.' },
+    { id:6,  domain:'service',     text:'어려운 사람을 돕는 일에서 진정한 보람을 느낀다.' },
+    { id:7,  domain:'stability',   text:'고용이 보장되고 안정적인 직장을 가장 우선시한다.' },
+    { id:8,  domain:'stability',   text:'예측 가능하고 변화가 적은 환경에서 일하는 것을 선호한다.' },
+    { id:9,  domain:'stability',   text:'위험 부담이 적은 안정된 선택을 하는 것이 중요하다.' },
+    { id:10, domain:'autonomy',    text:'스스로 업무 방식과 일정을 결정할 수 있는 자율성이 중요하다.' },
+    { id:11, domain:'autonomy',    text:'지시를 받기보다 스스로 판단하여 일하는 방식을 선호한다.' },
+    { id:12, domain:'autonomy',    text:'독립적으로 일하면서 나만의 방식을 만들어가는 것이 중요하다.' },
+    { id:13, domain:'creativity',  text:'새로운 것을 만들고 창조하는 일에서 큰 즐거움을 느낀다.' },
+    { id:14, domain:'creativity',  text:'기존 틀을 깨고 혁신적인 방법을 시도하는 것을 즐긴다.' },
+    { id:15, domain:'creativity',  text:'예술적·창의적 표현이 가능한 일에 매력을 느낀다.' },
+    { id:16, domain:'influence',   text:'조직이나 사회에서 영향력 있는 위치에 있는 것이 중요하다.' },
+    { id:17, domain:'influence',   text:'중요한 결정에 참여하고 의사결정 과정에서 주도적 역할을 하고 싶다.' },
+    { id:18, domain:'influence',   text:'다른 사람들의 생각과 행동에 긍정적 변화를 이끌고 싶다.' },
+    { id:19, domain:'knowledge',   text:'지속적으로 새로운 지식과 기술을 배우는 것이 중요하다.' },
+    { id:20, domain:'knowledge',   text:'특정 분야에서 깊은 전문성을 쌓는 것에 큰 의미를 둔다.' },
+    { id:21, domain:'knowledge',   text:'지적 자극이 있는 복잡하고 어려운 문제를 다루는 일을 좋아한다.' },
+    { id:22, domain:'balance',     text:'일과 개인 생활의 균형이 무엇보다 중요하다.' },
+    { id:23, domain:'balance',     text:'가족과 함께하는 시간과 개인 취미를 충분히 누릴 수 있는 직업을 원한다.' },
+    { id:24, domain:'balance',     text:'과도한 업무 부담보다 적정한 수준의 책임이 있는 일을 선호한다.' },
+    { id:25, domain:'social',      text:'주변 사람들에게 인정받고 존경받는 직업을 갖는 것이 중요하다.' },
+    { id:26, domain:'social',      text:'사회적으로 명망 있고 위상이 높은 직업을 갖고 싶다.' },
+    { id:27, domain:'social',      text:'내 직업이 타인에게 긍정적으로 평가받는 것이 중요하다.' },
+    { id:28, domain:'economic',    text:'높은 수입을 올릴 수 있는 직업을 원한다.' },
+    { id:29, domain:'economic',    text:'충분한 경제적 보상이 있어야 일에서 만족감을 느낀다.' },
+    { id:30, domain:'economic',    text:'성과에 따른 높은 인센티브를 제공하는 직업을 선호한다.' },
+  ];
+  const VALUES_DOMAIN_INFO = {
+    achievement: { label:'성취',       emoji:'🏆', desc:'높은 목표를 달성하고 성공을 추구합니다.' },
+    service:     { label:'봉사',       emoji:'🌱', desc:'타인을 돕고 사회에 기여하는 것에서 의미를 찾습니다.' },
+    stability:   { label:'안정',       emoji:'🛡️', desc:'직업 안정성과 예측 가능한 환경을 선호합니다.' },
+    autonomy:    { label:'자율',       emoji:'🦋', desc:'스스로 결정하고 독립적으로 일하는 것을 중시합니다.' },
+    creativity:  { label:'창의',       emoji:'🎨', desc:'새로운 것을 만들고 혁신하는 일에서 즐거움을 느낍니다.' },
+    influence:   { label:'영향력',     emoji:'📢', desc:'다른 사람과 조직에 영향을 미치는 것을 중시합니다.' },
+    knowledge:   { label:'지식추구',   emoji:'📚', desc:'지속적인 학습과 전문성 개발에 가치를 둡니다.' },
+    balance:     { label:'워라밸',     emoji:'⚖️', desc:'일과 삶의 균형을 중요하게 생각합니다.' },
+    social:      { label:'사회인정',   emoji:'🌟', desc:'타인으로부터 인정과 존경을 받는 것을 중시합니다.' },
+    economic:    { label:'경제적 보상', emoji:'💰', desc:'높은 수입과 경제적 여유를 중요하게 생각합니다.' },
+  };
+  function calcValues() {
+    const sums = {}, counts = {};
+    for (const q of VALUES_Q) {
+      if (!sums[q.domain]) { sums[q.domain] = 0; counts[q.domain] = 0; }
+      sums[q.domain] += (valuesResponses[q.id] || 3);
+      counts[q.domain]++;
+    }
+    const scores = {};
+    for (const d of Object.keys(sums)) scores[d] = Math.round((sums[d] / counts[d]) * 20);
+    const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+    return { scores, sorted };
+  }
+  function submitValues() {
+    if (Object.keys(valuesResponses).length < 30) {
+      setSaveStatus("⚠️ " + (30 - Object.keys(valuesResponses).length) + "개 문항이 남아있습니다.");
+      return;
+    }
+    const { scores, sorted } = calcValues();
+    if (isLoggedIn) {
+      api.saveTestScore("VALUES", sorted[0][1], sorted[0][0]).catch(() => {});
+      fetch('/api/test/save-result', {
+        method:'POST', headers:{ 'Content-Type':'application/json', ...api._authHeader() },
+        body: JSON.stringify({ test_type:'VALUES', result_json:{ scores } }),
+      }).catch(() => {});
+    }
+    const data = { sessionId, testType:"VALUES", responses:{ scores }, createdAt:new Date().toISOString(), userPhone:userInfo.phone||"미확인", linkId:activeLinkId||null };
+    advanceToNextTest("VALUES", data);
   }
 
   // DASS-21 제출 함수
@@ -8313,6 +8463,116 @@ function PsychologicalTestSystem() {
     </div>
   );
 
+  // ── Holland RIASEC 검사 화면 ────────────────────────────────
+  if (view === "riasecTest") return (
+    <div className="min-h-screen bg-gray-50 p-4">
+      {ProtectionLayers}
+      <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
+        {pendingTests.length > 1 && (
+          <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
+            <p className="text-xs font-bold text-purple-700 mb-2">📋 검사 진행 현황 ({currentTestIndex + 1}/{pendingTests.length})</p>
+            <div className="flex gap-2 flex-wrap">
+              {pendingTests.map((t, i) => (
+                <span key={t} className={`px-3 py-1 rounded-full text-xs font-bold border ${i < currentTestIndex ? "bg-green-100 border-green-300 text-green-700" : i === currentTestIndex ? "bg-purple-600 text-white border-purple-600" : "bg-gray-100 border-gray-300 text-gray-400"}`}>
+                  {i < currentTestIndex ? "✅ " : i === currentTestIndex ? "▶ " : ""}{t}
+                </span>
+              ))}
+            </div>
+            <div className="mt-2 bg-gray-200 rounded-full h-1.5">
+              <div className="bg-purple-500 h-1.5 rounded-full transition-all" style={{width: `${((currentTestIndex) / pendingTests.length) * 100}%`}}></div>
+            </div>
+          </div>
+        )}
+        <h1 className="text-2xl font-bold text-center text-violet-800 mb-1">🔍 Holland RIASEC 직업 흥미 검사</h1>
+        <p className="text-center text-gray-400 text-sm mb-2">나의 직업적 적성과 흥미를 6가지 유형으로 분석합니다 (30문항)</p>
+        <div className="bg-violet-50 border border-violet-200 rounded-lg p-3 mb-4 text-xs text-violet-800">
+          <div className="flex flex-wrap gap-3">
+            {["1: 전혀 아니다", "2: 아니다", "3: 보통", "4: 그렇다", "5: 매우 그렇다"].map(t => <span key={t} className="font-semibold">{t}</span>)}
+          </div>
+        </div>
+        <div className="bg-violet-50 border border-violet-200 rounded-lg p-2 text-xs text-violet-800 mb-6 text-center">
+          진행: <strong>{Object.keys(riasecResponses).length}</strong> / 30 문항
+        </div>
+        {saveStatus && <div className="mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded text-sm text-yellow-800 text-center">{saveStatus}</div>}
+        <div className="space-y-4">
+          {RIASEC_Q.map(q => (
+            <div key={q.id} className="border-b border-gray-100 pb-4">
+              <label className="block mb-3 font-semibold text-gray-700 text-sm">{q.id}. {q.text}</label>
+              <div className="flex gap-1.5">
+                {[1, 2, 3, 4, 5].map(v => (
+                  <button key={v} onClick={() => setRiasecResponses(p => ({ ...p, [q.id]: v }))}
+                    className={`flex-1 py-2 rounded-lg text-sm font-semibold transition ${riasecResponses[q.id] === v ? "bg-violet-700 text-white" : "bg-gray-100 text-gray-600 hover:bg-violet-100"}`}>
+                    {v}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-8 text-center">
+          <button onClick={submitRiasec} className="bg-violet-700 text-white px-10 py-3 rounded-xl font-bold text-lg hover:bg-violet-800 transition">
+            검사 제출 ({Object.keys(riasecResponses).length}/30)
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── 직업가치관 검사 화면 ──────────────────────────────────────
+  if (view === "valuesTest") return (
+    <div className="min-h-screen bg-gray-50 p-4">
+      {ProtectionLayers}
+      <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
+        {pendingTests.length > 1 && (
+          <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
+            <p className="text-xs font-bold text-purple-700 mb-2">📋 검사 진행 현황 ({currentTestIndex + 1}/{pendingTests.length})</p>
+            <div className="flex gap-2 flex-wrap">
+              {pendingTests.map((t, i) => (
+                <span key={t} className={`px-3 py-1 rounded-full text-xs font-bold border ${i < currentTestIndex ? "bg-green-100 border-green-300 text-green-700" : i === currentTestIndex ? "bg-purple-600 text-white border-purple-600" : "bg-gray-100 border-gray-300 text-gray-400"}`}>
+                  {i < currentTestIndex ? "✅ " : i === currentTestIndex ? "▶ " : ""}{t}
+                </span>
+              ))}
+            </div>
+            <div className="mt-2 bg-gray-200 rounded-full h-1.5">
+              <div className="bg-purple-500 h-1.5 rounded-full transition-all" style={{width: `${((currentTestIndex) / pendingTests.length) * 100}%`}}></div>
+            </div>
+          </div>
+        )}
+        <h1 className="text-2xl font-bold text-center text-amber-800 mb-1">💎 직업가치관 검사</h1>
+        <p className="text-center text-gray-400 text-sm mb-2">일에서 무엇을 중시하는지 10가지 가치요인으로 측정합니다 (30문항)</p>
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-xs text-amber-800">
+          <div className="flex flex-wrap gap-3">
+            {["1: 전혀 중요하지 않다", "2: 중요하지 않다", "3: 보통", "4: 중요하다", "5: 매우 중요하다"].map(t => <span key={t} className="font-semibold">{t}</span>)}
+          </div>
+        </div>
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 text-xs text-amber-800 mb-6 text-center">
+          진행: <strong>{Object.keys(valuesResponses).length}</strong> / 30 문항
+        </div>
+        {saveStatus && <div className="mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded text-sm text-yellow-800 text-center">{saveStatus}</div>}
+        <div className="space-y-4">
+          {VALUES_Q.map(q => (
+            <div key={q.id} className="border-b border-gray-100 pb-4">
+              <label className="block mb-3 font-semibold text-gray-700 text-sm">{q.id}. {q.text}</label>
+              <div className="flex gap-1.5">
+                {[1, 2, 3, 4, 5].map(v => (
+                  <button key={v} onClick={() => setValuesResponses(p => ({ ...p, [q.id]: v }))}
+                    className={`flex-1 py-2 rounded-lg text-sm font-semibold transition ${valuesResponses[q.id] === v ? "bg-amber-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-amber-100"}`}>
+                    {v}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-8 text-center">
+          <button onClick={submitValues} className="bg-amber-600 text-white px-10 py-3 rounded-xl font-bold text-lg hover:bg-amber-700 transition">
+            검사 제출 ({Object.keys(valuesResponses).length}/30)
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   // DASS-21 검사 화면
   if (view === "dass21Test") return (
     <div className="min-h-screen bg-gray-50 p-4">
@@ -8699,6 +8959,8 @@ function PsychologicalTestSystem() {
               BURNOUT: [{ id:'PHQ9',    name:'우울 자가점검',     emoji:'🌱', free:true  }, { id:'DASS21',  name:'우울·불안·스트레스', emoji:'🌊', free:false }],
               SCT:     [{ id:'DSI',     name:'자기분화 반응성',   emoji:'🪞', free:false }, { id:'BIG5',    name:'성격 5요인',         emoji:'🧠', free:false }],
               DSI:     [{ id:'SCT',     name:'자기반응 완성',     emoji:'✍️', free:false }, { id:'BIG5',    name:'성격 5요인',         emoji:'🧠', free:false }],
+              RIASEC:  [{ id:'VALUES',  name:'직업가치관',        emoji:'💎', free:false }, { id:'BIG5',    name:'성격 5요인',         emoji:'🧠', free:false }],
+              VALUES:  [{ id:'RIASEC',  name:'Holland RIASEC',   emoji:'🔍', free:false }, { id:'BIG5',    name:'성격 5요인',         emoji:'🧠', free:false }],
             };
             const suggestions = NEXT[completedTest];
             if (!suggestions) return null;
@@ -9081,6 +9343,197 @@ function PsychologicalTestSystem() {
             "GAD-7 결과에서 특히 주목해야 할 문항이 있나요?",
             "불안과 일상 기능 저하의 관계를 어떻게 이해하면 좋을까요?",
             "불안 완화를 위한 즉각적인 개입 방법을 알려주세요"
+          ]} />
+        </div>
+      </div>
+    );
+  }
+
+  // ── Holland RIASEC 결과 화면 ────────────────────────────────
+  if (view === "riasecResult") {
+    const { scores, sorted, dominantType } = calcRiasec();
+    const top1 = RIASEC_TYPE_INFO[sorted[0][0]];
+    const top2 = RIASEC_TYPE_INFO[sorted[1][0]];
+    const maxScore = 25;
+    return (
+      <div className="min-h-screen bg-gray-50 p-4">
+        {ProtectionLayers}
+        <div className="max-w-2xl mx-auto bg-white rounded-xl shadow p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-bold text-violet-800">🔍 Holland RIASEC 결과</h1>
+            <button onClick={() => setView(isLoggedIn ? "memberDashboard" : "testsIntro")} className="bg-gray-400 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-500">
+              ← 목록
+            </button>
+          </div>
+
+          {/* 주요 유형 뱃지 */}
+          <div className="bg-violet-50 border border-violet-200 rounded-2xl p-5 mb-6 text-center">
+            <div className="text-4xl mb-2">{top1.emoji}{top2.emoji}</div>
+            <div className="text-xl font-bold text-violet-800 mb-1">{dominantType}형 — {top1.name}·{top2.name}</div>
+            <p className="text-sm text-gray-600 mt-2">{top1.desc}</p>
+          </div>
+
+          {/* 6개 유형 점수 바 */}
+          <div className="mb-6">
+            <h3 className="font-bold text-gray-700 mb-3">유형별 점수</h3>
+            <div className="space-y-3">
+              {sorted.map(([type, score], i) => {
+                const info = RIASEC_TYPE_INFO[type];
+                return (
+                  <div key={type}>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-sm font-semibold text-gray-700">{info.emoji} {type} {info.name}</span>
+                      <span className="text-sm font-bold text-violet-700">{score}/{maxScore}</span>
+                    </div>
+                    <div className="bg-gray-100 rounded-full h-3">
+                      <div className={`h-3 rounded-full transition-all ${i === 0 ? 'bg-violet-600' : i === 1 ? 'bg-violet-400' : 'bg-violet-200'}`}
+                        style={{width: `${(score / maxScore) * 100}%`}}></div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 추천 직업 */}
+          <div className="mb-6">
+            <h3 className="font-bold text-gray-700 mb-3">추천 직업·역할</h3>
+            <div className="grid grid-cols-2 gap-3">
+              {[...top1.careers, ...top2.careers].map((c, i) => (
+                <div key={i} className="bg-violet-50 border border-violet-100 rounded-xl p-3 text-sm font-semibold text-violet-800 text-center">
+                  {c}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <AiAnalysisBox
+            aiKey="RIASEC"
+            onRun={() => {
+              runAiAnalysis("RIASEC", "RIASEC", {
+                dominant_type: dominantType,
+                top1: { type: sorted[0][0], name: top1.name, score: sorted[0][1] },
+                top2: { type: sorted[1][0], name: top2.name, score: sorted[1][1] },
+                scores,
+              });
+            }}
+          />
+          <ShareResultButton
+            text={`🔍 Holland RIASEC 검사 결과\n${dominantType}형 (${top1.name}·${top2.name})\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #진로검사`}
+            testLabel="Holland RIASEC 직업 흥미 검사"
+            scoreText={`${dominantType}형`}
+            levelText={`${top1.name}·${top2.name}`}
+            colorHex="#5b21b6"
+          />
+          {isLoggedIn && (
+            <div className="mt-4 p-4 bg-violet-50 border border-violet-200 rounded-2xl text-center">
+              <div className="text-sm font-semibold text-violet-800 mb-2">🎯 이 결과를 AI 상담에 활용하세요</div>
+              <button onClick={() => { setChatOpen(true); window.scrollTo(0, document.body.scrollHeight); }}
+                className="bg-violet-700 text-white px-5 py-2 rounded-xl text-sm font-bold hover:bg-violet-800 transition">
+                AI 상담사에게 진로 조언 받기 →
+              </button>
+            </div>
+          )}
+          <ChatBox testType="RIASEC" initialPrompts={[
+            `제 RIASEC 결과 ${dominantType}형이 어떤 의미인지 설명해주세요`,
+            "이 유형에 맞는 진로 방향을 추천해 주세요",
+            "현재 하는 일과 제 흥미 유형의 적합도가 어떤가요?",
+            "강점을 살릴 수 있는 구체적인 직업 활동은 무엇인가요?",
+          ]} />
+        </div>
+      </div>
+    );
+  }
+
+  // ── 직업가치관 결과 화면 ──────────────────────────────────────
+  if (view === "valuesResult") {
+    const { scores, sorted } = calcValues();
+    const top3 = sorted.slice(0, 3);
+    return (
+      <div className="min-h-screen bg-gray-50 p-4">
+        {ProtectionLayers}
+        <div className="max-w-2xl mx-auto bg-white rounded-xl shadow p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-bold text-amber-800">💎 직업가치관 결과</h1>
+            <button onClick={() => setView(isLoggedIn ? "memberDashboard" : "testsIntro")} className="bg-gray-400 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-500">
+              ← 목록
+            </button>
+          </div>
+
+          {/* 핵심 가치 Top 3 */}
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-6">
+            <h3 className="font-bold text-amber-800 mb-3 text-center">나의 핵심 직업 가치</h3>
+            <div className="grid grid-cols-3 gap-3">
+              {top3.map(([key, score], i) => {
+                const info = VALUES_DOMAIN_INFO[key];
+                return (
+                  <div key={key} className="bg-white border border-amber-200 rounded-xl p-3 text-center">
+                    <div className="text-xl mb-1">{info.emoji}</div>
+                    <div className={`text-xs font-bold mb-1 ${i === 0 ? 'text-amber-600' : 'text-gray-700'}`}>
+                      {i === 0 ? '🥇 ' : i === 1 ? '🥈 ' : '🥉 '}{info.label}
+                    </div>
+                    <div className="text-sm font-bold text-gray-800">{score}점</div>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-xs text-amber-700 mt-3 text-center">
+              {VALUES_DOMAIN_INFO[top3[0][0]].desc}
+            </p>
+          </div>
+
+          {/* 전체 가치 순위 바 차트 */}
+          <div className="mb-6">
+            <h3 className="font-bold text-gray-700 mb-3">전체 가치 순위</h3>
+            <div className="space-y-3">
+              {sorted.map(([key, score], i) => {
+                const info = VALUES_DOMAIN_INFO[key];
+                return (
+                  <div key={key}>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-sm font-semibold text-gray-700">{info.emoji} {info.label}</span>
+                      <span className="text-sm font-bold text-amber-700">{score}점</span>
+                    </div>
+                    <div className="bg-gray-100 rounded-full h-2.5">
+                      <div className={`h-2.5 rounded-full transition-all ${i < 3 ? 'bg-amber-500' : 'bg-amber-200'}`}
+                        style={{width: `${score}%`}}></div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <AiAnalysisBox
+            aiKey="VALUES"
+            onRun={() => {
+              runAiAnalysis("VALUES", "VALUES", {
+                top3: top3.map(([key, score]) => ({ key, label: VALUES_DOMAIN_INFO[key].label, score })),
+                scores,
+              });
+            }}
+          />
+          <ShareResultButton
+            text={`💎 직업가치관 검사 결과\n1위: ${VALUES_DOMAIN_INFO[top3[0][0]].emoji}${VALUES_DOMAIN_INFO[top3[0][0]].label} (${top3[0][1]}점)\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #진로검사`}
+            testLabel="직업가치관 검사"
+            scoreText={`${VALUES_DOMAIN_INFO[top3[0][0]].label} 1위`}
+            levelText={`${top3[0][1]}점`}
+            colorHex="#92400e"
+          />
+          {isLoggedIn && (
+            <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-2xl text-center">
+              <div className="text-sm font-semibold text-amber-800 mb-2">💡 나의 가치에 맞는 직업을 탐색해 보세요</div>
+              <button onClick={() => { setChatOpen(true); window.scrollTo(0, document.body.scrollHeight); }}
+                className="bg-amber-600 text-white px-5 py-2 rounded-xl text-sm font-bold hover:bg-amber-700 transition">
+                AI 상담사에게 진로 조언 받기 →
+              </button>
+            </div>
+          )}
+          <ChatBox testType="VALUES" initialPrompts={[
+            `제 1위 가치인 '${VALUES_DOMAIN_INFO[top3[0][0]].label}'가 어떤 의미인지 설명해주세요`,
+            "이 가치관에 맞는 직업을 추천해 주세요",
+            "현재 직업과 제 가치관이 얼마나 맞는지 분석해 주세요",
+            "직업 선택 시 이 가치관을 어떻게 활용하면 좋을까요?",
           ]} />
         </div>
       </div>

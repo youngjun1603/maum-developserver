@@ -1279,7 +1279,7 @@ app.post('/api/test/save-result', async (c) => {
     test_type?: string; result_json?: Record<string, unknown>
   }
   if (!test_type || !result_json) return c.json({ error: '파라미터 부족' }, 400)
-  if (!['BIG5', 'LOST', 'DSI'].includes(test_type)) return c.json({ error: '지원하지 않는 유형' }, 400)
+  if (!['BIG5', 'LOST', 'DSI', 'RIASEC', 'VALUES'].includes(test_type)) return c.json({ error: '지원하지 않는 유형' }, 400)
 
   const resultStr = JSON.stringify(result_json)
   const upd = await DB.prepare(
