@@ -1197,7 +1197,7 @@ function PsychologicalTestSystem() {
     const TEST_VIEW_MAP = {
       PHQ9: 'phq9Test', GAD7: 'gad7Test', DASS21: 'dass21Test',
       BIG5: 'big5Test', BURNOUT: 'burnoutTest', LOST: 'lostTest',
-      SCT: 'sctTest', DSI: 'dsiTest',
+      SCT: 'sctTest', DSI: 'dsiTest', RIASEC: 'riasecTest', VALUES: 'valuesTest',
     };
     const targetView = TEST_VIEW_MAP[testId];
     if (!targetView) { setView('memberDashboard'); return; }
@@ -1229,6 +1229,11 @@ function PsychologicalTestSystem() {
       setCurrentTestIndex(0);
       setMultiSessionIds([]);
       setSessionId(genId('session'));
+      setSaveStatus('');
+      setRiasecResponses({}); setValuesResponses({});
+      setPhq9Responses({}); setGad7Responses({}); setDass21Responses({});
+      setBig5Responses({}); setBurnoutResponses({}); setLostResponses({});
+      setSrciResponses({}); setSdriResponses({});
       resetChat();
       setView(targetView);
     })();
@@ -3574,6 +3579,11 @@ function PsychologicalTestSystem() {
       setCurrentTestIndex(0);
       setMultiSessionIds([]);
       setSessionId(genId('session'));
+      setSaveStatus('');
+      setRiasecResponses({}); setValuesResponses({});
+      setPhq9Responses({}); setGad7Responses({}); setDass21Responses({});
+      setBig5Responses({}); setBurnoutResponses({}); setLostResponses({});
+      setSrciResponses({}); setSdriResponses({});
       resetChat();
       setView(testMeta[testType]?.view || 'phq9Test');
     }
@@ -3664,6 +3674,11 @@ function PsychologicalTestSystem() {
                       setCurrentTestIndex(0);
                       setMultiSessionIds([]);
                       setSessionId(genId('session'));
+                      setSaveStatus('');
+                      setRiasecResponses({}); setValuesResponses({});
+                      setPhq9Responses({}); setGad7Responses({}); setDass21Responses({});
+                      setBig5Responses({}); setBurnoutResponses({}); setLostResponses({});
+                      setSrciResponses({}); setSdriResponses({});
                       resetChat();
                       localStorage.removeItem('maumful_checkin_date');
                       localStorage.removeItem('maumful_checkin_test');
@@ -3949,6 +3964,11 @@ function PsychologicalTestSystem() {
                             setCurrentTestIndex(0);
                             setMultiSessionIds([]);
                             setSessionId(genId('session'));
+                            setSaveStatus('');
+                            setRiasecResponses({}); setValuesResponses({});
+                            setPhq9Responses({}); setGad7Responses({}); setDass21Responses({});
+                            setBig5Responses({}); setBurnoutResponses({}); setLostResponses({});
+                            setSrciResponses({}); setSdriResponses({});
                             resetChat();
                             setView(testViews[h.test_type] || 'phq9Test');
                           }}
@@ -9352,6 +9372,10 @@ function PsychologicalTestSystem() {
 
   // ── Holland RIASEC 결과 화면 ────────────────────────────────
   if (view === "riasecResult") {
+    if (Object.keys(riasecResponses).length === 0) {
+      setView(isLoggedIn ? "memberDashboard" : "testsIntro");
+      return null;
+    }
     const { scores, sorted, dominantType } = calcRiasec();
     const top1 = RIASEC_TYPE_INFO[sorted[0][0]];
     const top2 = RIASEC_TYPE_INFO[sorted[1][0]];
@@ -9448,6 +9472,10 @@ function PsychologicalTestSystem() {
 
   // ── 직업가치관 결과 화면 ──────────────────────────────────────
   if (view === "valuesResult") {
+    if (Object.keys(valuesResponses).length === 0) {
+      setView(isLoggedIn ? "memberDashboard" : "testsIntro");
+      return null;
+    }
     const { scores, sorted } = calcValues();
     const top3 = sorted.slice(0, 3);
     return (
