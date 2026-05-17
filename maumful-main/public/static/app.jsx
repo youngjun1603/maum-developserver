@@ -1210,6 +1210,8 @@ function PsychologicalTestSystem() {
       setCurrentTestIndex(0);
       setMultiSessionIds([]);
       setSessionId(genId('session'));
+      setPhq9Responses({});
+      setGad7Responses({});
       resetChat();
       setView(targetView);
       return;
@@ -2710,7 +2712,7 @@ function PsychologicalTestSystem() {
           함께 심리검사를 완료하면<br/>커플 궁합 리포트를 받아볼 수 있어요.
         </div>
         <div style={{ background: '#FFF0F4', borderRadius: 12, padding: '12px 16px', marginBottom: 24, fontSize: 13, color: '#C06080', fontWeight: 600 }}>
-          필요한 검사: {partnerMode?.testType.split('+').map((t, i, arr) => (
+          필요한 검사: {(partnerMode?.testType || '').split('+').map((t, i, arr) => (
             <span key={t}>{t === 'DSI' ? 'SDRI 자아분화' : t}{i < arr.length - 1 ? ' + ' : ''}</span>
           ))}
         </div>
@@ -6285,9 +6287,8 @@ function PsychologicalTestSystem() {
       setDass21Responses({}); setBig5Responses({});
       setBurnoutResponses({}); setLostResponses({}); setSaveStatus("");
       const testViews = { "SCT":"sctTest","DSI":"dsiTest","PHQ9":"phq9Test","GAD7":"gad7Test","DASS21":"dass21Test","BIG5":"big5Test","BURNOUT":"burnoutTest","LOST":"lostTest" };
-      const testViews2 = { "SCT":"sctTest","DSI":"dsiTest","PHQ9":"phq9Test","GAD7":"gad7Test","DASS21":"dass21Test","BIG5":"big5Test","BURNOUT":"burnoutTest","LOST":"lostTest" };
       console.log("nextTest: " + nextType + " (" + (nextIndex+1) + "/" + pendingTests.length + ")");
-      setView(testViews2[nextType] || "sctTest");
+      setView(testViews[nextType] || "sctTest");
     } else {
       if (activeLinkId) {
         const ld = loadLink(activeLinkId);
@@ -8954,7 +8955,7 @@ function PsychologicalTestSystem() {
             {phq9Q.map(q => (
               <div key={q.num} className="border-b pb-2">
                 <p className="text-sm text-gray-600">{q.num}. {q.content}</p>
-                <p className="text-sm font-semibold">응답: {phq9Responses[q.num]}점</p>
+                <p className="text-sm font-semibold">응답: {phq9Responses[q.num] ?? '-'}점</p>
               </div>
             ))}
           </div>
@@ -9035,7 +9036,7 @@ function PsychologicalTestSystem() {
             {gad7Q.map(q => (
               <div key={q.num} className="border-b pb-2">
                 <p className="text-sm text-gray-600">{q.num}. {q.content}</p>
-                <p className="text-sm font-semibold">응답: {gad7Responses[q.num]}점</p>
+                <p className="text-sm font-semibold">응답: {gad7Responses[q.num] ?? '-'}점</p>
               </div>
             ))}
           </div>
