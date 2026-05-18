@@ -365,6 +365,14 @@ function PsychologicalTestSystem() {
     try { localStorage.setItem('counseling_mode', mode); } catch {}
   }
 
+  const [langOverride, setLangOverride] = useState(() => {
+    try { return localStorage.getItem('maumful_lang') || ''; } catch { return ''; }
+  });
+  function updateLang(l) {
+    setLangOverride(l);
+    try { localStorage.setItem('maumful_lang', l); } catch {}
+  }
+
   // ── GDPR 쿠키 동의 ────────────────────────────────────────
   const [showCookieBanner, setShowCookieBanner] = useState(() => {
     // EU 국가 코드 목록
@@ -428,6 +436,10 @@ function PsychologicalTestSystem() {
   // 🔒 B2B 잔재 setter stubs (logout 등 호환용)
   const setActiveLinkId = (...args) => {};
   const setSubscription = setSubscriptionState;  // 🔗 useState setter 위임
+
+  // ── 언어 설정 ────────────────────────────────────────────────
+  const lang = langOverride || regionConfig?.lang || 'ko';
+  const t = (ko, en) => lang === 'en' ? en : ko;
 
   // ============================================================
   // ✅ main.jsx 에서 복구한 헬퍼 함수 및 검사 데이터
@@ -618,25 +630,25 @@ function PsychologicalTestSystem() {
     ];
 
   const phq9Q = [
-      { num: 1, content: "기분이 가라앉거나, 우울하거나, 희망이 없다고 느꼈다" },
-      { num: 2, content: "평소 하던 일에 대한 흥미가 없어지거나 즐거움을 느끼지 못했다" },
-      { num: 3, content: "잠들기가 어렵거나 자주 깼다 / 혹은 너무 많이 잤다" },
-      { num: 4, content: "피곤하다고 느끼거나 기력이 거의 없었다" },
-      { num: 5, content: "식욕이 줄었다 / 혹은 평소보다 많이 먹었다" },
-      { num: 6, content: "내 자신이 실패자라고 느꼈다 / 혹은 자신과 가족을 실망시켰다고 느꼈다" },
-      { num: 7, content: "신문을 읽거나 TV를 보는 것과 같은 일에 집중하기가 어려웠다" },
-      { num: 8, content: "다른 사람들이 알아챌 정도로 평소보다 말과 행동이 느려졌다 / 혹은 너무 안절부절 못해서 가만히 앉아 있을 수 없었다" },
-      { num: 9, content: "차라리 죽는 것이 낫겠다고 생각했다 / 혹은 자해할 생각을 했다" },
+      { num: 1, content: t("기분이 가라앉거나, 우울하거나, 희망이 없다고 느꼈다", "Feeling down, depressed, or hopeless") },
+      { num: 2, content: t("평소 하던 일에 대한 흥미가 없어지거나 즐거움을 느끼지 못했다", "Little interest or pleasure in doing things") },
+      { num: 3, content: t("잠들기가 어렵거나 자주 깼다 / 혹은 너무 많이 잤다", "Trouble falling or staying asleep, or sleeping too much") },
+      { num: 4, content: t("피곤하다고 느끼거나 기력이 거의 없었다", "Feeling tired or having little energy") },
+      { num: 5, content: t("식욕이 줄었다 / 혹은 평소보다 많이 먹었다", "Poor appetite or overeating") },
+      { num: 6, content: t("내 자신이 실패자라고 느꼈다 / 혹은 자신과 가족을 실망시켰다고 느꼈다", "Feeling bad about yourself — or that you are a failure or have let yourself or your family down") },
+      { num: 7, content: t("신문을 읽거나 TV를 보는 것과 같은 일에 집중하기가 어려웠다", "Trouble concentrating on things, such as reading the newspaper or watching television") },
+      { num: 8, content: t("다른 사람들이 알아챌 정도로 평소보다 말과 행동이 느려졌다 / 혹은 너무 안절부절 못해서 가만히 앉아 있을 수 없었다", "Moving or speaking so slowly that other people could have noticed — or being so fidgety that you moved around more than usual") },
+      { num: 9, content: t("차라리 죽는 것이 낫겠다고 생각했다 / 혹은 자해할 생각을 했다", "Thoughts that you would be better off dead, or of hurting yourself in some way") },
     ];
 
   const gad7Q = [
-      { num: 1, content: "초조하거나 불안하거나 조마조마하게 느낀다" },
-      { num: 2, content: "걱정하는 것을 멈추거나 조절할 수가 없다" },
-      { num: 3, content: "여러 가지 것들에 대해 걱정을 너무 많이 한다" },
-      { num: 4, content: "편하게 있기가 어렵다" },
-      { num: 5, content: "너무 안절부절 못해서 가만히 있기 힘들다" },
-      { num: 6, content: "쉽게 짜증이 나거나 쉽게 성을 낸다" },
-      { num: 7, content: "마치 끔찍한 일이 생길 것처럼 두렵게 느낀다" },
+      { num: 1, content: t("초조하거나 불안하거나 조마조마하게 느낀다", "Feeling nervous, anxious, or on edge") },
+      { num: 2, content: t("걱정하는 것을 멈추거나 조절할 수가 없다", "Not being able to stop or control worrying") },
+      { num: 3, content: t("여러 가지 것들에 대해 걱정을 너무 많이 한다", "Worrying too much about different things") },
+      { num: 4, content: t("편하게 있기가 어렵다", "Trouble relaxing") },
+      { num: 5, content: t("너무 안절부절 못해서 가만히 있기 힘들다", "Being so restless that it is hard to sit still") },
+      { num: 6, content: t("쉽게 짜증이 나거나 쉽게 성을 낸다", "Becoming easily annoyed or irritable") },
+      { num: 7, content: t("마치 끔찍한 일이 생길 것처럼 두렵게 느낀다", "Feeling afraid, as if something awful might happen") },
     ];
 
   const dass21Q = [
@@ -2755,6 +2767,8 @@ function PsychologicalTestSystem() {
         currentUser={currentUser}
         credits={credits}
         activeView="landing"
+        lang={lang}
+        onLangToggle={updateLang}
       />
       <LandingPage setView={setView} isLoggedIn={isLoggedIn} />
     </>
@@ -2771,6 +2785,8 @@ function PsychologicalTestSystem() {
         currentUser={currentUser}
         credits={credits}
         activeView="testsIntro"
+        lang={lang}
+        onLangToggle={updateLang}
       />
       <TestsIntroPage setView={setView} isLoggedIn={isLoggedIn} />
     </>
@@ -2787,6 +2803,8 @@ function PsychologicalTestSystem() {
         currentUser={currentUser}
         credits={credits}
         activeView="counseling"
+        lang={lang}
+        onLangToggle={updateLang}
       />
       <CounselingPage
         setView={setView}
@@ -2812,6 +2830,8 @@ function PsychologicalTestSystem() {
         currentUser={currentUser}
         credits={credits}
         activeView="gameIntro"
+        lang={lang}
+        onLangToggle={updateLang}
       />
       <div style={{minHeight:'60vh', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:16, fontFamily:"'Noto Sans KR',sans-serif"}}>
         <div style={{fontSize:64}}>🎮</div>
@@ -6822,7 +6842,7 @@ function PsychologicalTestSystem() {
       const res = await fetch("/api/ai-analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...api._authHeader() },
-        body: JSON.stringify({ testType, counselingType, responses, category, lang: currentUser?.locale || 'ko' })
+        body: JSON.stringify({ testType, counselingType, responses, category, lang })
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -8396,15 +8416,15 @@ function PsychologicalTestSystem() {
             </div>
           </div>
         )}
-        <h1 className="text-2xl font-bold text-center text-green-800 mb-1">😔 우울 자가점검 (PHQ-9)</h1>
-        <p className="text-center text-gray-400 text-sm mb-2">지난 2주간 얼마나 자주 다음의 문제들로 어려움을 겪었는지 표시해 주세요 (9문항)</p>
+        <h1 className="text-2xl font-bold text-center text-green-800 mb-1">😔 {t("우울 자가점검", "Depression Screening")} (PHQ-9)</h1>
+        <p className="text-center text-gray-400 text-sm mb-2">{t("지난 2주간 얼마나 자주 다음의 문제들로 어려움을 겪었는지 표시해 주세요 (9문항)", "Over the last 2 weeks, how often have you been bothered by the following? (9 items)")}</p>
         <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4 text-xs text-green-800">
           <div className="flex flex-wrap gap-3">
-            {["0: 전혀 없음", "1: 여러 날 동안", "2: 7일 이상", "3: 거의 매일"].map(t => <span key={t} className="font-semibold">{t}</span>)}
+            {t(["0: 전혀 없음", "1: 여러 날 동안", "2: 7일 이상", "3: 거의 매일"], ["0: Not at all", "1: Several days", "2: More than half", "3: Nearly every day"]).map(s => <span key={s} className="font-semibold">{s}</span>)}
           </div>
         </div>
         <div className="bg-green-50 border border-green-200 rounded-lg p-2 text-xs text-green-800 mb-6 text-center">
-          진행: <strong>{Object.keys(phq9Responses).length}</strong> / 9 문항
+          {t("진행:", "Progress:")} <strong>{Object.keys(phq9Responses).length}</strong> / 9 {t("문항", "items")}
         </div>
         {saveStatus && <div className="mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded text-sm text-yellow-800 text-center">{saveStatus}</div>}
         <div className="space-y-3">
@@ -8423,7 +8443,7 @@ function PsychologicalTestSystem() {
         </div>
         <div className="mt-8 text-center">
           <button onClick={submitPhq9} className="bg-green-700 text-white px-10 py-3 rounded-xl font-bold text-lg hover:bg-green-800 transition">
-            검사 제출 ({Object.keys(phq9Responses).length}/9)
+            {t("검사 제출", "Submit")} ({Object.keys(phq9Responses).length}/9)
           </button>
         </div>
       </div>
@@ -8450,15 +8470,15 @@ function PsychologicalTestSystem() {
             </div>
           </div>
         )}
-        <h1 className="text-2xl font-bold text-center text-orange-800 mb-1">😰 불안 자가점검 (GAD-7)</h1>
-        <p className="text-center text-gray-400 text-sm mb-2">지난 2주간 다음의 문제들로 얼마나 자주 시달렸는지 표시해 주세요 (7문항)</p>
+        <h1 className="text-2xl font-bold text-center text-orange-800 mb-1">😰 {t("불안 자가점검", "Anxiety Screening")} (GAD-7)</h1>
+        <p className="text-center text-gray-400 text-sm mb-2">{t("지난 2주간 다음의 문제들로 얼마나 자주 시달렸는지 표시해 주세요 (7문항)", "Over the last 2 weeks, how often have you been bothered by the following? (7 items)")}</p>
         <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4 text-xs text-orange-800">
           <div className="flex flex-wrap gap-3">
-            {["0: 전혀 없음", "1: 여러 날 동안", "2: 7일 이상", "3: 거의 매일"].map(t => <span key={t} className="font-semibold">{t}</span>)}
+            {t(["0: 전혀 없음", "1: 여러 날 동안", "2: 7일 이상", "3: 거의 매일"], ["0: Not at all", "1: Several days", "2: More than half", "3: Nearly every day"]).map(s => <span key={s} className="font-semibold">{s}</span>)}
           </div>
         </div>
         <div className="bg-orange-50 border border-orange-200 rounded-lg p-2 text-xs text-orange-700 mb-6 text-center">
-          진행: <strong>{Object.keys(gad7Responses).length}</strong> / 7 문항
+          {t("진행:", "Progress:")} <strong>{Object.keys(gad7Responses).length}</strong> / 7 {t("문항", "items")}
         </div>
         {saveStatus && <div className="mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded text-sm text-yellow-800 text-center">{saveStatus}</div>}
         <div className="space-y-3">
@@ -8477,7 +8497,7 @@ function PsychologicalTestSystem() {
         </div>
         <div className="mt-8 text-center">
           <button onClick={submitGad7} className="bg-orange-600 text-white px-10 py-3 rounded-xl font-bold text-lg hover:bg-orange-700 transition">
-            검사 제출 ({Object.keys(gad7Responses).length}/7)
+            {t("검사 제출", "Submit")} ({Object.keys(gad7Responses).length}/7)
           </button>
         </div>
       </div>

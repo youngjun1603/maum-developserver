@@ -134,7 +134,7 @@ const COLOR_MAP = {
 // GlobalNav — 모든 페이지 상단 공통 네비게이션
 // props: { setView, isLoggedIn, currentUser, credits }
 // ============================================================
-function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView }) {
+function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang, onLangToggle }) {
   const { useState: useS, useEffect: useE } = React;
   const [scrolled, setScrolled]   = useS(false);
   const [mobileOpen, setMobileOpen] = useS(false);
@@ -321,6 +321,22 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView }) {
                 무료 시작 →
               </button>
             </>
+          )}
+
+          {/* 언어 토글 */}
+          {onLangToggle && (
+            <button
+              onClick={() => onLangToggle(lang === 'en' ? 'ko' : 'en')}
+              style={{
+                background: 'none', border: '1px solid rgba(0,0,0,0.12)',
+                borderRadius: 6, padding: '4px 9px',
+                fontSize: 12, fontWeight: 600, color: '#5A5A5A',
+                cursor: 'pointer', letterSpacing: '0.3px',
+              }}
+              title={lang === 'en' ? '한국어로 보기' : 'Switch to English'}
+            >
+              {lang === 'en' ? '한' : 'EN'}
+            </button>
           )}
 
           {/* 모바일 햄버거 */}

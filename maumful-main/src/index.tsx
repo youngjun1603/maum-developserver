@@ -1105,7 +1105,23 @@ function buildAnalysisPrompt(req: AnalyzeRequest): string {
 [소망의 한마디]
 격려와 성경적 소망을 담은 한 문장.`
 
-  const fmt = isBiblical ? biblicalFormat : psychFormat
+  const psychFormatEn = `
+Please write only these 4 sections. Never use clinical diagnoses or medical labels.
+
+[Current State]
+1–2 observational sentences without judgment. Use phrases like "It appears that..." or "There seems to be a tendency toward..."
+
+[Key Observations]
+2–3 noteworthy responses, listed briefly. End with: "These areas may be worth exploring further in your session."
+
+[Session Guide]
+- Opening questions: 2 open-ended questions to invite the client to share (written as examples)
+- Points to watch: 1–2 subtle signals or contexts easy to overlook
+
+[Daily Suggestions]
+1–2 small, manageable practices for everyday life. No mention of treatment or medication.`
+
+  const fmt = lang === 'en' ? psychFormatEn : (isBiblical ? biblicalFormat : psychFormat)
   const NL = '\n'
 
   // PHQ-9
@@ -1113,9 +1129,12 @@ function buildAnalysisPrompt(req: AnalyzeRequest): string {
     const total = r.total as number
     const level = r.level as string
     const items = (r.items as Array<{question:string;score:number}>) ?? []
-    const formatted = items.map((item, idx) => (idx+1) + '. ' + item.question + ': ' + item.score + '점').join(NL)
-    if (lang === 'ko') return ctx + NL + NL + 'PHQ-9 우울 자가점검 결과' + NL + '총점: ' + total + '/27 (' + level + ')' + NL + NL + '문항별 응답:' + NL + formatted + NL + fmt
-    return ctx + NL + NL + 'PHQ-9 Result — Total: ' + total + '/27 (' + level + ')' + NL + formatted + NL + NL + '[Summary][Notable Responses][Counseling Points][Daily Suggestions]'
+    if (lang === 'ko') {
+      const formatted = items.map((item, idx) => (idx+1) + '. ' + item.question + ': ' + item.score + '점').join(NL)
+      return ctx + NL + NL + 'PHQ-9 우울 자가점검 결과' + NL + '총점: ' + total + '/27 (' + level + ')' + NL + NL + '문항별 응답:' + NL + formatted + NL + fmt
+    }
+    const formatted = items.map((item, idx) => (idx+1) + '. ' + item.question + ': ' + item.score).join(NL)
+    return ctx + NL + NL + 'PHQ-9 Depression Screening' + NL + 'Total: ' + total + '/27 (' + level + ')' + NL + NL + 'Responses:' + NL + formatted + NL + fmt
   }
 
   // GAD-7
@@ -1123,9 +1142,12 @@ function buildAnalysisPrompt(req: AnalyzeRequest): string {
     const total = r.total as number
     const level = r.level as string
     const items = (r.items as Array<{question:string;score:number}>) ?? []
-    const formatted = items.map((item, idx) => (idx+1) + '. ' + item.question + ': ' + item.score + '점').join(NL)
-    if (lang === 'ko') return ctx + NL + NL + 'GAD-7 불안 자가점검 결과' + NL + '총점: ' + total + '/21 (' + level + ')' + NL + NL + '문항별 응답:' + NL + formatted + NL + fmt
-    return ctx + NL + NL + 'GAD-7 Result — Total: ' + total + '/21 (' + level + ')' + NL + formatted + NL + NL + '[Summary][Notable Responses][Counseling Points][Daily Suggestions]'
+    if (lang === 'ko') {
+      const formatted = items.map((item, idx) => (idx+1) + '. ' + item.question + ': ' + item.score + '점').join(NL)
+      return ctx + NL + NL + 'GAD-7 불안 자가점검 결과' + NL + '총점: ' + total + '/21 (' + level + ')' + NL + NL + '문항별 응답:' + NL + formatted + NL + fmt
+    }
+    const formatted = items.map((item, idx) => (idx+1) + '. ' + item.question + ': ' + item.score).join(NL)
+    return ctx + NL + NL + 'GAD-7 Anxiety Screening' + NL + 'Total: ' + total + '/21 (' + level + ')' + NL + NL + 'Responses:' + NL + formatted + NL + fmt
   }
 
   // DASS-21
@@ -1134,7 +1156,7 @@ function buildAnalysisPrompt(req: AnalyzeRequest): string {
     const anx = r.anxiety   as {score:number;level:string}
     const str = r.stress    as {score:number;level:string}
     if (lang === 'ko') return ctx + NL + NL + 'DASS-21 결과' + NL + '우울: ' + (dep?.score) + '점 (' + (dep?.level) + ') · 불안: ' + (anx?.score) + '점 (' + (anx?.level) + ') · 스트레스: ' + (str?.score) + '점 (' + (str?.level) + ')' + NL + fmt
-    return ctx + NL + NL + 'DASS-21' + NL + 'Depression: ' + (dep?.score) + ' (' + (dep?.level) + ') · Anxiety: ' + (anx?.score) + ' (' + (anx?.level) + ') · Stress: ' + (str?.score) + ' (' + (str?.level) + ')' + NL + '[Summary][Notable][Counseling Points][Daily Suggestions]'
+    return ctx + NL + NL + 'DASS-21 Results' + NL + 'Depression: ' + (dep?.score) + ' (' + (dep?.level) + ') · Anxiety: ' + (anx?.score) + ' (' + (anx?.level) + ') · Stress: ' + (str?.score) + ' (' + (str?.level) + ')' + NL + fmt
   }
 
   // BIG5
@@ -1142,7 +1164,7 @@ function buildAnalysisPrompt(req: AnalyzeRequest): string {
     const factors = r.factors as Record<string,number>
     const formatted = Object.entries(factors ?? {}).map(([k,v]) => k + ': ' + v + '/5').join(NL)
     if (lang === 'ko') return ctx + NL + NL + 'Big5 성격검사 결과' + NL + formatted + NL + fmt
-    return ctx + NL + NL + 'Big Five Personality' + NL + formatted + NL + '[Summary][Notable][Counseling Points][Daily Suggestions]'
+    return ctx + NL + NL + 'Big Five Personality Assessment' + NL + formatted + NL + fmt
   }
 
   // LOST
@@ -1152,22 +1174,27 @@ function buildAnalysisPrompt(req: AnalyzeRequest): string {
     const axisAvg  = r.axisAvg  as Record<string,number>
     const axisText = Object.entries(axisAvg ?? {}).map(([k,v]) => k + ': ' + Number(v).toFixed(2)).join(NL)
     if (lang === 'ko') return ctx + NL + NL + 'LOST 행동 운영체계 검사' + NL + '유형: ' + typeCode + ' (' + typeName + ')' + NL + NL + '축별 점수:' + NL + axisText + NL + fmt
-    return ctx + NL + NL + 'LOST Assessment' + NL + 'Type: ' + typeCode + ' (' + typeName + ')' + NL + axisText + NL + '[Summary][Notable][Counseling Points][Daily Suggestions]'
+    return ctx + NL + NL + 'LOST Behavioral Style Assessment' + NL + 'Type: ' + typeCode + ' (' + typeName + ')' + NL + NL + 'Axis Scores:' + NL + axisText + NL + fmt
   }
 
   // SRCI — 자기반응 완성 검사
   if (req.testType === 'SCT') {
     const sample     = (r.completionSample as Array<{scale:string;prompt:string;answer:string}>) ?? []
-    const sampleText = sample.map((s, i) => '[' + s.scale + '] ' + s.prompt + ' → ' + s.answer).join(NL)
-    return ctx + NL + NL + 'SRCI 자기반응 완성 검사 결과 (문장완성형 25문항)' + NL + NL + '소척도별 응답 예시:' + NL + sampleText + NL + fmt
+    const sampleText = sample.map(s => '[' + s.scale + '] ' + s.prompt + ' → ' + s.answer).join(NL)
+    if (lang === 'ko') return ctx + NL + NL + 'SRCI 자기반응 완성 검사 결과 (문장완성형 25문항)' + NL + NL + '소척도별 응답 예시:' + NL + sampleText + NL + fmt
+    return ctx + NL + NL + 'SRCI Self-Response Completion Inventory (25 sentence-completion items)' + NL + NL + 'Sample Responses by Subscale:' + NL + sampleText + NL + fmt
   }
 
   // SDRI — 자기분화 반응성 검사
   if (req.testType === 'DSI') {
     const scales    = (r.scales as Record<string,number>) ?? {}
     const total     = (r.total  as number) ?? 0
-    const scaleText = Object.entries(scales).map(([k,v]) => k + ': ' + v + '점').join(NL)
-    return ctx + NL + NL + 'SDRI 자기분화 반응성 검사 결과' + NL + '총점: ' + total + '점' + NL + NL + '소척도별 점수:' + NL + scaleText + NL + fmt
+    if (lang === 'ko') {
+      const scaleText = Object.entries(scales).map(([k,v]) => k + ': ' + v + '점').join(NL)
+      return ctx + NL + NL + 'SDRI 자기분화 반응성 검사 결과' + NL + '총점: ' + total + '점' + NL + NL + '소척도별 점수:' + NL + scaleText + NL + fmt
+    }
+    const scaleText = Object.entries(scales).map(([k,v]) => k + ': ' + v).join(NL)
+    return ctx + NL + NL + 'SDRI Self-Differentiation Reactivity Inventory' + NL + 'Total: ' + total + NL + NL + 'Subscale Scores:' + NL + scaleText + NL + fmt
   }
 
   // K-MBI+ 번아웃
@@ -1176,27 +1203,45 @@ function buildAnalysisPrompt(req: AnalyzeRequest): string {
     const level      = r.level as string
     const domains    = r.domains as Array<{name:string;score:number;max:number;percentage:number;level:string}>
     const domainText = (domains ?? []).map(d => d.name + ': ' + d.score + '/' + d.max + ' (' + d.percentage + '%) - ' + d.level).join(NL)
-    return ctx + NL + NL + 'K-MBI+ 소진 자가점검 결과' + NL + '전체 소진 지수: ' + totalScore + '/240 (' + level + ')' + NL + NL + '영역별 결과:' + NL + domainText + NL + fmt
+    if (lang === 'ko') return ctx + NL + NL + 'K-MBI+ 소진 자가점검 결과' + NL + '전체 소진 지수: ' + totalScore + '/240 (' + level + ')' + NL + NL + '영역별 결과:' + NL + domainText + NL + fmt
+    return ctx + NL + NL + 'K-MBI+ Burnout Self-Assessment' + NL + 'Overall Burnout Index: ' + totalScore + '/240 (' + level + ')' + NL + NL + 'Domain Results:' + NL + domainText + NL + fmt
   }
 
   // Holland RIASEC 직업 흥미
   if (req.testType === 'RIASEC') {
     const dominantType = r.dominant_type as string
     const scores       = r.scores as Record<string, number>
-    const typeNames: Record<string, string> = { R:'실재형', I:'탐구형', A:'예술형', S:'사회형', E:'진취형', C:'관습형' }
-    const scoresText = Object.entries(scores).sort(([,a],[,b]) => b - a).map(([t,s]) => typeNames[t] + '(' + t + '): ' + s + '/25').join(', ')
-    return ctx + NL + NL + 'Holland RIASEC 직업 흥미 검사 결과' + NL + '우세 유형: ' + dominantType + '형 (' + dominantType.split('').map(t => typeNames[t]).join('·') + ')' + NL + '유형별 점수: ' + scoresText + NL + fmt
+    if (lang === 'ko') {
+      const typeNamesKo: Record<string, string> = { R:'실재형', I:'탐구형', A:'예술형', S:'사회형', E:'진취형', C:'관습형' }
+      const scoresText = Object.entries(scores).sort(([,a],[,b]) => b - a).map(([t,s]) => typeNamesKo[t] + '(' + t + '): ' + s + '/25').join(', ')
+      return ctx + NL + NL + 'Holland RIASEC 직업 흥미 검사 결과' + NL + '우세 유형: ' + dominantType + '형 (' + dominantType.split('').map(t => typeNamesKo[t]).join('·') + ')' + NL + '유형별 점수: ' + scoresText + NL + fmt
+    }
+    const typeNamesEn: Record<string, string> = { R:'Realistic', I:'Investigative', A:'Artistic', S:'Social', E:'Enterprising', C:'Conventional' }
+    const scoresText = Object.entries(scores).sort(([,a],[,b]) => b - a).map(([t,s]) => typeNamesEn[t] + '(' + t + '): ' + s + '/25').join(', ')
+    return ctx + NL + NL + 'Holland RIASEC Career Interest Assessment' + NL + 'Dominant Type: ' + dominantType + ' (' + dominantType.split('').map((t: string) => typeNamesEn[t]).join('·') + ')' + NL + 'Scores: ' + scoresText + NL + fmt
   }
 
   // 직업가치관
   if (req.testType === 'VALUES') {
     const scores  = r.scores as Record<string, number>
     const sorted  = Object.entries(scores).sort(([,a],[,b]) => b - a)
-    const top3    = sorted.slice(0, 3).map(([k,s]) => k + ': ' + s + '점').join(', ')
-    const allText = sorted.map(([k,s]) => k + ': ' + s + '점').join(NL)
-    return ctx + NL + NL + '직업가치관 검사 결과' + NL + '상위 3개 가치: ' + top3 + NL + NL + '전체 가치요인:' + NL + allText + NL + fmt
+    if (lang === 'ko') {
+      const top3    = sorted.slice(0, 3).map(([k,s]) => k + ': ' + s + '점').join(', ')
+      const allText = sorted.map(([k,s]) => k + ': ' + s + '점').join(NL)
+      return ctx + NL + NL + '직업가치관 검사 결과' + NL + '상위 3개 가치: ' + top3 + NL + NL + '전체 가치요인:' + NL + allText + NL + fmt
+    }
+    const valuesNamesEn: Record<string, string> = {
+      achievement: 'Achievement', service: 'Service & Contribution', stability: 'Job Security',
+      autonomy: 'Autonomy', creativity: 'Creativity', influence: 'Influence & Leadership',
+      knowledge: 'Knowledge & Learning', balance: 'Work-Life Balance', social: 'Social Recognition',
+      economic: 'Economic Reward',
+    }
+    const top3    = sorted.slice(0, 3).map(([k,s]) => (valuesNamesEn[k] || k) + ': ' + s).join(', ')
+    const allText = sorted.map(([k,s]) => (valuesNamesEn[k] || k) + ': ' + s).join(NL)
+    return ctx + NL + NL + 'Work Values Assessment' + NL + 'Top 3 Values: ' + top3 + NL + NL + 'All Value Factors (20–100 scale):' + NL + allText + NL + fmt
   }
 
+  if (lang === 'en') return ctx + NL + NL + 'Assessment: ' + req.testType + NL + 'Results: ' + JSON.stringify(r, null, 2) + NL + fmt
   return ctx + NL + NL + '검사: ' + req.testType + NL + '결과: ' + JSON.stringify(r, null, 2) + NL + fmt
 }
 app.post('/api/ai-analyze', async (c) => {
