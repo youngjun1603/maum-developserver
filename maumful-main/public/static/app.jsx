@@ -2211,46 +2211,80 @@ function PsychologicalTestSystem() {
   // AI 채팅 — Authorization 헤더 추가
   // ============================================================
   function buildTestSummary(testType) {
+    const en = lang === 'en';
     try {
       if (testType === 'SCT') {
         const { filled, byScale } = calcSrci();
         const sample = Object.entries(byScale).map(([s,items]) => `[${s}] ${items.slice(0,1).map(a=>a.answer).join(' / ')}`).join('\n');
-        return `SRCI 자기반응 완성검사 (완성 ${filled}/25)\n${sample}`;
+        return en
+          ? `SRCI Self-Response Completion (${filled}/25 completed)\n${sample}`
+          : `SRCI 자기반응 완성검사 (완성 ${filled}/25)\n${sample}`;
       }
       if (testType === 'DSI') {
         const { scales, total } = calcSdri();
-        return `SDRI 자기분화 반응성 검사 총점: ${total}점\n${Object.entries(scales).map(([k,v])=>`${k}: ${v}점`).join('\n')}`;
+        const scalesStr = Object.entries(scales).map(([k,v])=>`${k}: ${v}`).join(', ');
+        return en
+          ? `SDRI Self-Differentiation total: ${total}\n${scalesStr}`
+          : `SDRI 자기분화 반응성 검사 총점: ${total}점\n${scalesStr}`;
       }
       if (testType === 'PHQ9') {
-        const total = Object.values(phq9Responses).reduce((a, b) => a + b, 0);
-        const level = total >= 20 ? '심각' : total >= 15 ? '중증' : total >= 10 ? '중간' : total >= 5 ? '경미' : '정상';
-        const items = Object.entries(phq9Responses).map(([k, v]) => `Q${+k + 1}: ${v}점`).join(', ');
-        return `PHQ-9 총점: ${total}/27 (${level})\n${items}`;
+        const r = calcPhq9();
+        const items = Object.entries(phq9Responses).map(([k, v]) => `Q${+k+1}:${v}`).join(', ');
+        return en
+          ? `PHQ-9 total: ${r.total}/27 (${r.level})\n${items}`
+          : `PHQ-9 총점: ${r.total}/27 (${r.level})\n${items}`;
       }
       if (testType === 'GAD7') {
-        const total = Object.values(gad7Responses).reduce((a, b) => a + b, 0);
-        const level = total >= 15 ? '심각' : total >= 10 ? '중간' : total >= 5 ? '경미' : '정상';
-        return `GAD-7 총점: ${total}/21 (${level})`;
+        const r = calcGad7();
+        return en
+          ? `GAD-7 total: ${r.total}/21 (${r.level})`
+          : `GAD-7 총점: ${r.total}/21 (${r.level})`;
       }
       if (testType === 'DASS21') {
-        const all = Object.entries(dass21Responses);
-        const d = all.filter(([k]) => [3,5,10,13,16,17,21].includes(+k+1)).reduce((a,[,v]) => a+v*2, 0);
-        const ax = all.filter(([k]) => [2,4,7,9,15,19,20].includes(+k+1)).reduce((a,[,v]) => a+v*2, 0);
-        const s = all.filter(([k]) => [1,6,8,11,12,14,18].includes(+k+1)).reduce((a,[,v]) => a+v*2, 0);
-        return `DASS-21 우울:${d} 불안:${ax} 스트레스:${s}`;
+        const r = calcDass21();
+        return en
+          ? `DASS-21 — Depression:${r.depression.score}(${r.depression.level}), Anxiety:${r.anxiety.score}(${r.anxiety.level}), Stress:${r.stress.score}(${r.stress.level})`
+          : `DASS-21 — 우울:${r.depression.score}(${r.depression.level}), 불안:${r.anxiety.score}(${r.anxiety.level}), 스트레스:${r.stress.score}(${r.stress.level})`;
       }
       if (testType === 'BIG5') {
-        return `Big5 응답 ${Object.keys(big5Responses).length}문항`;
+        const r = calcBig5();
+        const factors = Object.entries(r).map(([k,v]) => `${k}:${v}`).join(', ');
+        return en
+          ? `Big Five personality: ${factors}`
+          : `Big5 성격검사: ${factors}`;
       }
       if (testType === 'BURNOUT') {
-        const total = Object.values(burnoutResponses).reduce((a, b) => a + b, 0);
-        return `K-MBI+ 총점: ${total}`;
+        const r = calcBurnout();
+        return en
+          ? `K-MBI+ Burnout: ${r.totalScore}/240 (${r.percentage}%)`
+          : `K-MBI+ 번아웃: ${r.totalScore}/240 (${r.percentage}%, ${r.level})`;
       }
       if (testType === 'LOST') {
-        return `LOST 응답 ${Object.keys(lostResponses).length}문항`;
+        const r = calcLost();
+        const axisLabel = en
+          ? { E:"Energy",D:"Decision",S:"Speed",N:"Stability",R:"Relation",T:"Stress" }
+          : { E:"에너지",D:"의사결정",S:"행동속도",N:"안정성",R:"관계민감도",T:"스트레스반응" };
+        const axisText = Object.entries(r.axisAvg).map(([k,v]) => `${axisLabel[k]}:${Number(v).toFixed(1)}`).join(', ');
+        return en
+          ? `LOST type: ${r.typeCode} (${r.typeInfo?.eng || r.typeInfo?.name})\nAxes: ${axisText}`
+          : `LOST 행동유형: ${r.typeCode} (${r.typeInfo?.name})\n축별: ${axisText}`;
+      }
+      if (testType === 'RIASEC') {
+        const { sorted, dominantType } = calcRiasec();
+        const top2 = sorted.slice(0,2).map(([k,s]) => `${k}:${s}`).join(', ');
+        return en
+          ? `Holland RIASEC dominant type: ${dominantType} (top2: ${top2})`
+          : `Holland RIASEC 우세 유형: ${dominantType}형 (상위2: ${top2})`;
+      }
+      if (testType === 'VALUES') {
+        const { sorted } = calcValues();
+        const top3 = sorted.slice(0,3).map(([k,s]) => `${VALUES_DOMAIN_INFO[k]?.label || k}:${s}`).join(', ');
+        return en
+          ? `Work Values top 3: ${top3}`
+          : `직업가치관 상위 3: ${top3}`;
       }
       if (testType === 'GENERAL' || !testType) {
-        return '일반 AI 상담 (검사 결과 없음 — 자유 상담)';
+        return en ? 'General counseling (no test result)' : '일반 AI 상담 (검사 결과 없음 — 자유 상담)';
       }
     } catch { /* 무시 */ }
     return '';
@@ -2288,7 +2322,6 @@ function PsychologicalTestSystem() {
       return;
     }
 
-    const lang    = currentUser?.locale || 'ko';
     const summary = buildTestSummary(testType);
     const userMsg = { role: 'user', content: input, id: Date.now() };
 
@@ -4621,10 +4654,10 @@ function PsychologicalTestSystem() {
     const currency  = isKorea ? 'KRW' : 'USD';
 
     const PACKAGES_KR = [
-      { key:'starter_kr',  credits:50,  amount:2900,  label:'스타터',   badge:null },
-      { key:'standard_kr', credits:120, amount:5900,  label:'표준',     badge:'인기' },
-      { key:'premium_kr',  credits:300, amount:12900, label:'프리미엄', badge:'추천' },
-      { key:'pro_kr',      credits:700, amount:24900, label:'대용량',   badge:null },
+      { key:'starter_kr',  credits:50,  amount:2900,  label:t('스타터','Starter'),   badge:null },
+      { key:'standard_kr', credits:120, amount:5900,  label:t('표준','Standard'),    badge:t('인기','Popular') },
+      { key:'premium_kr',  credits:300, amount:12900, label:t('프리미엄','Premium'), badge:t('추천','Best') },
+      { key:'pro_kr',      credits:700, amount:24900, label:t('대용량','Pro'),        badge:null },
     ];
     const PACKAGES_GLOBAL = [
       { key:'starter_g',  credits:50,  amount:2.99,  label:'Starter',  badge:null },
@@ -4647,7 +4680,7 @@ function PsychologicalTestSystem() {
       setLoading(true); setErrMsg('');
       try {
         const res = await api.prepareCharge(selected, isKorea ? 'toss' : 'stripe');
-        if (!res.success) { setErrMsg(res.error || '결제 준비 실패'); setLoading(false); return; }
+        if (!res.success) { setErrMsg(res.error || t('결제 준비 실패','Payment preparation failed')); setLoading(false); return; }
         const d = res.data;
 
         if (isKorea) {
@@ -4676,7 +4709,7 @@ function PsychologicalTestSystem() {
         }
       } catch (err) {
         if (err?.code !== 'USER_CANCEL') {
-          setErrMsg('결제 중 오류가 발생했습니다. 다시 시도해 주세요.');
+          setErrMsg(t('결제 중 오류가 발생했습니다. 다시 시도해 주세요.','A payment error occurred. Please try again.'));
         }
         setLoading(false);
       }
@@ -4695,9 +4728,9 @@ function PsychologicalTestSystem() {
           <div style={{ background:'linear-gradient(135deg,#2D6A4F,#40916C)', padding:'22px 24px', color:'white' }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
               <div>
-                <div style={{ fontSize:12, opacity:0.8, marginBottom:4 }}>현재 잔액</div>
+                <div style={{ fontSize:12, opacity:0.8, marginBottom:4 }}>{t("현재 잔액","Balance")}</div>
                 <div style={{ fontSize:28, fontWeight:800 }}>✦ {credits}</div>
-                <div style={{ fontSize:12, opacity:0.75, marginTop:2 }}>크레딧</div>
+                <div style={{ fontSize:12, opacity:0.75, marginTop:2 }}>{t("크레딧","credits")}</div>
               </div>
               <button onClick={onClose}
                 style={{ background:'rgba(255,255,255,0.2)', border:'none', borderRadius:8,
@@ -4706,13 +4739,13 @@ function PsychologicalTestSystem() {
             </div>
             <div style={{ marginTop:14, fontSize:12, opacity:0.85,
               background:'rgba(255,255,255,0.15)', borderRadius:8, padding:'6px 12px', display:'inline-block' }}>
-              심리검사 1회 = 10 크레딧 · AI 채팅 1회 = 5 크레딧
+              {t("심리검사 1회 = 10 크레딧 · AI 채팅 1회 = 5 크레딧","Assessment = 10 cr · AI chat = 5 cr")}
             </div>
           </div>
 
           {/* 탭 */}
           <div style={{ display:'flex', borderBottom:'1px solid #E5E7EB' }}>
-            {[['credits','✦ 크레딧 충전'],['plans','💎 멤버십 플랜']].map(([tab, label]) => (
+            {[['credits',t('✦ 크레딧 충전','✦ Top Up')],['plans',t('💎 멤버십 플랜','💎 Plans')]].map(([tab, label]) => (
               <button key={tab} onClick={() => setActiveTab(tab)}
                 style={{
                   flex:1, padding:'12px', border:'none', cursor:'pointer', fontFamily:F,
@@ -4728,7 +4761,7 @@ function PsychologicalTestSystem() {
 
             {/* ── 크레딧 충전 탭 ── */}
             {activeTab === 'credits' && (<>
-              <div style={{ fontSize:13, fontWeight:700, color:'#374151', marginBottom:12 }}>패키지 선택</div>
+              <div style={{ fontSize:13, fontWeight:700, color:'#374151', marginBottom:12 }}>{t("패키지 선택","Select Package")}</div>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:9, marginBottom:18 }}>
                 {pkgs.map(pkg => {
                   const isSel = selected === pkg.key;
@@ -4762,22 +4795,22 @@ function PsychologicalTestSystem() {
                 <div style={{ background:'#F9FAFB', borderRadius:12, padding:'12px 16px',
                   marginBottom:10, border:'1px solid rgba(0,0,0,0.07)' }}>
                   <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'#6B7280' }}>
-                    <span>{selPkg.label} · ✦ {selPkg.credits} 크레딧</span>
+                    <span>{selPkg.label} · ✦ {selPkg.credits} {t("크레딧","cr")}</span>
                     <div style={{ textAlign:'right' }}>
                       <div style={{ fontWeight:700, color:'#111', fontSize:15 }}>
                         {fmt(selPkg.amount)}
-                        <span style={{ fontSize:10, color:'#9CA3AF', fontWeight:400, marginLeft:4 }}>(VAT 포함)</span>
+                        <span style={{ fontSize:10, color:'#9CA3AF', fontWeight:400, marginLeft:4 }}>({t("VAT 포함","incl. VAT")})</span>
                       </div>
                       {isKorea && (
                         <div style={{ fontSize:10, color:'#9CA3AF', marginTop:2 }}>
-                          공급가 {Math.round(selPkg.amount / 1.1).toLocaleString('ko-KR')}원 + 부가세 {Math.round(selPkg.amount - selPkg.amount / 1.1).toLocaleString('ko-KR')}원
+                          {t("공급가","Net")} {Math.round(selPkg.amount / 1.1).toLocaleString('ko-KR')}원 + {t("부가세","VAT")} {Math.round(selPkg.amount - selPkg.amount / 1.1).toLocaleString('ko-KR')}원
                         </div>
                       )}
                     </div>
                   </div>
                   <div style={{ marginTop:6, fontSize:11, color:'#9CA3AF' }}>
-                    충전 후 잔액: ✦ {credits + selPkg.credits} 크레딧
-                    · 검사 {Math.floor((credits + selPkg.credits) / 10)}회 가능
+                    {t(`충전 후 잔액: ✦ ${credits + selPkg.credits} 크레딧 · 검사 ${Math.floor((credits + selPkg.credits) / 10)}회 가능`,
+                       `After top-up: ✦ ${credits + selPkg.credits} cr · ${Math.floor((credits + selPkg.credits) / 10)} assessments`)}
                   </div>
                 </div>
               )}
@@ -4785,12 +4818,15 @@ function PsychologicalTestSystem() {
               {/* 결제 전 법적 고지 (전자상거래법 제17조 제2항) */}
               <div style={{ background:'#FEF9EC', border:'1px solid #FDE68A', borderRadius:10,
                 padding:'11px 14px', marginBottom:10, fontSize:11, color:'#78350F', lineHeight:1.8 }}>
-                <div style={{ fontWeight:700, marginBottom:4, color:'#92400E' }}>⚠ 결제 전 확인하세요</div>
+                <div style={{ fontWeight:700, marginBottom:4, color:'#92400E' }}>⚠ {t("결제 전 확인하세요","Before you pay")}</div>
                 <ul style={{ margin:0, paddingLeft:14 }}>
-                  <li>크레딧을 <strong>1개라도 사용한 경우</strong> 청약철회가 제한됩니다. (전자상거래법 제17조 제2항 제5호)</li>
-                  <li>미사용 크레딧은 구매일로부터 <strong>7일 이내</strong> 전액 환불 가능합니다.</li>
-                  {isKorea && <li>결제 시 이메일·결제금액이 <strong>토스페이먼츠(주)</strong>에 제공됩니다. (결제 처리 목적)</li>}
-                  <li>환불 문의: support@maumful.com</li>
+                  {t(<li>크레딧을 <strong>1개라도 사용한 경우</strong> 청약철회가 제한됩니다. (전자상거래법 제17조 제2항 제5호)</li>,
+                     <li>Refunds are restricted once <strong>any credit is used</strong>. (Korean E-commerce Act §17②⑤)</li>)}
+                  {t(<li>미사용 크레딧은 구매일로부터 <strong>7일 이내</strong> 전액 환불 가능합니다.</li>,
+                     <li>Unused credits are fully refundable within <strong>7 days</strong> of purchase.</li>)}
+                  {isKorea && t(<li>결제 시 이메일·결제금액이 <strong>토스페이먼츠(주)</strong>에 제공됩니다. (결제 처리 목적)</li>,
+                                <li>Your email and payment amount will be shared with <strong>TossPayments</strong> for processing.</li>)}
+                  <li>{t("환불 문의:","Refund inquiries:")} support@maumful.com</li>
                 </ul>
               </div>
 
@@ -4798,15 +4834,15 @@ function PsychologicalTestSystem() {
                 padding:'14px 16px', marginBottom:4 }}>
                 <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
                   <span style={{ fontSize:16 }}>🔧</span>
-                  <span style={{ fontSize:13, fontWeight:700, color:'#92400E' }}>결제 시스템 준비 중</span>
+                  <span style={{ fontSize:13, fontWeight:700, color:'#92400E' }}>{t("결제 시스템 준비 중","Payment coming soon")}</span>
                 </div>
                 <p style={{ fontSize:12, color:'#78350F', lineHeight:1.6, margin:0 }}>
-                  현재 결제 서비스를 준비하고 있습니다.<br />
-                  오픈 후 support@maumful.com으로 문의하시면 크레딧을 우선 지급해 드립니다.
+                  {t(<>현재 결제 서비스를 준비하고 있습니다.<br />오픈 후 support@maumful.com으로 문의하시면 크레딧을 우선 지급해 드립니다.</>,
+                     <>We're setting up payment processing.<br />Email support@maumful.com after launch for early credit access.</>)}
                 </p>
               </div>
               <div style={{ textAlign:'center', marginTop:10, fontSize:11, color:'#9CA3AF' }}>
-                {isKorea ? '토스페이먼츠 연동 준비 중' : 'Payment coming soon'}
+                {isKorea ? t('토스페이먼츠 연동 준비 중','Payment coming soon') : 'Payment coming soon'}
               </div>
             </>)}
 
@@ -4814,11 +4850,11 @@ function PsychologicalTestSystem() {
             {activeTab === 'plans' && (<>
               <div style={{ background:'#FFF8E7', borderRadius:12, padding:'10px 14px',
                 marginBottom:12, border:'1px solid #FDE68A', fontSize:12, color:'#92400E' }}>
-                🚀 사업자 등록 완료 후 정식 오픈 예정입니다. 관심 등록하시면 오픈 시 알려드려요!
+                🚀 {t("사업자 등록 완료 후 정식 오픈 예정입니다. 관심 등록하시면 오픈 시 알려드려요!","Launching after business registration. Register your interest and we'll notify you!")}
               </div>
               <div style={{ display:'flex', justifyContent:'center', marginBottom:14 }}>
                 <div style={{ background:'#F3F4F6', borderRadius:12, padding:3, display:'inline-flex', gap:2 }}>
-                  {[['monthly','월간'],['annual','연간 🎉 20% 할인']].map(([cyc, lbl]) => (
+                  {[['monthly',t('월간','Monthly')],['annual',t('연간 🎉 20% 할인','Annual 🎉 20% off')]].map(([cyc, lbl]) => (
                     <button key={cyc} onClick={() => setBillingCycle(cyc)} style={{
                       padding:'6px 14px', borderRadius:10, fontSize:12, fontWeight:700, border:'none', cursor:'pointer', fontFamily:F,
                       background: billingCycle===cyc ? 'white' : 'transparent',
@@ -4830,14 +4866,14 @@ function PsychologicalTestSystem() {
               </div>
               {[
                 {
-                  name: '마음풀 Plus', priceKrw: 5900, priceUsd: 5.99,
+                  name: t('마음풀 Plus','Maumful Plus'), priceKrw: 5900, priceUsd: 5.99,
                   color: '#2D6A4F', colorL: '#F0FAF4', emoji: '🧠',
-                  features: ['월 100 크레딧 지급', 'AI 채팅 무제한', '검사 이력 무제한 보관', '우선 고객 지원'],
+                  features: [t('월 100 크레딧 지급','100 credits/month'), t('AI 채팅 무제한','Unlimited AI chat'), t('검사 이력 무제한 보관','Unlimited history'), t('우선 고객 지원','Priority support')],
                 },
                 {
-                  name: '마음커플 Plus', priceKrw: 9900, priceUsd: 9.99,
+                  name: t('마음커플 Plus','MaumCouple Plus'), priceKrw: 9900, priceUsd: 9.99,
                   color: '#B5556A', colorL: '#FCF0F3', emoji: '💕',
-                  features: ['월 150 크레딧 지급', '월 1회 커플 리포트 포함', 'AI 관계 코치 무제한', '데이트 코스 무제한'],
+                  features: [t('월 150 크레딧 지급','150 credits/month'), t('월 1회 커플 리포트 포함','1 couple report/month'), t('AI 관계 코치 무제한','Unlimited AI relationship coach'), t('데이트 코스 무제한','Unlimited date courses')],
                 },
               ].map(plan => {
                 const isAnnual = billingCycle === 'annual';
@@ -4847,8 +4883,8 @@ function PsychologicalTestSystem() {
                   ? `월 ${monthlyKrw.toLocaleString('ko-KR')}원`
                   : `$${monthlyUsd.toFixed(2)}/mo`;
                 const billingLabel = isAnnual
-                  ? (isKorea ? `연 ${(monthlyKrw*12).toLocaleString('ko-KR')}원 일시결제` : `$${(monthlyUsd*12).toFixed(2)}/yr`)
-                  : '월 자동 결제';
+                  ? (isKorea ? `연 ${(monthlyKrw*12).toLocaleString('ko-KR')}원 ${t('일시결제','billed annually')}` : `$${(monthlyUsd*12).toFixed(2)}/yr`)
+                  : t('월 자동 결제','billed monthly');
                 return (
                 <div key={plan.name} style={{
                   borderRadius:16, border:`2px solid ${plan.color}22`,
@@ -4857,7 +4893,7 @@ function PsychologicalTestSystem() {
                   <div style={{ background:`linear-gradient(135deg, ${plan.color}, ${plan.color}CC)`,
                     padding:'14px 18px', color:'white', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                     <div>
-                      <div style={{ fontSize:11, opacity:0.85, marginBottom:2 }}>{plan.emoji} 구독 플랜</div>
+                      <div style={{ fontSize:11, opacity:0.85, marginBottom:2 }}>{plan.emoji} {t("구독 플랜","Subscription")}</div>
                       <div style={{ fontSize:17, fontWeight:800 }}>{plan.name}</div>
                     </div>
                     <div style={{ textAlign:'right' }}>
@@ -4878,24 +4914,24 @@ function PsychologicalTestSystem() {
                     ))}
                     <button onClick={async () => {
                       const email = currentUser?.email || '';
-                      if (!email) { alert('로그인 후 관심 등록이 가능합니다.'); return; }
+                      if (!email) { alert(t('로그인 후 관심 등록이 가능합니다.','Please sign in to register your interest.')); return; }
                       await api._fetch('/api/credits/notify-plan', { method:'POST',
                         body: JSON.stringify({ plan: plan.name, email }) });
-                      alert(`${plan.name} 오픈 알림을 신청했습니다! 준비되면 이메일로 알려드릴게요 🎉`);
+                      alert(t(`${plan.name} 오픈 알림을 신청했습니다! 준비되면 이메일로 알려드릴게요 🎉`,`You're on the waitlist for ${plan.name}! We'll email you when it's ready 🎉`));
                     }} style={{
                       marginTop:10, width:'100%', padding:'10px', borderRadius:10,
                       background:plan.color, color:'white', border:'none', cursor:'pointer',
                       fontSize:13, fontWeight:700, fontFamily:F,
                     }}>
-                      🔔 오픈 알림 신청
+                      {t('🔔 오픈 알림 신청','🔔 Notify Me')}
                     </button>
                   </div>
                 </div>
               ); })}
               <div style={{ fontSize:11, color:'#9CA3AF', marginTop:4, lineHeight:1.8 }}>
-                <div>* 구독 플랜은 토스페이먼츠 심사 완료 후 정식 출시됩니다</div>
-                <div>* 모든 금액은 부가가치세(VAT 10%) 포함 가격입니다</div>
-                <div>* 만 19세 미만 미성년자의 구독 결제는 법정대리인 동의가 필요합니다 (민법 제5조)</div>
+                <div>{t('* 구독 플랜은 토스페이먼츠 심사 완료 후 정식 출시됩니다','* Subscription plans will launch after payment provider review is complete')}</div>
+                <div>{t('* 모든 금액은 부가가치세(VAT 10%) 포함 가격입니다','* All prices include VAT (10%)')}</div>
+                <div>{t('* 만 19세 미만 미성년자의 구독 결제는 법정대리인 동의가 필요합니다 (민법 제5조)','* Minors under 19 require parental consent for subscription purchases')}</div>
               </div>
             </>)}
           </div>
@@ -5431,53 +5467,84 @@ function PsychologicalTestSystem() {
   // 💬 AI 상담 채팅 함수
   // 검사 결과 요약 텍스트 생성 (채팅 컨텍스트용)
   function buildTestSummary(testType) {
+    const en = lang === 'en';
     try {
-      if (testType === 'SCT' || testType === 'DSI') {
-        const cats = Object.keys(sctCategories);
-        const sampleAnswers = cats.slice(0, 5).map(cat => {
-          const nums = sctCategories[cat];
-          const ans = nums.map(n => srciResponses[n] || '').filter(Boolean).slice(0, 2).join(' / ');
-          return ans ? `${cat}: ${ans}` : null;
-        }).filter(Boolean).join('\n');
-        return `검사: SRCI 자기반응 완성 검사\n주요 응답:\n${sampleAnswers}`;
+      if (testType === 'SCT') {
+        const { filled, byScale } = calcSrci();
+        const sample = Object.entries(byScale).map(([s,items]) => `[${s}] ${items.slice(0,1).map(a=>a.answer).join(' / ')}`).join('\n');
+        return en
+          ? `SRCI Self-Response Completion (${filled}/25 completed)\n${sample}`
+          : `SRCI 자기반응 완성검사 (완성 ${filled}/25)\n${sample}`;
       }
       if (testType === 'DSI') {
-        const { scales: areas, total } = calcSdri();
-        const level = total >= 120 ? '높음' : total >= 80 ? '보통' : '낮음';
-        const areaText = Object.entries(areas).map(([k,v]) => `${k}: ${v}/36`).join(', ');
-        return `검사: 자아분화검사(DSI)\n총점: ${total}/180 (${level})\n영역별: ${areaText}`;
+        const { scales, total } = calcSdri();
+        const scalesStr = Object.entries(scales).map(([k,v])=>`${k}: ${v}`).join(', ');
+        return en
+          ? `SDRI Self-Differentiation total: ${total}\n${scalesStr}`
+          : `SDRI 자기분화 반응성 검사 총점: ${total}점\n${scalesStr}`;
       }
       if (testType === 'PHQ9') {
         const r = calcPhq9();
-        return `검사: PHQ-9 우울 자가점검\n총점: ${r.total}/27 (${r.level})`;
+        return en
+          ? `PHQ-9 total: ${r.total}/27 (${r.level})`
+          : `PHQ-9 총점: ${r.total}/27 (${r.level})`;
       }
       if (testType === 'GAD7') {
         const r = calcGad7();
-        return `검사: GAD-7 불안 자가점검\n총점: ${r.total}/21 (${r.level})`;
+        return en
+          ? `GAD-7 total: ${r.total}/21 (${r.level})`
+          : `GAD-7 총점: ${r.total}/21 (${r.level})`;
       }
       if (testType === 'DASS21') {
         const r = calcDass21();
-        return `검사: DASS-21\n우울: ${r.depression.score}점(${r.depression.level}), 불안: ${r.anxiety.score}점(${r.anxiety.level}), 스트레스: ${r.stress.score}점(${r.stress.level})`;
+        return en
+          ? `DASS-21 — Depression:${r.depression.score}(${r.depression.level}), Anxiety:${r.anxiety.score}(${r.anxiety.level}), Stress:${r.stress.score}(${r.stress.level})`
+          : `DASS-21 — 우울:${r.depression.score}(${r.depression.level}), 불안:${r.anxiety.score}(${r.anxiety.level}), 스트레스:${r.stress.score}(${r.stress.level})`;
       }
       if (testType === 'BIG5') {
         const r = calcBig5();
-        const factors = Object.entries(r).map(([k,v]) => `${k}: ${v}`).join(', ');
-        return `검사: Big5 성격검사\n요인별: ${factors}`;
+        const factors = Object.entries(r).map(([k,v]) => `${k}:${v}`).join(', ');
+        return en
+          ? `Big Five personality: ${factors}`
+          : `Big5 성격검사: ${factors}`;
       }
       if (testType === 'BURNOUT') {
         const r = calcBurnout();
-        return `검사: K-MBI+ 번아웃\n총점: ${r.totalScore}/240 (${r.percentage}%, ${r.level})`;
+        return en
+          ? `K-MBI+ Burnout: ${r.totalScore}/240 (${r.percentage}%)`
+          : `K-MBI+ 번아웃: ${r.totalScore}/240 (${r.percentage}%, ${r.level})`;
       }
       if (testType === 'LOST') {
         const r = calcLost();
-        const axisLabel = { E:"에너지", D:"의사결정", S:"행동속도", N:"안정성", R:"관계민감도", T:"스트레스반응" };
+        const axisLabel = en
+          ? { E:"Energy",D:"Decision",S:"Speed",N:"Stability",R:"Relation",T:"Stress" }
+          : { E:"에너지",D:"의사결정",S:"행동속도",N:"안정성",R:"관계민감도",T:"스트레스반응" };
         const axisText = Object.entries(r.axisAvg).map(([k,v]) => `${axisLabel[k]}:${Number(v).toFixed(1)}`).join(', ');
-        return `검사: LOST 행동 운영체계\n유형: ${r.typeInfo.name}(${r.typeCode})\n축별 평균: ${axisText}`;
+        return en
+          ? `LOST type: ${r.typeCode} (${r.typeInfo?.eng || r.typeInfo?.name})\nAxes: ${axisText}`
+          : `LOST 행동유형: ${r.typeCode} (${r.typeInfo?.name})\n축별: ${axisText}`;
       }
-      return '검사 결과';
+      if (testType === 'RIASEC') {
+        const { sorted, dominantType } = calcRiasec();
+        const top2 = sorted.slice(0,2).map(([k,s]) => `${k}:${s}`).join(', ');
+        return en
+          ? `Holland RIASEC dominant type: ${dominantType} (top2: ${top2})`
+          : `Holland RIASEC 우세 유형: ${dominantType}형 (상위2: ${top2})`;
+      }
+      if (testType === 'VALUES') {
+        const { sorted } = calcValues();
+        const top3 = sorted.slice(0,3).map(([k,s]) => `${VALUES_DOMAIN_INFO[k]?.label || k}:${s}`).join(', ');
+        return en
+          ? `Work Values top 3: ${top3}`
+          : `직업가치관 상위 3: ${top3}`;
+      }
+      if (testType === 'GENERAL' || !testType) {
+        return en ? 'General counseling (no test result)' : '일반 AI 상담 (검사 결과 없음)';
+      }
     } catch(e) {
-      return '검사 결과';
+      return en ? 'Assessment result' : '검사 결과';
     }
+    return en ? 'Assessment result' : '검사 결과';
   }
 
   // 채팅 전송 함수
@@ -5504,7 +5571,7 @@ function PsychologicalTestSystem() {
         headers: { 'Content-Type': 'application/json', ...api._authHeader() },
         body: JSON.stringify({
           messages: history,
-          testContext: { testType, counselingType, summary, lang: currentUser?.locale || 'ko' }
+          testContext: { testType, counselingType, summary, lang }
         })
       });
 
@@ -5742,7 +5809,7 @@ function PsychologicalTestSystem() {
                           headers: { 'Content-Type': 'application/json', ...api._authHeader() },
                           body: JSON.stringify({
                             messages: [...chatMessages.filter(m => m.content && m.content.trim() && !m.streaming), userMsg].map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content.trim() })),
-                            testContext: { testType, counselingType, summary, lang: currentUser?.locale || 'ko' }
+                            testContext: { testType, counselingType, summary, lang }
                           })
                         })
                         .then(async res => {
@@ -5906,7 +5973,7 @@ function PsychologicalTestSystem() {
                           headers: { 'Content-Type': 'application/json', ...api._authHeader() },
                           body: JSON.stringify({
                             messages: [...chatMessages.filter(m => m.content && m.content.trim() && !m.streaming), userMsg].map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content.trim() })),
-                            testContext: { testType, counselingType, summary, lang: currentUser?.locale || 'ko' }
+                            testContext: { testType, counselingType, summary, lang }
                           })
                         })
                         .then(async res => {
@@ -6006,7 +6073,7 @@ function PsychologicalTestSystem() {
                           headers: { 'Content-Type': 'application/json', ...api._authHeader() },
                           body: JSON.stringify({
                             messages: [...chatMessages.filter(m => m.content && m.content.trim() && !m.streaming), userMsg].map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content.trim() })),
-                            testContext: { testType, counselingType, summary, lang: currentUser?.locale || 'ko' }
+                            testContext: { testType, counselingType, summary, lang }
                           })
                         })
                         .then(async res => {
@@ -7524,7 +7591,7 @@ function PsychologicalTestSystem() {
         // 푸터
         ctx.font = '16px "Noto Sans KR", sans-serif';
         ctx.fillStyle = 'rgba(255,255,255,0.55)';
-        ctx.fillText('maumful.com  |  AI 마음 상담 플랫폼', 72, 378);
+        ctx.fillText(t('maumful.com  |  AI 마음 상담 플랫폼','maumful.com  |  AI Mental Wellness Platform'), 72, 378);
 
         await new Promise((resolve) => {
           canvas.toBlob(async (blob) => {
@@ -7532,7 +7599,7 @@ function PsychologicalTestSystem() {
             // 네이티브 파일 공유 시도
             if (navigator.share && navigator.canShare?.({ files: [new File([blob], 'x.png', { type: 'image/png' })] })) {
               try {
-                await navigator.share({ title: '마음풀 검사 결과', files: [new File([blob], 'maumful-result.png', { type: 'image/png' })], text });
+                await navigator.share({ title: t('마음풀 검사 결과','Maumful Result'), files: [new File([blob], 'maumful-result.png', { type: 'image/png' })], text });
                 resolve(); return;
               } catch {}
             }
@@ -7545,25 +7612,25 @@ function PsychologicalTestSystem() {
         });
       } catch {
         // Canvas 실패 시 텍스트 공유 fallback
-        if (navigator.share) navigator.share({ title: '마음풀 검사 결과', text }).catch(() => {});
+        if (navigator.share) navigator.share({ title: t('마음풀 검사 결과','Maumful Result'), text }).catch(() => {});
         else navigator.clipboard?.writeText(text).then(() => alert('클립보드에 복사됐어요!')).catch(() => {});
       }
     }
 
     function shareText() {
-      if (navigator.share) navigator.share({ title: '마음풀 검사 결과', text }).catch(() => {});
-      else navigator.clipboard?.writeText(text).then(() => alert('클립보드에 복사됐어요!')).catch(() => {});
+      if (navigator.share) navigator.share({ title: t('마음풀 검사 결과','Maumful Result'), text }).catch(() => {});
+      else navigator.clipboard?.writeText(text).then(() => alert(t('클립보드에 복사됐어요!','Copied to clipboard!'))).catch(() => {});
     }
 
     return (
       <div className="mt-3 flex justify-end gap-2">
         <button onClick={shareAsImage}
           className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-emerald-700 px-3 py-1.5 rounded-lg hover:bg-emerald-50 transition border border-gray-200 hover:border-emerald-300">
-          🖼️ 카드 공유
+          🖼️ {t("카드 공유","Share Card")}
         </button>
         <button onClick={shareText}
           className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-emerald-700 px-3 py-1.5 rounded-lg hover:bg-emerald-50 transition border border-gray-200 hover:border-emerald-300">
-          🔗 링크 공유
+          🔗 {t("링크 공유","Share Link")}
         </button>
       </div>
     );
@@ -7588,17 +7655,13 @@ function PsychologicalTestSystem() {
           <div className="flex items-start gap-3">
             <span className="text-2xl">🔒</span>
             <div className="flex-1">
-              <p className="font-bold text-amber-800 text-sm mb-1">무료 AI 분석 횟수를 모두 사용했습니다</p>
+              <p className="font-bold text-amber-800 text-sm mb-1">{t("무료 AI 분석 횟수를 모두 사용했습니다","You've used all your free AI analyses")}</p>
               <p className="text-xs text-amber-700 mb-3">
-                무료 플랜은 AI 실시간 분석을 <strong>{AI_LIMIT_FREE}회</strong>까지 제공합니다.<br/>
-                유료 플랜으로 업그레이드하면 <strong>무제한</strong>으로 사용할 수 있습니다.
+                {t(<>무료 플랜은 AI 실시간 분석을 <strong>{AI_LIMIT_FREE}회</strong>까지 제공합니다.<br/>유료 플랜으로 업그레이드하면 <strong>무제한</strong>으로 사용할 수 있습니다.</>,<>The free plan includes <strong>{AI_LIMIT_FREE}</strong> AI analyses.<br/>Upgrade to a paid plan for <strong>unlimited</strong> access.</>)}
               </p>
               <div className="flex gap-2">
-                <button
-                  onClick={() => setShowChargeView(true)}
-                  className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-xs font-bold transition shadow"
-                >
-                  💎 플랜 업그레이드
+                <button onClick={() => setShowChargeView(true)} className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-xs font-bold transition shadow">
+                  💎 {t("플랜 업그레이드","Upgrade Plan")}
                 </button>
               </div>
             </div>
@@ -7607,42 +7670,35 @@ function PsychologicalTestSystem() {
       );
     }
 
-    // ── 버튼 영역 ─────────────────────────────────────────
     const showButton = !text && !loading && !error;
 
     return (
       <div className="mt-4">
         {showButton && (
           <div className="flex items-center gap-3">
-            <button
-              onClick={onRun}
-              className="flex items-center gap-2 bg-gradient-to-r from-violet-600 to-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:from-violet-700 hover:to-green-700 transition shadow"
-            >
-              ✨ AI 실시간 분석
+            <button onClick={onRun}
+              className="flex items-center gap-2 bg-gradient-to-r from-violet-600 to-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:from-violet-700 hover:to-green-700 transition shadow">
+              ✨ {t("AI 실시간 분석","AI Live Analysis")}
             </button>
-            {/* 무료 플랜 잔여 횟수 배지 */}
             {isFree && (
               <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${
-                remainingFree <= 1
-                  ? "bg-red-100 text-red-700"
-                  : remainingFree <= 3
-                  ? "bg-amber-100 text-amber-700"
-                  : "bg-green-100 text-green-700"
+                remainingFree <= 1 ? "bg-red-100 text-red-700"
+                : remainingFree <= 3 ? "bg-amber-100 text-amber-700"
+                : "bg-green-100 text-green-700"
               }`}>
-                무료 {remainingFree}회 남음
+                {t(`무료 ${remainingFree}회 남음`,`${remainingFree} free left`)}
               </span>
             )}
           </div>
         )}
 
-        {/* 로딩 중 */}
         {loading && (
           <div className="bg-violet-50 border border-violet-200 rounded-xl p-4">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-2 h-2 bg-violet-500 rounded-full animate-bounce" style={{animationDelay:"0ms"}}></div>
               <div className="w-2 h-2 bg-violet-500 rounded-full animate-bounce" style={{animationDelay:"150ms"}}></div>
               <div className="w-2 h-2 bg-violet-500 rounded-full animate-bounce" style={{animationDelay:"300ms"}}></div>
-              <span className="text-xs text-violet-600 font-semibold">AI가 실시간으로 분석 중...</span>
+              <span className="text-xs text-violet-600 font-semibold">{t("AI가 실시간으로 분석 중...","AI is analyzing...")}</span>
             </div>
             {text && (
               <p className="text-sm text-violet-800 whitespace-pre-wrap leading-relaxed">{text}<span className="inline-block w-1 h-4 bg-violet-500 animate-pulse ml-0.5 align-middle"></span></p>
@@ -7650,29 +7706,26 @@ function PsychologicalTestSystem() {
           </div>
         )}
 
-        {/* 분석 완료 */}
         {done && (
           <div className="bg-gradient-to-br from-violet-50 to-green-50 border border-violet-200 rounded-xl p-4 shadow-sm">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-1.5">
                 <span className="text-base">✨</span>
-                <p className="text-xs font-bold text-violet-700">AI 실시간 분석 결과</p>
+                <p className="text-xs font-bold text-violet-700">{t("AI 실시간 분석 결과","AI Live Analysis")}</p>
               </div>
-              <button
-                onClick={() => setAiAnalysis(p => ({ ...p, [aiKey]: "" }))}
-                className="text-xs text-violet-400 hover:text-violet-600"
-              >다시 분석</button>
+              <button onClick={() => setAiAnalysis(p => ({ ...p, [aiKey]: "" }))} className="text-xs text-violet-400 hover:text-violet-600">
+                {t("다시 분석","Re-analyze")}
+              </button>
             </div>
             <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{text}</p>
           </div>
         )}
 
-        {/* 일반 에러 */}
         {error && error !== "UPGRADE_REQUIRED" && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-            <p className="text-xs font-bold text-red-600 mb-1">⚠️ 오류</p>
+            <p className="text-xs font-bold text-red-600 mb-1">⚠️ {t("오류","Error")}</p>
             <p className="text-sm text-red-700">{error}</p>
-            <button onClick={onRun} className="mt-2 text-xs text-red-600 underline hover:text-red-800">다시 시도</button>
+            <button onClick={onRun} className="mt-2 text-xs text-red-600 underline hover:text-red-800">{t("다시 시도","Retry")}</button>
           </div>
         )}
       </div>
@@ -9042,7 +9095,7 @@ function PsychologicalTestSystem() {
   if (view === "sctResult") {
     const { filled, byScale } = calcSrci();
     const counselingType = activeLinkData?.counselingType || "psychological";
-    const counselingTypeLabel = counselingType === "biblical" ? "🕊️ 기독교 상담" : "🧠 심리상담";
+    const counselingTypeLabel = counselingType === "biblical" ? t("🕊️ 기독교 상담","🕊️ Christian Counseling") : t("🧠 심리상담","🧠 Psychology");
 
     const SCALE_META = {
       "자기입장 유지": { emoji:'🎯', color:'violet', border:'border-violet-200', bg:'bg-violet-50', text:'text-violet-700' },
@@ -9057,18 +9110,17 @@ function PsychologicalTestSystem() {
         <div className="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-violet-900">✍️ SRCI 검사 결과</h1>
-              <p className="text-sm text-gray-400 mt-1">자기반응 완성 검사 — 문장완성형 25문항</p>
+              <h1 className="text-2xl font-bold text-violet-900">✍️ {t("SRCI 검사 결과","SRCI Result")}</h1>
+              <p className="text-sm text-gray-400 mt-1">{t("자기반응 완성 검사 — 문장완성형 25문항","Self-Response Completion — 25 sentence-completion items")}</p>
             </div>
-            <button onClick={() => setView("memberDashboard")} className="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg text-sm hover:bg-gray-200">← 목록</button>
+            <button onClick={() => setView("memberDashboard")} className="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg text-sm hover:bg-gray-200">← {t("목록","Back")}</button>
           </div>
           <div className="border rounded-lg p-4 mb-6 bg-violet-50 border-violet-200 text-violet-700">
-            <p className="text-sm"><strong>상담 유형:</strong> {counselingTypeLabel}</p>
-            <p className="text-sm"><strong>세션 ID:</strong> {sessionId}</p>
-            <p className="text-sm mt-1"><strong>완성 문항:</strong> {filled}/25</p>
+            <p className="text-sm"><strong>{t("상담 유형:","Counseling Type:")}</strong> {counselingTypeLabel}</p>
+            <p className="text-sm mt-1"><strong>{t("완성 문항:","Completed Items:")}</strong> {filled}/25</p>
           </div>
 
-          <h2 className="text-lg font-bold text-gray-800 mb-4">소척도별 응답</h2>
+          <h2 className="text-lg font-bold text-gray-800 mb-4">{t("소척도별 응답","Responses by Subscale")}</h2>
           <div className="space-y-4 mb-8">
             {Object.entries(SCALE_META).map(([scaleName, meta]) => {
               const answers = byScale[scaleName] || [];
@@ -9077,7 +9129,7 @@ function PsychologicalTestSystem() {
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-lg">{meta.emoji}</span>
                     <span className={`font-bold text-sm ${meta.text}`}>{scaleName}</span>
-                    <span className="text-xs text-gray-400 ml-auto">{answers.length}문항 완성</span>
+                    <span className="text-xs text-gray-400 ml-auto">{answers.length} {t("문항 완성","completed")}</span>
                   </div>
                   {answers.length > 0 ? (
                     <div className="space-y-2">
@@ -9089,7 +9141,7 @@ function PsychologicalTestSystem() {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-xs text-gray-400">응답 없음</p>
+                    <p className="text-xs text-gray-400">{t("응답 없음","No responses")}</p>
                   )}
                 </div>
               );
@@ -9105,12 +9157,12 @@ function PsychologicalTestSystem() {
               runAiAnalysis("SCT", "SCT", { completionSample: sample });
             }}
           />
-          <ShareResultButton text={`✍️ SRCI 자기반응완성 검사 결과\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #심리검사`} />
+          <ShareResultButton text={t(`✍️ SRCI 자기반응완성 검사 결과\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #심리검사`,`✍️ SRCI Self-Response Completion Result\nTested on Maumful! https://maumful.com`)} />
           <button
             onClick={() => generateSctPdf({ sessionId, createdAt: new Date().toISOString(), userPhone: userInfo?.phone, responses: srciResponses })}
             className="w-full mb-3 py-3 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-bold transition flex items-center justify-center gap-2"
           >
-            📄 PDF 보고서 다운로드
+            📄 {t("PDF 보고서 다운로드","Download PDF Report")}
           </button>
           <RecoveryCard testType="SCT" score={0} level="low" />
           <ExpertCTA testType="SCT" score={0} level="low"
@@ -9135,24 +9187,24 @@ function PsychologicalTestSystem() {
   if (view === "dsiResult") {
     const { scales, total } = calcSdri();
     const counselingType = activeLinkData?.counselingType || "psychological";
-    const counselingTypeLabel = counselingType === "biblical" ? "🕊️ 기독교 상담" : "🧠 심리상담";
+    const counselingTypeLabel = counselingType === "biblical" ? t("🕊️ 기독교 상담","🕊️ Christian Counseling") : t("🧠 심리상담","🧠 Psychology");
 
     const SCALE_META = {
       "자기입장 유지": { emoji:'🎯', max:50, colorBar:'bg-indigo-500', bg:'bg-indigo-50 border-indigo-200', text:'text-indigo-700',
-        desc:'타인 압력에도 자신의 기준을 유지하는 능력' },
+        desc:t('타인 압력에도 자신의 기준을 유지하는 능력','Ability to maintain own standards under social pressure') },
       "정서반응성":    { emoji:'💫', max:35, colorBar:'bg-rose-500',   bg:'bg-rose-50 border-rose-200',     text:'text-rose-700',
-        desc:'갈등·스트레스 상황에서 감정적으로 반응하는 정도' },
+        desc:t('갈등·스트레스 상황에서 감정적으로 반응하는 정도','Degree of emotional reactivity in conflict/stress situations') },
       "정서적 단절":   { emoji:'🌿', max:20, colorBar:'bg-amber-500',  bg:'bg-amber-50 border-amber-200',   text:'text-amber-700',
-        desc:'갈등 시 정서적 거리를 두거나 대화를 피하는 경향' },
+        desc:t('갈등 시 정서적 거리를 두거나 대화를 피하는 경향','Tendency to create emotional distance or avoid dialogue during conflict') },
       "융합·관계의존": { emoji:'🔗', max:20, colorBar:'bg-purple-500', bg:'bg-purple-50 border-purple-200', text:'text-purple-700',
-        desc:'타인 감정에 과도하게 동화되거나 의존하는 정도' },
+        desc:t('타인 감정에 과도하게 동화되거나 의존하는 정도','Degree of over-identification with or dependence on others\' emotions') },
     };
 
     const getLevel = (score, max) => {
       const pct = score / max;
-      if (pct >= 0.75) return { label:'높음', color:'text-emerald-600' };
-      if (pct >= 0.45) return { label:'보통', color:'text-blue-600' };
-      return               { label:'낮음', color:'text-amber-600' };
+      if (pct >= 0.75) return { label:t('높음','High'), color:'text-emerald-600' };
+      if (pct >= 0.45) return { label:t('보통','Moderate'), color:'text-blue-600' };
+      return               { label:t('낮음','Low'), color:'text-amber-600' };
     };
 
     return (
@@ -9161,18 +9213,17 @@ function PsychologicalTestSystem() {
         <div className="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-teal-900">🪞 SDRI 검사 결과</h1>
-              <p className="text-sm text-gray-400 mt-1">자기분화 반응성 검사 — 평정형 25문항</p>
+              <h1 className="text-2xl font-bold text-teal-900">🪞 {t("SDRI 검사 결과","SDRI Result")}</h1>
+              <p className="text-sm text-gray-400 mt-1">{t("자기분화 반응성 검사 — 평정형 25문항","Self-Differentiation Reactivity — 25 rating-scale items")}</p>
             </div>
-            <button onClick={() => setView("memberDashboard")} className="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg text-sm hover:bg-gray-200">← 목록</button>
+            <button onClick={() => setView("memberDashboard")} className="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg text-sm hover:bg-gray-200">← {t("목록","Back")}</button>
           </div>
           <div className="border rounded-lg p-4 mb-6 bg-teal-50 border-teal-200 text-teal-700">
-            <p className="text-sm"><strong>상담 유형:</strong> {counselingTypeLabel}</p>
-            <p className="text-sm"><strong>세션 ID:</strong> {sessionId}</p>
-            <p className="text-lg font-bold mt-2">총점: {total}점</p>
+            <p className="text-sm"><strong>{t("상담 유형:","Counseling Type:")}</strong> {counselingTypeLabel}</p>
+            <p className="text-lg font-bold mt-2">{t("총점:","Total:")} {total}{t("점","")}</p>
           </div>
 
-          <h2 className="text-lg font-bold text-gray-800 mb-4">소척도별 결과</h2>
+          <h2 className="text-lg font-bold text-gray-800 mb-4">{t("소척도별 결과","Results by Subscale")}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
             {Object.entries(SCALE_META).map(([scaleName, meta]) => {
               const score = scales[scaleName] || 0;
@@ -9192,7 +9243,7 @@ function PsychologicalTestSystem() {
                     <div className={`${meta.colorBar} h-3 rounded-full`} style={{width:`${pct}%`, transition:'width 0.5s'}}/>
                   </div>
                   <div className="flex justify-between text-xs text-gray-400 mt-1">
-                    <span>{score}점</span><span>최대 {meta.max}점 ({pct}%)</span>
+                    <span>{score}{t("점","")}</span><span>{t("최대","Max")} {meta.max}{t("점","")} ({pct}%)</span>
                   </div>
                 </div>
               );
@@ -9205,12 +9256,12 @@ function PsychologicalTestSystem() {
               runAiAnalysis("DSI", "DSI", { scales, total });
             }}
           />
-          <ShareResultButton text={`🪞 SDRI 자기분화 검사 결과\n총점: ${calcSdri().total}점\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #심리검사`} />
+          <ShareResultButton text={t(`🪞 SDRI 자기분화 검사 결과\n총점: ${calcSdri().total}점\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #심리검사`,`🪞 SDRI Self-Differentiation Result\nTotal: ${calcSdri().total}\nTested on Maumful! https://maumful.com`)} />
           <button
             onClick={() => generateDsiPdf({ sessionId, createdAt: new Date().toISOString(), userPhone: userInfo?.phone, scales, total })}
             className="w-full mb-3 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition flex items-center justify-center gap-2"
           >
-            📄 PDF 보고서 다운로드
+            📄 {t("PDF 보고서 다운로드","Download PDF Report")}
           </button>
           <RecoveryCard testType="DSI" score={0} level="low" />
           <ExpertCTA testType="DSI" score={0} level="low"
@@ -9283,7 +9334,7 @@ function PsychologicalTestSystem() {
               });
             }}
           />
-          {(() => { const r = calcPhq9(); return <ShareResultButton text={`😔 PHQ-9 우울 검사 결과\n총점: ${r.total}/27 (${r.level})\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #심리검사`} testLabel="PHQ-9 우울 자가점검" scoreText={`${r.total}/27점`} levelText={r.level} colorHex="#1B4332" />; })()}
+          {(() => { const r = calcPhq9(); return <ShareResultButton text={t(`😔 PHQ-9 우울 검사 결과\n총점: ${r.total}/27 (${r.level})\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #심리검사`,`😔 PHQ-9 Depression Result\nTotal: ${r.total}/27 (${r.level})\nTested on Maumful! https://maumful.com`)} testLabel={t("PHQ-9 우울 자가점검","PHQ-9 Depression Screening")} scoreText={`${r.total}/27`} levelText={r.level} colorHex="#1B4332" />; })()}
 
 
           {/* 🤝 전문가 상담 CTA */}
@@ -9369,7 +9420,7 @@ function PsychologicalTestSystem() {
               });
             }}
           />
-          {(() => { const r = calcGad7(); return <ShareResultButton text={`😰 GAD-7 불안 검사 결과\n총점: ${r.total}/21 (${r.level})\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #심리검사`} testLabel="GAD-7 불안 자가점검" scoreText={`${r.total}/21점`} levelText={r.level} colorHex="#1a3a5c" />; })()}
+          {(() => { const r = calcGad7(); return <ShareResultButton text={t(`😰 GAD-7 불안 검사 결과\n총점: ${r.total}/21 (${r.level})\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #심리검사`,`😰 GAD-7 Anxiety Result\nTotal: ${r.total}/21 (${r.level})\nTested on Maumful! https://maumful.com`)} testLabel={t("GAD-7 불안 자가점검","GAD-7 Anxiety Screening")} scoreText={`${r.total}/21`} levelText={r.level} colorHex="#1a3a5c" />; })()}
 
 
           {/* 🤝 전문가 상담 CTA */}
@@ -9670,7 +9721,7 @@ function PsychologicalTestSystem() {
               });
             }}
           />
-          {(() => { const r = calcDass21(); return <ShareResultButton text={`📊 DASS-21 결과\n우울: ${r.depression.score}점 / 불안: ${r.anxiety.score}점 / 스트레스: ${r.stress.score}점\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #심리검사`} testLabel="DASS-21 종합 정서검사" scoreText={`우울 ${r.depression.score} / 불안 ${r.anxiety.score}`} levelText={`스트레스 ${r.stress.score}점`} colorHex="#2c5364" />; })()}
+          {(() => { const r = calcDass21(); return <ShareResultButton text={t(`📊 DASS-21 결과\n우울: ${r.depression.score}점 / 불안: ${r.anxiety.score}점 / 스트레스: ${r.stress.score}점\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #심리검사`,`📊 DASS-21 Result\nDepression: ${r.depression.score} / Anxiety: ${r.anxiety.score} / Stress: ${r.stress.score}\nTested on Maumful! https://maumful.com`)} testLabel={t("DASS-21 종합 정서검사","DASS-21 Comprehensive Emotional Assessment")} scoreText={t(`우울 ${r.depression.score} / 불안 ${r.anxiety.score}`,`D:${r.depression.score} / A:${r.anxiety.score}`)} levelText={t(`스트레스 ${r.stress.score}점`,`Stress: ${r.stress.score}`)} colorHex="#2c5364" />; })()}
 
 
           {/* 🤝 전문가 상담 CTA */}
@@ -9702,152 +9753,125 @@ function PsychologicalTestSystem() {
 
   // Big5 결과 화면
   if (view === "burnoutResult") {
-    console.log('🔥 번아웃 결과 화면 렌더링 시작');
-    console.log('📊 burnoutResponses 개수:', Object.keys(burnoutResponses).length);
-    console.log('📊 burnoutResponses 내용:', burnoutResponses);
-    console.log('📊 sessionId:', sessionId);
-
-    
-    // 응답이 없는 경우 경고
     if (Object.keys(burnoutResponses).length === 0) {
-      console.error('❌ burnoutResponses가 비어 있습니다!');
       return (
         <div className="min-h-screen bg-gray-50 p-4 flex items-center justify-center">
           <div className="bg-white rounded-xl shadow-lg p-8 text-center">
-            <h1 className="text-2xl font-bold text-red-600 mb-4">⚠️ 데이터 오류</h1>
-            <p className="text-gray-600 mb-4">검사 응답 데이터를 찾을 수 없습니다.</p>
-            <p className="text-sm text-gray-500 mb-4">세션 ID: {sessionId || 'N/A'}</p>
-            <button 
-              onClick={() => setView("memberDashboard")} 
-              className="bg-gray-400 text-white px-6 py-2 rounded-lg hover:bg-gray-500"
-            >
-              ← 돌아가기
+            <h1 className="text-2xl font-bold text-red-600 mb-4">⚠️ {t("데이터 오류","Data Error")}</h1>
+            <p className="text-gray-600 mb-4">{t("검사 응답 데이터를 찾을 수 없습니다.","No response data found.")}</p>
+            <p className="text-sm text-gray-500 mb-4">{t("세션 ID:","Session ID:")} {sessionId || 'N/A'}</p>
+            <button onClick={() => setView("memberDashboard")} className="bg-gray-400 text-white px-6 py-2 rounded-lg hover:bg-gray-500">
+              ← {t("돌아가기","Back")}
             </button>
           </div>
         </div>
       );
     }
-    
+
     try {
       const result = calcBurnout();
-      console.log('📊 calcBurnout 결과:', result);
-      
+
       if (!result || !result.domains) {
-        console.error('❌ calcBurnout 결과가 유효하지 않습니다');
         return (
           <div className="min-h-screen bg-gray-50 p-4 flex items-center justify-center">
             <div className="bg-white rounded-xl shadow-lg p-8 text-center">
-              <h1 className="text-2xl font-bold text-red-600 mb-4">⚠️ 데이터 오류</h1>
-              <p className="text-gray-600 mb-4">검사 결과를 계산할 수 없습니다.</p>
-              <button 
-                onClick={() => setView("memberDashboard")} 
-                className="bg-gray-400 text-white px-6 py-2 rounded-lg hover:bg-gray-500"
-              >
-                ← 돌아가기
+              <h1 className="text-2xl font-bold text-red-600 mb-4">⚠️ {t("데이터 오류","Data Error")}</h1>
+              <p className="text-gray-600 mb-4">{t("검사 결과를 계산할 수 없습니다.","Unable to calculate results.")}</p>
+              <button onClick={() => setView("memberDashboard")} className="bg-gray-400 text-white px-6 py-2 rounded-lg hover:bg-gray-500">
+                ← {t("돌아가기","Back")}
               </button>
             </div>
           </div>
         );
       }
-      
+
       const { domains, totalScore, percentage, level, crisis, domainCrisis } = result;
-      
-      console.log('📊 domains:', domains);
-      console.log('📊 totalScore:', totalScore);
-      console.log('📊 percentage:', percentage);
-      
-      // 레벨별 색상 및 아이콘
+
       const levelConfig = {
-        "매우 낮음": { color: "bg-green-100 text-green-800 border-green-300", icon: "😊" },
-        "낮음": { color: "bg-blue-100 text-blue-800 border-blue-300", icon: "🙂" },
-        "보통": { color: "bg-yellow-100 text-yellow-800 border-yellow-300", icon: "😐" },
-        "높음": { color: "bg-orange-100 text-orange-800 border-orange-300", icon: "😰" },
-        "매우 높음": { color: "bg-red-100 text-red-800 border-red-300", icon: "🔥" }
+        "매우 낮음": { color: "bg-green-100 text-green-800 border-green-300", icon: "😊", en: "Very Low" },
+        "낮음":      { color: "bg-blue-100 text-blue-800 border-blue-300",   icon: "🙂", en: "Low" },
+        "보통":      { color: "bg-yellow-100 text-yellow-800 border-yellow-300", icon: "😐", en: "Moderate" },
+        "높음":      { color: "bg-orange-100 text-orange-800 border-orange-300", icon: "😰", en: "High" },
+        "매우 높음": { color: "bg-red-100 text-red-800 border-red-300",       icon: "🔥", en: "Very High" },
       };
-      
+
       const config = levelConfig[level] || levelConfig["보통"];
-    
+      const levelLabel = lang === 'en' ? (config.en || level) : level;
+
     return (
       <div className="min-h-screen bg-gray-50 p-4">
         {ProtectionLayers}
         <div className="max-w-5xl mx-auto bg-white rounded-xl shadow-lg p-6">
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold text-red-600">🔥 번아웃 증후군 검사 결과 (K-MBI+)</h1>
+            <h1 className="text-3xl font-bold text-red-600">🔥 {t("번아웃 증후군 검사 결과 (K-MBI+)","Burnout Syndrome Result (K-MBI+)")}</h1>
             <button onClick={() => setView(isLoggedIn ? "memberDashboard" : "testsIntro")} className="bg-gray-400 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-500">
-              ← 목록
+              ← {t("목록","Back")}
             </button>
           </div>
-          
-          {/* 세션 정보 */}
-          <div className="border rounded-lg p-4 mb-6 bg-gray-50">
-            <p className="text-sm"><strong>세션 ID:</strong> {sessionId}</p>
-            <p className="text-sm"><strong>전화번호:</strong> {userInfo.phone || "N/A"}</p>
-          </div>
-          
+
           {/* 위기 경고 배너 */}
           {crisis && (
             <div className="mb-6 bg-orange-50 border-2 border-orange-300 rounded-lg p-4">
               <div className="flex items-start gap-3">
                 <span className="text-3xl">🔴</span>
                 <div>
-                  <h3 className="text-lg font-bold text-orange-700 mb-2">소진 신호가 높아요</h3>
+                  <h3 className="text-lg font-bold text-orange-700 mb-2">{t("소진 신호가 높아요","High Burnout Signal Detected")}</h3>
                   <p className="text-sm text-orange-700 mb-2">
-                    번아웃 신호가 전반적으로 높게 나타났습니다.
+                    {t("번아웃 신호가 전반적으로 높게 나타났습니다.","Your burnout indicators are significantly elevated across multiple areas.")}
                   </p>
                   <p className="text-sm text-orange-700 font-semibold">
-                    지금 잠시 멈추고, 충분히 쉬어가는 시간이 필요합니다. 혼자 감당하지 않아도 돼요.
+                    {t("지금 잠시 멈추고, 충분히 쉬어가는 시간이 필요합니다. 혼자 감당하지 않아도 돼요.","It's important to pause and rest. You don't have to carry this alone.")}
                   </p>
                 </div>
               </div>
             </div>
           )}
-          
+
           {/* 전체 점수 카드 */}
           <div className={`border-2 rounded-lg p-6 mb-6 ${config.color}`}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold">전체 번아웃 수준</h2>
+              <h2 className="text-2xl font-bold">{t("전체 번아웃 수준","Overall Burnout Level")}</h2>
               <span className="text-5xl">{config.icon}</span>
             </div>
             <div className="flex items-baseline gap-4 mb-2">
               <span className="text-5xl font-bold">{totalScore}</span>
-              <span className="text-2xl text-gray-600">/ 240점</span>
+              <span className="text-2xl text-gray-600">/ {t("240점","240")}</span>
               <span className="text-3xl font-bold ml-4">{percentage}%</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-6 mb-3">
-              <div 
+              <div
                 className={`h-6 rounded-full ${percentage >= 75 ? 'bg-red-600' : percentage >= 50 ? 'bg-orange-500' : percentage >= 30 ? 'bg-yellow-500' : 'bg-green-500'}`}
                 style={{ width: `${percentage}%` }}
               ></div>
             </div>
-            <p className="text-xl font-bold">{level}</p>
+            <p className="text-xl font-bold">{levelLabel}</p>
           </div>
-          
+
           {/* 영역별 점수 */}
           <div className="mb-6">
-            <h2 className="text-xl font-bold mb-4 text-gray-800">📊 영역별 분석</h2>
+            <h2 className="text-xl font-bold mb-4 text-gray-800">📊 {t("영역별 분석","Domain Analysis")}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {domains.map((domain, idx) => {
                 const isCrisis = domainCrisis.includes(domain.name);
-                
                 return (
                   <div key={domain.id || idx} className={`border rounded-lg p-4 ${isCrisis ? 'bg-red-50 border-red-300' : 'bg-white'}`}>
                     <div className="flex justify-between items-center mb-2">
                       <h3 className="font-bold text-lg">{domain.name}</h3>
-                      {isCrisis && <span className="text-red-600 font-bold text-sm">⚠️ 위기</span>}
+                      {isCrisis && <span className="text-red-600 font-bold text-sm">⚠️ {t("위기","Critical")}</span>}
                     </div>
                     <div className="flex items-baseline gap-2 mb-2">
                       <span className="text-3xl font-bold">{domain.score}</span>
-                      <span className="text-sm text-gray-600">/ {domain.max}점</span>
+                      <span className="text-sm text-gray-600">/ {domain.max}{t("점","")}</span>
                       <span className="text-xl font-bold ml-2">{domain.percentage}%</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
-                      <div 
+                      <div
                         className={`h-3 rounded-full ${isCrisis ? 'bg-red-600' : 'bg-blue-500'}`}
                         style={{ width: `${domain.percentage}%` }}
                       ></div>
                     </div>
                     <p className="text-xs text-gray-600 mb-2">
-                      <strong>수준:</strong> {domain.level}
+                      <strong>{t("수준:","Level:")}</strong> {domain.level}
                     </p>
                     <p className="text-sm text-gray-700">{domain.description}</p>
                   </div>
@@ -9855,41 +9879,39 @@ function PsychologicalTestSystem() {
               })}
             </div>
           </div>
-          
+
           {/* 해석 및 권고사항 */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-            <h2 className="text-xl font-bold mb-4 text-blue-800">💡 결과 해석 및 권고사항</h2>
+            <h2 className="text-xl font-bold mb-4 text-blue-800">💡 {t("결과 해석 및 권고사항","Results & Recommendations")}</h2>
             <div className="space-y-3 text-sm text-gray-700">
               <div>
-                <p className="font-bold text-base mb-1">📌 점수 해석 기준:</p>
+                <p className="font-bold text-base mb-1">📌 {t("점수 해석 기준:","Score Guide:")}</p>
                 <ul className="list-disc ml-5 space-y-1">
-                  <li>0-30%: 매우 낮음 (건강한 상태)</li>
-                  <li>31-50%: 낮음 (주의 필요)</li>
-                  <li>51-70%: 보통 (관리 필요)</li>
-                  <li>71-85%: 높음 (상담 권장)</li>
-                  <li>86-100%: 매우 높음 (즉시 개입 필요)</li>
+                  <li>{t("0-30%: 매우 낮음 (건강한 상태)","0–30%: Very Low (Healthy)")}</li>
+                  <li>{t("31-50%: 낮음 (주의 필요)","31–50%: Low (Worth monitoring)")}</li>
+                  <li>{t("51-70%: 보통 (관리 필요)","51–70%: Moderate (Needs management)")}</li>
+                  <li>{t("71-85%: 높음 (상담 권장)","71–85%: High (Counseling recommended)")}</li>
+                  <li>{t("86-100%: 매우 높음 (즉시 개입 필요)","86–100%: Very High (Immediate attention needed)")}</li>
                 </ul>
               </div>
-              
               <div>
-                <p className="font-bold text-base mb-1">🩺 권장 조치:</p>
+                <p className="font-bold text-base mb-1">🩺 {t("권장 조치:","Recommended Actions:")}</p>
                 <ul className="list-disc ml-5 space-y-1">
-                  {percentage < 30 && <li>현재 건강한 상태를 유지하고 있습니다. 지속적인 자기 관리를 권장합니다.</li>}
-                  {percentage >= 30 && percentage < 50 && <li>가벼운 번아웃 증상이 나타나고 있습니다. 충분한 휴식과 스트레스 관리가 필요합니다.</li>}
-                  {percentage >= 50 && percentage < 70 && <li>번아웃 증상이 보통 수준입니다. 전문가 상담 및 생활 습관 개선을 고려해 보세요.</li>}
-                  {percentage >= 70 && percentage < 85 && <li>높은 수준의 번아웃입니다. 전문 상담사와의 상담을 권장합니다.</li>}
-                  {percentage >= 85 && <li>소진 신호가 매우 높습니다. 지금 쉬어가는 것이 중요합니다. 전문가 상담을 권합니다.</li>}
+                  {percentage < 30 && <li>{t("현재 건강한 상태를 유지하고 있습니다. 지속적인 자기 관리를 권장합니다.","You are in a healthy state. Keep up your self-care routines.")}</li>}
+                  {percentage >= 30 && percentage < 50 && <li>{t("가벼운 번아웃 증상이 나타나고 있습니다. 충분한 휴식과 스트레스 관리가 필요합니다.","Mild burnout signs are present. Rest and stress management will help.")}</li>}
+                  {percentage >= 50 && percentage < 70 && <li>{t("번아웃 증상이 보통 수준입니다. 전문가 상담 및 생활 습관 개선을 고려해 보세요.","Moderate burnout detected. Consider professional counseling and lifestyle adjustments.")}</li>}
+                  {percentage >= 70 && percentage < 85 && <li>{t("높은 수준의 번아웃입니다. 전문 상담사와의 상담을 권장합니다.","High burnout level. We recommend speaking with a professional counselor.")}</li>}
+                  {percentage >= 85 && <li>{t("소진 신호가 매우 높습니다. 지금 쉬어가는 것이 중요합니다. 전문가 상담을 권합니다.","Burnout signals are very high. Rest is essential right now. Please seek professional support.")}</li>}
                 </ul>
               </div>
-              
               <div>
-                <p className="font-bold text-base mb-1">🌱 자가 관리 팁:</p>
+                <p className="font-bold text-base mb-1">🌱 {t("자가 관리 팁:","Self-Care Tips:")}</p>
                 <ul className="list-disc ml-5 space-y-1">
-                  <li>규칙적인 수면 패턴 유지 (하루 7-8시간)</li>
-                  <li>업무와 개인 시간의 명확한 경계 설정</li>
-                  <li>취미 활동 및 사회적 관계 유지</li>
-                  <li>정기적인 신체 활동 (주 3회 이상)</li>
-                  <li>마음챙김 명상 및 이완 기법 연습</li>
+                  <li>{t("규칙적인 수면 패턴 유지 (하루 7-8시간)","Maintain a regular sleep schedule (7–8 hours/day)")}</li>
+                  <li>{t("업무와 개인 시간의 명확한 경계 설정","Set clear boundaries between work and personal time")}</li>
+                  <li>{t("취미 활동 및 사회적 관계 유지","Keep up hobbies and social connections")}</li>
+                  <li>{t("정기적인 신체 활동 (주 3회 이상)","Regular physical activity (3+ times/week)")}</li>
+                  <li>{t("마음챙김 명상 및 이완 기법 연습","Practice mindfulness and relaxation techniques")}</li>
                 </ul>
               </div>
             </div>
@@ -9906,7 +9928,7 @@ function PsychologicalTestSystem() {
               });
             }}
           />
-          {(() => { const r = calcBurnout(); return <ShareResultButton text={`🔥 K-MBI+ 번아웃 검사 결과\n${r.level} (${r.percentage}%)\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #번아웃`} testLabel="K-MBI+ 번아웃 검사" scoreText={`${r.percentage}%`} levelText={r.level} colorHex="#4a1942" />; })()}
+          {(() => { const r = calcBurnout(); const lvlEn = ({매우낮음:"Very Low",낮음:"Low",보통:"Moderate",높음:"High",매우높음:"Very High"})[r.level?.replace(/\s/g,'')] || r.level; return <ShareResultButton text={t(`🔥 K-MBI+ 번아웃 검사 결과\n${r.level} (${r.percentage}%)\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #번아웃`,`🔥 K-MBI+ Burnout Result\n${lvlEn} (${r.percentage}%)\nTested on Maumful! https://maumful.com`)} testLabel={t("K-MBI+ 번아웃 검사","K-MBI+ Burnout Assessment")} scoreText={`${r.percentage}%`} levelText={lang==='en'?lvlEn:r.level} colorHex="#4a1942" />; })()}
 
 
           {/* 🤝 전문가 상담 CTA */}
@@ -9935,18 +9957,14 @@ function PsychologicalTestSystem() {
       </div>
     );
     } catch (error) {
-      console.error('❌ 번아웃 결과 렌더링 에러:', error);
       return (
         <div className="min-h-screen bg-gray-50 p-4 flex items-center justify-center">
           <div className="bg-white rounded-xl shadow-lg p-8 text-center">
-            <h1 className="text-2xl font-bold text-red-600 mb-4">⚠️ 오류 발생</h1>
-            <p className="text-gray-600 mb-4">결과 화면을 표시할 수 없습니다.</p>
+            <h1 className="text-2xl font-bold text-red-600 mb-4">⚠️ {t("오류 발생","Error")}</h1>
+            <p className="text-gray-600 mb-4">{t("결과 화면을 표시할 수 없습니다.","Unable to display results.")}</p>
             <p className="text-sm text-gray-500 mb-4">{error.toString()}</p>
-            <button 
-              onClick={() => setView("memberDashboard")} 
-              className="bg-gray-400 text-white px-6 py-2 rounded-lg hover:bg-gray-500"
-            >
-              ← 돌아가기
+            <button onClick={() => setView("memberDashboard")} className="bg-gray-400 text-white px-6 py-2 rounded-lg hover:bg-gray-500">
+              ← {t("돌아가기","Back")}
             </button>
           </div>
         </div>
@@ -10012,7 +10030,7 @@ function PsychologicalTestSystem() {
           {(() => {
             const r = calcBig5();
             const top = Object.entries(r).sort(([,a],[,b]) => b-a)[0];
-            return <ShareResultButton text={`🌟 Big5 성격검사 결과\n가장 높은 특성: ${top?.[0]} (${top?.[1]}/5)\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #성격검사`} testLabel="Big5 성격 5요인 검사" scoreText={top?.[0] || ''} levelText={`${top?.[1]}/5점`} colorHex="#3b1f8c" />;
+            return <ShareResultButton text={t(`🌟 Big5 성격검사 결과\n가장 높은 특성: ${top?.[0]} (${top?.[1]}/5)\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #성격검사`,`🌟 Big Five Personality Result\nTop trait: ${top?.[0]} (${top?.[1]}/5)\nTested on Maumful! https://maumful.com`)} testLabel={t("Big5 성격 5요인 검사","Big Five Personality Test")} scoreText={top?.[0] || ''} levelText={`${top?.[1]}/5`} colorHex="#3b1f8c" />;
           })()}
 
 
@@ -10226,7 +10244,7 @@ function PsychologicalTestSystem() {
               }}
             />
           </div>
-          {(() => { const r = calcLost(); return <ShareResultButton text={`🧭 LOST 행동 유형 검사 결과\n유형: ${r.typeCode} ${r.typeInfo.name}\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #LOST`} testLabel="LOST 행동 운영체계 검사" scoreText={r.typeCode} levelText={r.typeInfo?.name} colorHex="#7c4f1e" />; })()}
+          {(() => { const r = calcLost(); return <ShareResultButton text={t(`🧭 LOST 행동 유형 검사 결과\n유형: ${r.typeCode} ${r.typeInfo.name}\n마음풀에서 검사해봤어요! https://maumful.com #마음풀 #LOST`,`🧭 LOST Behavioral Style Result\nType: ${r.typeCode} ${r.typeInfo?.eng || r.typeInfo?.name}\nTested on Maumful! https://maumful.com`)} testLabel={t("LOST 행동 운영체계 검사","LOST Behavioral System Assessment")} scoreText={r.typeCode} levelText={r.typeInfo?.eng || r.typeInfo?.name} colorHex="#7c4f1e" />; })()}
 
 
           {/* 🤝 전문가 상담 CTA */}

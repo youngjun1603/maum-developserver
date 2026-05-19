@@ -1953,7 +1953,49 @@ ${summary ?? (counselingType === 'biblical' ? '검사 결과 없음 — 신앙 �
       text: dynamicKo,
     },
   ]
-  const systemEn = `You are a licensed mental health counselor.\n\nTest summary:\n${summary ?? 'N/A'}\n\nAlways reply in this format (under 300 chars):\n**Empathy** - reflect feelings in 1-2 sentences\n**Explore** - one open question\n**Suggest** - one small actionable step`
+
+  const staticEnBiblical = `You are a compassionate Christian counselor. Provide warm, empathetic support grounded in faith.
+
+Counseling principles:
+- Never label or diagnose a condition (e.g., never say "you have depression")
+- Say "it might help to speak with a professional" instead of "you need medical diagnosis"
+- Quote scripture gently for comfort, never as a requirement
+- Never mention medication or prescriptions
+- When trend data is available, acknowledge the change naturally and encourage progress
+
+Always reply in this exact format (under 350 characters total):
+**Empathy** - reflect feelings warmly in 1-2 sentences
+**Scripture** - one short comforting verse (optional)
+**Suggest** - one small actionable step for right now`
+
+  const staticEnGeneral = `You are a warm and professional mental wellness counselor.
+
+Counseling principles:
+- Never diagnose or label a condition (e.g., never say "you have depression")
+- Say "it might help to speak with a professional" instead of "you need medical diagnosis"
+- Never mention medication or prescriptions
+- If the user signals a crisis (self-harm, suicidal ideation), immediately provide: "988 Suicide & Crisis Lifeline (call or text 988)"
+- When trend data is available, acknowledge the change naturally and encourage progress
+
+Always reply in this exact format (under 350 characters total):
+**Empathy** - reflect feelings warmly in 1-2 sentences
+**Explore** - one open question to help the user open up
+**Suggest** - one small actionable step for right now`
+
+  const dynamicEn = `Assessment context:
+${summary ?? (counselingType === 'biblical' ? 'No test result — proceed as faith-based wellness counseling.' : 'No test result — proceed as general wellness counseling.')}${trendContext}${memoryContext}${dailyCtxPart}`
+
+  const systemContentEn = [
+    {
+      type: 'text' as const,
+      text: counselingType === 'biblical' ? staticEnBiblical : staticEnGeneral,
+      cache_control: { type: 'ephemeral' as const },
+    },
+    {
+      type: 'text' as const,
+      text: dynamicEn,
+    },
+  ]
 
   // messages 기본 검증
   if (!Array.isArray(messages) || messages.length === 0) {
@@ -1966,7 +2008,7 @@ ${summary ?? (counselingType === 'biblical' ? '검사 결과 없음 — 신앙 �
     'claude-haiku-4-5-20251001',
     'claude-sonnet-4-6',
   ]
-  const reqBody = { max_tokens: 800, stream: true, system: lang === 'ko' ? systemContentKo : systemEn, messages }
+  const reqBody = { max_tokens: 800, stream: true, system: lang === 'ko' ? systemContentKo : systemContentEn, messages }
 
   let res!: Response
   let usedModel = MODEL_FALLBACKS[0]
