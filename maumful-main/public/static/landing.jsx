@@ -6,114 +6,74 @@
 // ── 검사 메타데이터 (app.jsx 와 공유) ──────────────────────
 const TEST_META = [
   {
-    id: 'PHQ9',
-    label: 'PHQ-9',
-    name: '우울 자가점검',
+    id: 'PHQ9', label: 'PHQ-9', icon: '🌱', color: 'green', free: true,
+    name: '우울 자가점검', nameEn: 'Depression Screening',
     desc: '지난 2주간 정서적 상태를 9개 문항으로 가볍게 체크합니다. 전문가들이 활용하는 표준 자가점검 도구입니다.',
-    icon: '🌱',
-    color: 'green',
-    time: '5분',
-    count: '9문항',
-    free: true,
+    descEn: 'Check your emotional state over the past 2 weeks with 9 items. A standard screening tool used by professionals worldwide.',
+    time: '5분', timeEn: '5 min', count: '9문항', countEn: '9 items',
   },
   {
-    id: 'GAD7',
-    label: 'GAD-7',
-    name: '불안 자가점검',
+    id: 'GAD7', label: 'GAD-7', icon: '💙', color: 'blue', free: true,
+    name: '불안 자가점검', nameEn: 'Anxiety Screening',
     desc: '7개 문항으로 불안과 긴장 수준을 빠르게 점검합니다. WHO가 권장하는 표준 자가점검 도구입니다.',
-    icon: '💙',
-    color: 'blue',
-    time: '5분',
-    count: '7문항',
-    free: true,
+    descEn: 'Quickly assess your anxiety and tension levels with 7 items. A WHO-recommended standard screening tool.',
+    time: '5분', timeEn: '5 min', count: '7문항', countEn: '7 items',
   },
   {
-    id: 'DASS21',
-    label: 'DASS-21',
-    name: '우울·불안·스트레스',
+    id: 'DASS21', label: 'DASS-21', icon: '🌊', color: 'teal', free: false,
+    name: '우울·불안·스트레스', nameEn: 'Depression·Anxiety·Stress',
     desc: '우울, 불안, 스트레스 세 가지 정서 상태를 동시에 측정하는 종합 정서 검사입니다.',
-    icon: '🌊',
-    color: 'teal',
-    time: '10분',
-    count: '21문항',
-    free: false,
+    descEn: 'A comprehensive emotional assessment that simultaneously measures depression, anxiety, and stress.',
+    time: '10분', timeEn: '10 min', count: '21문항', countEn: '21 items',
   },
   {
-    id: 'BIG5',
-    label: 'Big5',
-    name: '성격 5요인 검사',
+    id: 'BIG5', label: 'Big5', icon: '🧠', color: 'purple', free: false,
+    name: '성격 5요인 검사', nameEn: 'Big Five Personality',
     desc: '개방성·성실성·외향성·친화성·신경증 5가지 성격 차원을 과학적으로 분석합니다.',
-    icon: '🧠',
-    color: 'purple',
-    time: '15분',
-    count: '60문항',
-    free: false,
+    descEn: 'Scientifically analyzes 5 personality dimensions: Openness, Conscientiousness, Extraversion, Agreeableness, and Neuroticism.',
+    time: '15분', timeEn: '15 min', count: '60문항', countEn: '60 items',
   },
   {
-    id: 'LOST',
-    label: 'LOST',
-    name: '행동 운영체계 검사',
+    id: 'LOST', label: 'LOST', icon: '🧭', color: 'amber', free: false,
+    name: '행동 운영체계 검사', nameEn: 'Behavioral Style Assessment',
     desc: '나의 행동 패턴과 동기 시스템(BIS/BAS)을 파악하여 일상 행동을 이해합니다.',
-    icon: '🧭',
-    color: 'amber',
-    time: '10분',
-    count: '24문항',
-    free: false,
+    descEn: 'Understand your daily behavior by identifying your behavioral patterns and motivational system (BIS/BAS).',
+    time: '10분', timeEn: '10 min', count: '24문항', countEn: '24 items',
   },
   {
-    id: 'SCT',
-    label: 'SRCI',
-    name: '자기반응 완성 검사',
+    id: 'SCT', label: 'SRCI', icon: '✍️', color: 'coral', free: false,
+    name: '자기반응 완성 검사', nameEn: 'Self-Response Completion',
     desc: '갈등·압박 상황에서 나타나는 자기입장, 정서반응, 관계 패턴을 문장완성 방식으로 탐색합니다.',
-    icon: '✍️',
-    color: 'coral',
-    time: '20분',
-    count: '25문항',
-    free: false,
+    descEn: 'Explore self-position, emotional responses, and relationship patterns in conflict and pressure situations.',
+    time: '20분', timeEn: '20 min', count: '25문항', countEn: '25 items',
   },
   {
-    id: 'DSI',
-    label: 'SDRI',
-    name: '자기분화 반응성 검사',
+    id: 'DSI', label: 'SDRI', icon: '🪞', color: 'pink', free: false,
+    name: '자기분화 반응성 검사', nameEn: 'Self-Differentiation Index',
     desc: '자기입장 유지·정서반응성·정서적 단절·융합 등 4개 소척도로 자기분화 수준을 평정합니다.',
-    icon: '🪞',
-    color: 'pink',
-    time: '15분',
-    count: '25문항',
-    free: false,
+    descEn: 'Rates self-differentiation level across 4 subscales: self-position, emotional reactivity, emotional cutoff, and fusion.',
+    time: '15분', timeEn: '15 min', count: '25문항', countEn: '25 items',
   },
   {
-    id: 'BURNOUT',
-    label: 'K-MBI+',
-    name: '번아웃 자가점검',
+    id: 'BURNOUT', label: 'K-MBI+', icon: '🔥', color: 'red', free: false,
+    name: '번아웃 자가점검', nameEn: 'Burnout Screening',
     desc: '정서적 고갈·냉소·효능감 3가지 소진 신호를 체크합니다. 직장인·의료진·교육자에게 특화된 자가점검입니다.',
-    icon: '🔥',
-    color: 'red',
-    time: '10분',
-    count: '22문항',
-    free: false,
+    descEn: 'Checks 3 burnout signals: emotional exhaustion, cynicism, and efficacy. Specialized for workers, medical staff, and educators.',
+    time: '10분', timeEn: '10 min', count: '22문항', countEn: '22 items',
   },
   {
-    id: 'RIASEC',
-    label: 'Holland RIASEC',
-    name: '직업 흥미 유형 검사',
+    id: 'RIASEC', label: 'Holland RIASEC', icon: '🔍', color: 'violet', free: false,
+    name: '직업 흥미 유형 검사', nameEn: 'Career Interest Type',
     desc: '나의 직업적 적성과 흥미를 실재형·탐구형·예술형·사회형·진취형·관습형 6가지 유형으로 분석합니다.',
-    icon: '🔍',
-    color: 'violet',
-    time: '8분',
-    count: '30문항',
-    free: false,
+    descEn: 'Analyzes your career aptitude and interests across 6 Holland types: Realistic, Investigative, Artistic, Social, Enterprising, and Conventional.',
+    time: '8분', timeEn: '8 min', count: '30문항', countEn: '30 items',
   },
   {
-    id: 'VALUES',
-    label: '직업가치관',
-    name: '직업가치관 검사',
+    id: 'VALUES', label: '직업가치관', icon: '💎', color: 'gold', free: false,
+    name: '직업가치관 검사', nameEn: 'Work Values Assessment',
     desc: '일에서 무엇을 중시하는지 성취·봉사·안정·자율·창의·영향력 등 10가지 가치요인으로 측정합니다.',
-    icon: '💎',
-    color: 'gold',
-    time: '8분',
-    count: '30문항',
-    free: false,
+    descEn: 'Measures what you value most at work across 10 factors: achievement, service, stability, autonomy, creativity, influence, and more.',
+    time: '8분', timeEn: '8 min', count: '30문항', countEn: '30 items',
   },
 ];
 
@@ -405,7 +365,8 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
 // ============================================================
 // LandingPage — 홈 메인 페이지
 // ============================================================
-function LandingPage({ setView, isLoggedIn }) {
+function LandingPage({ setView, isLoggedIn, lang }) {
+  const tl = (ko, en) => lang === 'en' ? en : ko;
   const { useState: useS, useEffect: useE, useRef } = React;
   const [activeTestIdx, setActiveTestIdx] = useS(0);
   const [visibleSections, setVisibleSections] = useS({});
@@ -467,21 +428,18 @@ function LandingPage({ setView, isLoggedIn }) {
               fontSize: 13, fontWeight: 600, marginBottom: 24,
             }}>
               <span style={{ fontSize: 8, animation: 'pulse 2s infinite' }}>●</span>
-              전문 심리검사 10종 제공
+              {tl("전문 심리검사 10종 제공", "10 Professional Assessments")}
             </div>
 
             <h1 style={{
               fontSize: 52, lineHeight: 1.2, fontWeight: 700,
               marginBottom: 20, letterSpacing: '-1px',
             }}>
-              나를 이해하는<br />
-              <span style={{ color: '#2D6A4F' }}>첫걸음</span>,<br />
-              심리검사
+              {tl(<>나를 이해하는<br /><span style={{ color: '#2D6A4F' }}>첫걸음</span>,<br />심리검사</>, <>Your journey<br />to <span style={{ color: '#2D6A4F' }}>self-understanding</span><br />starts here</>)}
             </h1>
 
             <p style={{ fontSize: 17, color: '#5A5A5A', lineHeight: 1.8, marginBottom: 36 }}>
-              임상에서 검증된 표준 심리검사를 온라인에서 간편하게.<br />
-              검사 후 AI 상담으로 나의 결과를 깊이 이해하세요.
+              {tl(<>임상에서 검증된 표준 심리검사를 온라인에서 간편하게.<br />검사 후 AI 상담으로 나의 결과를 깊이 이해하세요.</>, <>Clinically validated assessments — easily accessible online.<br />Understand your results deeply through AI counseling after each test.</>)}
             </p>
 
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -496,7 +454,7 @@ function LandingPage({ setView, isLoggedIn }) {
                 onMouseEnter={e => { e.currentTarget.style.background = '#1B5138'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = '#2D6A4F'; e.currentTarget.style.transform = 'none'; }}
               >
-                무료 검사 시작하기
+                {tl("무료 검사 시작하기", "Start Free Assessment")}
               </button>
               <button
                 onClick={() => setView('testsIntro')}
@@ -510,7 +468,7 @@ function LandingPage({ setView, isLoggedIn }) {
                 onMouseEnter={e => { e.currentTarget.style.background = '#D8F3DC'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
               >
-                검사 소개 보기
+                {tl("검사 소개 보기", "View Assessments")}
               </button>
             </div>
 
@@ -520,9 +478,9 @@ function LandingPage({ setView, isLoggedIn }) {
               paddingTop: 36, borderTop: '1px solid rgba(0,0,0,0.08)',
             }}>
               {[
-                { num: '10종', label: '전문 심리검사' },
-                { num: '10', label: '가입 즉시 크레딧' },
-                { num: 'AI', label: '결과 분석 상담' },
+                { num: '10', label: tl('전문 심리검사', 'Assessments') },
+                { num: '10', label: tl('가입 즉시 크레딧', 'Free Credits') },
+                { num: 'AI', label: tl('결과 분석 상담', 'Result Analysis') },
               ].map(s => (
                 <div key={s.label}>
                   <div style={{ fontSize: 26, fontWeight: 700, color: '#2D6A4F', lineHeight: 1 }}>{s.num}</div>
@@ -554,7 +512,7 @@ function LandingPage({ setView, isLoggedIn }) {
               padding: '28px 28px 24px', overflow: 'hidden',
             }}>
               <div style={{ fontSize: 12, fontWeight: 600, color: '#9A9A9A', marginBottom: 16, letterSpacing: '0.5px' }}>
-                🔍 심리검사 선택
+                🔍 {tl("심리검사 선택", "Select Assessment")}
               </div>
 
               {TEST_META.slice(0, 4).map((t, i) => {
@@ -578,15 +536,15 @@ function LandingPage({ setView, isLoggedIn }) {
                       justifyContent: 'center', fontSize: 18, flexShrink: 0,
                     }}>{t.icon}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: '#1A1A1A' }}>{t.name}</div>
-                      <div style={{ fontSize: 12, color: '#9A9A9A' }}>{t.time} · {t.count}</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: '#1A1A1A' }}>{tl(t.name, t.nameEn)}</div>
+                      <div style={{ fontSize: 12, color: '#9A9A9A' }}>{tl(t.time, t.timeEn)} · {tl(t.count, t.countEn)}</div>
                     </div>
                     <div style={{
                       fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 100,
                       background: t.free ? '#D8F3DC' : '#FFF0E6',
                       color: t.free ? '#1A6B3C' : '#C05621', whiteSpace: 'nowrap',
                     }}>
-                      {t.free ? '무료' : '10 크레딧'}
+                      {t.free ? tl('무료', 'Free') : tl('10 크레딧', '10 Credits')}
                     </div>
                   </div>
                 );
@@ -602,7 +560,7 @@ function LandingPage({ setView, isLoggedIn }) {
                   fontFamily: "'Noto Sans KR', sans-serif",
                 }}
               >
-                전체 검사 10종 보기 →
+                {tl("전체 검사 10종 보기 →", "View all 10 assessments →")}
               </button>
             </div>
 
@@ -615,8 +573,8 @@ function LandingPage({ setView, isLoggedIn }) {
             }}>
               <span style={{ fontSize: 18 }}>🤖</span>
               <div>
-                <div style={{ fontSize: 12, fontWeight: 600 }}>AI 결과 분석 준비됨</div>
-                <div style={{ fontSize: 11, color: '#9A9A9A' }}>검사 후 바로 상담 시작</div>
+                <div style={{ fontSize: 12, fontWeight: 600 }}>{tl("AI 결과 분석 준비됨", "AI Analysis Ready")}</div>
+                <div style={{ fontSize: 11, color: '#9A9A9A' }}>{tl("검사 후 바로 상담 시작", "Start counseling right after")}</div>
               </div>
             </div>
           </div>
@@ -633,10 +591,10 @@ function LandingPage({ setView, isLoggedIn }) {
               textTransform: 'uppercase', padding: '5px 14px', borderRadius: 100, marginBottom: 14,
             }}>Psychological Tests</div>
             <h2 style={{ fontSize: 36, fontWeight: 700, lineHeight: 1.3, marginBottom: 12 }}>
-              10가지 전문 <span style={{ color: '#2D6A4F' }}>심리·진로 검사</span>
+              {tl(<>10가지 전문 <span style={{ color: '#2D6A4F' }}>심리·진로 검사</span></>, <>10 Professional <span style={{ color: '#2D6A4F' }}>Assessments</span></>)}
             </h2>
             <p style={{ fontSize: 16, color: '#5A5A5A', maxWidth: 480, margin: '0 auto' }}>
-              정신건강 전문가들이 실제 임상에서 사용하는 표준화된 검사 도구를 제공합니다
+              {tl("정신건강 전문가들이 실제 임상에서 사용하는 표준화된 검사 도구를 제공합니다", "Standardized assessment tools used by mental health professionals in real clinical settings")}
             </p>
           </div>
 
@@ -669,17 +627,17 @@ function LandingPage({ setView, isLoggedIn }) {
                   <div style={{ fontSize: 30 }}>{t.icon}</div>
                   <div>
                     <div style={{ fontSize: 11, fontWeight: 700, color: '#9A9A9A', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 4 }}>{t.label}</div>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: '#1A1A1A', marginBottom: 6 }}>{t.name}</div>
-                    <div style={{ fontSize: 13, color: '#6A6A6A', lineHeight: 1.6 }}>{t.desc.substring(0, 50)}...</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: '#1A1A1A', marginBottom: 6 }}>{tl(t.name, t.nameEn)}</div>
+                    <div style={{ fontSize: 13, color: '#6A6A6A', lineHeight: 1.6 }}>{tl(t.desc, t.descEn).substring(0, 55)}...</div>
                   </div>
                   <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 12, color: '#9A9A9A' }}>⏱ {t.time} · {t.count}</span>
+                    <span style={{ fontSize: 12, color: '#9A9A9A' }}>⏱ {tl(t.time, t.timeEn)} · {tl(t.count, t.countEn)}</span>
                     <span style={{
                       fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 100,
                       background: t.free ? '#D8F3DC' : '#FFF0E6',
                       color: t.free ? '#1A6B3C' : '#C05621',
                     }}>
-                      {t.free ? '무료' : '10 크레딧'}
+                      {t.free ? tl('무료', 'Free') : tl('10 크레딧', '10 Credits')}
                     </span>
                   </div>
                 </div>
@@ -700,7 +658,7 @@ function LandingPage({ setView, isLoggedIn }) {
               onMouseEnter={e => { e.currentTarget.style.background = '#D8F3DC'; }}
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
             >
-              각 검사 상세 소개 보기 →
+              {tl("각 검사 상세 소개 보기 →", "View detailed assessment info →")}
             </button>
           </div>
         </div>
@@ -716,7 +674,7 @@ function LandingPage({ setView, isLoggedIn }) {
               textTransform: 'uppercase', padding: '5px 14px', borderRadius: 100, marginBottom: 14,
             }}>Why 마음풀</div>
             <h2 style={{ fontSize: 34, fontWeight: 700, lineHeight: 1.3, marginBottom: 12 }}>
-              신뢰할 수 있는<br /><span style={{ color: '#2D6A4F' }}>심리검사</span>가 필요한 이유
+              {tl(<>신뢰할 수 있는<br /><span style={{ color: '#2D6A4F' }}>심리검사</span>가 필요한 이유</>, <>Why you need a<br /><span style={{ color: '#2D6A4F' }}>trusted assessment</span></>)}
             </h2>
           </div>
 
@@ -724,18 +682,18 @@ function LandingPage({ setView, isLoggedIn }) {
             {[
               {
                 icon: '🏥', bg: '#D8F3DC',
-                title: '임상 표준화 검사',
-                desc: 'PHQ-9, GAD-7 등 실제 병원·상담센터에서 사용하는 국제 표준 도구를 동일하게 제공합니다. 전문가가 신뢰하는 기준입니다.',
+                title: tl('임상 표준화 검사', 'Clinically Validated'),
+                desc: tl('PHQ-9, GAD-7 등 실제 병원·상담센터에서 사용하는 국제 표준 도구를 동일하게 제공합니다. 전문가가 신뢰하는 기준입니다.', 'We offer the same international standard tools used in real hospitals and counseling centers — the benchmarks trusted by professionals.'),
               },
               {
                 icon: '🤖', bg: '#EEF0FF',
-                title: 'AI 결과 해석 상담',
-                desc: '검사 완료 후 Anthropic Claude AI와 1:1 대화로 나의 결과를 더 깊이 이해할 수 있습니다. 단순 점수를 넘어선 인사이트를 제공합니다.',
+                title: tl('AI 결과 해석 상담', 'AI-Powered Interpretation'),
+                desc: tl('검사 완료 후 Anthropic Claude AI와 1:1 대화로 나의 결과를 더 깊이 이해할 수 있습니다. 단순 점수를 넘어선 인사이트를 제공합니다.', 'After completing a test, have a 1:1 conversation with Anthropic Claude AI to deeply understand your results — insights beyond just scores.'),
               },
               {
                 icon: '🔒', bg: '#FEF3C7',
-                title: '완전한 프라이버시 보호',
-                desc: '검사 결과는 본인 계정에만 저장됩니다. 개인 식별 정보와 분리 보관하여 익명성을 보장합니다.',
+                title: tl('완전한 프라이버시 보호', 'Full Privacy Protection'),
+                desc: tl('검사 결과는 본인 계정에만 저장됩니다. 개인 식별 정보와 분리 보관하여 익명성을 보장합니다.', 'Your results are stored only in your account, kept separate from personal identifiers to guarantee anonymity.'),
               },
             ].map(f => (
               <div key={f.title} style={{
@@ -770,14 +728,14 @@ function LandingPage({ setView, isLoggedIn }) {
                 textTransform: 'uppercase', padding: '5px 14px', borderRadius: 100, marginBottom: 20,
               }}>AI Counseling</div>
               <h2 style={{ fontSize: 36, fontWeight: 700, lineHeight: 1.3, color: 'white', marginBottom: 16 }}>
-                검사 결과,<br />AI와 함께<br />이해하세요
+                {tl(<>검사 결과,<br />AI와 함께<br />이해하세요</>, <>Understand your<br />results with<br />AI counseling</>)}
               </h2>
               <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, marginBottom: 28 }}>
-                단순한 점수 확인을 넘어,<br />내 결과의 의미와 앞으로의 방향을 대화로 탐색합니다.
+                {tl(<>단순한 점수 확인을 넘어,<br />내 결과의 의미와 앞으로의 방향을 대화로 탐색합니다.</>, <>Beyond just seeing a score — explore the meaning of your results and your path forward through conversation.</>)}
               </p>
 
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 32 }}>
-                {['📊 결과 해석', '💭 감정 탐색', '🗺 대처 방법', '🔄 추가 검사 추천'].map(chip => (
+                {tl(['📊 결과 해석', '💭 감정 탐색', '🗺 대처 방법', '🔄 추가 검사 추천'], ['📊 Result Interpretation', '💭 Emotion Exploration', '🗺 Coping Strategies', '🔄 Test Recommendations']).map(chip => (
                   <span key={chip} style={{
                     background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.9)',
                     padding: '6px 14px', borderRadius: 100, fontSize: 13,
@@ -804,10 +762,10 @@ function LandingPage({ setView, isLoggedIn }) {
                 onMouseEnter={e => { e.currentTarget.style.background = '#E76F51'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = '#F4A261'; }}
               >
-                AI 상담 체험하기 →
+                {tl("AI 상담 체험하기 →", "Try AI Counseling →")}
               </button>
               <div style={{ marginTop: 12, fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
-                PHQ-9 우울 검사(무료) → 결과 확인 → AI 상담
+                {tl("PHQ-9 우울 검사(무료) → 결과 확인 → AI 상담", "PHQ-9 Depression (Free) → View Results → AI Counseling")}
               </div>
             </div>
 
@@ -897,18 +855,24 @@ function LandingPage({ setView, isLoggedIn }) {
                   justifyContent: 'center', fontSize: 22,
                 }}>🤖</div>
                 <div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: '#555' }}>일반 AI (ChatGPT 등)</div>
-                  <div style={{ fontSize: 12, color: '#9A9A9A' }}>일회성 대화 서비스</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: '#555' }}>{tl("일반 AI (ChatGPT 등)", "Generic AI (ChatGPT etc.)")}</div>
+                  <div style={{ fontSize: 12, color: '#9A9A9A' }}>{tl("일회성 대화 서비스", "One-off conversation")}</div>
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {[
+                {tl([
                   '내 심리 상태를 전혀 모른 채 답변',
                   '오늘 대화는 내일이면 기억 못함',
                   '검사 근거 없는 일반적 조언',
                   '시간이 지나도 변화 추적 불가',
                   '누구에게나 동일한 답변 패턴',
-                ].map(t => (
+                ], [
+                  'Responds with no knowledge of your mental state',
+                  "Today's conversation is forgotten tomorrow",
+                  'Generic advice with no assessment basis',
+                  'No tracking of changes over time',
+                  'Same response pattern for everyone',
+                ]).map(t => (
                   <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span style={{ color: '#D1D5DB', fontSize: 16, flexShrink: 0 }}>✗</span>
                     <span style={{ fontSize: 14, color: '#888' }}>{t}</span>
@@ -928,7 +892,7 @@ function LandingPage({ setView, isLoggedIn }) {
                 position: 'absolute', top: 14, right: 14,
                 background: '#2D6A4F', color: 'white',
                 fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 100,
-              }}>마음풀 방식</div>
+              }}>{tl("마음풀 방식", "Maumful Approach")}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
                 <div style={{
                   width: 44, height: 44, borderRadius: 12,
@@ -936,18 +900,24 @@ function LandingPage({ setView, isLoggedIn }) {
                   justifyContent: 'center', fontSize: 22,
                 }}>🌿</div>
                 <div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: '#1A1A1A' }}>마음풀 AI 상담</div>
-                  <div style={{ fontSize: 12, color: '#52B788' }}>심리검사 기반 지속 관리</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: '#1A1A1A' }}>{tl("마음풀 AI 상담", "Maumful AI Counseling")}</div>
+                  <div style={{ fontSize: 12, color: '#52B788' }}>{tl("심리검사 기반 지속 관리", "Assessment-based continuous care")}</div>
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {[
+                {tl([
                   'PHQ-9, GAD-7 등 검사 결과를 이미 알고 대화',
                   '이전 검사 이력·감정 기록을 기억해 맥락 유지',
                   '내 점수와 증상 패턴 기반 개인화 상담',
                   '시간 경과에 따른 심리 변화 트렌드 추적',
                   '나만의 데이터 프로필로 정밀한 인사이트',
-                ].map(t => (
+                ], [
+                  'Already knows your PHQ-9, GAD-7 results when you chat',
+                  'Maintains context from your past test history and mood logs',
+                  'Personalized counseling based on your scores and symptom patterns',
+                  'Tracks your psychological changes and trends over time',
+                  'Precise insights powered by your personal data profile',
+                ]).map(t => (
                   <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span style={{ color: '#52B788', fontSize: 16, flexShrink: 0 }}>✓</span>
                     <span style={{ fontSize: 14, color: '#3A3A3A' }}>{t}</span>
@@ -1023,7 +993,7 @@ function LandingPage({ setView, isLoggedIn }) {
               textTransform: 'uppercase', padding: '5px 14px', borderRadius: 100, marginBottom: 14,
             }}>How It Works</div>
             <h2 style={{ fontSize: 34, fontWeight: 700 }}>
-              3단계로 <span style={{ color: '#2D6A4F' }}>간단하게</span> 시작
+              {tl(<>3단계로 <span style={{ color: '#2D6A4F' }}>간단하게</span> 시작</>, <>Get started in <span style={{ color: '#2D6A4F' }}>3 simple steps</span></>)}
             </h2>
           </div>
 
@@ -1036,9 +1006,9 @@ function LandingPage({ setView, isLoggedIn }) {
             }} />
 
             {[
-              { step: '01', icon: '📋', title: '회원가입', desc: '이메일로 30초 만에 가입. 즉시 20 크레딧 지급됩니다.', note: '검사 4회 + AI채팅 5회 무료' },
-              { step: '02', icon: '🔍', title: '검사 선택 & 수행', desc: '8가지 검사 중 원하는 것을 선택. 질문에 솔직하게 답하세요.', note: '최소 5분이면 완료' },
-              { step: '03', icon: '💬', title: 'AI와 결과 상담', desc: '검사 완료 즉시 AI 상담사와 대화로 결과를 분석합니다.', note: '내 언어로 쉽게 이해' },
+              { step: '01', icon: '📋', title: tl('회원가입', 'Sign Up'), desc: tl('이메일로 30초 만에 가입. 즉시 20 크레딧 지급됩니다.', 'Sign up with email in 30 seconds. Receive 20 credits instantly.'), note: tl('검사 4회 + AI채팅 5회 무료', '4 tests + 5 AI chats free') },
+              { step: '02', icon: '🔍', title: tl('검사 선택 & 수행', 'Pick & Take a Test'), desc: tl('8가지 검사 중 원하는 것을 선택. 질문에 솔직하게 답하세요.', 'Choose from 10 assessments. Answer the questions honestly.'), note: tl('최소 5분이면 완료', 'Done in as little as 5 min') },
+              { step: '03', icon: '💬', title: tl('AI와 결과 상담', 'AI Result Counseling'), desc: tl('검사 완료 즉시 AI 상담사와 대화로 결과를 분석합니다.', 'Right after your test, analyze your results through conversation with an AI counselor.'), note: tl('내 언어로 쉽게 이해', 'Understand in plain language') },
             ].map((s, i) => (
               <div key={s.step} style={{ padding: '0 32px', textAlign: 'center', position: 'relative', zIndex: 1 }}>
                 <div style={{
@@ -1067,10 +1037,10 @@ function LandingPage({ setView, isLoggedIn }) {
         <div style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)' }}
           className="stats-grid">
           {[
-            { num: '10종', label: '전문 심리·진로 검사' },
-            { num: '10', label: '가입 즉시 무료 크레딧' },
-            { num: '5분~', label: '최소 검사 소요시간' },
-            { num: '100%', label: '데이터 프라이버시' },
+            { num: '10', label: tl('전문 심리·진로 검사', 'Professional Assessments') },
+            { num: '10', label: tl('가입 즉시 무료 크레딧', 'Free Credits on Signup') },
+            { num: '5min~', label: tl('최소 검사 소요시간', 'Minimum Test Duration') },
+            { num: '100%', label: tl('데이터 프라이버시', 'Data Privacy') },
           ].map((s, i) => (
             <div key={s.label} style={{
               padding: '52px 20px', textAlign: 'center',
@@ -1089,10 +1059,10 @@ function LandingPage({ setView, isLoggedIn }) {
         background: 'linear-gradient(135deg, #D8F3DC, #B7E4C7)',
       }}>
         <h2 style={{ fontSize: 40, fontWeight: 700, marginBottom: 16 }}>
-          지금 바로 시작하세요
+          {tl("지금 바로 시작하세요", "Start your journey today")}
         </h2>
         <p style={{ fontSize: 17, color: '#5A5A5A', marginBottom: 36 }}>
-          가입 즉시 20 크레딧 지급 — 심리검사 4회 + AI 상담 5회 무료
+          {tl("가입 즉시 20 크레딧 지급 — 심리검사 4회 + AI 상담 5회 무료", "Get 20 credits instantly on signup — 4 assessments + 5 AI chats free")}
         </p>
         <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
           <button
@@ -1106,7 +1076,7 @@ function LandingPage({ setView, isLoggedIn }) {
             onMouseEnter={e => { e.currentTarget.style.background = '#1B5138'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
             onMouseLeave={e => { e.currentTarget.style.background = '#2D6A4F'; e.currentTarget.style.transform = 'none'; }}
           >
-            무료 회원가입 →
+            {tl("무료 회원가입 →", "Sign up free →")}
           </button>
           <button
             onClick={() => setView('testsIntro')}
@@ -1120,7 +1090,7 @@ function LandingPage({ setView, isLoggedIn }) {
             onMouseEnter={e => { e.currentTarget.style.background = '#F0FAF4'; }}
             onMouseLeave={e => { e.currentTarget.style.background = 'white'; }}
           >
-            검사 목록 둘러보기
+            {tl("검사 목록 둘러보기", "Browse assessments")}
           </button>
         </div>
       </section>
@@ -1508,12 +1478,13 @@ function LandingPage({ setView, isLoggedIn }) {
 // ============================================================
 // TestsIntroPage — 검사 소개 상세 페이지
 // ============================================================
-function TestsIntroPage({ setView, isLoggedIn }) {
+function TestsIntroPage({ setView, isLoggedIn, lang }) {
+  const tl = (ko, en) => lang === 'en' ? en : ko;
   const { useState: useS } = React;
   const [selected, setSelected] = useS(null);
 
-  const t = selected !== null ? TEST_META[selected] : null;
-  const c = t ? COLOR_MAP[t.color] : null;
+  const tm = selected !== null ? TEST_META[selected] : null;
+  const c = tm ? COLOR_MAP[tm.color] : null;
 
   return (
     <div style={{ fontFamily: "'Noto Sans KR', sans-serif", background: '#FAFAF8', minHeight: '100vh' }}>
@@ -1529,10 +1500,10 @@ function TestsIntroPage({ setView, isLoggedIn }) {
           textTransform: 'uppercase', padding: '5px 14px', borderRadius: 100, marginBottom: 16,
         }}>Psychological Tests</div>
         <h1 style={{ fontSize: 40, fontWeight: 700, marginBottom: 14 }}>
-          심리검사 <span style={{ color: '#2D6A4F' }}>소개</span>
+          {tl(<>심리검사 <span style={{ color: '#2D6A4F' }}>소개</span></>, <>Assessment <span style={{ color: '#2D6A4F' }}>Overview</span></>)}
         </h1>
         <p style={{ fontSize: 16, color: '#5A5A5A', maxWidth: 480, margin: '0 auto' }}>
-          각 검사를 선택하면 상세 정보를 확인할 수 있습니다
+          {tl("각 검사를 선택하면 상세 정보를 확인할 수 있습니다", "Select an assessment to view detailed information")}
         </p>
       </div>
 
@@ -1566,15 +1537,15 @@ function TestsIntroPage({ setView, isLoggedIn }) {
                   }}>{test.icon}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                      <span style={{ fontSize: 16, fontWeight: 700, color: '#1A1A1A' }}>{test.name}</span>
+                      <span style={{ fontSize: 16, fontWeight: 700, color: '#1A1A1A' }}>{tl(test.name, test.nameEn)}</span>
                       <span style={{
                         fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 100,
                         background: test.free ? '#D8F3DC' : '#FFF0E6',
                         color: test.free ? '#1A6B3C' : '#C05621',
-                      }}>{test.free ? '무료' : '10 크레딧'}</span>
+                      }}>{test.free ? tl('무료', 'Free') : tl('10 크레딧', '10 Credits')}</span>
                     </div>
                     <div style={{ fontSize: 13, color: '#9A9A9A' }}>
-                      {test.label} · {test.time} · {test.count}
+                      {test.label} · {tl(test.time, test.timeEn)} · {tl(test.count, test.countEn)}
                     </div>
                   </div>
                   <div style={{ fontSize: 18, color: isActive ? cc.bar : '#CACACA' }}>›</div>
@@ -1593,7 +1564,7 @@ function TestsIntroPage({ setView, isLoggedIn }) {
               color: '#9A9A9A',
             }}>
               <div style={{ fontSize: 48, marginBottom: 16 }}>👆</div>
-              <p style={{ fontSize: 15 }}>왼쪽에서 검사를 선택하면<br />상세 정보를 확인할 수 있습니다</p>
+              <p style={{ fontSize: 15 }}>{tl(<>왼쪽에서 검사를 선택하면<br />상세 정보를 확인할 수 있습니다</>, <>Select an assessment on the left<br />to view detailed information</>)}</p>
             </div>
           ) : (
             <div style={{
@@ -1605,19 +1576,19 @@ function TestsIntroPage({ setView, isLoggedIn }) {
                 background: c.bg, padding: '32px 32px 28px',
                 borderBottom: `1px solid ${c.bar}22`,
               }}>
-                <div style={{ fontSize: 40, marginBottom: 12 }}>{t.icon}</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: c.bar, letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 6 }}>{t.label}</div>
-                <h2 style={{ fontSize: 26, fontWeight: 700, color: '#1A1A1A', marginBottom: 8 }}>{t.name}</h2>
-                <p style={{ fontSize: 14, color: '#5A5A5A', lineHeight: 1.7 }}>{t.desc}</p>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>{tm.icon}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: c.bar, letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 6 }}>{tm.label}</div>
+                <h2 style={{ fontSize: 26, fontWeight: 700, color: '#1A1A1A', marginBottom: 8 }}>{tl(tm.name, tm.nameEn)}</h2>
+                <p style={{ fontSize: 14, color: '#5A5A5A', lineHeight: 1.7 }}>{tl(tm.desc, tm.descEn)}</p>
               </div>
 
               <div style={{ padding: '24px 32px' }}>
                 {/* 기본 정보 */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
                   {[
-                    { label: '소요 시간', value: t.time },
-                    { label: '문항 수', value: t.count },
-                    { label: '비용', value: t.free ? '무료' : '10 크레딧' },
+                    { label: tl('소요 시간', 'Duration'), value: tl(tm.time, tm.timeEn) },
+                    { label: tl('문항 수', 'Items'), value: tl(tm.count, tm.countEn) },
+                    { label: tl('비용', 'Cost'), value: tm.free ? tl('무료', 'Free') : tl('10 크레딧', '10 Credits') },
                   ].map(info => (
                     <div key={info.label} style={{
                       background: '#F9F9F7', borderRadius: 10, padding: '14px',
@@ -1631,30 +1602,28 @@ function TestsIntroPage({ setView, isLoggedIn }) {
 
                 {/* 측정 영역 */}
                 <div style={{ marginBottom: 24 }}>
-                  <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 10, color: '#1A1A1A' }}>📌 측정 영역</h4>
+                  <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 10, color: '#1A1A1A' }}>📌 {tl("측정 영역", "What It Measures")}</h4>
                   <div style={{ fontSize: 14, color: '#5A5A5A', lineHeight: 1.75, background: '#F9F9F7', borderRadius: 10, padding: '14px 16px' }}>
-                    {t.id === 'PHQ9' && '우울한 기분 · 흥미/즐거움 감소 · 수면 변화 · 피로감 · 식욕 변화 · 자기비난 · 집중력 · 정신운동 변화 · 자살사고'}
-                    {t.id === 'GAD7' && '불안감 · 걱정 조절 어려움 · 여러 걱정 · 긴장감 · 안절부절 · 과민함 · 나쁜 일에 대한 두려움'}
-                    {t.id === 'DASS21' && '우울(D) — 무기력·절망·자기비하 / 불안(A) — 자율신경 각성·상황불안 / 스트레스(S) — 만성적 각성·긴장'}
-                    {t.id === 'BIG5' && '개방성(O) · 성실성(C) · 외향성(E) · 친화성(A) · 신경증(N) — 5가지 성격 핵심 차원'}
-                    {t.id === 'LOST' && '행동억제체계(BIS) · 행동활성화체계(BAS) — 추동·재미추구·보상반응성 4하위척도'}
-                    {t.id === 'SCT' && '자기입장 유지 · 정서반응성 · 정서적 단절 · 융합·관계의존 등 4개 영역의 자기반응 패턴을 문장완성으로 탐색합니다'}
-                    {t.id === 'DSI' && '자기입장 유지 · 정서반응성 · 정서적 단절 · 융합·관계의존 — 4개 소척도 평정형 25문항으로 자기분화 수준을 측정합니다'}
-                    {t.id === 'BURNOUT' && '정서적 고갈 · 냉소 · 효능감 저하 3가지 소진 신호 자가점검 — 직장인·교육·서비스직 특화'}
-                    {t.id === 'RIASEC' && '실재형(R) · 탐구형(I) · 예술형(A) · 사회형(S) · 진취형(E) · 관습형(C) — 6가지 Holland 유형별 점수와 우세 직업 흥미 코드(2자리)를 도출합니다'}
-                    {t.id === 'VALUES' && '성취 · 봉사 · 안정 · 자율 · 창의 · 영향력 · 지식추구 · 워라밸 · 사회인정 · 경제적 보상 — 10가지 가치요인의 중요도를 100점 척도로 환산해 순위를 제시합니다'}
+                    {tm.id === 'PHQ9' && tl('우울한 기분 · 흥미/즐거움 감소 · 수면 변화 · 피로감 · 식욕 변화 · 자기비난 · 집중력 · 정신운동 변화 · 자살사고', 'Depressed mood · Loss of interest · Sleep changes · Fatigue · Appetite changes · Self-blame · Concentration · Psychomotor changes · Suicidal thoughts')}
+                    {tm.id === 'GAD7' && tl('불안감 · 걱정 조절 어려움 · 여러 걱정 · 긴장감 · 안절부절 · 과민함 · 나쁜 일에 대한 두려움', 'Anxiety · Uncontrollable worry · Multiple worries · Tension · Restlessness · Irritability · Fear of something bad happening')}
+                    {tm.id === 'DASS21' && tl('우울(D) — 무기력·절망·자기비하 / 불안(A) — 자율신경 각성·상황불안 / 스트레스(S) — 만성적 각성·긴장', 'Depression (D) — hopelessness, self-deprecation / Anxiety (A) — autonomic arousal, situational anxiety / Stress (S) — chronic arousal, tension')}
+                    {tm.id === 'BIG5' && tl('개방성(O) · 성실성(C) · 외향성(E) · 친화성(A) · 신경증(N) — 5가지 성격 핵심 차원', 'Openness (O) · Conscientiousness (C) · Extraversion (E) · Agreeableness (A) · Neuroticism (N) — 5 core personality dimensions')}
+                    {tm.id === 'LOST' && tl('행동억제체계(BIS) · 행동활성화체계(BAS) — 추동·재미추구·보상반응성 4하위척도', 'Behavioral Inhibition System (BIS) · Behavioral Activation System (BAS) — Drive, Fun-Seeking, Reward Responsiveness — 4 subscales')}
+                    {tm.id === 'SCT' && tl('자기입장 유지 · 정서반응성 · 정서적 단절 · 융합·관계의존 등 4개 영역의 자기반응 패턴을 문장완성으로 탐색합니다', 'Explores 4 domains of self-response patterns through sentence completion: self-position, emotional reactivity, emotional cutoff, and fusion/dependency')}
+                    {tm.id === 'DSI' && tl('자기입장 유지 · 정서반응성 · 정서적 단절 · 융합·관계의존 — 4개 소척도 평정형 25문항으로 자기분화 수준을 측정합니다', 'Self-position · Emotional reactivity · Emotional cutoff · Fusion/dependency — 4 subscales, 25 rating items measuring self-differentiation')}
+                    {tm.id === 'BURNOUT' && tl('정서적 고갈 · 냉소 · 효능감 저하 3가지 소진 신호 자가점검 — 직장인·교육·서비스직 특화', 'Emotional exhaustion · Cynicism · Reduced efficacy — 3 burnout signals, specialized for workers, educators, and service professionals')}
+                    {tm.id === 'RIASEC' && tl('실재형(R) · 탐구형(I) · 예술형(A) · 사회형(S) · 진취형(E) · 관습형(C) — 6가지 Holland 유형별 점수와 우세 직업 흥미 코드(2자리)를 도출합니다', 'Realistic (R) · Investigative (I) · Artistic (A) · Social (S) · Enterprising (E) · Conventional (C) — scores for all 6 Holland types, with a 2-letter dominant career code')}
+                    {tm.id === 'VALUES' && tl('성취 · 봉사 · 안정 · 자율 · 창의 · 영향력 · 지식추구 · 워라밸 · 사회인정 · 경제적 보상 — 10가지 가치요인의 중요도를 100점 척도로 환산해 순위를 제시합니다', 'Achievement · Service · Stability · Autonomy · Creativity · Influence · Knowledge · Work-Life Balance · Social Recognition · Economic Reward — 10 value factors ranked on a 100-point scale')}
                   </div>
                 </div>
 
                 <button
                   onClick={() => {
-                    // 무료 검사(PHQ9·GAD7): 비로그인도 바로 시작
-                    // 유료 검사: 비로그인이면 회원가입 유도
                     const FREE = ['PHQ9', 'GAD7'];
-                    if (!isLoggedIn && !FREE.includes(t.id)) {
+                    if (!isLoggedIn && !FREE.includes(tm.id)) {
                       setView('memberSignup'); return;
                     }
-                    setView('startTest:' + t.id);
+                    setView('startTest:' + tm.id);
                   }}
                   style={{
                     width: '100%', padding: '14px 0',
@@ -1666,7 +1635,7 @@ function TestsIntroPage({ setView, isLoggedIn }) {
                   onMouseEnter={e => e.currentTarget.style.opacity = '0.88'}
                   onMouseLeave={e => e.currentTarget.style.opacity = '1'}
                 >
-                  {t.name} 시작하기 {t.free ? '(무료)' : '→'}
+                  {tl(tm.name, tm.nameEn)} {tl("시작하기", "Start")} {tm.free ? tl('(무료)', '(Free)') : '→'}
                 </button>
               </div>
             </div>

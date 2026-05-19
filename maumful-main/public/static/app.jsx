@@ -951,12 +951,12 @@ function PsychologicalTestSystem() {
         const r = phq9Responses[q.num];
         if (r) total += r;
       });
-      let level = "안정";
+      let level = t("안정", "Minimal");
       let color = "green";
-      if (total >= 20) { level = "전문 지원 필요"; color = "red"; }
-      else if (total >= 15) { level = "적극적 지원 필요"; color = "orange"; }
-      else if (total >= 10) { level = "지원 필요"; color = "orange"; }
-      else if (total >= 5) { level = "주의 필요"; color = "yellow"; }
+      if (total >= 20) { level = t("전문 지원 필요", "Severe"); color = "red"; }
+      else if (total >= 15) { level = t("적극적 지원 필요", "Moderately Severe"); color = "orange"; }
+      else if (total >= 10) { level = t("지원 필요", "Moderate"); color = "orange"; }
+      else if (total >= 5) { level = t("주의 필요", "Mild"); color = "yellow"; }
       return { total, level, color };
     }
 
@@ -966,11 +966,11 @@ function PsychologicalTestSystem() {
         const r = gad7Responses[q.num];
         if (r) total += r;
       });
-      let level = "안정";
+      let level = t("안정", "Minimal");
       let color = "green";
-      if (total >= 15) { level = "전문 지원 필요"; color = "red"; }
-      else if (total >= 10) { level = "지원 필요"; color = "orange"; }
-      else if (total >= 5) { level = "주의 필요"; color = "yellow"; }
+      if (total >= 15) { level = t("전문 지원 필요", "Severe"); color = "red"; }
+      else if (total >= 10) { level = t("지원 필요", "Moderate"); color = "orange"; }
+      else if (total >= 5) { level = t("주의 필요", "Mild"); color = "yellow"; }
       return { total, level, color };
     }
 
@@ -1160,6 +1160,25 @@ function PsychologicalTestSystem() {
     const total = Object.values(scales).reduce((a,b) => a+b, 0);
     return { scales, counts, total };
   }
+
+  const LOST_TYPES = {
+    ETPR:{ icon:"🦁", name:t("실행 리더","Action Leader"), eng:"Action Leader", desc:t("빠른 실행력과 관계 중심으로 팀을 이끄는 카리스마형 리더입니다.","A charismatic leader who drives results quickly while keeping relationships central."), traits:[t("추진력","Drive"),t("사교성","Sociability"),t("결단력","Decisiveness"),t("팀십","Teamwork")], strength:[t("빠른 의사결정과 실행","Fast decision-making and execution"),t("사람들을 동기부여하는 능력","Ability to motivate people"),t("목표 달성 집중력","Goal-focused concentration")], weakness:[t("급하게 결론 내리는 경향","Tendency to rush to conclusions"),t("타인의 속도를 기다리기 어려움","Difficulty waiting for others"),t("감정보다 결과 우선","Results over feelings")], work:t("팀을 빠르게 움직이며 성과를 만들어냅니다.","Moves the team quickly to deliver results."), love:t("적극적으로 표현하고 파트너를 이끌려는 경향이 있습니다.","Expressive and tends to take the lead in relationships."), stress:t("압박을 받으면 더욱 강하게 밀어붙이거나 지시적이 됩니다.","Under pressure, may push harder or become directive."), match:["IFJR","EFJR"], conflict:["IFJC","IFPC"] },
+    ETPC:{ icon:"🦅", name:t("개척자","Pioneer"), eng:"Pioneer", desc:t("논리와 속도로 새로운 길을 여는 독립적인 혁신가입니다.","An independent innovator who opens new paths with logic and speed."), traits:[t("혁신","Innovation"),t("독립성","Independence"),t("속도","Speed"),t("논리","Logic")], strength:[t("새로운 방식으로 문제를 해결","Solving problems in novel ways"),t("빠른 판단과 실행","Quick judgment and action"),t("자기 동기부여","Self-motivation")], weakness:[t("팀워크보다 단독 행동 선호","Prefers solo action over teamwork"),t("타인 감정 고려 부족","May overlook others' feelings"),t("규칙·절차에 답답함 느낌","Frustrated by rules and procedures")], work:t("혼자 빠르게 결과를 만들어내는 역할에 강합니다.","Excels in roles where independent, fast results are needed."), love:t("자유를 중시하며 서로 독립적인 관계를 선호합니다.","Values freedom and prefers mutually independent relationships."), stress:t("압박 시 혼자 해결하려 하거나 상황을 회피합니다.","Under stress, tends to handle things alone or avoid situations."), match:["IFJC","ETJR"], conflict:["IFJR","EFPR"] },
+    ETJR:{ icon:"🦊", name:t("전략 조율가","Strategic Coordinator"), eng:"Strategic Coordinator", desc:t("사람과 시스템을 연결하여 체계적으로 목표를 달성하는 유형입니다.","Achieves goals systematically by connecting people and systems."), traits:[t("전략적","Strategic"),t("체계적","Systematic"),t("사교적","Sociable"),t("신중함","Careful")], strength:[t("장기 계획 수립과 실행","Long-term planning and execution"),t("팀 합의 형성","Building team consensus"),t("구조화된 소통","Structured communication")], weakness:[t("유연성이 부족할 수 있음","May lack flexibility"),t("변화에 느리게 적응","Slow to adapt to change"),t("과도한 계획으로 실행 지연","Over-planning can delay action")], work:t("명확한 목표 아래 팀을 조율하며 체계를 만들어갑니다.","Coordinates teams under clear goals to build effective systems."), love:t("안정적이고 계획적인 관계를 지향합니다.","Seeks stable, planned relationships."), stress:t("계획이 어긋날 때 통제를 강화하려는 경향이 있습니다.","When plans go awry, tends to tighten control."), match:["IFPR","EFPR"], conflict:["ETPC","IFPC"] },
+    ETJC:{ icon:"🏗️", name:t("시스템 구축자","System Builder"), eng:"System Builder", desc:t("효율적인 구조와 시스템을 설계하는 논리적인 외향가입니다.","A logical extrovert who designs efficient structures and systems."), traits:[t("체계성","Structure"),t("논리","Logic"),t("외향성","Extroversion"),t("독립성","Independence")], strength:[t("복잡한 시스템 설계","Designing complex systems"),t("효율성 최적화","Optimizing efficiency"),t("외부 발표와 소통","Presenting and communicating")], weakness:[t("감정적 요소 간과","Overlooking emotional factors"),t("지나친 완벽주의","Excessive perfectionism"),t("협업보다 지시 선호","Prefers directing over collaborating")], work:t("명확한 역할과 프로세스를 만들어 팀을 이끕니다.","Leads teams by creating clear roles and processes."), love:t("감정보다 실용적인 관점에서 관계를 바라봅니다.","Views relationships from a practical rather than emotional lens."), stress:t("문제를 시스템 오류로 인식하고 재설계하려 합니다.","Sees problems as system errors and tries to redesign."), match:["IFPC","ITPR"], conflict:["EFPR","IFJR"] },
+    EFPR:{ icon:"🌟", name:t("관계 활력가","Social Energizer"), eng:"Social Energizer", desc:t("에너지와 감성으로 주변을 밝히는 외향적 관계 중심 유형입니다.","An extroverted, relationship-centered type who brightens surroundings with energy and warmth."), traits:[t("에너지","Energy"),t("공감","Empathy"),t("사교성","Sociability"),t("자발성","Spontaneity")], strength:[t("분위기를 밝게 만드는 능력","Ability to brighten the atmosphere"),t("빠른 공감과 지지","Quick empathy and support"),t("네트워크 형성","Network building")], weakness:[t("깊은 집중이 어려울 수 있음","May struggle with deep focus"),t("감정적 충동으로 실수","Impulsive emotional mistakes"),t("비판에 민감","Sensitive to criticism")], work:t("팀 분위기를 살리고 사람들을 연결하는 역할이 맞습니다.","Thrives in roles that energize team morale and connect people."), love:t("적극적으로 감정을 표현하고 함께하는 시간을 소중히 합니다.","Expresses feelings actively and values time together."), stress:t("스트레스를 사람들과 이야기하며 해소하려 합니다.","Relieves stress by talking things out with others."), match:["ITJR","ETJR"], conflict:["ITJC","ETJC"] },
+    EFPC:{ icon:"🎨", name:t("창의 표현가","Creative Expresser"), eng:"Creative Expresser", desc:t("자유로운 감성과 창의성으로 독자적인 세계를 만들어가는 유형입니다.","Creates an independent world through free-spirited emotion and creativity."), traits:[t("창의성","Creativity"),t("자유","Freedom"),t("감성","Sensitivity"),t("즉흥성","Improvisation")], strength:[t("독창적인 아이디어 생성","Generating original ideas"),t("예술적·감성적 표현","Artistic and emotional expression"),t("유연한 적응력","Flexible adaptability")], weakness:[t("장기 계획이 약함","Weak at long-term planning"),t("마감·규칙 준수 어려움","Difficulty meeting deadlines and rules"),t("일관성 유지 힘듦","Hard to maintain consistency")], work:t("창의적 자유가 주어진 환경에서 최고 성과를 냅니다.","Performs best in environments that allow creative freedom."), love:t("파트너에게 창의적이고 감성적인 방식으로 사랑을 표현합니다.","Expresses love in creative and emotional ways."), stress:t("압박 시 예술적 활동이나 혼자만의 시간으로 회복합니다.","Recovers through artistic activities or alone time."), match:["ITJC","ETJC"], conflict:["ITJR","ETJR"] },
+    EFJR:{ icon:"🌿", name:t("협력 추진자","Collaborative Driver"), eng:"Collaborative Driver", desc:t("따뜻한 마음으로 팀을 이끌고 협력을 통해 목표를 이루는 유형입니다.","A warm-hearted type who leads teams and achieves goals through collaboration."), traits:[t("협력","Collaboration"),t("따뜻함","Warmth"),t("추진력","Drive"),t("신뢰","Trust")], strength:[t("팀 화합과 동기부여","Team harmony and motivation"),t("공감 기반 리더십","Empathy-based leadership"),t("계획적 협업","Planned collaboration")], weakness:[t("갈등 회피 경향","Tendency to avoid conflict"),t("타인 감정에 지나치게 영향받음","Overly influenced by others' emotions"),t("자기 욕구 뒤로 미룸","Puts own needs last")], work:t("구성원의 강점을 이끌어내는 협력적 리더입니다.","A collaborative leader who draws out each member's strengths."), love:t("헌신적이고 따뜻한 파트너로 관계에 에너지를 쏟습니다.","Dedicated and warm, pours energy into the relationship."), stress:t("내면 갈등을 숨기다가 감정이 폭발하는 패턴이 있습니다.","May suppress inner conflict until emotions overflow."), match:["ETPR","ITJR"], conflict:["ITJC","ETPC"] },
+    EFJC:{ icon:"🕊️", name:t("소통 전략가","Communication Strategist"), eng:"Communication Strategist", desc:t("감성과 전략을 결합하여 다리 역할을 하는 조율사입니다.","A mediator who bridges people by combining empathy with strategy."), traits:[t("소통","Communication"),t("공감","Empathy"),t("계획","Planning"),t("독립성","Independence")], strength:[t("대화와 협상 능력","Dialogue and negotiation skills"),t("감성적 이해와 전략적 사고","Emotional intelligence with strategic thinking"),t("중재 역할","Mediating role")], weakness:[t("우유부단할 수 있음","May be indecisive"),t("깊은 감정을 표현하기 어려움","Difficulty expressing deep emotions"),t("혼자 결정 내리기 힘듦","Hard to decide alone")], work:t("조직 내 소통 허브로서 갈등 조율에 탁월합니다.","Excels as a communication hub and conflict mediator in organizations."), love:t("파트너의 말을 잘 듣고 감성적으로 지지합니다.","Listens well and provides emotional support to partners."), stress:t("스트레스 시 대화를 통해 문제를 풀어가려 합니다.","Tries to resolve stress through dialogue."), match:["ETPC","ITJR"], conflict:["ITPR","ETPR"] },
+    ITPR:{ icon:"🦉", name:t("분석 지원가","Analytical Supporter"), eng:"Analytical Supporter", desc:t("냉철한 분석과 빠른 판단으로 팀을 뒤에서 지원하는 유형입니다.","Supports the team from behind with sharp analysis and quick judgment."), traits:[t("분석력","Analysis"),t("신속함","Speed"),t("지원","Support"),t("내향성","Introversion")], strength:[t("빠른 데이터 분석","Quick data analysis"),t("조용하지만 효율적인 실행","Quiet but efficient execution"),t("상황 판단력","Situational judgment")], weakness:[t("혼자 일하는 것 선호로 협업 어려울 수 있음","May find collaboration difficult, preferring solo work"),t("감정 표현 부족","Lacks emotional expression"),t("과부하 시 번아웃","Burnout risk when overloaded")], work:t("분석이 필요한 업무에서 조용하고 빠르게 성과를 냅니다.","Quietly and quickly delivers results in analysis-heavy work."), love:t("말보다 행동으로 사랑을 표현하는 편입니다.","Tends to express love through actions rather than words."), stress:t("혼자 분석하고 해결책을 찾으며 회복합니다.","Recovers by analyzing problems and finding solutions alone."), match:["ETJC","EFJR"], conflict:["EFPR","IFPC"] },
+    ITPC:{ icon:"⚡", name:t("독자 혁신가","Independent Innovator"), eng:"Independent Innovator", desc:t("혼자 빠르게 새로운 해법을 만들어내는 독립적 혁신 유형입니다.","An independent innovator who quickly creates new solutions on their own."), traits:[t("혁신","Innovation"),t("독립성","Independence"),t("분석","Analysis"),t("속도","Speed")], strength:[t("독창적 문제 해결","Original problem-solving"),t("빠른 독립적 실행","Fast independent execution"),t("기술적 숙련도","Technical proficiency")], weakness:[t("협력보다 단독 행동 선호","Prefers solo action over collaboration"),t("타인 관점 수용 어려울 수 있음","May struggle to accept others' viewpoints"),t("결과 중심으로 과정 무시","Results-focused, may ignore process")], work:t("기술적 도전이 있는 독립적 업무에서 빛을 발합니다.","Shines in independent work with technical challenges."), love:t("파트너에게 지적 자극을 주고받는 관계를 선호합니다.","Prefers relationships that offer mutual intellectual stimulation."), stress:t("혼자만의 공간을 찾아 분석·해결에 집중합니다.","Seeks solitude to focus on analyzing and solving the problem."), match:["ETJR","EFJR"], conflict:["EFPC","IFJR"] },
+    ITJR:{ icon:"🏔️", name:t("정밀 계획가","Precision Planner"), eng:"Precision Planner", desc:t("체계적인 계획과 관계 지향으로 안정적인 성과를 내는 유형입니다.","Delivers stable results with systematic planning and a relationship-oriented approach."), traits:[t("정밀성","Precision"),t("계획성","Planning"),t("신뢰성","Reliability"),t("관계지향","Relationship-oriented")], strength:[t("빈틈없는 계획 수립","Thorough planning"),t("신뢰할 수 있는 실행","Reliable execution"),t("장기적 관계 유지","Maintaining long-term relationships")], weakness:[t("변화에 느리게 반응","Slow to respond to change"),t("새로운 시도에 보수적","Conservative about new attempts"),t("과도한 완벽주의","Excessive perfectionism")], work:t("장기 프로젝트를 꼼꼼하게 관리하는 역할에 뛰어납니다.","Excels at carefully managing long-term projects."), love:t("깊고 안정적인 관계를 선호하며 신뢰를 쌓아갑니다.","Prefers deep, stable relationships built on trust."), stress:t("계획이 흔들릴 때 더 많이 준비하고 확인합니다.","When plans waver, prepares and verifies more intensively."), match:["EFPR","EFJR"], conflict:["EFPC","ETPC"] },
+    ITJC:{ icon:"🔬", name:t("완벽 탐구자","Perfectionist Explorer"), eng:"Perfectionist Explorer", desc:t("깊이 있는 분석과 완벽함 추구로 전문성을 쌓는 독립적 내향형입니다.","An independent introvert who builds expertise through deep analysis and pursuit of perfection."), traits:[t("완벽주의","Perfectionism"),t("탐구심","Curiosity"),t("독립성","Independence"),t("집중력","Focus")], strength:[t("깊은 전문 지식","Deep specialized knowledge"),t("꼼꼼한 오류 검토","Thorough error checking"),t("독립적 연구 능력","Independent research ability")], weakness:[t("완벽주의로 결정 지연","Perfectionism causes decision delays"),t("대인 관계가 어려울 수 있음","May find interpersonal relationships difficult"),t("피드백 수용이 어려울 때 있음","Sometimes struggles to accept feedback")], work:t("전문성이 요구되는 깊은 연구·분석 업무에 강합니다.","Strong in deep research and analysis requiring expertise."), love:t("소수와 깊고 의미있는 관계를 지향합니다.","Seeks deep, meaningful relationships with a few people."), stress:t("더 많이 파고들며 완벽한 해답을 찾으려 합니다.","Digs deeper, seeking a perfect answer."), match:["EFPC","ETJC"], conflict:["EFPR","ETPR"] },
+    IFPR:{ icon:"🌸", name:t("공감 실행가","Empathetic Doer"), eng:"Empathetic Doer", desc:t("따뜻한 마음으로 빠르게 사람을 돕는 내향적 관계 지향 유형입니다.","An introverted, relationship-oriented type who warmly and quickly helps others."), traits:[t("공감","Empathy"),t("자발성","Spontaneity"),t("돌봄","Care"),t("민감성","Sensitivity")], strength:[t("타인 감정에 빠르게 반응","Quick response to others' emotions"),t("자연스러운 지지와 돌봄","Natural support and care"),t("진실된 공감 능력","Genuine empathy")], weakness:[t("자기 경계 설정이 어려움","Difficulty setting personal boundaries"),t("타인 감정에 지나치게 영향받음","Overly affected by others' emotions"),t("번아웃 위험","Burnout risk")], work:t("사람을 돌보는 상담·교육·서비스 분야에 탁월합니다.","Excels in counseling, education, and service roles."), love:t("파트너의 감정 변화에 섬세하게 반응하며 헌신합니다.","Responds sensitively to partner's emotional changes, with dedication."), stress:t("타인 걱정으로 자신을 잊고 소진되는 패턴이 있습니다.","Pattern of neglecting self while worrying about others, leading to exhaustion."), match:["ETJR","EFJR"], conflict:["ETPC","ITPC"] },
+    IFPC:{ icon:"🦋", name:t("자유 탐색자","Free Explorer"), eng:"Free Explorer", desc:t("감성과 자유를 따르며 자신만의 길을 탐색하는 내향적 유형입니다.","An introverted type who follows emotion and freedom to explore their own path."), traits:[t("자유","Freedom"),t("감성","Sensitivity"),t("탐색","Exploration"),t("자발성","Spontaneity")], strength:[t("깊은 감수성과 예술적 감각","Deep sensibility and artistic sense"),t("유연한 적응","Flexible adaptation"),t("자기만의 독창적 관점","Unique personal perspective")], weakness:[t("결정 미루는 경향","Tendency to postpone decisions"),t("장기 계획 어려움","Difficulty with long-term plans"),t("외부 기대에 부담감","Burdened by external expectations")], work:t("창의적 자율성이 보장된 환경에서 꽃을 피웁니다.","Flourishes in environments that guarantee creative autonomy."), love:t("깊은 감성적 연결을 원하지만 혼자만의 시간도 필요합니다.","Wants deep emotional connection but also needs personal time."), stress:t("자신만의 공간으로 물러나 감정을 정리합니다.","Retreats to personal space to process emotions."), match:["ETJC","EFJC"], conflict:["ETJR","ITJR"] },
+    IFJR:{ icon:"🌙", name:t("신중 지지자","Mindful Supporter"), eng:"Mindful Supporter", desc:t("조용하지만 깊이 있게 타인을 지지하는 신뢰의 내향형입니다.","A trustworthy introvert who quietly but deeply supports others."), traits:[t("신중함","Mindfulness"),t("지지","Support"),t("신뢰","Trust"),t("공감","Empathy")], strength:[t("깊은 신뢰 관계 형성","Building deep trust relationships"),t("조용한 헌신과 지속성","Quiet dedication and consistency"),t("타인의 필요를 잘 파악","Reading others' needs well")], weakness:[t("자기 감정 표현이 서툼","Clumsy at expressing own emotions"),t("갈등 회피로 불만 축적","Conflict avoidance leads to pent-up dissatisfaction"),t("과도한 자기 희생","Excessive self-sacrifice")], work:t("신뢰 기반의 지원·조력 역할에서 깊은 가치를 발휘합니다.","Brings deep value in trust-based support and helper roles."), love:t("말보다 행동으로 사랑을 보여주는 조용한 헌신자입니다.","A quiet devotee who shows love through actions rather than words."), stress:t("혼자 감내하다가 돌연 감정적으로 무너지는 패턴이 있습니다.","Pattern of enduring alone until suddenly emotionally overwhelmed."), match:["ETPR","EFPR"], conflict:["ETPC","ITPC"] },
+    IFJC:{ icon:"🌌", name:t("성찰 독자","Reflective Individual"), eng:"Reflective Individual", desc:t("깊은 내면 세계를 탐구하며 조용히 자신만의 가치를 추구하는 유형입니다.","A type that explores a deep inner world and quietly pursues personal values."), traits:[t("성찰","Reflection"),t("독립성","Independence"),t("깊이","Depth"),t("가치지향","Values-driven")], strength:[t("깊은 자기 이해","Deep self-understanding"),t("진정성 있는 관계","Authentic relationships"),t("독자적인 사고와 통찰","Independent thinking and insight")], weakness:[t("타인과의 연결이 어려울 수 있음","May find it hard to connect with others"),t("과도한 내면 집중으로 현실 괴리","Excessive introspection can disconnect from reality"),t("변화 대응 느림","Slow to respond to change")], work:t("가치 있는 목적을 위해 혼자 깊이 집중하는 작업에 강합니다.","Strong at solo deep-focus work with meaningful purpose."), love:t("진정성 있는 깊은 연결을 원하며 가치관 공유를 중시합니다.","Seeks authentic deep connection and values sharing the same values."), stress:t("깊은 성찰과 혼자만의 시간으로 에너지를 회복합니다.","Restores energy through deep reflection and solitary time."), match:["ETPC","EFPC"], conflict:["ETPR","ITPR"] },
+  };
 
   function calcLost() {
       const axisScores = { E:0, D:0, S:0, N:0, R:0, T:0 };
@@ -2412,11 +2431,9 @@ function PsychologicalTestSystem() {
           <>
             <div className="text-center mb-5">
               <div className="text-4xl mb-3">🌿</div>
-              <h2 className="text-xl font-bold text-gray-800 mb-2">무료 체험이 끝났습니다</h2>
+              <h2 className="text-xl font-bold text-gray-800 mb-2">{t("무료 체험이 끝났습니다","Free trial ended")}</h2>
               <p className="text-sm text-gray-500 leading-relaxed">
-                AI 상담 <strong>{AI_GUEST_TOTAL}회</strong>를 모두 사용했어요.<br/>
-                회원가입하면 <span className="text-green-700 font-bold">20 크레딧 즉시 지급</span> +<br/>
-                검사 결과 저장 · 하루 5회 AI 상담이 제공됩니다.
+                {t(<>AI 상담 <strong>{AI_GUEST_TOTAL}회</strong>를 모두 사용했어요.<br/>회원가입하면 <span className="text-green-700 font-bold">20 크레딧 즉시 지급</span> +<br/>검사 결과 저장 · 하루 5회 AI 상담이 제공됩니다.</>, <>You've used all <strong>{AI_GUEST_TOTAL}</strong> free AI sessions.<br/>Sign up to get <span className="text-green-700 font-bold">20 credits instantly</span> +<br/>saved history & 5 AI chats per day.</>)}
               </p>
             </div>
             <div className="space-y-2 mb-4">
@@ -2426,7 +2443,7 @@ function PsychologicalTestSystem() {
                     display:'flex', alignItems:'center', justifyContent:'center', gap:8,
                     cursor:'pointer', fontWeight:'bold', fontSize:14, color:'#3C1E1E' }}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="#3C1E1E"><path d="M12 3C7.03 3 3 6.36 3 10.5c0 2.67 1.67 5.02 4.2 6.43L6.2 20.5l4.03-2.66c.57.08 1.17.12 1.77.12 4.97 0 9-3.36 9-7.5S16.97 3 12 3z"/></svg>
-                  카카오로 1초 가입
+                  {t("카카오로 1초 가입","Sign up with Kakao")}
                 </button>
               )}
               {window.GOOGLE_CLIENT_ID && (
@@ -2436,33 +2453,33 @@ function PsychologicalTestSystem() {
               )}
               <button onClick={() => { sessionStorage.setItem('post_login_view', 'aiCounsel'); setShowAiLimitModal(false); setView('memberSignup'); }}
                 className="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition text-sm">
-                이메일로 무료 가입하기
+                {t("이메일로 무료 가입하기","Sign up free with email")}
               </button>
             </div>
             <button onClick={() => { setShowAiLimitModal(false); setView('memberLogin'); }}
-              className="w-full text-green-700 text-sm py-1 hover:underline">이미 계정이 있어요 → 로그인</button>
+              className="w-full text-green-700 text-sm py-1 hover:underline">{t("이미 계정이 있어요 → 로그인","Already have an account? Sign in")}</button>
             <button onClick={() => setShowAiLimitModal(false)}
-              className="w-full text-gray-300 text-xs py-1 hover:text-gray-500 mt-1">닫기</button>
+              className="w-full text-gray-300 text-xs py-1 hover:text-gray-500 mt-1">{t("닫기","Close")}</button>
           </>
         ) : (
           <>
             <div className="text-center mb-5">
               <div className="text-4xl mb-3">💬</div>
-              <h2 className="text-xl font-bold text-gray-800 mb-2">AI 상담 횟수를 모두 사용했습니다</h2>
+              <h2 className="text-xl font-bold text-gray-800 mb-2">{t("AI 상담 횟수를 모두 사용했습니다","Daily AI sessions used up")}</h2>
               <p className="text-sm text-gray-500 leading-relaxed">
                 {credits <= 0
-                  ? `크레딧이 없으면 AI 상담을 하루 ${AI_LIMIT_FREE}회까지 이용할 수 있습니다.`
-                  : `크레딧 보유 시 AI 상담을 하루 최대 ${AI_LIMIT_PAID}회 이용할 수 있습니다.`}
+                  ? t(`크레딧이 없으면 AI 상담을 하루 ${AI_LIMIT_FREE}회까지 이용할 수 있습니다.`, `Without credits you can use ${AI_LIMIT_FREE} AI sessions per day.`)
+                  : t(`크레딧 보유 시 AI 상담을 하루 최대 ${AI_LIMIT_PAID}회 이용할 수 있습니다.`, `With credits you can use up to ${AI_LIMIT_PAID} AI sessions per day.`)}
               </p>
             </div>
             <div className="space-y-3 mb-4">
               <button onClick={() => { setShowAiLimitModal(false); setShowChargeView(true); }}
                 className="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition text-sm">
-                ✦ 크레딧 충전하여 계속 상담하기
+                ✦ {t("크레딧 충전하여 계속 상담하기","Top up credits to continue")}
               </button>
             </div>
             <button onClick={() => setShowAiLimitModal(false)}
-              className="w-full text-gray-400 text-sm py-2 hover:text-gray-600 transition">닫기</button>
+              className="w-full text-gray-400 text-sm py-2 hover:text-gray-600 transition">{t("닫기","Close")}</button>
           </>
         )}
       </div>
@@ -2479,48 +2496,47 @@ function PsychologicalTestSystem() {
 
       if (testType === 'BURNOUT' || isHighRisk) {
         return {
-          day1: { key: 'burnout',   emoji: '⚡', label: '번아웃 회복' },
-          day2: { key: 'gratitude', emoji: '🙏', label: '감사 일기' },
-          day3: { key: 'garden',    emoji: '🌱', label: '마음 정원' },
-          reason: '소진 신호가 높을 때는 번아웃 회복 → 감사 → 정원 순서가 효과적입니다.',
+          day1: { key: 'burnout',   emoji: '⚡', label: t('번아웃 회복','Burnout Recovery') },
+          day2: { key: 'gratitude', emoji: '🙏', label: t('감사 일기','Gratitude') },
+          day3: { key: 'garden',    emoji: '🌱', label: t('마음 정원','Mind Garden') },
+          reason: t('소진 신호가 높을 때는 번아웃 회복 → 감사 → 정원 순서가 효과적입니다.','When burnout is high: Recovery → Gratitude → Garden works best.'),
         };
       }
       if (testType === 'PHQ9' || testType === 'DASS21') {
         return {
-          day1: { key: 'gratitude', emoji: '🙏', label: '감사 일기' },
-          day2: { key: 'garden',    emoji: '🌱', label: '마음 정원' },
-          day3: { key: 'tree',      emoji: '🌳', label: '마음 나무' },
-          reason: '감정 안정에는 감사 → 정원 → 나무 루틴이 도움이 됩니다.',
+          day1: { key: 'gratitude', emoji: '🙏', label: t('감사 일기','Gratitude') },
+          day2: { key: 'garden',    emoji: '🌱', label: t('마음 정원','Mind Garden') },
+          day3: { key: 'tree',      emoji: '🌳', label: t('마음 나무','Mind Tree') },
+          reason: t('감정 안정에는 감사 → 정원 → 나무 루틴이 도움이 됩니다.','Gratitude → Garden → Tree helps stabilize emotions.'),
         };
       }
       if (testType === 'GAD7') {
         return {
-          day1: { key: 'garden',    emoji: '🌱', label: '마음 정원' },
-          day2: { key: 'tree',      emoji: '🌳', label: '마음 나무' },
-          day3: { key: 'gratitude', emoji: '🙏', label: '감사 일기' },
-          reason: '불안이 높을 때는 정원 → 나무 → 감사 순서로 천천히 이완하세요.',
+          day1: { key: 'garden',    emoji: '🌱', label: t('마음 정원','Mind Garden') },
+          day2: { key: 'tree',      emoji: '🌳', label: t('마음 나무','Mind Tree') },
+          day3: { key: 'gratitude', emoji: '🙏', label: t('감사 일기','Gratitude') },
+          reason: t('불안이 높을 때는 정원 → 나무 → 감사 순서로 천천히 이완하세요.','When anxiety is high: Garden → Tree → Gratitude for gradual relaxation.'),
         };
       }
       if (testType === 'LOST' || testType === 'BIG5') {
         return {
-          day1: { key: 'efmt',      emoji: '😊', label: '감정 표현' },
-          day2: { key: 'tree',      emoji: '🌳', label: '마음 나무' },
-          day3: { key: 'garden',    emoji: '🌱', label: '마음 정원' },
-          reason: '자기이해 검사 후에는 감정 표현 → 나무 → 정원 루틴을 추천합니다.',
+          day1: { key: 'efmt',      emoji: '😊', label: t('감정 표현','Express Emotions') },
+          day2: { key: 'tree',      emoji: '🌳', label: t('마음 나무','Mind Tree') },
+          day3: { key: 'garden',    emoji: '🌱', label: t('마음 정원','Mind Garden') },
+          reason: t('자기이해 검사 후에는 감정 표현 → 나무 → 정원 루틴을 추천합니다.','After self-insight tests: Express → Tree → Garden routine is recommended.'),
         };
       }
-      // 기본 (SCT, DSI 등)
       return {
-        day1: { key: 'garden',    emoji: '🌱', label: '마음 정원' },
-        day2: { key: 'gratitude', emoji: '🙏', label: '감사 일기' },
-        day3: { key: 'efmt',      emoji: '😊', label: '감정 표현' },
-        reason: '오늘부터 3일간 짧은 루틴으로 마음을 돌봐보세요.',
+        day1: { key: 'garden',    emoji: '🌱', label: t('마음 정원','Mind Garden') },
+        day2: { key: 'gratitude', emoji: '🙏', label: t('감사 일기','Gratitude') },
+        day3: { key: 'efmt',      emoji: '😊', label: t('감정 표현','Express Emotions') },
+        reason: t('오늘부터 3일간 짧은 루틴으로 마음을 돌봐보세요.','Try a short routine for 3 days starting today.'),
       };
     }
 
     async function launchGame(gameKey) {
       if (!isLoggedIn) {
-        alert('마음 게임은 로그인 후 이용 가능합니다.');
+        alert(t('마음 게임은 로그인 후 이용 가능합니다.','MaumGame requires login.'));
         return;
       }
       // openMaumGame과 동일하게 7일 게임 토큰 사용
@@ -2530,7 +2546,9 @@ function PsychologicalTestSystem() {
     const routine = getGameRoutine();
     const checkinDate = new Date();
     checkinDate.setDate(checkinDate.getDate() + 3);
-    const checkinLabel = `${checkinDate.getMonth()+1}월 ${checkinDate.getDate()}일`;
+    const checkinLabel = lang === 'en'
+      ? checkinDate.toLocaleDateString('en-US', { month:'short', day:'numeric' })
+      : `${checkinDate.getMonth()+1}월 ${checkinDate.getDate()}일`;
 
     return (
       <div className="rounded-2xl border-2 border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50 p-5 mt-4">
@@ -2538,7 +2556,7 @@ function PsychologicalTestSystem() {
         <div className="flex items-center gap-2 mb-3">
           <span className="text-2xl">🌿</span>
           <div>
-            <h3 className="font-bold text-emerald-800 text-base">오늘부터 3일 회복 루틴</h3>
+            <h3 className="font-bold text-emerald-800 text-base">{t("오늘부터 3일 회복 루틴","3-Day Recovery Routine")}</h3>
             <p className="text-xs text-emerald-600">{routine.reason}</p>
           </div>
         </div>
@@ -2565,24 +2583,24 @@ function PsychologicalTestSystem() {
         {/* 3일 재방문 CTA */}
         <div className="bg-white rounded-xl p-3 border border-emerald-100 flex items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-bold text-gray-800">📅 {checkinLabel} 변화 체크</p>
-            <p className="text-xs text-gray-500 mt-0.5">3일 후 다시 체크하면 마음의 변화를 비교해 드려요</p>
+            <p className="text-sm font-bold text-gray-800">📅 {checkinLabel} {t("변화 체크","check-in")}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{t("3일 후 다시 체크하면 마음의 변화를 비교해 드려요","Check back in 3 days to track how you feel")}</p>
           </div>
           <button
             onClick={() => {
               localStorage.setItem('maumful_checkin_date', checkinDate.toISOString());
               localStorage.setItem('maumful_checkin_test', testType);
-              alert(`✅ ${checkinLabel}에 다시 체크하도록 기억해 드릴게요!\n\n마음풀에 다시 방문해 같은 검사를 진행하시면\n이전 결과와 비교해 드립니다.`);
+              alert(t(`✅ ${checkinLabel}에 다시 체크하도록 기억해 드릴게요!\n\n마음풀에 다시 방문해 같은 검사를 진행하시면\n이전 결과와 비교해 드립니다.`,`✅ We'll remind you to check in on ${checkinLabel}!\n\nVisit Maumful and take the same test again to compare your progress.`));
             }}
             className="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition whitespace-nowrap"
           >
-            기억하기 →
+            {t("기억하기 →","Remind me →")}
           </button>
         </div>
 
         {/* 면책 */}
         <p className="text-xs text-gray-400 mt-3 text-center">
-          본 결과는 자기이해를 위한 참고 자료이며, 의학적 진단이 아닙니다.
+          {t("본 결과는 자기이해를 위한 참고 자료이며, 의학적 진단이 아닙니다.","These results are for self-understanding only and are not a medical diagnosis.")}
         </p>
       </div>
     );
@@ -2598,12 +2616,11 @@ function PsychologicalTestSystem() {
         <div className="flex items-center gap-2 mb-4">
           <span className="text-2xl">🤝</span>
           <div>
-            <h3 className="font-bold text-teal-800 text-base">더 깊은 이야기, 함께해요</h3>
-            <p className="text-xs text-gray-500">검사 결과는 자기이해를 위한 참고 자료입니다. 의학적 진단이 아닙니다.</p>
+            <h3 className="font-bold text-teal-800 text-base">{t("더 깊은 이야기, 함께해요","Let's explore deeper together")}</h3>
+            <p className="text-xs text-gray-500">{t("검사 결과는 자기이해를 위한 참고 자료입니다. 의학적 진단이 아닙니다.","Results are for self-understanding only, not medical diagnosis.")}</p>
           </div>
         </div>
 
-        {/* AI 상담 + 제휴 상담사 버튼 */}
         <div className="flex flex-col sm:flex-row gap-2 mb-4">
           {onContinueAI && (
             <button onClick={isAiChatExhausted() ? () => setShowAiLimitModal(true) : onContinueAI}
@@ -2612,25 +2629,24 @@ function PsychologicalTestSystem() {
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   : 'bg-white border border-teal-200 text-teal-700 hover:bg-teal-50'}`}>
               {isAiChatExhausted()
-                ? `💬 AI 상담 ${usedCount}/${limit}회 완료`
-                : `💬 AI와 더 이야기하기 (${usedCount}/${limit}회)`}
+                ? t(`💬 AI 상담 ${usedCount}/${limit}회 완료`,`💬 AI sessions used ${usedCount}/${limit}`)
+                : t(`💬 AI와 더 이야기하기 (${usedCount}/${limit}회)`,`💬 Talk more with AI (${usedCount}/${limit})`)}
             </button>
           )}
           <button
             onClick={() => { setView('counseling'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
             className="flex-1 py-3 px-4 rounded-xl font-bold text-sm transition text-white bg-teal-600 hover:bg-teal-700">
-            🏥 상담센터 찾기
+            🏥 {t("상담센터 찾기","Find a Center")}
           </button>
         </div>
 
-        {/* 공공 무료 상담 기관 */}
         <div className="bg-white/80 rounded-xl p-4 border border-teal-100">
-          <p className="text-xs font-bold text-gray-500 mb-3">📞 언제든 이용할 수 있는 무료 상담</p>
+          <p className="text-xs font-bold text-gray-500 mb-3">📞 {t("언제든 이용할 수 있는 무료 상담","Free counseling resources")}</p>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-gray-800">자살예방상담전화</p>
-                <p className="text-xs text-gray-400">24시간 무료 · 보건복지부</p>
+                <p className="text-sm font-semibold text-gray-800">{t("자살예방상담전화","Suicide Prevention Hotline")}</p>
+                <p className="text-xs text-gray-400">{t("24시간 무료 · 보건복지부","24/7 Free · Ministry of Health")}</p>
               </div>
               <a href="tel:109"
                 className="bg-rose-50 text-rose-600 font-bold text-xl px-4 py-2 rounded-xl border border-rose-100 hover:bg-rose-100 transition">
@@ -2640,8 +2656,8 @@ function PsychologicalTestSystem() {
             <div className="h-px bg-gray-100" />
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-gray-800">정신건강위기상담전화</p>
-                <p className="text-xs text-gray-400">24시간 무료 · 전국 연결</p>
+                <p className="text-sm font-semibold text-gray-800">{t("정신건강위기상담전화","Mental Health Crisis Line")}</p>
+                <p className="text-xs text-gray-400">{t("24시간 무료 · 전국 연결","24/7 Free · Nationwide")}</p>
               </div>
               <a href="tel:15770199"
                 className="bg-blue-50 text-blue-600 font-bold text-sm px-3 py-2 rounded-xl border border-blue-100 hover:bg-blue-100 transition whitespace-nowrap">
@@ -2652,8 +2668,8 @@ function PsychologicalTestSystem() {
             <a href="https://blutouch.net/facility/center" target="_blank" rel="noopener noreferrer"
               className="flex items-center justify-between p-1 rounded-lg hover:bg-teal-50 transition group">
               <div>
-                <p className="text-sm font-semibold text-gray-800">지역 정신건강복지센터 찾기</p>
-                <p className="text-xs text-gray-400">전국 시·군·구 무료 방문 상담 · 블루터치</p>
+                <p className="text-sm font-semibold text-gray-800">{t("지역 정신건강복지센터 찾기","Find a Local Mental Health Center")}</p>
+                <p className="text-xs text-gray-400">{t("전국 시·군·구 무료 방문 상담 · 블루터치","Free in-person counseling nationwide · Blutouch")}</p>
               </div>
               <span className="text-teal-500 text-sm font-bold group-hover:translate-x-0.5 transition-transform">→</span>
             </a>
@@ -2668,18 +2684,18 @@ function PsychologicalTestSystem() {
     <div className="fixed bottom-0 left-0 right-0 z-50 bg-gray-900 text-white p-4 shadow-2xl">
       <div className="max-w-2xl mx-auto flex flex-col sm:flex-row items-start sm:items-center gap-3">
         <p className="text-sm flex-1 text-gray-200">
-          저희 서비스는 필수 쿠키만 사용합니다. 로그인 상태 유지와 서비스 제공에 필요한 최소한의 정보만 저장됩니다.{' '}
-          <button onClick={() => setView('privacy')} className="underline text-green-400 hover:text-green-100">자세히 보기</button>
+          {t("저희 서비스는 필수 쿠키만 사용합니다. 로그인 상태 유지와 서비스 제공에 필요한 최소한의 정보만 저장됩니다.","We use only essential cookies — the minimum needed to keep you logged in and deliver the service.")}{' '}
+          <button onClick={() => setView('privacy')} className="underline text-green-400 hover:text-green-100">{t("자세히 보기","Learn more")}</button>
         </p>
         <div className="flex gap-2 shrink-0">
           <button
             onClick={() => { localStorage.setItem('cookie_consent', 'accepted'); setShowCookieBanner(false); }}
             className="bg-green-600 hover:bg-green-600 text-white text-sm font-semibold px-4 py-2 rounded-lg transition"
-          >동의</button>
+          >{t("동의","Accept")}</button>
           <button
             onClick={() => { localStorage.setItem('cookie_consent', 'essential'); setShowCookieBanner(false); }}
             className="bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm px-4 py-2 rounded-lg transition"
-          >필수만</button>
+          >{t("필수만","Essential only")}</button>
         </div>
       </div>
     </div>
@@ -2771,7 +2787,7 @@ function PsychologicalTestSystem() {
         lang={lang}
         onLangToggle={updateLang}
       />
-      <LandingPage setView={setView} isLoggedIn={isLoggedIn} />
+      <LandingPage setView={setView} isLoggedIn={isLoggedIn} lang={lang} />
     </>
   );
 
@@ -2789,7 +2805,7 @@ function PsychologicalTestSystem() {
         lang={lang}
         onLangToggle={updateLang}
       />
-      <TestsIntroPage setView={setView} isLoggedIn={isLoggedIn} />
+      <TestsIntroPage setView={setView} isLoggedIn={isLoggedIn} lang={lang} />
     </>
   );
 
@@ -2851,17 +2867,17 @@ function PsychologicalTestSystem() {
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
         <button onClick={() => setView('landing')}
           className="flex items-center gap-1 text-gray-400 hover:text-green-700 text-sm mb-4 transition">
-          ← 홈으로
+          {t("← 홈으로","← Home")}
         </button>
         <div className="text-center mb-7">
           <div className="text-5xl mb-3">🌿</div>
-          <h1 className="text-3xl font-bold text-gray-800">마음풀</h1>
-          <p className="text-gray-400 text-sm mt-1">나를 이해하는 첫걸음</p>
+          <h1 className="text-3xl font-bold text-gray-800">Maumful</h1>
+          <p className="text-gray-400 text-sm mt-1">{t("나를 이해하는 첫걸음","Your first step to self-understanding")}</p>
         </div>
 
         {sessionStorage.getItem('pending_ref_code') && (
           <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700 text-center">
-            🎁 초대 링크로 접속하셨습니다! 가입 후 <strong>+10 크레딧</strong>이 추가 지급됩니다.
+            {t(<>🎁 초대 링크로 접속하셨습니다! 가입 후 <strong>+10 크레딧</strong>이 추가 지급됩니다.</>, <>🎁 You joined via invite! Sign up to get <strong>+10 bonus credits</strong>.</>)}
           </div>
         )}
         <Msg msg={loginMsg} extra={
@@ -2875,26 +2891,26 @@ function PsychologicalTestSystem() {
                 });
                 const d = await r.json();
                 setLoginMsg({ type: d.success ? 'success' : 'error',
-                  text: d.success ? '✅ 인증 메일을 재발송했습니다. 메일함을 확인해주세요.' : (d.error || '재발송 실패') });
+                  text: d.success ? t('✅ 인증 메일을 재발송했습니다. 메일함을 확인해주세요.','✅ Verification email resent. Please check your inbox.') : (d.error || t('재발송 실패','Resend failed')) });
                 if (d.success) setPendingVerifyEmail('');
               }}
               className="mt-2 block text-xs font-semibold underline text-red-500 hover:text-red-700 cursor-pointer"
             >
-              📧 인증 메일 재발송하기
+              {t("📧 인증 메일 재발송하기","📧 Resend verification email")}
             </button>
           ) : null
         } />
         <div className="space-y-3 mb-5">
-          <input id="login-email" type="email" placeholder="이메일" autoComplete="email"
+          <input id="login-email" type="email" placeholder={t("이메일","Email")} autoComplete="email"
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm"
             onKeyDown={e => e.key === 'Enter' && document.getElementById('login-pw').focus()} />
-          <input id="login-pw" type="password" placeholder="비밀번호 (8자 이상)" autoComplete="current-password"
+          <input id="login-pw" type="password" placeholder={t("비밀번호 (8자 이상)","Password (min. 8 chars)")} autoComplete="current-password"
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm"
             onKeyDown={e => e.key === 'Enter' && handleLogin()} />
         </div>
         <button onClick={handleLogin}
           className="w-full bg-green-700 text-white py-3 rounded-xl font-bold hover:bg-green-800 transition mb-4 text-base">
-          로그인
+          {t("로그인","Sign In")}
         </button>
         {(window.KAKAO_APP_KEY || window.GOOGLE_CLIENT_ID || window.NAVER_CLIENT_ID) && (
           <div className="space-y-2 mb-4">
@@ -2905,23 +2921,23 @@ function PsychologicalTestSystem() {
         )}
         <div className="relative mb-4">
           <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"/></div>
-          <div className="relative flex justify-center"><span className="px-3 bg-white text-gray-400 text-xs">또는</span></div>
+          <div className="relative flex justify-center"><span className="px-3 bg-white text-gray-400 text-xs">{t("또는","or")}</span></div>
         </div>
         <button
           onClick={() => setView('memberSignup')}
           className="w-full bg-white border-2 border-green-200 text-green-800 py-3 rounded-xl font-semibold hover:bg-green-50 transition mb-3">
-          이메일로 회원가입
+          {t("이메일로 회원가입","Sign up with email")}
         </button>
         <button
           onClick={() => { setLoginMsg({ type: '', text: '' }); setView('forgotPassword'); }}
           className="w-full text-center text-gray-400 text-sm hover:text-gray-600 py-1">
-          비밀번호를 잊으셨나요?
+          {t("비밀번호를 잊으셨나요?","Forgot your password?")}
         </button>
         <button
           onClick={async () => {
             const email = document.getElementById('login-email')?.value.trim();
-            if (!email) { setLoginMsg({ type:'error', text:'이메일을 먼저 입력해주세요.' }); return; }
-            setLoginMsg({ type:'loading', text:'인증 메일 발송 중...' });
+            if (!email) { setLoginMsg({ type:'error', text:t('이메일을 먼저 입력해주세요.','Please enter your email first.') }); return; }
+            setLoginMsg({ type:'loading', text:t('인증 메일 발송 중...','Sending verification email...') });
             const r = await fetch('/api/auth/resend-verify', {
               method:'POST', headers:{'Content-Type':'application/json'},
               body: JSON.stringify({ email }),
@@ -2930,12 +2946,12 @@ function PsychologicalTestSystem() {
             setTimeout(() => setLoginMsg({ type:'', text:'' }), 5000);
           }}
           className="w-full text-center text-gray-300 text-xs hover:text-gray-500 py-1">
-          인증 메일을 받지 못하셨나요? 재발송
+          {t("인증 메일을 받지 못하셨나요? 재발송","Didn't receive verification email? Resend")}
         </button>
         <div className="flex justify-center gap-4 mt-3">
-          <button onClick={() => setView('privacy')} className="text-xs text-gray-300 hover:text-gray-500">개인정보 처리방침</button>
+          <button onClick={() => setView('privacy')} className="text-xs text-gray-300 hover:text-gray-500">{t("개인정보 처리방침","Privacy Policy")}</button>
           <span className="text-gray-200 text-xs">|</span>
-          <button onClick={() => setView('terms')}   className="text-xs text-gray-300 hover:text-gray-500">이용약관</button>
+          <button onClick={() => setView('terms')}   className="text-xs text-gray-300 hover:text-gray-500">{t("이용약관","Terms of Service")}</button>
         </div>
       </div>
     </div>
@@ -2948,36 +2964,34 @@ function PsychologicalTestSystem() {
     <div className="bg-gradient-to-br from-slate-50 to-green-100 flex flex-col items-center px-4 py-10" style={{minHeight:'100dvh'}}>
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
         <button onClick={() => { setView('memberLogin'); setFormMsg({ type: '', text: '' }); setSignupForm({ email: '', password: '', pwConfirm: '', nickname: '' }); }}
-          className="text-gray-400 hover:text-gray-600 text-sm mb-5 flex items-center gap-1">← 뒤로</button>
+          className="text-gray-400 hover:text-gray-600 text-sm mb-5 flex items-center gap-1">← {t("뒤로","Back")}</button>
         <div className="text-center mb-6">
           <div className="text-4xl mb-2">✨</div>
-          <h2 className="text-2xl font-bold text-gray-800">회원가입</h2>
-          <p className="text-sm text-gray-400 mt-1">가입 시 <span className="text-green-700 font-semibold">20 크레딧</span> 즉시 지급</p>
+          <h2 className="text-2xl font-bold text-gray-800">{t("회원가입","Sign Up")}</h2>
+          <p className="text-sm text-gray-400 mt-1">{t(<>가입 시 <span className="text-green-700 font-semibold">20 크레딧</span> 즉시 지급</>, <>Get <span className="text-green-700 font-semibold">20 credits</span> instantly on signup</>)}</p>
         </div>
         <div className="bg-green-50 rounded-xl p-3 mb-5 text-sm text-green-800 space-y-0.5">
-          <p>✦ 가입 보너스 20 크레딧 (검사 2회)</p>
-          <p>✦ PHQ9·GAD7 심리검사 무료 제공</p>
-          <p>✦ AI 채팅 하루 5회 무료</p>
+          <p>✦ {t("가입 보너스 20 크레딧 (검사 2회)","Signup bonus: 20 credits (2 tests)")}</p>
+          <p>✦ {t("PHQ9·GAD7 심리검사 무료 제공","PHQ-9 & GAD-7 assessments free")}</p>
+          <p>✦ {t("AI 채팅 하루 5회 무료","5 free AI chats per day")}</p>
         </div>
         <Msg msg={formMsg} />
         <div className="space-y-3 mb-5">
-          <input type="email" placeholder="이메일" value={signupForm.email}
+          <input type="email" placeholder={t("이메일","Email")} value={signupForm.email}
             onChange={e => setSignupForm(p => ({ ...p, email: e.target.value }))}
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm" />
-          <input type="text" placeholder="닉네임 (AI 상담에서 이름으로 불려요)" value={signupForm.nickname}
+          <input type="text" placeholder={t("닉네임 (AI 상담에서 이름으로 불려요)","Nickname (used in AI sessions)")} value={signupForm.nickname}
             onChange={e => setSignupForm(p => ({ ...p, nickname: e.target.value }))}
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm" />
-          <input type="password" placeholder="비밀번호 (8자 이상)" value={signupForm.password}
+          <input type="password" placeholder={t("비밀번호 (8자 이상)","Password (min. 8 chars)")} value={signupForm.password}
             onChange={e => setSignupForm(p => ({ ...p, password: e.target.value }))}
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm" />
-          <input type="password" placeholder="비밀번호 확인" value={signupForm.pwConfirm}
+          <input type="password" placeholder={t("비밀번호 확인","Confirm password")} value={signupForm.pwConfirm}
             onChange={e => setSignupForm(p => ({ ...p, pwConfirm: e.target.value }))}
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm"
             onKeyDown={e => e.key === 'Enter' && handleSignup()} />
         </div>
-        {/* 약관 동의 (개인정보보호법 제22조 준수) */}
         <div className="mb-4 text-xs text-gray-600 bg-gray-50 rounded-xl p-3 space-y-2">
-          {/* 전체 동의 */}
           {(() => {
             const allRequired = signupConsents.terms && signupConsents.privacy && signupConsents.sensitive && signupConsents.overseas && signupConsents.age;
             const allIncMarketing = allRequired && signupConsents.marketing;
@@ -2989,21 +3003,20 @@ function PsychologicalTestSystem() {
                     const v = e.target.checked;
                     setSignupConsents({ terms: v, privacy: v, sensitive: v, overseas: v, age: v, marketing: v });
                   }} />
-                <span className="font-bold text-gray-800 text-sm">전체 동의 (필수 + 선택 포함)</span>
+                <span className="font-bold text-gray-800 text-sm">{t("전체 동의 (필수 + 선택 포함)","Agree to all (required + optional)")}</span>
               </label>
             );
           })()}
 
-          {/* 필수 항목 */}
-          <p className="text-gray-400 font-semibold pt-1">— 필수 동의 항목 —</p>
+          <p className="text-gray-400 font-semibold pt-1">{t("— 필수 동의 항목 —","— Required —")}</p>
 
           <label className="flex items-start gap-2 cursor-pointer">
             <input type="checkbox" className="mt-0.5 w-3.5 h-3.5 accent-green-600 flex-shrink-0"
               checked={signupConsents.terms}
               onChange={e => setSignupConsents(p => ({ ...p, terms: e.target.checked }))} />
             <span>
-              <button type="button" onClick={() => setView('terms')} className="text-green-600 underline font-semibold">이용약관</button> 동의
-              <span className="text-red-500 ml-1">(필수)</span>
+              <button type="button" onClick={() => setView('terms')} className="text-green-600 underline font-semibold">{t("이용약관","Terms of Service")}</button> {t("동의","agree")}
+              <span className="text-red-500 ml-1">{t("(필수)","(required)")}</span>
             </span>
           </label>
 
@@ -3012,9 +3025,9 @@ function PsychologicalTestSystem() {
               checked={signupConsents.privacy}
               onChange={e => setSignupConsents(p => ({ ...p, privacy: e.target.checked }))} />
             <span>
-              <button type="button" onClick={() => setView('privacy')} className="text-green-600 underline font-semibold">개인정보 수집·이용</button> 동의
-              <span className="text-gray-400 ml-1">(이메일·닉네임·이용기록 / 서비스 제공 / 탈퇴 시까지)</span>
-              <span className="text-red-500 ml-1">(필수)</span>
+              <button type="button" onClick={() => setView('privacy')} className="text-green-600 underline font-semibold">{t("개인정보 수집·이용","Privacy Collection & Use")}</button> {t("동의","agree")}
+              <span className="text-gray-400 ml-1">{t("(이메일·닉네임·이용기록 / 서비스 제공 / 탈퇴 시까지)","(email·nickname·usage / service / until withdrawal)")}</span>
+              <span className="text-red-500 ml-1">{t("(필수)","(required)")}</span>
             </span>
           </label>
 
@@ -3022,9 +3035,9 @@ function PsychologicalTestSystem() {
             <input type="checkbox" className="mt-0.5 w-3.5 h-3.5 accent-green-600 flex-shrink-0"
               checked={signupConsents.sensitive}
               onChange={e => setSignupConsents(p => ({ ...p, sensitive: e.target.checked }))} />
-            <span><strong>민감정보(정신건강 정보)</strong> 수집·처리 동의
-              <span className="text-gray-400 ml-1">(심리검사·AI 상담 내용)</span>
-              <span className="text-red-500 ml-1">(필수)</span>
+            <span><strong>{t("민감정보(정신건강 정보)","Sensitive Info (Mental Health)")}</strong> {t("수집·처리 동의","Collection & Processing")}
+              <span className="text-gray-400 ml-1">{t("(심리검사·AI 상담 내용)","(assessments & AI sessions)")}</span>
+              <span className="text-red-500 ml-1">{t("(필수)","(required)")}</span>
             </span>
           </label>
 
@@ -3032,9 +3045,9 @@ function PsychologicalTestSystem() {
             <input type="checkbox" className="mt-0.5 w-3.5 h-3.5 accent-green-600 flex-shrink-0"
               checked={signupConsents.overseas}
               onChange={e => setSignupConsents(p => ({ ...p, overseas: e.target.checked }))} />
-            <span><strong>개인정보 제3자 제공</strong> 동의
-              <span className="text-gray-400 ml-1">(Anthropic Inc., 미국 / AI 상담 기능 제공)</span>
-              <span className="text-red-500 ml-1">(필수)</span>
+            <span><strong>{t("개인정보 제3자 제공","Third-party Data Transfer")}</strong> {t("동의","agree")}
+              <span className="text-gray-400 ml-1">{t("(Anthropic Inc., 미국 / AI 상담 기능 제공)","(Anthropic Inc., USA / AI counseling)")}</span>
+              <span className="text-red-500 ml-1">{t("(필수)","(required)")}</span>
             </span>
           </label>
 
@@ -3042,34 +3055,33 @@ function PsychologicalTestSystem() {
             <input type="checkbox" className="mt-0.5 w-3.5 h-3.5 accent-green-600 flex-shrink-0"
               checked={signupConsents.age}
               onChange={e => setSignupConsents(p => ({ ...p, age: e.target.checked }))} />
-            <span>본인은 <strong>만 14세 이상</strong>임을 확인합니다.
-              <span className="text-red-500 ml-1">(필수)</span>
+            <span>{t(<>본인은 <strong>만 14세 이상</strong>임을 확인합니다.</>,<>I confirm I am <strong>14 years or older</strong>.</>)}
+              <span className="text-red-500 ml-1">{t("(필수)","(required)")}</span>
             </span>
           </label>
 
-          {/* 선택 항목 */}
-          <p className="text-gray-400 font-semibold pt-2">— 선택 동의 항목 —</p>
+          <p className="text-gray-400 font-semibold pt-2">{t("— 선택 동의 항목 —","— Optional —")}</p>
 
           <label className="flex items-start gap-2 cursor-pointer">
             <input type="checkbox" className="mt-0.5 w-3.5 h-3.5 accent-green-600 flex-shrink-0"
               checked={signupConsents.marketing}
               onChange={e => setSignupConsents(p => ({ ...p, marketing: e.target.checked }))} />
-            <span>마케팅 정보 수신 동의
-              <span className="text-gray-400 ml-1">(신규 기능·이벤트·혜택 안내, 이메일)</span>
-              <span className="text-gray-400 ml-1">(선택 — 미동의 시에도 서비스 이용 가능)</span>
+            <span>{t("마케팅 정보 수신 동의","Marketing communications")}
+              <span className="text-gray-400 ml-1">{t("(신규 기능·이벤트·혜택 안내, 이메일)","(new features, events, offers via email)")}</span>
+              <span className="text-gray-400 ml-1">{t("(선택 — 미동의 시에도 서비스 이용 가능)","(optional — service available without consent)")}</span>
             </span>
           </label>
         </div>
 
         <button onClick={handleSignup}
           className="w-full bg-green-700 text-white py-3 rounded-xl font-bold hover:bg-green-800 transition mb-4">
-          가입하기
+          {t("가입하기","Sign Up")}
         </button>
         {(window.KAKAO_APP_KEY || window.GOOGLE_CLIENT_ID || window.NAVER_CLIENT_ID) && (
           <>
             <div className="relative mb-4">
               <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"/></div>
-              <div className="relative flex justify-center"><span className="px-3 bg-white text-gray-400 text-xs">또는 소셜 계정으로 시작</span></div>
+              <div className="relative flex justify-center"><span className="px-3 bg-white text-gray-400 text-xs">{t("또는 소셜 계정으로 시작","or continue with social")}</span></div>
             </div>
             <div className="space-y-2">
               {window.NAVER_CLIENT_ID && <NaverLoginBtn onLogin={handleNaverLogin} />}
@@ -3090,18 +3102,20 @@ function PsychologicalTestSystem() {
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
         <div className="text-center mb-7">
           <div className="text-5xl mb-3">🌿</div>
-          <h2 className="text-2xl font-bold text-gray-800">환영합니다, {currentUser?.nickname || '회원'}님!</h2>
-          <p className="text-sm text-gray-400 mt-2">마음풀을 시작하기 전에<br/>AI 상담 해석 방식을 선택해주세요</p>
+          <h2 className="text-2xl font-bold text-gray-800">{t(`환영합니다, ${currentUser?.nickname || '회원'}님!`, `Welcome, ${currentUser?.nickname || 'member'}!`)}</h2>
+          <p className="text-sm text-gray-400 mt-2">{t(<>마음풀을 시작하기 전에<br/>AI 상담 해석 방식을 선택해주세요</>, <>Before you start<br/>choose how AI interprets your results</>)}</p>
         </div>
 
-        <p className="text-xs text-gray-400 text-center mb-3">검사 결과를 어떤 관점으로 해석할까요?</p>
+        <p className="text-xs text-gray-400 text-center mb-3">{t("검사 결과를 어떤 관점으로 해석할까요?","How should we interpret your results?")}</p>
         <div className="grid gap-3 mb-6">
           {[
-            { mode: 'psychological', icon: '🧠', label: '심리상담 (기본)',
-              desc: '심리학 이론과 과학적 근거를 바탕으로 해석합니다',
+            { mode: 'psychological', icon: '🧠',
+              label: t('심리상담 (기본)','Psychology (default)'),
+              desc: t('심리학 이론과 과학적 근거를 바탕으로 해석합니다','Interpreted through psychological theory and scientific evidence'),
               activeClass: 'border-green-500 bg-green-50', checkClass: 'text-green-600' },
-            { mode: 'biblical', icon: '✝️', label: '기독교 상담',
-              desc: '성경 말씀과 기독교 신앙을 기반으로 해석합니다',
+            { mode: 'biblical', icon: '✝️',
+              label: t('기독교 상담','Christian Counseling'),
+              desc: t('성경 말씀과 기독교 신앙을 기반으로 해석합니다','Interpreted through Scripture and Christian faith'),
               activeClass: 'border-purple-400 bg-purple-50', checkClass: 'text-purple-600' },
           ].map(({ mode, icon, label, desc, activeClass, checkClass }) => (
             <button key={mode} onClick={() => updateCounselingMode(mode)}
@@ -3118,15 +3132,15 @@ function PsychologicalTestSystem() {
         </div>
 
         <div className="bg-green-50 rounded-xl p-4 mb-6">
-          <p className="text-sm font-semibold text-green-800">✦ 가입 보너스 10 크레딧 지급 완료!</p>
-          <p className="text-xs text-green-600 mt-1">심리검사 1회 + AI 채팅 2회를 무료로 이용할 수 있어요</p>
+          <p className="text-sm font-semibold text-green-800">✦ {t("가입 보너스 10 크레딧 지급 완료!","Signup bonus of 10 credits applied!")}</p>
+          <p className="text-xs text-green-600 mt-1">{t("심리검사 1회 + AI 채팅 2회를 무료로 이용할 수 있어요","Use 1 assessment + 2 AI chats for free")}</p>
         </div>
 
         <button onClick={() => { loadTestHistory(); setView('memberDashboard'); }}
           className="w-full bg-green-700 text-white py-3 rounded-xl font-bold hover:bg-green-800 transition text-base">
-          심리검사 시작하기 →
+          {t("심리검사 시작하기 →","Start Assessments →")}
         </button>
-        <p className="text-xs text-gray-300 text-center mt-3">마이페이지 → 설정에서 언제든 변경할 수 있어요</p>
+        <p className="text-xs text-gray-300 text-center mt-3">{t("마이페이지 → 설정에서 언제든 변경할 수 있어요","You can change this anytime in My Info → Settings")}</p>
       </div>
     </div>
   );
@@ -3137,25 +3151,25 @@ function PsychologicalTestSystem() {
   if (!isLoggedIn && view === 'forgotPassword') return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-green-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
-        <button onClick={() => setView('memberLogin')} className="text-gray-400 hover:text-gray-600 text-sm mb-5 flex items-center gap-1">← 뒤로</button>
+        <button onClick={() => setView('memberLogin')} className="text-gray-400 hover:text-gray-600 text-sm mb-5 flex items-center gap-1">{t("← 뒤로","← Back")}</button>
         <div className="text-center mb-6">
           <div className="text-4xl mb-2">🔑</div>
-          <h2 className="text-2xl font-bold text-gray-800">비밀번호 찾기</h2>
-          <p className="text-sm text-gray-400 mt-1">가입한 이메일로 재설정 링크를 보내드립니다</p>
+          <h2 className="text-2xl font-bold text-gray-800">{t("비밀번호 찾기","Forgot Password")}</h2>
+          <p className="text-sm text-gray-400 mt-1">{t("가입한 이메일로 재설정 링크를 보내드립니다","We'll send a reset link to your registered email")}</p>
         </div>
         <Msg msg={formMsg} />
-        <input id="forgot-email" type="email" placeholder="가입한 이메일"
+        <input id="forgot-email" type="email" placeholder={t("가입한 이메일","Registered email")}
           className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm mb-4" />
         <button
           onClick={async () => {
             const email = document.getElementById('forgot-email')?.value.trim();
-            if (!email) { setFormMsg({ type: 'error', text: '이메일을 입력해주세요.' }); return; }
-            setFormMsg({ type: 'loading', text: '전송 중...' });
+            if (!email) { setFormMsg({ type: 'error', text: t('이메일을 입력해주세요.','Please enter your email.') }); return; }
+            setFormMsg({ type: 'loading', text: t('전송 중...','Sending...') });
             const r = await api.forgotPassword(email);
-            setFormMsg({ type: 'success', text: r.message || '재설정 링크를 발송했습니다.' });
+            setFormMsg({ type: 'success', text: r.message || t('재설정 링크를 발송했습니다.','Reset link sent.') });
           }}
           className="w-full bg-green-700 text-white py-3 rounded-xl font-bold hover:bg-green-800 transition">
-          재설정 링크 전송
+          {t("재설정 링크 전송","Send Reset Link")}
         </button>
       </div>
     </div>
@@ -3204,32 +3218,29 @@ function PsychologicalTestSystem() {
         {/* 헤더 */}
         <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
           <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
-            <button onClick={() => setView('memberDashboard')} className="text-gray-500 hover:text-gray-700 flex items-center gap-1 text-sm">← 뒤로</button>
-            <span className="font-bold text-gray-800">🤖 AI 상담</span>
+            <button onClick={() => setView('memberDashboard')} className="text-gray-500 hover:text-gray-700 flex items-center gap-1 text-sm">{t("← 뒤로","← Back")}</button>
+            <span className="font-bold text-gray-800">🤖 {t("AI 상담","AI Counseling")}</span>
             <CreditBadge />
           </div>
         </header>
 
         <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
-          {/* 안내 카드 */}
           <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
             <div className="flex items-start gap-3 mb-3">
               <span className="text-3xl">🧠</span>
               <div className="flex-1">
-                <h2 className="font-bold text-gray-800 text-lg mb-1">AI 심리 상담</h2>
+                <h2 className="font-bold text-gray-800 text-lg mb-1">{t("AI 심리 상담","AI Psychological Counseling")}</h2>
                 <p className="text-sm text-gray-500 leading-relaxed">
-                  검사 결과를 바탕으로 AI와 심층 상담하세요.<br/>
-                  검사 결과가 있으면 AI가 결과를 분석하여 맞춤 상담을 제공합니다.
+                  {t(<>검사 결과를 바탕으로 AI와 심층 상담하세요.<br/>검사 결과가 있으면 AI가 결과를 분석하여 맞춤 상담을 제공합니다.</>, <>Have a deep conversation with AI based on your test results.<br/>When results are available, AI provides personalized guidance.</>)}
                 </p>
-                {/* 누적 트렌드 배지 — 3회 이상 측정된 검사가 있을 때 */}
                 {(() => {
-                  const trendTypes = ['PHQ9','GAD7','BURNOUT','DSI'].filter(t => testHistory.filter(h => h.test_type === t && h.score != null).length >= 3);
+                  const trendTypes = ['PHQ9','GAD7','BURNOUT','DSI'].filter(tt => testHistory.filter(h => h.test_type === tt && h.score != null).length >= 3);
                   if (trendTypes.length === 0) return null;
                   return (
                     <div className="mt-2 flex flex-wrap gap-1.5">
-                      {trendTypes.map(t => (
-                        <span key={t} className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium border border-indigo-200">
-                          📈 {t} 트렌드 분석 활성
+                      {trendTypes.map(tt => (
+                        <span key={tt} className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium border border-indigo-200">
+                          📈 {tt} {t("트렌드 분석 활성","trend analysis active")}
                         </span>
                       ))}
                     </div>
@@ -3238,31 +3249,30 @@ function PsychologicalTestSystem() {
               </div>
             </div>
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 leading-relaxed">
-              ⚠️ <strong>참고 안내:</strong> AI 상담은 자기 이해를 위한 참고 정보입니다. 의학적 진단이나 치료를 대체하지 않으며, 모든 답변은 확정적 결론이 아닙니다.
+              ⚠️ <strong>{t("참고 안내:","Note:")}</strong> {t("AI 상담은 자기 이해를 위한 참고 정보입니다. 의학적 진단이나 치료를 대체하지 않으며, 모든 답변은 확정적 결론이 아닙니다.","AI counseling is for self-understanding only. It does not replace medical diagnosis or treatment, and responses are not definitive conclusions.")}
             </div>
           </div>
 
-          {/* 이번 세션에 완료한 검사가 있으면 → 결과 화면에서 상담 유도 */}
           {completedThisSession.length > 0 && (
             <div className="bg-green-50 border-2 border-green-300 rounded-2xl p-5">
               <p className="text-sm font-bold text-green-800 mb-3">
-                ✅ 방금 완료한 검사 결과로 AI 상담하기
+                ✅ {t("방금 완료한 검사 결과로 AI 상담하기","Chat with AI about your just-completed results")}
               </p>
               <p className="text-xs text-green-600 mb-3">
-                검사 결과 화면에서 AI와 상담하면 검사 데이터가 자동으로 전달됩니다.
+                {t("검사 결과 화면에서 AI와 상담하면 검사 데이터가 자동으로 전달됩니다.","Your test data is automatically shared when you chat from the result screen.")}
               </p>
               <div className="flex flex-wrap gap-2">
-                {completedThisSession.map(t => {
-                  const meta = {
-                    PHQ9:'😔 PHQ-9 우울', GAD7:'😰 GAD-7 불안', BIG5:'🌟 Big5 성격',
-                    DASS21:'📊 DASS-21', LOST:'🧭 LOST', DSI:'🪞 SDRI', BURNOUT:'🔥 K-MBI+',
+                {completedThisSession.map(tt => {
+                  const metaMap = {
+                    PHQ9:t('😔 PHQ-9 우울','😔 PHQ-9 Depression'), GAD7:t('😰 GAD-7 불안','😰 GAD-7 Anxiety'), BIG5:t('🌟 Big5 성격','🌟 Big Five'),
+                    DASS21:'📊 DASS-21', LOST:t('🧭 LOST 행동','🧭 LOST Style'), DSI:'🪞 SDRI', BURNOUT:'🔥 K-MBI+',
                   };
                   return (
-                    <button key={t}
-                      onClick={() => setView(resultViews[t])}
+                    <button key={tt}
+                      onClick={() => setView(resultViews[tt])}
                       className="flex items-center gap-1.5 bg-green-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-green-700 transition">
-                      <span>{meta[t]}</span>
-                      <span>결과 보고 상담 →</span>
+                      <span>{metaMap[tt]}</span>
+                      <span>{t("결과 보고 상담 →","View & chat →")}</span>
                     </button>
                   );
                 })}
@@ -3270,37 +3280,40 @@ function PsychologicalTestSystem() {
             </div>
           )}
 
-          {/* 새 검사 시작 */}
           <div className="bg-white rounded-2xl p-5 border border-gray-100">
-            <p className="text-sm font-semibold text-gray-700 mb-1">💡 새 검사 후 상담하기 (더 정확한 상담)</p>
-            <p className="text-xs text-gray-400 mb-3">검사 완료 후 결과 화면에서 AI 상담 버튼을 누르세요</p>
+            <p className="text-sm font-semibold text-gray-700 mb-1">💡 {t("새 검사 후 상담하기 (더 정확한 상담)","Take a new test then chat (more accurate)")}</p>
+            <p className="text-xs text-gray-400 mb-3">{t("검사 완료 후 결과 화면에서 AI 상담 버튼을 누르세요","After the test, tap the AI chat button on the result screen")}</p>
             <div className="flex flex-wrap gap-2">
               {[
-                { id:'PHQ9',  label:'PHQ-9 우울', emoji:'🌱', view:'phq9Test'  },
-                { id:'GAD7',  label:'GAD-7 불안', emoji:'💙', view:'gad7Test'  },
-                { id:'LOST',  label:'LOST 행동',  emoji:'🧭', view:'lostTest'  },
-              ].map(t => (
-                <button key={t.id} onClick={() => setView(t.view)}
+                { id:'PHQ9',  label:t('PHQ-9 우울','PHQ-9 Depression'), emoji:'🌱', view:'phq9Test'  },
+                { id:'GAD7',  label:t('GAD-7 불안','GAD-7 Anxiety'),   emoji:'💙', view:'gad7Test'  },
+                { id:'LOST',  label:t('LOST 행동','LOST Style'),        emoji:'🧭', view:'lostTest'  },
+              ].map(tt => (
+                <button key={tt.id} onClick={() => setView(tt.view)}
                   className="flex items-center gap-1.5 bg-white border border-green-200 text-green-700 px-3 py-2 rounded-xl text-xs font-semibold hover:bg-green-100 transition">
-                  <span>{t.emoji}</span><span>{t.label}</span>
-                  <span className="text-green-400">무료</span>
+                  <span>{tt.emoji}</span><span>{tt.label}</span>
+                  <span className="text-green-400">{t("무료","Free")}</span>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* 검사 없이 바로 상담 */}
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
             <div className="px-5 pt-4 pb-2">
-              <p className="text-sm font-semibold text-gray-700 mb-1">💬 검사 없이 바로 상담하기</p>
-              <p className="text-xs text-gray-400">검사 결과 없이 AI와 자유롭게 대화할 수 있습니다</p>
+              <p className="text-sm font-semibold text-gray-700 mb-1">💬 {t("검사 없이 바로 상담하기","Chat without a test")}</p>
+              <p className="text-xs text-gray-400">{t("검사 결과 없이 AI와 자유롭게 대화할 수 있습니다","Talk freely with AI without any test results")}</p>
             </div>
-            <ChatBox testType="GENERAL" initialPrompts={[
+            <ChatBox testType="GENERAL" initialPrompts={t([
               "요즘 마음이 무겁고 지쳐있어요. 어떻게 하면 좋을까요?",
               "불안감이 자주 생기는데 어떻게 다루면 좋을까요?",
               "직장 스트레스로 힘든데 도움이 필요해요",
               "스스로를 이해하고 싶어요. 어디서부터 시작할까요?",
-            ]} />
+            ],[
+              "I've been feeling heavy and exhausted lately. What should I do?",
+              "I often feel anxious. How can I manage it better?",
+              "Work stress is overwhelming me. I need some help.",
+              "I want to understand myself better. Where do I start?",
+            ])} />
           </div>
 
           <ExpertCTA testType="GENERAL" score={0} level="low" onContinueAI={null} />
@@ -3545,31 +3558,31 @@ function PsychologicalTestSystem() {
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
         <div className="text-center mb-6">
           <div className="text-4xl mb-2">🔐</div>
-          <h2 className="text-2xl font-bold text-gray-800">새 비밀번호 설정</h2>
+          <h2 className="text-2xl font-bold text-gray-800">{t("새 비밀번호 설정","Set New Password")}</h2>
         </div>
         <Msg msg={formMsg} />
         <div className="space-y-3 mb-5">
-          <input id="new-pw"  type="password" placeholder="새 비밀번호 (8자 이상)"
+          <input id="new-pw"  type="password" placeholder={t("새 비밀번호 (8자 이상)","New password (min. 8 chars)")}
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm" />
-          <input id="new-pw2" type="password" placeholder="새 비밀번호 확인"
+          <input id="new-pw2" type="password" placeholder={t("새 비밀번호 확인","Confirm new password")}
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm" />
         </div>
         <button
           onClick={async () => {
             const pw  = document.getElementById('new-pw')?.value  || '';
             const pw2 = document.getElementById('new-pw2')?.value || '';
-            if (pw.length < 8) { setFormMsg({ type: 'error', text: '비밀번호는 8자 이상이어야 합니다.' }); return; }
-            if (pw !== pw2)    { setFormMsg({ type: 'error', text: '비밀번호가 일치하지 않습니다.' }); return; }
-            setFormMsg({ type: 'loading', text: '변경 중...' });
+            if (pw.length < 8) { setFormMsg({ type: 'error', text: t('비밀번호는 8자 이상이어야 합니다.','Password must be at least 8 characters.') }); return; }
+            if (pw !== pw2)    { setFormMsg({ type: 'error', text: t('비밀번호가 일치하지 않습니다.','Passwords do not match.') }); return; }
+            setFormMsg({ type: 'loading', text: t('변경 중...','Updating...') });
             const r = await fetch('/api/auth/reset-password', {
               method: 'POST', headers: { 'Content-Type': 'application/json', ...api._authHeader() },
               body: JSON.stringify({ token: window.__resetToken, newPassword: pw }),
             }).then(r => r.json());
-            if (r.success) { setFormMsg({ type: 'success', text: '비밀번호가 변경되었습니다.' }); setTimeout(() => { setView('memberLogin'); setFormMsg({ type:'',text:'' }); }, 1500); }
-            else setFormMsg({ type: 'error', text: r.error || '변경 실패' });
+            if (r.success) { setFormMsg({ type: 'success', text: t('비밀번호가 변경되었습니다.','Password updated successfully.') }); setTimeout(() => { setView('memberLogin'); setFormMsg({ type:'',text:'' }); }, 1500); }
+            else setFormMsg({ type: 'error', text: r.error || t('변경 실패','Update failed') });
           }}
           className="w-full bg-green-700 text-white py-3 rounded-xl font-bold hover:bg-green-800 transition">
-          비밀번호 변경
+          {t("비밀번호 변경","Change Password")}
         </button>
       </div>
     </div>
@@ -3581,16 +3594,16 @@ function PsychologicalTestSystem() {
   if (isLoggedIn && view === 'memberDashboard') {
     const allTests = regionConfig?.availableTests || ['PHQ9','GAD7','DASS21','BIG5','LOST','SCT','DSI','BURNOUT','RIASEC','VALUES'];
     const testMeta = {
-      PHQ9:    { label: 'PHQ-9',   desc: '우울 자가점검',    emoji: '😔', view: 'phq9Test',    summary: '최근 2주간 기분·수면·의욕의 변화를 점검합니다',              questions: 9,  time: '2분'  },
-      GAD7:    { label: 'GAD-7',   desc: '불안 자가점검',    emoji: '😰', view: 'gad7Test',    summary: '일상 속 걱정·긴장·불안의 정도를 확인합니다',                  questions: 7,  time: '2분'  },
-      DASS21:  { label: 'DASS-21', desc: '우울/불안/스트레스', emoji: '📊', view: 'dass21Test',  summary: '우울·불안·스트레스 세 가지를 한 번에 측정합니다',               questions: 21, time: '5분'  },
-      BIG5:    { label: 'Big5',    desc: '성격 5요인',       emoji: '🌟', view: 'big5Test',    summary: '나만의 성격 패턴 5가지를 심층 분석합니다',                     questions: 44, time: '10분' },
-      LOST:    { label: 'LOST',    desc: '행동 운영체계',    emoji: '🧭', view: 'lostTest',    summary: '내 행동이 감정 vs 이성 중 어느 쪽에 기반하는지 파악합니다',     questions: 40, time: '8분'  },
-      SCT:     { label: 'SRCI',    desc: '자기반응 완성',    emoji: '✍️', view: 'sctTest',     summary: '문장 완성으로 나도 몰랐던 내면의 자아 반응을 탐색합니다',        questions: 30, time: '8분'  },
-      DSI:     { label: 'SDRI',    desc: '자기분화 반응성',  emoji: '🪞', view: 'dsiTest',     summary: '가족·연인 관계에서 감정 반응성과 자아 독립 정도를 측정합니다',   questions: 35, time: '8분'  },
-      BURNOUT: { label: 'K-MBI+',  desc: '번아웃 증후군',   emoji: '🔥', view: 'burnoutTest', summary: '직장·일상에서 쌓인 신체·정서적 소진을 점검합니다',               questions: 22, time: '5분'  },
-      RIASEC:  { label: 'Holland RIASEC', desc: '직업 흥미 유형', emoji: '🔍', view: 'riasecTest', summary: '나의 직업적 적성과 흥미를 6가지 유형으로 분석합니다',          questions: 30, time: '8분'  },
-      VALUES:  { label: '직업가치관', desc: '일의 의미 탐색',  emoji: '💎', view: 'valuesTest',  summary: '일에서 무엇을 중시하는지 10가지 가치요인으로 측정합니다',        questions: 30, time: '8분'  },
+      PHQ9:    { label: 'PHQ-9',   desc: t('우울 자가점검','Depression Screening'),       emoji: '😔', view: 'phq9Test',    summary: t('최근 2주간 기분·수면·의욕의 변화를 점검합니다','Check mood, sleep, and motivation changes over the past 2 weeks'),              questions: 9,  time: t('2분','2 min')  },
+      GAD7:    { label: 'GAD-7',   desc: t('불안 자가점검','Anxiety Screening'),           emoji: '😰', view: 'gad7Test',    summary: t('일상 속 걱정·긴장·불안의 정도를 확인합니다','Assess your level of daily worry, tension, and anxiety'),                  questions: 7,  time: t('2분','2 min')  },
+      DASS21:  { label: 'DASS-21', desc: t('우울/불안/스트레스','Depression/Anxiety/Stress'), emoji: '📊', view: 'dass21Test',  summary: t('우울·불안·스트레스 세 가지를 한 번에 측정합니다','Measures depression, anxiety, and stress all at once'),               questions: 21, time: t('5분','5 min')  },
+      BIG5:    { label: 'Big5',    desc: t('성격 5요인','Big Five Personality'),            emoji: '🌟', view: 'big5Test',    summary: t('나만의 성격 패턴 5가지를 심층 분석합니다','Deep analysis of your five personality dimensions'),                     questions: 44, time: t('10분','10 min') },
+      LOST:    { label: 'LOST',    desc: t('행동 운영체계','Behavioral Style'),             emoji: '🧭', view: 'lostTest',    summary: t('내 행동이 감정 vs 이성 중 어느 쪽에 기반하는지 파악합니다','Understand whether your behavior is driven by emotion or reason'),     questions: 40, time: t('8분','8 min')  },
+      SCT:     { label: 'SRCI',    desc: t('자기반응 완성','Self-Response Completion'),     emoji: '✍️', view: 'sctTest',     summary: t('문장 완성으로 나도 몰랐던 내면의 자아 반응을 탐색합니다','Explore hidden inner reactions through sentence completion'),        questions: 30, time: t('8분','8 min')  },
+      DSI:     { label: 'SDRI',    desc: t('자기분화 반응성','Self-Differentiation'),       emoji: '🪞', view: 'dsiTest',     summary: t('가족·연인 관계에서 감정 반응성과 자아 독립 정도를 측정합니다','Measures emotional reactivity and independence in relationships'),   questions: 35, time: t('8분','8 min')  },
+      BURNOUT: { label: 'K-MBI+',  desc: t('번아웃 증후군','Burnout Screening'),            emoji: '🔥', view: 'burnoutTest', summary: t('직장·일상에서 쌓인 신체·정서적 소진을 점검합니다','Check physical and emotional exhaustion from work and daily life'),               questions: 22, time: t('5분','5 min')  },
+      RIASEC:  { label: 'Holland RIASEC', desc: t('직업 흥미 유형','Career Interest Type'), emoji: '🔍', view: 'riasecTest', summary: t('나의 직업적 적성과 흥미를 6가지 유형으로 분석합니다','Analyze career aptitude and interests across 6 Holland types'),          questions: 30, time: t('8분','8 min')  },
+      VALUES:  { label: t('직업가치관','Work Values'), desc: t('일의 의미 탐색','Work Values Assessment'), emoji: '💎', view: 'valuesTest', summary: t('일에서 무엇을 중시하는지 10가지 가치요인으로 측정합니다','Measures what you value most in work across 10 value factors'),        questions: 30, time: t('8분','8 min')  },
     };
 
     async function startSelectedTest(testType) {
@@ -3625,16 +3638,16 @@ function PsychologicalTestSystem() {
               <button onClick={() => openMaumGame()}
                 className="text-gray-500 hover:text-green-700 text-sm px-2 py-1.5 rounded-lg hover:bg-green-50 transition flex items-center gap-1"
                 title="마음 게임 — 별도 로그인 없이 바로 이동">
-                🎮 <span className="hidden sm:inline">마음 게임</span>
+                🎮 <span className="hidden sm:inline">{t("마음 게임","MaumGame")}</span>
               </button>
               {/* 마음커플 진입 — 마음게임과 동일한 JWT SSO 방식 */}
               <button onClick={() => openMaumCouple()}
                 className="text-gray-500 hover:text-rose-600 text-sm px-2 py-1.5 rounded-lg hover:bg-rose-50 transition flex items-center gap-1"
                 title="마음커플 — 파트너와 심리 궁합 분석">
-                💕 <span className="hidden sm:inline">마음커플</span>
+                💕 <span className="hidden sm:inline">{t("마음커플","MaumCouple")}</span>
               </button>
               <button onClick={() => setView('myPage')} className="text-gray-500 hover:text-gray-700 text-sm px-2 py-1.5 rounded-lg hover:bg-gray-100 transition">
-                👤 {currentUser?.nickname || '내 정보'}
+                👤 {currentUser?.nickname || t('내 정보','My Info')}
               </button>
               <button onClick={() => { setAdminAuthenticated(false); setAdminMsg({type:'',text:''}); setView('admin'); }}
                 className="text-gray-400 hover:text-gray-600 text-xs px-2 py-1.5 rounded-lg hover:bg-gray-100 transition">
@@ -3649,7 +3662,7 @@ function PsychologicalTestSystem() {
           <div className="sm:hidden flex justify-end mb-3">
             <a href="#test-list"
               className="text-xs text-green-700 font-semibold bg-green-50 border border-green-200 px-3 py-1.5 rounded-full hover:bg-green-100 transition flex items-center gap-1">
-              📋 검사 목록 바로가기 ↓
+              📋 {t("검사 목록 바로가기 ↓", "Go to assessments ↓")}
             </a>
           </div>
 
@@ -3661,14 +3674,14 @@ function PsychologicalTestSystem() {
             const target = new Date(checkinDate);
             const now = new Date();
             const diffDays = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
-            const testMeta2 = { PHQ9:'우울 자가점검', GAD7:'불안 자가점검', DASS21:'DASS-21', BIG5:'Big5', BURNOUT:'K-MBI+', LOST:'LOST', SCT:'SRCI', DSI:'SDRI', RIASEC:'Holland RIASEC', VALUES:'직업가치관' };
+            const testMeta2 = { PHQ9:t('우울 자가점검','Depression Check'), GAD7:t('불안 자가점검','Anxiety Check'), DASS21:'DASS-21', BIG5:'Big5', BURNOUT:'K-MBI+', LOST:'LOST', SCT:'SRCI', DSI:'SDRI', RIASEC:'Holland RIASEC', VALUES:t('직업가치관','Work Values') };
             const testLabel = testMeta2[checkinTest] || checkinTest;
             if (diffDays > 0) {
               return (
                 <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-4 mb-5 flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-bold text-emerald-800">📅 {diffDays}일 후 변화 체크 예정</p>
-                    <p className="text-xs text-emerald-600 mt-0.5">{testLabel} 재검사로 마음의 변화를 비교해 드려요</p>
+                    <p className="text-sm font-bold text-emerald-800">📅 {t(`${diffDays}일 후 변화 체크 예정`,`Check-in scheduled in ${diffDays} days`)}</p>
+                    <p className="text-xs text-emerald-600 mt-0.5">{t(`${testLabel} 재검사로 마음의 변화를 비교해 드려요`,`Retest ${testLabel} to compare how you've changed`)}</p>
                   </div>
                   <button
                     onClick={() => { localStorage.removeItem('maumful_checkin_date'); localStorage.removeItem('maumful_checkin_test'); }}
@@ -3680,12 +3693,12 @@ function PsychologicalTestSystem() {
               return (
                 <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-2xl p-4 mb-5">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm font-bold text-amber-800">🔔 오늘 {testLabel} 재검사 날이에요!</p>
+                    <p className="text-sm font-bold text-amber-800">🔔 {t(`오늘 ${testLabel} 재검사 날이에요!`,`Today is your ${testLabel} check-in day!`)}</p>
                     <button
                       onClick={() => { localStorage.removeItem('maumful_checkin_date'); localStorage.removeItem('maumful_checkin_test'); }}
                       className="text-xs text-amber-400 hover:text-amber-600">✕</button>
                   </div>
-                  <p className="text-xs text-amber-700 mb-3">이전 결과와 비교해 마음의 변화를 확인하세요</p>
+                  <p className="text-xs text-amber-700 mb-3">{t("이전 결과와 비교해 마음의 변화를 확인하세요","Compare with your previous results to see how you've changed")}</p>
                   <button
                     onClick={async () => {
                       const testViews = { PHQ9:'phq9Test', GAD7:'gad7Test', DASS21:'dass21Test', BIG5:'big5Test', BURNOUT:'burnoutTest', LOST:'lostTest', SCT:'sctTest', DSI:'dsiTest', RIASEC:'riasecTest', VALUES:'valuesTest' };
@@ -3706,7 +3719,7 @@ function PsychologicalTestSystem() {
                       setView(testViews[checkinTest] || 'phq9Test');
                     }}
                     className="w-full bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold py-2 rounded-xl transition">
-                    지금 바로 재검사하기 →
+                    {t("지금 바로 재검사하기 →","Retest now →")}
                   </button>
                 </div>
               );
@@ -3753,15 +3766,15 @@ function PsychologicalTestSystem() {
           {testHistory.length === 0 && !localStorage.getItem('maumful_guide_dismissed') && (
             <div className="bg-gradient-to-br from-green-50 to-teal-50 border border-green-200 rounded-2xl p-5 mb-5">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-bold text-green-800">🌿 마음풀 시작하기</p>
+                <p className="text-sm font-bold text-green-800">🌿 {t("마음풀 시작하기", "Getting Started with Maumful")}</p>
                 <button onClick={() => { localStorage.setItem('maumful_guide_dismissed', '1'); setView('memberDashboard'); }}
-                  className="text-xs text-green-400 hover:text-green-600">✕ 닫기</button>
+                  className="text-xs text-green-400 hover:text-green-600">✕ {t("닫기","Close")}</button>
               </div>
               <div className="grid grid-cols-3 gap-2 mb-3">
                 {[
-                  { step: '1', icon: '📋', title: '검사 선택', desc: '아래에서 원하는 심리검사를 선택하세요' },
-                  { step: '2', icon: '🧠', title: 'AI 분석', desc: '검사 완료 후 AI가 결과를 해석해 드려요' },
-                  { step: '3', icon: '💬', title: 'AI 상담', desc: '궁금한 점을 AI 상담사에게 물어보세요' },
+                  { step: '1', icon: '📋', title: t('검사 선택','Pick a Test'), desc: t('아래에서 원하는 심리검사를 선택하세요','Choose an assessment below') },
+                  { step: '2', icon: '🧠', title: t('AI 분석','AI Analysis'), desc: t('검사 완료 후 AI가 결과를 해석해 드려요','AI interprets your results after the test') },
+                  { step: '3', icon: '💬', title: t('AI 상담','AI Counseling'), desc: t('궁금한 점을 AI 상담사에게 물어보세요','Ask the AI counselor any questions') },
                 ].map(({ step, icon, title, desc }) => (
                   <div key={step} className="bg-white rounded-xl p-3 text-center border border-green-100">
                     <div className="text-xl mb-1">{icon}</div>
@@ -3771,29 +3784,29 @@ function PsychologicalTestSystem() {
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-green-600 text-center">아래 검사 카드를 눌러 지금 바로 시작해 보세요 👇</p>
+              <p className="text-xs text-green-600 text-center">{t("아래 검사 카드를 눌러 지금 바로 시작해 보세요 👇", "Tap a test card below to get started right now 👇")}</p>
             </div>
           )}
 
           {/* 인사말 */}
           <div className="mb-6">
             <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-xl font-bold text-gray-800">안녕하세요, {currentUser?.nickname || '회원'}님 👋</h2>
+              <h2 className="text-xl font-bold text-gray-800">{t(`안녕하세요, ${currentUser?.nickname || '회원'}님 👋`, `Hello, ${currentUser?.nickname || 'there'} 👋`)}</h2>
               {counselingMode === 'biblical' && (
                 <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">✝️ 기독교 상담</span>
               )}
             </div>
-            <p className="text-gray-500 text-sm mt-1">검사 1회에 10 크레딧이 차감됩니다</p>
+            <p className="text-gray-500 text-sm mt-1">{t("검사 1회에 10 크레딧이 차감됩니다", "10 credits per assessment")}</p>
           </div>
 
           {/* 크레딧 현황 카드 */}
           <div className="bg-gradient-to-r from-green-500 to-purple-600 rounded-2xl p-5 text-white mb-6">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm opacity-80">현재 크레딧</span>
-              <button onClick={() => setShowChargeView(true)} className="text-xs bg-white/20 px-3 py-1 rounded-full hover:bg-white/30 transition">충전 →</button>
+              <span className="text-sm opacity-80">{t("현재 크레딧", "Current Credits")}</span>
+              <button onClick={() => setShowChargeView(true)} className="text-xs bg-white/20 px-3 py-1 rounded-full hover:bg-white/30 transition">{t("충전 →", "Top up →")}</button>
             </div>
             <div className="text-4xl font-bold">✦ {credits}</div>
-            <div className="text-xs opacity-70 mt-1">검사 {Math.floor(credits / 10)}회 · AI 채팅 {Math.floor(credits / 5)}회 가능</div>
+            <div className="text-xs opacity-70 mt-1">{t(`검사 ${Math.floor(credits / 10)}회 · AI 채팅 ${Math.floor(credits / 5)}회 가능`, `${Math.floor(credits / 10)} tests · ${Math.floor(credits / 5)} AI chats available`)}</div>
           </div>
 
           {/* 추천 검사 카드 — 이력 기반 개인화 */}
@@ -3808,28 +3821,28 @@ function PsychologicalTestSystem() {
 
             // 우선순위별 추천 로직
             if (!doneTypes.has('PHQ9'))
-              recs.push({ type:'PHQ9', emoji:'😔', reason:'우울 상태를 아직 확인하지 않았어요', free: true });
+              recs.push({ type:'PHQ9', emoji:'😔', reason:t('우울 상태를 아직 확인하지 않았어요', "You haven't checked your depression yet"), free: true });
             else if (daysSince('PHQ9') >= 30)
-              recs.push({ type:'PHQ9', emoji:'😔', reason:`마지막 우울 검사가 ${daysSince('PHQ9')}일 전이에요`, free: true });
+              recs.push({ type:'PHQ9', emoji:'😔', reason:t(`마지막 우울 검사가 ${daysSince('PHQ9')}일 전이에요`, `Your last depression check was ${daysSince('PHQ9')} days ago`), free: true });
 
             if (!doneTypes.has('GAD7'))
-              recs.push({ type:'GAD7', emoji:'😰', reason:'불안 검사를 아직 받지 않았어요', free: true });
+              recs.push({ type:'GAD7', emoji:'😰', reason:t('불안 검사를 아직 받지 않았어요', "You haven't taken an anxiety check yet"), free: true });
             else if (daysSince('GAD7') >= 30)
-              recs.push({ type:'GAD7', emoji:'😰', reason:`마지막 불안 검사가 ${daysSince('GAD7')}일 전이에요`, free: true });
+              recs.push({ type:'GAD7', emoji:'😰', reason:t(`마지막 불안 검사가 ${daysSince('GAD7')}일 전이에요`, `Your last anxiety check was ${daysSince('GAD7')} days ago`), free: true });
 
             if (!doneTypes.has('BIG5'))
-              recs.push({ type:'BIG5', emoji:'🌟', reason:'성격 5요인으로 자신을 더 깊이 이해해 보세요', free: false });
+              recs.push({ type:'BIG5', emoji:'🌟', reason:t('성격 5요인으로 자신을 더 깊이 이해해 보세요', 'Understand yourself more deeply with Big Five'), free: false });
             else if (daysSince('BIG5') >= 90)
-              recs.push({ type:'BIG5', emoji:'🌟', reason:`성격 검사 이후 ${daysSince('BIG5')}일이 지났어요`, free: false });
+              recs.push({ type:'BIG5', emoji:'🌟', reason:t(`성격 검사 이후 ${daysSince('BIG5')}일이 지났어요`, `It's been ${daysSince('BIG5')} days since your personality test`), free: false });
 
             if (!doneTypes.has('BURNOUT') && doneTypes.has('PHQ9'))
-              recs.push({ type:'BURNOUT', emoji:'🔥', reason:'번아웃 위험도를 함께 확인해 보세요', free: false });
+              recs.push({ type:'BURNOUT', emoji:'🔥', reason:t('번아웃 위험도를 함께 확인해 보세요', 'Check your burnout risk while you\'re at it'), free: false });
 
             const top = recs.slice(0, 2);
             if (top.length === 0) return null;
             return (
               <div className="mb-6">
-                <h3 className="font-bold text-gray-700 mb-3">✨ 추천 검사</h3>
+                <h3 className="font-bold text-gray-700 mb-3">✨ {t("추천 검사", "Recommended Tests")}</h3>
                 <div className={top.length > 1 ? 'grid grid-cols-2 gap-3' : 'grid grid-cols-1 gap-3'}>
                   {top.map(r => (
                     <button key={r.type} onClick={() => startSelectedTest(r.type)}
@@ -3839,7 +3852,7 @@ function PsychologicalTestSystem() {
                       <div className="text-xs text-gray-500 mt-1 leading-tight">{r.reason}</div>
                       <div className="mt-2">
                         <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${r.free ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                          {r.free ? '✓ 무료' : '10 크레딧'}
+                          {r.free ? t('✓ 무료','✓ Free') : t('10 크레딧','10 Credits')}
                         </span>
                       </div>
                     </button>
@@ -3904,8 +3917,8 @@ function PsychologicalTestSystem() {
 
           {/* 검사 목록 */}
           <div className="flex items-center justify-between mb-3">
-            <h3 id="test-list" className="font-bold text-gray-700">심리검사 선택</h3>
-            <span className="text-xs text-gray-400">총 {allTests.length}종</span>
+            <h3 id="test-list" className="font-bold text-gray-700">{t("심리검사 선택", "Select Assessment")}</h3>
+            <span className="text-xs text-gray-400">{t(`총 ${allTests.length}종`, `${allTests.length} total`)}</span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
             {allTests.map(type => {
@@ -3920,7 +3933,7 @@ function PsychologicalTestSystem() {
                   <div className={`absolute top-2 right-2 text-xs font-bold px-2 py-0.5 rounded-full ${
                     FREE_TESTS.includes(type) ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
                   }`}>
-                    {FREE_TESTS.includes(type) ? '✓ 무료' : '10 크레딧'}
+                    {FREE_TESTS.includes(type) ? t('✓ 무료','✓ Free') : t('10 크레딧','10 Credits')}
                   </div>
                   <div className="text-3xl sm:mb-2 shrink-0 mt-0.5">{m.emoji}</div>
                   <div className="flex-1 min-w-0 pr-14 sm:pr-0">
@@ -3928,12 +3941,12 @@ function PsychologicalTestSystem() {
                     <div className="text-xs text-gray-400 mt-0.5">{m.desc}</div>
                     <div className="text-xs text-gray-500 mt-1.5 leading-relaxed">{m.summary}</div>
                     <div className="text-xs text-gray-300 mt-1.5 flex items-center gap-1">
-                      <span>📋 {m.questions}문항</span>
+                      <span>📋 {m.questions}{t('문항','Q')}</span>
                       <span>·</span>
-                      <span>⏱ 약 {m.time}</span>
+                      <span>⏱ {t('약','')} {m.time}</span>
                     </div>
                     <div className="mt-2 text-xs text-green-600 font-semibold sm:opacity-0 sm:group-hover:opacity-100 transition">
-                      {FREE_TESTS.includes(type) ? '바로 시작 →' : '크레딧으로 이용 →'}
+                      {FREE_TESTS.includes(type) ? t('바로 시작 →','Start now →') : t('크레딧으로 이용 →','Use credits →')}
                     </div>
                   </div>
                 </button>
@@ -3945,8 +3958,8 @@ function PsychologicalTestSystem() {
           {testHistory.length > 0 && (
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold text-gray-700">최근 검사</h3>
-                <button onClick={() => setView('myPage')} className="text-xs text-green-600 hover:text-green-800">전체 보기 →</button>
+                <h3 className="font-bold text-gray-700">{t("최근 검사", "Recent Tests")}</h3>
+                <button onClick={() => setView('myPage')} className="text-xs text-green-600 hover:text-green-800">{t("전체 보기 →", "View all →")}</button>
               </div>
               <div className="space-y-2">
                 {testHistory.slice(0, 5).map((h, i) => {
@@ -3962,14 +3975,14 @@ function PsychologicalTestSystem() {
                           <div>
                             <span className="font-semibold text-gray-700 text-sm">{h.test_type}</span>
                             <span className="text-xs text-gray-400 ml-2">
-                              {daysSince === 0 ? '오늘' : daysSince === 1 ? '어제' : `${daysSince}일 전`}
+                              {daysSince === 0 ? t('오늘','Today') : daysSince === 1 ? t('어제','Yesterday') : t(`${daysSince}일 전`, `${daysSince} days ago`)}
                             </span>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
                           {prevSame && (
                             <span className="text-xs bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full border border-emerald-100">
-                              재검사
+                              {t("재검사", "Retest")}
                             </span>
                           )}
                           <span className="text-xs text-red-300">-{h.credits_spent}cr</span>
@@ -3994,7 +4007,7 @@ function PsychologicalTestSystem() {
                             setView(testViews[h.test_type] || 'phq9Test');
                           }}
                           className="mt-2 w-full text-xs text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 rounded-lg py-1.5 font-semibold transition">
-                          🔄 {daysSince}일 후 재검사로 변화 확인하기
+                          🔄 {t(`${daysSince}일 후 재검사로 변화 확인하기`, `Retest after ${daysSince} days to track your progress`)}
                         </button>
                       )}
                     </div>
@@ -4028,8 +4041,8 @@ function PsychologicalTestSystem() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-green-50">
       <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
-          <button onClick={() => setView('memberDashboard')} className="text-gray-500 hover:text-gray-700 flex items-center gap-1 text-sm">← 뒤로</button>
-          <span className="font-bold text-gray-800">마이페이지</span>
+          <button onClick={() => setView('memberDashboard')} className="text-gray-500 hover:text-gray-700 flex items-center gap-1 text-sm">{t("← 뒤로","← Back")}</button>
+          <span className="font-bold text-gray-800">{t("마이페이지","My Page")}</span>
           <div className="flex items-center gap-2">
             <button onClick={() => openMaumGame()}
               className="text-green-600 hover:text-green-800 text-sm px-2 py-1.5 rounded-lg hover:bg-green-50 transition"
@@ -4051,7 +4064,7 @@ function PsychologicalTestSystem() {
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center text-2xl">👤</div>
             <div>
-              <div className="font-bold text-gray-800">{currentUser?.nickname || '회원'}</div>
+              <div className="font-bold text-gray-800">{currentUser?.nickname || t('회원','member')}</div>
               <div className="text-sm text-gray-400">{currentUser?.email}</div>
             </div>
           </div>
@@ -4059,7 +4072,7 @@ function PsychologicalTestSystem() {
 
         {/* 탭 */}
         <div className="flex gap-2 mb-5">
-          {[['credits','크레딧 내역'],['history','검사 이력'],['appointments','상담 예약'],['referral','친구 초대'],['settings','설정']].map(([tab, label]) => (
+          {[[`credits`,t('크레딧 내역','Credits')],[`history`,t('검사 이력','History')],[`appointments`,t('상담 예약','Sessions')],[`referral`,t('친구 초대','Referral')],[`settings`,t('설정','Settings')]].map(([tab, label]) => (
             <button key={tab} onClick={() => { setMyPageTab(tab); if (tab === 'credits') refreshCredits(); if (tab === 'history') loadTestHistory(); if (tab === 'referral') loadReferralData(); if (tab === 'settings') checkPushStatus(); }}
               className={`px-4 py-2 rounded-full text-sm font-semibold transition ${myPageTab === tab ? 'bg-green-700 text-white' : 'bg-white text-gray-500 border border-gray-200 hover:border-green-300'}`}>
               {label}
@@ -4069,39 +4082,39 @@ function PsychologicalTestSystem() {
 
         {/* 크레딧 & 결제 내역 */}
         {myPageTab === 'credits' && (() => {
-          const usageTxns   = creditTxns.filter(t => t.type === 'spend');
-          const chargeTxns  = creditTxns.filter(t => t.type === 'gain');
+          const usageTxns   = creditTxns.filter(tx => tx.type === 'spend');
+          const chargeTxns  = creditTxns.filter(tx => tx.type === 'gain');
 
           const reasonLabel = (r) => ({
-            signup_bonus:'가입 보너스',
-            test:'심리검사', chat:'AI 채팅',
-            charge:'크레딧 충전', refund_api_error:'오류 환불',
-            admin_grant:'관리자 지급', referral:'친구 초대',
-            couple:'마음커플 분석', couple_session:'마음커플 세션',
-            game:'마음게임', game_spend:'마음게임 아이템',
-            solo_analysis:'이상형 성향 분석', date_course:'데이트 코스 추천',
-            coach:'관계 코치', counseling:'상담 예약',
-            ai_refund:'AI 오류 환불', bonus:'보너스 지급',
+            signup_bonus:t('가입 보너스','Signup Bonus'),
+            test:t('심리검사','Assessment'), chat:t('AI 채팅','AI Chat'),
+            charge:t('크레딧 충전','Credit Purchase'), refund_api_error:t('오류 환불','Error Refund'),
+            admin_grant:t('관리자 지급','Admin Grant'), referral:t('친구 초대','Referral'),
+            couple:t('마음커플 분석','MaumCouple Analysis'), couple_session:t('마음커플 세션','MaumCouple Session'),
+            game:t('마음게임','MaumGame'), game_spend:t('마음게임 아이템','MaumGame Item'),
+            solo_analysis:t('이상형 성향 분석','Ideal Type Analysis'), date_course:t('데이트 코스 추천','Date Course'),
+            coach:t('관계 코치','Relationship Coach'), counseling:t('상담 예약','Session Booking'),
+            ai_refund:t('AI 오류 환불','AI Error Refund'), bonus:t('보너스 지급','Bonus'),
           }[r] || r);
 
-          const reasonIcon = (t) => {
-            if (t.type === 'spend') {
-              if (t.reason === 'test') return '📋';
-              if (t.reason === 'chat') return '💬';
-              if (t.reason?.startsWith('couple') || t.reason === 'solo_analysis' || t.reason === 'date_course' || t.reason === 'coach') return '💕';
-              if (t.reason?.startsWith('game')) return '🌿';
-              if (t.reason === 'counseling') return '🏥';
+          const reasonIcon = (tx) => {
+            if (tx.type === 'spend') {
+              if (tx.reason === 'test') return '📋';
+              if (tx.reason === 'chat') return '💬';
+              if (tx.reason?.startsWith('couple') || tx.reason === 'solo_analysis' || tx.reason === 'date_course' || tx.reason === 'coach') return '💕';
+              if (tx.reason?.startsWith('game')) return '🌿';
+              if (tx.reason === 'counseling') return '🏥';
               return '💸';
             }
-            if (t.reason === 'charge') return '💳';
-            if (t.reason === 'signup_bonus' || t.reason === 'bonus') return '🎁';
-            if (t.reason === 'referral') return '🤝';
-            if (t.reason?.includes('refund')) return '↩️';
-            if (t.reason === 'admin_grant') return '⭐';
+            if (tx.reason === 'charge') return '💳';
+            if (tx.reason === 'signup_bonus' || tx.reason === 'bonus') return '🎁';
+            if (tx.reason === 'referral') return '🤝';
+            if (tx.reason?.includes('refund')) return '↩️';
+            if (tx.reason === 'admin_grant') return '⭐';
             return '✦';
           };
 
-          const fmtDt = (d) => new Date(d).toLocaleString('ko-KR', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+          const fmtDt = (d) => new Date(d).toLocaleString(lang === 'en' ? 'en-US' : 'ko-KR', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
 
           return (
             <div>
@@ -4110,23 +4123,23 @@ function PsychologicalTestSystem() {
                 style={{fontFamily:"'Noto Sans KR',sans-serif"}}>
                 <div className="flex items-end justify-between">
                   <div>
-                    <div className="text-xs opacity-75 mb-1">현재 잔액</div>
+                    <div className="text-xs opacity-75 mb-1">{t("현재 잔액","Current Balance")}</div>
                     <div className="text-4xl font-bold">✦ {credits}</div>
-                    <div className="text-xs opacity-75 mt-1">심리검사 {Math.floor(credits/10)}회 가능</div>
+                    <div className="text-xs opacity-75 mt-1">{t(`심리검사 ${Math.floor(credits/10)}회 가능`,`${Math.floor(credits/10)} assessments available`)}</div>
                   </div>
                   <button onClick={() => setShowChargeView(true)}
                     className="text-sm bg-white text-green-700 font-bold px-5 py-2.5 rounded-full hover:bg-green-50 transition"
                     style={{fontFamily:"'Noto Sans KR',sans-serif"}}>
-                    충전하기 →
+                    {t("충전하기 →","Top up →")}
                   </button>
                 </div>
 
                 {/* 빠른 통계 */}
                 <div className="mt-4 grid grid-cols-3 gap-2">
                   {[
-                    { label:'총 충전', val: chargeTxns.filter(t=>t.reason==='charge').reduce((s,t)=>s+t.amount,0) + ' cr' },
-                    { label:'사용 건수', val: usageTxns.length + '건' },
-                    { label:'이번 달 사용', val: usageTxns.filter(t=>new Date(t.created_at).getMonth()===new Date().getMonth()).reduce((s,t)=>s+t.amount,0) + ' cr' },
+                    { label:t('총 충전','Total charged'), val: chargeTxns.filter(tx=>tx.reason==='charge').reduce((s,tx)=>s+tx.amount,0) + ' cr' },
+                    { label:t('사용 건수','Usage count'), val: usageTxns.length + t('건',' uses') },
+                    { label:t('이번 달 사용','This month'), val: usageTxns.filter(tx=>new Date(tx.created_at).getMonth()===new Date().getMonth()).reduce((s,tx)=>s+tx.amount,0) + ' cr' },
                   ].map(s => (
                     <div key={s.label} className="bg-white/15 rounded-xl p-2 text-center">
                       <div className="text-xs opacity-75">{s.label}</div>
@@ -4138,9 +4151,9 @@ function PsychologicalTestSystem() {
 
               {/* 소탭 */}
               <div className="flex gap-2 mb-4">
-                {[['usage','사용 내역'],['charge','충전/지급 내역']].map(([t,l]) => (
-                  <button key={t} onClick={() => setCreditSubTab(t)}
-                    className={`px-4 py-1.5 rounded-full text-xs font-bold transition ${creditSubTab===t ? 'bg-gray-800 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}
+                {[['usage',t('사용 내역','Usage')],['charge',t('충전/지급 내역','Charges')]].map(([tab,l]) => (
+                  <button key={tab} onClick={() => setCreditSubTab(tab)}
+                    className={`px-4 py-1.5 rounded-full text-xs font-bold transition ${creditSubTab===tab ? 'bg-gray-800 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}
                     style={{fontFamily:"'Noto Sans KR',sans-serif"}}>{l}</button>
                 ))}
               </div>
@@ -4148,19 +4161,19 @@ function PsychologicalTestSystem() {
               {/* 사용 내역 */}
               {creditSubTab === 'usage' && (
                 <div className="space-y-2">
-                  {usageTxns.length === 0 && <p className="text-gray-400 text-sm text-center py-6">사용 내역이 없습니다</p>}
-                  {usageTxns.map((t, i) => (
+                  {usageTxns.length === 0 && <p className="text-gray-400 text-sm text-center py-6">{t("사용 내역이 없습니다","No usage history")}</p>}
+                  {usageTxns.map((tx, i) => (
                     <div key={i} className="bg-white rounded-xl p-3.5 flex items-center justify-between border border-gray-100">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-red-50 flex items-center justify-center text-base">
-                          {reasonIcon(t)}
+                          {reasonIcon(tx)}
                         </div>
                         <div>
-                          <div className="text-sm font-semibold text-gray-700">{reasonLabel(t.reason)}</div>
-                          <div className="text-xs text-gray-400">{fmtDt(t.created_at)}</div>
+                          <div className="text-sm font-semibold text-gray-700">{reasonLabel(tx.reason)}</div>
+                          <div className="text-xs text-gray-400">{fmtDt(tx.created_at)}</div>
                         </div>
                       </div>
-                      <span className="font-bold text-sm text-red-500">-{t.amount} cr</span>
+                      <span className="font-bold text-sm text-red-500">-{tx.amount} cr</span>
                     </div>
                   ))}
                 </div>
@@ -4169,24 +4182,24 @@ function PsychologicalTestSystem() {
               {/* 충전/지급 내역 */}
               {creditSubTab === 'charge' && (
                 <div className="space-y-2">
-                  {chargeTxns.length === 0 && <p className="text-gray-400 text-sm text-center py-6">충전 내역이 없습니다</p>}
-                  {chargeTxns.map((t, i) => (
+                  {chargeTxns.length === 0 && <p className="text-gray-400 text-sm text-center py-6">{t("충전 내역이 없습니다","No charge history")}</p>}
+                  {chargeTxns.map((tx, i) => (
                     <div key={i} className="bg-white rounded-xl p-3.5 flex items-center justify-between border border-gray-100">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-green-50 flex items-center justify-center text-base">
-                          {reasonIcon(t)}
+                          {reasonIcon(tx)}
                         </div>
                         <div>
-                          <div className="text-sm font-semibold text-gray-700">{reasonLabel(t.reason)}</div>
-                          <div className="text-xs text-gray-400">{fmtDt(t.created_at)}</div>
-                          {t.reason==='charge' && t.pg_amount && (
+                          <div className="text-sm font-semibold text-gray-700">{reasonLabel(tx.reason)}</div>
+                          <div className="text-xs text-gray-400">{fmtDt(tx.created_at)}</div>
+                          {tx.reason==='charge' && tx.pg_amount && (
                             <div className="text-xs text-blue-500 mt-0.5">
-                              ₩{Number(t.pg_amount).toLocaleString('ko-KR')} 결제 완료
+                              ₩{Number(tx.pg_amount).toLocaleString('ko-KR')} {t("결제 완료","payment complete")}
                             </div>
                           )}
                         </div>
                       </div>
-                      <span className="font-bold text-sm text-green-600">+{t.amount} cr</span>
+                      <span className="font-bold text-sm text-green-600">+{tx.amount} cr</span>
                     </div>
                   ))}
 
@@ -4195,7 +4208,7 @@ function PsychologicalTestSystem() {
                       <button onClick={() => setShowChargeView(true)}
                         className="text-sm font-bold text-blue-600 hover:text-blue-800"
                         style={{fontFamily:"'Noto Sans KR',sans-serif"}}>
-                        + 크레딧 충전하기
+                        + {t("크레딧 충전하기","Top up credits")}
                       </button>
                     </div>
                   )}
@@ -4209,7 +4222,7 @@ function PsychologicalTestSystem() {
         {myPageTab === 'history' && (
           <div>
             <ExternalResultSection onSaved={loadTestHistory} />
-            {testHistory.length === 0 && <p className="text-gray-400 text-sm text-center py-4">검사 이력이 없습니다</p>}
+            {testHistory.length === 0 && <p className="text-gray-400 text-sm text-center py-4">{t("검사 이력이 없습니다","No assessment history")}</p>}
             {/* 점수가 있는 검사의 트렌드 요약 */}
             {(() => {
               const scored = ['PHQ9','GAD7','BURNOUT','DSI'];
@@ -4229,7 +4242,7 @@ function PsychologicalTestSystem() {
               if (summaries.length === 0) return null;
               return (
                 <div className="mb-4 p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
-                  <div className="text-xs font-bold text-emerald-700 mb-3">📈 점수 추이</div>
+                  <div className="text-xs font-bold text-emerald-700 mb-3">📈 {t("점수 추이","Score Trends")}</div>
                   <div className="grid grid-cols-2 gap-3">
                     {summaries.map(({ type, rows }) => {
                       const latest = rows[0];
@@ -4238,7 +4251,7 @@ function PsychologicalTestSystem() {
                       const max = scoreMax[type] || 100;
                       const pct = Math.round((latest.score / max) * 100);
                       const color = scoreColor(type, latest.score);
-                      const testLabel = { PHQ9:'우울(PHQ-9)', GAD7:'불안(GAD-7)', BURNOUT:'번아웃', DSI:'자아분화' };
+                      const testLabel = { PHQ9:t('우울(PHQ-9)','Depression(PHQ-9)'), GAD7:t('불안(GAD-7)','Anxiety(GAD-7)'), BURNOUT:t('번아웃','Burnout'), DSI:t('자아분화','Self-Diff.') };
                       return (
                         <div key={type} className="bg-white rounded-xl p-3 border border-gray-100">
                           <div className="text-xs text-gray-400 mb-1">{testLabel[type]}</div>
@@ -4267,7 +4280,7 @@ function PsychologicalTestSystem() {
               const scored = ['PHQ9','GAD7','BURNOUT','DSI'];
               const scoreMax = { PHQ9: 27, GAD7: 21, BURNOUT: 240, DSI: 125 };
               const colors   = { PHQ9:'#6366f1', GAD7:'#f43f5e', BURNOUT:'#f97316', DSI:'#10b981' };
-              const labels   = { PHQ9:'PHQ-9', GAD7:'GAD-7', BURNOUT:'번아웃', DSI:'자아분화' };
+              const labels   = { PHQ9:'PHQ-9', GAD7:'GAD-7', BURNOUT:t('번아웃','Burnout'), DSI:t('자아분화','Self-Diff.') };
               const series = scored.map(type => {
                 const rows = testHistory
                   .filter(h => h.test_type === type && h.score != null)
@@ -4287,7 +4300,7 @@ function PsychologicalTestSystem() {
 
               return (
                 <div className="mb-4 p-4 bg-white rounded-2xl border border-gray-100">
-                  <div className="text-xs font-bold text-gray-600 mb-2">📉 점수 시계열 차트</div>
+                  <div className="text-xs font-bold text-gray-600 mb-2">📉 {t("점수 시계열 차트","Score Timeline")}</div>
                   <div className="flex flex-wrap gap-3 mb-2">
                     {series.map(s => (
                       <div key={s.type} className="flex items-center gap-1">
@@ -4360,7 +4373,7 @@ function PsychologicalTestSystem() {
                           </span>
                         )}
                         {prevSame && (
-                          <span className="text-xs bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full border border-emerald-100">재검사</span>
+                          <span className="text-xs bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full border border-emerald-100">{t("재검사","Retest")}</span>
                         )}
                       </div>
                     </div>
@@ -4376,29 +4389,26 @@ function PsychologicalTestSystem() {
           <div>
             <Msg msg={referralMsg} />
             {referralLoading ? (
-              <div className="text-center py-8 text-gray-400">로딩 중...</div>
+              <div className="text-center py-8 text-gray-400">{t("로딩 중...","Loading...")}</div>
             ) : referralData ? (
               <div className="space-y-4">
-                {/* 내 초대 코드 */}
                 <div className="bg-gradient-to-r from-green-500 to-purple-600 rounded-2xl p-5 text-white">
-                  <p className="text-xs opacity-75 mb-1">내 초대 코드</p>
+                  <p className="text-xs opacity-75 mb-1">{t("내 초대 코드","My Invite Code")}</p>
                   <div className="text-3xl font-bold tracking-widest mb-3">{referralData.code}</div>
                   <button
                     onClick={() => copyInviteLink(referralData.inviteUrl)}
                     className="w-full bg-white/20 hover:bg-white/30 text-white py-2.5 rounded-xl font-semibold text-sm transition"
-                  >🔗 초대 링크 복사</button>
+                  >🔗 {t("초대 링크 복사","Copy invite link")}</button>
                 </div>
 
-                {/* 보상 안내 */}
                 <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-1.5">
-                  <p className="font-bold text-amber-800 text-sm mb-2">🎁 초대 보상</p>
-                  <p className="text-sm text-amber-700">✦ 친구가 링크로 가입하면 친구에게 <strong>+10 크레딧</strong></p>
-                  <p className="text-sm text-amber-700">✦ 친구가 첫 결제 완료 시 나에게 <strong>+30 크레딧</strong></p>
+                  <p className="font-bold text-amber-800 text-sm mb-2">🎁 {t("초대 보상","Referral Rewards")}</p>
+                  <p className="text-sm text-amber-700">✦ {t(<>친구가 링크로 가입하면 친구에게 <strong>+10 크레딧</strong></>, <>Friend gets <strong>+10 credits</strong> when they sign up</>)}</p>
+                  <p className="text-sm text-amber-700">✦ {t(<>친구가 첫 결제 완료 시 나에게 <strong>+30 크레딧</strong></>, <>You get <strong>+30 credits</strong> when friend makes first purchase</>)}</p>
                 </div>
 
-                {/* 통계 */}
                 <div className="grid grid-cols-3 gap-3">
-                  {[['초대', referralData.stats.totalInvited],['완료', referralData.stats.completed],['획득', referralData.stats.totalEarned + ' cr']].map(([label, val]) => (
+                  {[[t('초대','Invited'), referralData.stats.totalInvited],[t('완료','Done'), referralData.stats.completed],[t('획득','Earned'), referralData.stats.totalEarned + ' cr']].map(([label, val]) => (
                     <div key={label} className="bg-white rounded-2xl p-4 text-center border border-gray-100">
                       <div className="text-2xl font-bold text-green-700">{val}</div>
                       <div className="text-xs text-gray-400 mt-1">{label}</div>
@@ -4406,19 +4416,18 @@ function PsychologicalTestSystem() {
                   ))}
                 </div>
 
-                {/* 초대 목록 */}
                 {referralList.length > 0 && (
                   <div>
-                    <p className="font-semibold text-gray-700 text-sm mb-2">초대 목록</p>
+                    <p className="font-semibold text-gray-700 text-sm mb-2">{t("초대 목록","Invite List")}</p>
                     <div className="space-y-2">
                       {referralList.map((r, i) => (
                         <div key={i} className="bg-white rounded-xl p-3 flex items-center justify-between border border-gray-100">
                           <div>
                             <span className="text-sm font-medium text-gray-700">{r.referee_email_masked}</span>
-                            <span className="text-xs text-gray-400 ml-2">{new Date(r.created_at).toLocaleDateString('ko-KR')}</span>
+                            <span className="text-xs text-gray-400 ml-2">{new Date(r.created_at).toLocaleDateString(lang === 'en' ? 'en-US' : 'ko-KR')}</span>
                           </div>
                           <span className={`text-xs font-semibold px-2 py-1 rounded-full ${r.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                            {r.status === 'completed' ? '완료 +'+r.referrer_bonus+'cr' : '대기 중'}
+                            {r.status === 'completed' ? t('완료','Done') +' +'+r.referrer_bonus+'cr' : t('대기 중','Pending')}
                           </span>
                         </div>
                       ))}
@@ -4427,20 +4436,19 @@ function PsychologicalTestSystem() {
                 )}
               </div>
             ) : (
-              <button onClick={loadReferralData} className="w-full bg-green-700 text-white py-3 rounded-xl font-bold hover:bg-green-800 transition">초대 코드 불러오기</button>
+              <button onClick={loadReferralData} className="w-full bg-green-700 text-white py-3 rounded-xl font-bold hover:bg-green-800 transition">{t("초대 코드 불러오기","Load invite code")}</button>
             )}
 
-            {/* 친구 초대 코드 입력 (내가 코드 적용) */}
             <div className="mt-5 pt-5 border-t border-gray-100">
-              <p className="font-semibold text-gray-700 text-sm mb-2">친구 초대 코드 입력</p>
+              <p className="font-semibold text-gray-700 text-sm mb-2">{t("친구 초대 코드 입력","Enter a friend's invite code")}</p>
               <div className="flex gap-2">
                 <input
-                  type="text" placeholder="PSY코드 입력"
+                  type="text" placeholder={t("PSY코드 입력","Enter PSY code")}
                   value={referralInput}
                   onChange={e => setReferralInput(e.target.value.toUpperCase())}
                   className="flex-1 px-4 py-2.5 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm font-mono"
                 />
-                <button onClick={applyReferralCode} className="bg-green-700 text-white px-4 py-2.5 rounded-xl font-semibold text-sm hover:bg-green-800 transition">적용</button>
+                <button onClick={applyReferralCode} className="bg-green-700 text-white px-4 py-2.5 rounded-xl font-semibold text-sm hover:bg-green-800 transition">{t("적용","Apply")}</button>
               </div>
             </div>
           </div>
@@ -4451,23 +4459,21 @@ function PsychologicalTestSystem() {
           <div className="bg-white rounded-2xl p-6 border border-gray-100 text-center space-y-4">
             <div className="text-5xl">🏥</div>
             <div>
-              <h3 className="font-bold text-gray-800 text-lg mb-1">전문 상담 기관 안내</h3>
+              <h3 className="font-bold text-gray-800 text-lg mb-1">{t("전문 상담 기관 안내","Professional Counseling Centers")}</h3>
               <p className="text-sm text-gray-500 leading-relaxed">
-                마음풀은 심리검사 및 AI 상담 서비스를 제공합니다.<br/>
-                전문 상담사와의 상담은 각 기관에 직접 연락하시거나<br/>
-                아래 버튼을 눌러 가까운 상담센터를 찾아보세요.
+                {t(<>마음풀은 심리검사 및 AI 상담 서비스를 제공합니다.<br/>전문 상담사와의 상담은 각 기관에 직접 연락하시거나<br/>아래 버튼을 눌러 가까운 상담센터를 찾아보세요.</>, <>Maumful provides psychological assessments and AI counseling.<br/>For professional counseling, contact a center directly or<br/>tap below to find one near you.</>)}
               </p>
             </div>
             <button onClick={() => { setView('counseling'); window.scrollTo({ top:0, behavior:'smooth' }); }}
               className="inline-block bg-teal-600 hover:bg-teal-700 text-white font-bold text-sm px-6 py-3 rounded-xl transition">
-              🏥 상담센터 찾기 →
+              🏥 {t("상담센터 찾기 →","Find a Center →")}
             </button>
           </div>
         )}
                 {myPageTab === 'settings' && (
           <div className="space-y-3">
             <div className="bg-white rounded-2xl p-5 border border-gray-100">
-              <h4 className="font-bold text-gray-700 mb-3">언어 설정</h4>
+              <h4 className="font-bold text-gray-700 mb-3">{t("언어 설정","Language")}</h4>
               <div className="flex gap-2">
                 {[['ko','한국어'],['en','English']].map(([lang, label]) => (
                   <button key={lang} onClick={async () => { await api.updateMe({ locale: lang }); setCurrentUser(p => ({ ...p, locale: lang })); tokenStore.setUser({ ...currentUser, locale: lang }); }}
@@ -4480,15 +4486,17 @@ function PsychologicalTestSystem() {
 
             {/* 🧠 AI 상담 해석 방식 */}
             <div className="bg-white rounded-2xl p-5 border border-gray-100">
-              <h4 className="font-bold text-gray-700 mb-1">AI 상담 해석 방식</h4>
-              <p className="text-xs text-gray-400 mb-3">검사 결과를 어떤 관점으로 해석할지 선택합니다</p>
+              <h4 className="font-bold text-gray-700 mb-1">{t("AI 상담 해석 방식","AI Counseling Mode")}</h4>
+              <p className="text-xs text-gray-400 mb-3">{t("검사 결과를 어떤 관점으로 해석할지 선택합니다","Choose how AI interprets your results")}</p>
               <div className="grid gap-2">
                 {[
-                  { mode: 'psychological', icon: '🧠', label: '심리상담 (기본)',
-                    desc: '심리학 이론과 과학적 근거를 바탕으로 해석합니다',
+                  { mode: 'psychological', icon: '🧠',
+                    label: t('심리상담 (기본)','Psychology (default)'),
+                    desc: t('심리학 이론과 과학적 근거를 바탕으로 해석합니다','Interpreted through psychological theory and scientific evidence'),
                     activeClass: 'border-green-500 bg-green-50', checkClass: 'text-green-600' },
-                  { mode: 'biblical', icon: '✝️', label: '기독교 상담',
-                    desc: '성경 말씀과 기독교 신앙을 기반으로 해석합니다',
+                  { mode: 'biblical', icon: '✝️',
+                    label: t('기독교 상담','Christian Counseling'),
+                    desc: t('성경 말씀과 기독교 신앙을 기반으로 해석합니다','Interpreted through Scripture and Christian faith'),
                     activeClass: 'border-purple-400 bg-purple-50', checkClass: 'text-purple-600' },
                 ].map(({ mode, icon, label, desc, activeClass, checkClass }) => (
                   <button key={mode} onClick={() => updateCounselingMode(mode)}
@@ -4505,7 +4513,7 @@ function PsychologicalTestSystem() {
               </div>
               {counselingMode === 'biblical' && (
                 <p className="text-xs text-purple-600 mt-2 bg-purple-50 rounded-lg p-2 leading-relaxed">
-                  ✝️ 기독교 상담 모드 적용 중 — AI 분석과 채팅 상담에 성경적 관점의 해석과 권장사항이 포함됩니다
+                  ✝️ {t("기독교 상담 모드 적용 중 — AI 분석과 채팅 상담에 성경적 관점의 해석과 권장사항이 포함됩니다","Christian counseling mode active — AI analysis and chat include biblical perspectives and recommendations")}
                 </p>
               )}
             </div>
@@ -4513,18 +4521,18 @@ function PsychologicalTestSystem() {
             {/* 🔔 Web Push 알림 */}
             {pushStatus !== 'unsupported' && (
               <div className="bg-white rounded-2xl p-5 border border-gray-100">
-                <h4 className="font-bold text-gray-700 mb-1">🔔 푸시 알림</h4>
-                <p className="text-xs text-gray-400 mb-3">검사 결과 업데이트, 상담 알림을 바로 받아보세요</p>
+                <h4 className="font-bold text-gray-700 mb-1">🔔 {t("푸시 알림","Push Notifications")}</h4>
+                <p className="text-xs text-gray-400 mb-3">{t("검사 결과 업데이트, 상담 알림을 바로 받아보세요","Get instant alerts for result updates and sessions")}</p>
                 {pushStatus === 'denied' ? (
-                  <p className="text-xs text-red-500 bg-red-50 rounded-xl p-3">브라우저 알림이 차단되어 있어요. 주소 표시줄의 잠금 아이콘에서 알림 권한을 허용해 주세요.</p>
+                  <p className="text-xs text-red-500 bg-red-50 rounded-xl p-3">{t("브라우저 알림이 차단되어 있어요. 주소 표시줄의 잠금 아이콘에서 알림 권한을 허용해 주세요.","Notifications are blocked. Allow them from the lock icon in your address bar.")}</p>
                 ) : pushStatus === 'subscribed' ? (
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-green-700 font-semibold">✅ 알림 켜져 있음</span>
-                    <button onClick={unsubscribePush} className="text-xs text-gray-400 hover:text-gray-600 underline">끄기</button>
+                    <span className="text-sm text-green-700 font-semibold">✅ {t("알림 켜져 있음","Notifications on")}</span>
+                    <button onClick={unsubscribePush} className="text-xs text-gray-400 hover:text-gray-600 underline">{t("끄기","Turn off")}</button>
                   </div>
                 ) : (
                   <button onClick={subscribePush} className="w-full bg-green-700 text-white py-2.5 rounded-xl text-sm font-bold hover:bg-green-800 transition">
-                    🔔 알림 켜기
+                    🔔 {t("알림 켜기","Enable notifications")}
                   </button>
                 )}
               </div>
@@ -4532,26 +4540,26 @@ function PsychologicalTestSystem() {
 
             {currentUser?.email && !currentUser?.social_provider && !currentUser?.is_email_verified && (
               <div className="bg-amber-50 rounded-2xl p-4 border border-amber-200">
-                <h4 className="font-bold text-amber-800 mb-1">📧 이메일 미인증</h4>
-                <p className="text-xs text-amber-700 mb-3">이메일 인증을 완료하면 계정을 안전하게 보호할 수 있어요</p>
+                <h4 className="font-bold text-amber-800 mb-1">📧 {t("이메일 미인증","Email Not Verified")}</h4>
+                <p className="text-xs text-amber-700 mb-3">{t("이메일 인증을 완료하면 계정을 안전하게 보호할 수 있어요","Verify your email to keep your account secure")}</p>
                 <button onClick={async () => {
                   const r = await fetch('/api/auth/resend-verify', { method:'POST', headers:{ 'Content-Type':'application/json', ...api._authHeader() }, body: JSON.stringify({ email: currentUser.email }) }).then(r=>r.json());
-                  alert(r.success ? '인증 이메일을 발송했어요!' : r.error || '발송 실패');
+                  alert(r.success ? t('인증 이메일을 발송했어요!','Verification email sent!') : r.error || t('발송 실패','Send failed'));
                 }} className="w-full bg-amber-500 text-white py-2.5 rounded-xl text-sm font-bold hover:bg-amber-600 transition">
-                  📧 인증 이메일 재발송
+                  📧 {t("인증 이메일 재발송","Resend verification email")}
                 </button>
               </div>
             )}
 
             {currentUser?.email && !currentUser?.social_provider && (
               <div className="bg-white rounded-2xl p-5 border border-gray-100">
-                <h4 className="font-bold text-gray-700 mb-3">비밀번호 변경</h4>
+                <h4 className="font-bold text-gray-700 mb-3">{t("비밀번호 변경","Change Password")}</h4>
                 <div className="space-y-2 mb-3">
-                  <input id="cp-current" type="password" placeholder="현재 비밀번호"
+                  <input id="cp-current" type="password" placeholder={t("현재 비밀번호","Current password")}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm" />
-                  <input id="cp-new" type="password" placeholder="새 비밀번호 (8자 이상)"
+                  <input id="cp-new" type="password" placeholder={t("새 비밀번호 (8자 이상)","New password (min. 8 chars)")}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm" />
-                  <input id="cp-confirm" type="password" placeholder="새 비밀번호 확인"
+                  <input id="cp-confirm" type="password" placeholder={t("새 비밀번호 확인","Confirm new password")}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm" />
                 </div>
                 {changePwMsg.text && (
@@ -4563,32 +4571,32 @@ function PsychologicalTestSystem() {
                   const cur  = document.getElementById('cp-current')?.value || '';
                   const nw   = document.getElementById('cp-new')?.value || '';
                   const conf = document.getElementById('cp-confirm')?.value || '';
-                  if (!cur || !nw || !conf) { setChangePwMsg({ type: 'error', text: '모든 항목을 입력해주세요.' }); return; }
-                  if (nw.length < 8) { setChangePwMsg({ type: 'error', text: '비밀번호는 8자 이상이어야 합니다.' }); return; }
-                  if (nw !== conf) { setChangePwMsg({ type: 'error', text: '새 비밀번호가 일치하지 않습니다.' }); return; }
-                  setChangePwMsg({ type: 'loading', text: '변경 중...' });
+                  if (!cur || !nw || !conf) { setChangePwMsg({ type: 'error', text: t('모든 항목을 입력해주세요.','Please fill in all fields.') }); return; }
+                  if (nw.length < 8) { setChangePwMsg({ type: 'error', text: t('비밀번호는 8자 이상이어야 합니다.','Password must be at least 8 characters.') }); return; }
+                  if (nw !== conf) { setChangePwMsg({ type: 'error', text: t('새 비밀번호가 일치하지 않습니다.','Passwords do not match.') }); return; }
+                  setChangePwMsg({ type: 'loading', text: t('변경 중...','Updating...') });
                   const r = await fetch('/api/auth/change-password', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', ...api._authHeader() },
                     body: JSON.stringify({ currentPassword: cur, newPassword: nw }),
                   }).then(r => r.json());
                   if (r.success) {
-                    setChangePwMsg({ type: 'success', text: '비밀번호가 변경되었습니다.' });
+                    setChangePwMsg({ type: 'success', text: t('비밀번호가 변경되었습니다.','Password updated successfully.') });
                     document.getElementById('cp-current').value = '';
                     document.getElementById('cp-new').value = '';
                     document.getElementById('cp-confirm').value = '';
                   } else {
-                    setChangePwMsg({ type: 'error', text: r.error || '변경 실패' });
+                    setChangePwMsg({ type: 'error', text: r.error || t('변경 실패','Update failed') });
                   }
                 }} className="w-full bg-green-700 text-white py-3 rounded-xl text-sm font-bold hover:bg-green-800 transition">
-                  비밀번호 변경
+                  {t("비밀번호 변경","Change Password")}
                 </button>
               </div>
             )}
 
-            <button onClick={async () => { if (window.confirm('정말 탈퇴하시겠습니까?')) { await api.deleteMe(); handleLogout(); } }}
+            <button onClick={async () => { if (window.confirm(t('정말 탈퇴하시겠습니까?','Are you sure you want to delete your account?'))) { await api.deleteMe(); handleLogout(); } }}
               className="w-full bg-red-50 text-red-500 border border-red-200 py-3 rounded-xl text-sm font-semibold hover:bg-red-100 transition">
-              회원 탈퇴
+              {t("회원 탈퇴","Delete Account")}
             </button>
             <button onClick={handleLogout}
               className="w-full bg-gray-100 text-gray-600 py-3 rounded-xl text-sm font-semibold hover:bg-gray-200 transition">
@@ -8938,7 +8946,7 @@ function PsychologicalTestSystem() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">검사 완료!</h1>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">{t("검사 완료!", "Assessment Complete!")}</h1>
           <div className="flex flex-wrap justify-center gap-2 mb-6">
             {pendingTests.map(t => (
               <span key={t} className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-bold border border-green-300">
@@ -8949,28 +8957,35 @@ function PsychologicalTestSystem() {
 
           {/* AI 상담 체험 */}
           <div className="mb-4 text-left">
-            <div className="text-sm font-bold text-blue-800 mb-1">💬 AI 상담 체험하기</div>
-            <div className="text-xs text-blue-600 mb-3">검사 결과를 바탕으로 AI와 3회 무료 상담을 받아보세요</div>
+            <div className="text-sm font-bold text-blue-800 mb-1">💬 {t("AI 상담 체험하기", "Try AI Counseling")}</div>
+            <div className="text-xs text-blue-600 mb-3">{t("검사 결과를 바탕으로 AI와 3회 무료 상담을 받아보세요", "Get 3 free AI counseling sessions based on your results")}</div>
             <ChatBox testType={completedTest} initialPrompts={
-              ['PHQ9','GAD7'].includes(completedTest) ? [
+              ['PHQ9','GAD7'].includes(completedTest) ? (lang === 'en' ? [
+                'What do my results mean?',
+                'What can I do in my daily life?',
+                'Do I need professional counseling?'
+              ] : [
                 '제 검사 결과가 어떤 의미인지 설명해주세요',
                 '일상에서 할 수 있는 것이 있나요?',
                 '전문가 상담이 필요한 수준인가요?'
+              ]) : (lang === 'en' ? [
+                'Please explain my overall results.',
+                'What should I pay most attention to?'
               ] : [
                 '검사 결과 전체적으로 설명해주세요',
                 '가장 주목해야 할 부분은 무엇인가요?'
-              ]
+              ])
             } />
           </div>
 
           {/* 비로그인: 회원가입 유도 */}
           {!isLoggedIn && (
             <div className="bg-gradient-to-r from-green-50 to-teal-50 border border-green-200 rounded-xl p-4 mb-4">
-              <div className="text-sm font-bold text-green-800 mb-1">🌱 결과를 저장하고 싶으신가요?</div>
-              <div className="text-xs text-green-700 mb-3">무료 가입하면 검사 이력 저장 + 20 크레딧이 지급됩니다</div>
+              <div className="text-sm font-bold text-green-800 mb-1">🌱 {t("결과를 저장하고 싶으신가요?", "Want to save your results?")}</div>
+              <div className="text-xs text-green-700 mb-3">{t("무료 가입하면 검사 이력 저장 + 20 크레딧이 지급됩니다", "Sign up free to save your history and get 20 credits")}</div>
               <button onClick={() => setView('memberSignup')}
                 className="w-full bg-green-600 text-white py-2.5 rounded-xl font-bold text-sm hover:bg-green-700 transition">
-                무료로 가입하기 →
+                {t("무료로 가입하기 →", "Sign up free →")}
               </button>
             </div>
           )}
@@ -8978,22 +8993,22 @@ function PsychologicalTestSystem() {
           {/* 다음 검사 추천 */}
           {(() => {
             const NEXT = {
-              PHQ9:    [{ id:'GAD7',    name:'불안 자가점검',     emoji:'💙', free:true  }, { id:'DASS21',  name:'우울·불안·스트레스', emoji:'🌊', free:false }],
-              GAD7:    [{ id:'PHQ9',    name:'우울 자가점검',     emoji:'🌱', free:true  }, { id:'DASS21',  name:'우울·불안·스트레스', emoji:'🌊', free:false }],
-              DASS21:  [{ id:'BIG5',    name:'성격 5요인',        emoji:'🧠', free:false }, { id:'BURNOUT', name:'번아웃 자가점검',     emoji:'🔥', free:false }],
-              BIG5:    [{ id:'LOST',    name:'행동 운영체계',     emoji:'🧭', free:false }, { id:'DSI',     name:'자기분화 반응성',    emoji:'🪞', free:false }],
-              LOST:    [{ id:'BIG5',    name:'성격 5요인',        emoji:'🧠', free:false }, { id:'BURNOUT', name:'번아웃 자가점검',     emoji:'🔥', free:false }],
-              BURNOUT: [{ id:'PHQ9',    name:'우울 자가점검',     emoji:'🌱', free:true  }, { id:'DASS21',  name:'우울·불안·스트레스', emoji:'🌊', free:false }],
-              SCT:     [{ id:'DSI',     name:'자기분화 반응성',   emoji:'🪞', free:false }, { id:'BIG5',    name:'성격 5요인',         emoji:'🧠', free:false }],
-              DSI:     [{ id:'SCT',     name:'자기반응 완성',     emoji:'✍️', free:false }, { id:'BIG5',    name:'성격 5요인',         emoji:'🧠', free:false }],
-              RIASEC:  [{ id:'VALUES',  name:'직업가치관',        emoji:'💎', free:false }, { id:'BIG5',    name:'성격 5요인',         emoji:'🧠', free:false }],
-              VALUES:  [{ id:'RIASEC',  name:'Holland RIASEC',   emoji:'🔍', free:false }, { id:'BIG5',    name:'성격 5요인',         emoji:'🧠', free:false }],
+              PHQ9:    [{ id:'GAD7',    name:t('불안 자가점검','Anxiety Screening'),     emoji:'💙', free:true  }, { id:'DASS21',  name:t('우울·불안·스트레스','Depression·Anxiety·Stress'), emoji:'🌊', free:false }],
+              GAD7:    [{ id:'PHQ9',    name:t('우울 자가점검','Depression Screening'),  emoji:'🌱', free:true  }, { id:'DASS21',  name:t('우울·불안·스트레스','Depression·Anxiety·Stress'), emoji:'🌊', free:false }],
+              DASS21:  [{ id:'BIG5',    name:t('성격 5요인','Big Five'),                 emoji:'🧠', free:false }, { id:'BURNOUT', name:t('번아웃 자가점검','Burnout Screening'),     emoji:'🔥', free:false }],
+              BIG5:    [{ id:'LOST',    name:t('행동 운영체계','Behavioral Style'),      emoji:'🧭', free:false }, { id:'DSI',     name:t('자기분화 반응성','Self-Differentiation'), emoji:'🪞', free:false }],
+              LOST:    [{ id:'BIG5',    name:t('성격 5요인','Big Five'),                 emoji:'🧠', free:false }, { id:'BURNOUT', name:t('번아웃 자가점검','Burnout Screening'),     emoji:'🔥', free:false }],
+              BURNOUT: [{ id:'PHQ9',    name:t('우울 자가점검','Depression Screening'),  emoji:'🌱', free:true  }, { id:'DASS21',  name:t('우울·불안·스트레스','Depression·Anxiety·Stress'), emoji:'🌊', free:false }],
+              SCT:     [{ id:'DSI',     name:t('자기분화 반응성','Self-Differentiation'),emoji:'🪞', free:false }, { id:'BIG5',    name:t('성격 5요인','Big Five'),                  emoji:'🧠', free:false }],
+              DSI:     [{ id:'SCT',     name:t('자기반응 완성','Self-Response'),         emoji:'✍️', free:false }, { id:'BIG5',    name:t('성격 5요인','Big Five'),                  emoji:'🧠', free:false }],
+              RIASEC:  [{ id:'VALUES',  name:t('직업가치관','Work Values'),              emoji:'💎', free:false }, { id:'BIG5',    name:t('성격 5요인','Big Five'),                  emoji:'🧠', free:false }],
+              VALUES:  [{ id:'RIASEC',  name:'Holland RIASEC',                           emoji:'🔍', free:false }, { id:'BIG5',    name:t('성격 5요인','Big Five'),                  emoji:'🧠', free:false }],
             };
             const suggestions = NEXT[completedTest];
             if (!suggestions) return null;
             return (
               <div className="mb-4">
-                <p className="text-xs font-bold text-gray-500 mb-2 text-left">📋 이런 검사도 해보세요</p>
+                <p className="text-xs font-bold text-gray-500 mb-2 text-left">📋 {t("이런 검사도 해보세요", "Try these assessments too")}</p>
                 <div className="flex gap-2">
                   {suggestions.map(s => (
                     <button key={s.id}
@@ -9001,7 +9016,7 @@ function PsychologicalTestSystem() {
                       className="flex-1 bg-green-50 border border-green-200 rounded-xl py-2.5 px-3 text-left hover:bg-green-100 transition">
                       <div className="text-base mb-0.5">{s.emoji}</div>
                       <div className="text-xs font-bold text-green-800">{s.name}</div>
-                      <div className="text-xs text-green-600">{s.free ? '무료' : '10 cr'}</div>
+                      <div className="text-xs text-green-600">{s.free ? t('무료','Free') : '10 cr'}</div>
                     </button>
                   ))}
                 </div>
@@ -9018,7 +9033,7 @@ function PsychologicalTestSystem() {
           <button
             onClick={() => { if (isLoggedIn) { setView('memberDashboard'); } else { setView('landing'); } }}
             className="w-full bg-gray-100 text-gray-600 py-2.5 rounded-xl font-semibold text-sm hover:bg-gray-200 transition">
-            {isLoggedIn ? '대시보드로 →' : '시작화면으로'}
+            {isLoggedIn ? t('대시보드로 →','Dashboard →') : t('시작화면으로','Home')}
           </button>
         </div>
       </div>
@@ -9100,12 +9115,17 @@ function PsychologicalTestSystem() {
           <RecoveryCard testType="SCT" score={0} level="low" />
           <ExpertCTA testType="SCT" score={0} level="low"
             onContinueAI={() => { setChatOpen(true); window.scrollTo(0,document.body.scrollHeight); }} />
-          <ChatBox testType="SCT" initialPrompts={[
+          <ChatBox testType="SCT" initialPrompts={t([
             "SRCI 검사 결과에서 주목해야 할 패턴은 무엇인가요?",
             "자기입장 유지와 관련된 응답을 분석해 주세요",
             "정서반응성을 건강하게 조절하려면 어떻게 해야 하나요?",
             "대인관계에서 건강한 경계를 설정하는 방법을 알려주세요",
-          ]} />
+          ],[
+            "What patterns in my SRCI results should I pay attention to?",
+            "Please analyze my responses related to maintaining my own perspective",
+            "How can I regulate emotional reactivity in a healthy way?",
+            "How do I set healthy boundaries in interpersonal relationships?",
+          ])} />
         </div>
       </div>
     );
@@ -9195,12 +9215,17 @@ function PsychologicalTestSystem() {
           <RecoveryCard testType="DSI" score={0} level="low" />
           <ExpertCTA testType="DSI" score={0} level="low"
             onContinueAI={() => { setChatOpen(true); window.scrollTo(0,document.body.scrollHeight); }} />
-          <ChatBox testType="DSI" initialPrompts={[
+          <ChatBox testType="DSI" initialPrompts={t([
             "SDRI 소척도 결과가 어떤 의미인지 설명해 주세요",
             "자기입장 유지 능력을 높이는 방법이 있나요?",
             "정서적 단절 경향을 어떻게 이해하면 좋을까요?",
             "융합·관계의존이 높을 때 어떻게 경계를 설정하나요?",
-          ]} />
+          ],[
+            "What do my SDRI subscale results mean?",
+            "How can I improve my ability to maintain my own position?",
+            "How should I understand a tendency toward emotional detachment?",
+            "How do I set boundaries when fusion or relationship dependency is high?",
+          ])} />
           {returnToCouple && (
             <button onClick={goBackToCouple}
               className="w-full mt-4 bg-pink-500 text-white py-3 rounded-xl font-bold text-sm hover:bg-pink-600 transition">
@@ -9219,32 +9244,32 @@ function PsychologicalTestSystem() {
         {ProtectionLayers}
         <div className="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold text-green-800">😔 PHQ-9 우울 자가점검 결과</h1>
+            <h1 className="text-2xl font-bold text-green-800">😔 {t("PHQ-9 우울 자가점검 결과", "PHQ-9 Depression Screening Result")}</h1>
             <button onClick={() => setView(isLoggedIn ? "memberDashboard" : "testsIntro")} className="bg-gray-400 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-500">
-              ← 목록
+              ← {t("목록", "Back")}
             </button>
           </div>
           <div className="border rounded-lg p-4 mb-6 bg-gray-50">
-            <p className="text-sm"><strong>세션 ID:</strong> {sessionId}</p>
-            <p className="text-sm"><strong>전화번호:</strong> {userInfo.phone || "N/A"}</p>
-            <p className="text-lg font-bold mt-2">총점: {result.total}/27 ({result.level})</p>
+            <p className="text-sm"><strong>{t("세션 ID:", "Session ID:")}</strong> {sessionId}</p>
+            <p className="text-sm"><strong>{t("전화번호:", "Phone:")}</strong> {userInfo.phone || "N/A"}</p>
+            <p className="text-lg font-bold mt-2">{t("총점:", "Total:")} {result.total}/27 ({result.level})</p>
           </div>
           <div className={`p-4 rounded-lg mb-6 ${result.color === 'green' ? 'bg-green-50 border border-green-200' : result.color === 'yellow' ? 'bg-yellow-50 border border-yellow-200' : result.color === 'orange' ? 'bg-orange-50 border border-orange-200' : 'bg-red-50 border border-red-200'}`}>
-            <h3 className="font-bold mb-2">해석</h3>
+            <h3 className="font-bold mb-2">{t("해석", "Interpretation")}</h3>
             <p className="text-sm">
-              {result.total < 5 && "지금 마음이 비교적 안정적입니다."}
-              {result.total >= 5 && result.total < 10 && "마음이 조금 무거운 편입니다. 가벼운 자기돌봄이 도움이 될 수 있어요."}
-              {result.total >= 10 && result.total < 15 && "요즘 마음이 꽤 힘드신 것 같아요. 믿을 수 있는 누군가와 이야기 나눠보세요."}
-              {result.total >= 15 && result.total < 20 && "많이 지치셨군요. 아래 상담 연결을 통해 이야기 나눠보시는 것도 좋아요."}
-              {result.total >= 20 && "지금 많이 힘드신 것 같아요. 혼자 감당하지 않아도 됩니다. 아래 상담 연결을 이용해 보세요."}
+              {result.total < 5 && t("지금 마음이 비교적 안정적입니다.", "Your mind seems relatively stable right now.")}
+              {result.total >= 5 && result.total < 10 && t("마음이 조금 무거운 편입니다. 가벼운 자기돌봄이 도움이 될 수 있어요.", "You may be feeling a bit low. Light self-care can help.")}
+              {result.total >= 10 && result.total < 15 && t("요즘 마음이 꽤 힘드신 것 같아요. 믿을 수 있는 누군가와 이야기 나눠보세요.", "It seems things have been quite tough. Try talking to someone you trust.")}
+              {result.total >= 15 && result.total < 20 && t("많이 지치셨군요. 아래 상담 연결을 통해 이야기 나눠보시는 것도 좋아요.", "You seem very worn out. Reaching out for support would be a good step.")}
+              {result.total >= 20 && t("지금 많이 힘드신 것 같아요. 혼자 감당하지 않아도 됩니다. 아래 상담 연결을 이용해 보세요.", "You seem to be going through a very hard time. You don't have to face this alone — please reach out for support.")}
             </p>
           </div>
           <div className="space-y-2">
-            <h3 className="font-bold mb-2">응답 내역</h3>
+            <h3 className="font-bold mb-2">{t("응답 내역", "Response History")}</h3>
             {phq9Q.map(q => (
               <div key={q.num} className="border-b pb-2">
                 <p className="text-sm text-gray-600">{q.num}. {q.content}</p>
-                <p className="text-sm font-semibold">응답: {phq9Responses[q.num] ?? '-'}점</p>
+                <p className="text-sm font-semibold">{t("응답:", "Score:")} {phq9Responses[q.num] ?? '-'}{t("점", "")}</p>
               </div>
             ))}
           </div>
@@ -9269,12 +9294,12 @@ function PsychologicalTestSystem() {
             {!isLoggedIn && (
               <div className="mt-4 p-4 bg-gradient-to-r from-green-50 to-teal-50 border border-green-200 rounded-2xl text-center">
                 <div className="text-2xl mb-2">🌱</div>
-                <div className="font-bold text-green-800 mb-1">결과를 저장하고 싶으신가요?</div>
-                <div className="text-sm text-green-700 mb-3">무료 가입하면 검사 이력 저장 + 20 크레딧이 지급됩니다</div>
+                <div className="font-bold text-green-800 mb-1">{t("결과를 저장하고 싶으신가요?", "Want to save your results?")}</div>
+                <div className="text-sm text-green-700 mb-3">{t("무료 가입하면 검사 이력 저장 + 20 크레딧이 지급됩니다", "Sign up free to save your history and get 20 credits")}</div>
                 <button onClick={() => setView('memberSignup')}
                   className="bg-green-600 text-white px-6 py-2 rounded-xl font-bold text-sm hover:bg-green-700 transition"
                   style={{fontFamily:"'Noto Sans KR',sans-serif"}}>
-                  무료로 가입하기 →
+                  {t("무료로 가입하기 →", "Sign up free →")}
                 </button>
               </div>
             )}
@@ -9284,7 +9309,12 @@ function PsychologicalTestSystem() {
             </>);
           })()}
 {/* 💬 AI 상담 채팅 */}
-          <ChatBox testType="PHQ9" initialPrompts={[
+          <ChatBox testType="PHQ9" initialPrompts={lang === 'en' ? [
+            "What does my PHQ-9 result mean?",
+            "What is my mental state based on this score?",
+            "What can I do daily to improve depressive symptoms?",
+            "Do I need professional counseling based on this result?"
+          ] : [
             "제 PHQ-9 검사 결과가 어떤 의미인지 설명해주세요",
             "이 점수로 보아 저는 어떤 상태인가요?",
             "우울 증상을 개선하기 위해 일상에서 할 수 있는 것이 있나요?",
@@ -9301,31 +9331,31 @@ function PsychologicalTestSystem() {
         {ProtectionLayers}
         <div className="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold text-orange-800">😰 GAD-7 불안 자가점검 결과</h1>
+            <h1 className="text-2xl font-bold text-orange-800">😰 {t("GAD-7 불안 자가점검 결과", "GAD-7 Anxiety Screening Result")}</h1>
             <button onClick={() => setView(isLoggedIn ? "memberDashboard" : "testsIntro")} className="bg-gray-400 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-500">
-              ← 목록
+              ← {t("목록", "Back")}
             </button>
           </div>
           <div className="border rounded-lg p-4 mb-6 bg-gray-50">
-            <p className="text-sm"><strong>세션 ID:</strong> {sessionId}</p>
-            <p className="text-sm"><strong>전화번호:</strong> {userInfo.phone || "N/A"}</p>
-            <p className="text-lg font-bold mt-2">총점: {result.total}/21 ({result.level})</p>
+            <p className="text-sm"><strong>{t("세션 ID:", "Session ID:")}</strong> {sessionId}</p>
+            <p className="text-sm"><strong>{t("전화번호:", "Phone:")}</strong> {userInfo.phone || "N/A"}</p>
+            <p className="text-lg font-bold mt-2">{t("총점:", "Total:")} {result.total}/21 ({result.level})</p>
           </div>
           <div className={`p-4 rounded-lg mb-6 ${result.color === 'green' ? 'bg-green-50 border border-green-200' : result.color === 'yellow' ? 'bg-yellow-50 border border-yellow-200' : result.color === 'orange' ? 'bg-orange-50 border border-orange-200' : 'bg-red-50 border border-red-200'}`}>
-            <h3 className="font-bold mb-2">해석</h3>
+            <h3 className="font-bold mb-2">{t("해석", "Interpretation")}</h3>
             <p className="text-sm">
-              {result.total < 5 && "지금 마음이 비교적 안정적입니다."}
-              {result.total >= 5 && result.total < 10 && "마음이 조금 조여드는 편입니다. 충분히 쉬어가는 것이 도움이 될 수 있어요."}
-              {result.total >= 10 && result.total < 15 && "많이 긴장하고 걱정이 많으신 것 같아요. 부담을 나눌 수 있는 공간을 찾아보세요."}
-              {result.total >= 15 && "요즘 마음이 많이 불안하신 것 같아요. 아래 상담 연결을 통해 도움을 받아보세요."}
+              {result.total < 5 && t("지금 마음이 비교적 안정적입니다.", "Your anxiety level seems minimal right now.")}
+              {result.total >= 5 && result.total < 10 && t("마음이 조금 조여드는 편입니다. 충분히 쉬어가는 것이 도움이 될 수 있어요.", "You may be feeling some tension. Getting enough rest can help.")}
+              {result.total >= 10 && result.total < 15 && t("많이 긴장하고 걱정이 많으신 것 같아요. 부담을 나눌 수 있는 공간을 찾아보세요.", "It seems you're quite tense and worried. Find a space to share the burden.")}
+              {result.total >= 15 && t("요즘 마음이 많이 불안하신 것 같아요. 아래 상담 연결을 통해 도움을 받아보세요.", "Your anxiety seems quite high. Please reach out for support below.")}
             </p>
           </div>
           <div className="space-y-2">
-            <h3 className="font-bold mb-2">응답 내역</h3>
+            <h3 className="font-bold mb-2">{t("응답 내역", "Response History")}</h3>
             {gad7Q.map(q => (
               <div key={q.num} className="border-b pb-2">
                 <p className="text-sm text-gray-600">{q.num}. {q.content}</p>
-                <p className="text-sm font-semibold">응답: {gad7Responses[q.num] ?? '-'}점</p>
+                <p className="text-sm font-semibold">{t("응답:", "Score:")} {gad7Responses[q.num] ?? '-'}{t("점", "")}</p>
               </div>
             ))}
           </div>
@@ -9350,12 +9380,12 @@ function PsychologicalTestSystem() {
             {!isLoggedIn && (
               <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl text-center">
                 <div className="text-2xl mb-2">💙</div>
-                <div className="font-bold text-blue-800 mb-1">결과를 저장하고 싶으신가요?</div>
-                <div className="text-sm text-blue-700 mb-3">무료 가입하면 검사 이력 저장 + 20 크레딧이 지급됩니다</div>
+                <div className="font-bold text-blue-800 mb-1">{t("결과를 저장하고 싶으신가요?", "Want to save your results?")}</div>
+                <div className="text-sm text-blue-700 mb-3">{t("무료 가입하면 검사 이력 저장 + 20 크레딧이 지급됩니다", "Sign up free to save your history and get 20 credits")}</div>
                 <button onClick={() => setView('memberSignup')}
                   className="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold text-sm hover:bg-blue-700 transition"
                   style={{fontFamily:"'Noto Sans KR',sans-serif"}}>
-                  무료로 가입하기 →
+                  {t("무료로 가입하기 →", "Sign up free →")}
                 </button>
               </div>
             )}
@@ -9365,7 +9395,12 @@ function PsychologicalTestSystem() {
             </>);
           })()}
 {/* 💬 AI 상담 채팅 */}
-          <ChatBox testType="GAD7" initialPrompts={[
+          <ChatBox testType="GAD7" initialPrompts={lang === 'en' ? [
+            "What does my GAD-7 result mean?",
+            "Are there specific items in the GAD-7 I should pay attention to?",
+            "How are anxiety and daily functioning related?",
+            "What are immediate strategies to reduce anxiety?"
+          ] : [
             "불안 증상이 심한 경우 초기 상담 전략은 무엇인가요?",
             "GAD-7 결과에서 특히 주목해야 할 문항이 있나요?",
             "불안과 일상 기능 저하의 관계를 어떻게 이해하면 좋을까요?",
@@ -9465,12 +9500,17 @@ function PsychologicalTestSystem() {
               </button>
             </div>
           )}
-          <ChatBox testType="RIASEC" initialPrompts={[
+          <ChatBox testType="RIASEC" initialPrompts={t([
             `제 RIASEC 결과 ${dominantType}형이 어떤 의미인지 설명해주세요`,
             "이 유형에 맞는 진로 방향을 추천해 주세요",
             "현재 하는 일과 제 흥미 유형의 적합도가 어떤가요?",
             "강점을 살릴 수 있는 구체적인 직업 활동은 무엇인가요?",
-          ]} />
+          ],[
+            `What does my RIASEC type ${dominantType} mean?`,
+            "What career paths suit my interest type?",
+            "How well does my current job match my interest type?",
+            "What specific work activities best leverage my strengths?",
+          ])} />
         </div>
       </div>
     );
@@ -9564,12 +9604,17 @@ function PsychologicalTestSystem() {
               </button>
             </div>
           )}
-          <ChatBox testType="VALUES" initialPrompts={[
+          <ChatBox testType="VALUES" initialPrompts={t([
             `제 1위 가치인 '${VALUES_DOMAIN_INFO[top3[0][0]].label}'가 어떤 의미인지 설명해주세요`,
             "이 가치관에 맞는 직업을 추천해 주세요",
             "현재 직업과 제 가치관이 얼마나 맞는지 분석해 주세요",
             "직업 선택 시 이 가치관을 어떻게 활용하면 좋을까요?",
-          ]} />
+          ],[
+            `What does my top work value '${VALUES_DOMAIN_INFO[top3[0][0]].label}' mean?`,
+            "What careers align with my work values?",
+            "How well does my current job match my values?",
+            "How can I use these values when choosing a career?",
+          ])} />
         </div>
       </div>
     );
@@ -9639,12 +9684,17 @@ function PsychologicalTestSystem() {
             </>);
           })()}
 {/* 💬 AI 상담 채팅 */}
-          <ChatBox testType="DASS21" initialPrompts={[
+          <ChatBox testType="DASS21" initialPrompts={t([
             "우울/불안/스트레스가 모두 높을 때 우선순위는 무엇인가요?",
             "DASS-21 결과에서 가장 시급한 개입 영역은 어디인가요?",
             "세 가지 영역 간의 상호작용을 어떻게 이해해야 하나요?",
             "각 영역별 맞춤 상담 전략을 제안해주세요"
-          ]} />
+          ],[
+            "What should I prioritize when depression, anxiety, and stress are all high?",
+            "Which area of my DASS-21 results needs the most urgent attention?",
+            "How should I understand the interaction between the three domains?",
+            "Can you suggest tailored strategies for each domain?"
+          ])} />
         </div>
       </div>
     );
@@ -9870,12 +9920,17 @@ function PsychologicalTestSystem() {
             </>);
           })()}
 {/* 💬 AI 상담 채팅 */}
-          <ChatBox testType="BURNOUT" initialPrompts={[
+          <ChatBox testType="BURNOUT" initialPrompts={t([
             "소진 수준이 높은 내담자를 위한 즉각적인 개입 방법은?",
             "K-MBI+ 결과에서 가장 우선적으로 다뤄야 할 영역은?",
             "업무 복귀를 위한 단계적 접근 방법을 알려주세요",
             "번아웃 회복을 위한 장기적인 전략을 제안해주세요"
-          ]} />
+          ],[
+            "What immediate interventions help someone with high burnout?",
+            "Which K-MBI+ area should I address first?",
+            "What is a step-by-step approach to returning to work?",
+            "Can you suggest a long-term strategy for burnout recovery?"
+          ])} />
         </div>
       </div>
     );
@@ -9966,12 +10021,17 @@ function PsychologicalTestSystem() {
           <ExpertCTA testType="BIG5" score={0} level="low"
             onContinueAI={() => { setChatOpen(true); window.scrollTo(0,document.body.scrollHeight); }} />
 {/* 💬 AI 상담 채팅 */}
-          <ChatBox testType="BIG5" initialPrompts={[
+          <ChatBox testType="BIG5" initialPrompts={t([
             "성격 특성을 상담에 어떻게 활용할 수 있나요?",
             "Big-5 결과에서 가장 주목해야 할 요인은 무엇인가요?",
             "성격 강점을 발견하고 개발하는 방법은?",
             "성격 특성 간의 상호작용이 삶에 어떤 영향을 미치나요?"
-          ]} />
+          ],[
+            "How can I use personality traits in counseling?",
+            "Which Big-5 factor should I pay most attention to?",
+            "How can I discover and develop my personality strengths?",
+            "How do personality traits interact and affect my life?"
+          ])} />
           {returnToCouple && (
             <button onClick={goBackToCouple}
               className="w-full mt-4 bg-pink-500 text-white py-3 rounded-xl font-bold text-sm hover:bg-pink-600 transition">
@@ -10028,8 +10088,8 @@ function PsychologicalTestSystem() {
 
             {/* 핵심 특징 */}
             <div className="flex flex-wrap gap-2 justify-center mb-2">
-              {typeInfo.traits.map(t => (
-                <span key={t} className="bg-teal-50 border border-teal-200 text-teal-800 px-3 py-1 rounded-full text-sm font-semibold">{t}</span>
+              {typeInfo.traits.map(tr => (
+                <span key={tr} className="bg-teal-50 border border-teal-200 text-teal-800 px-3 py-1 rounded-full text-sm font-semibold">{tr}</span>
               ))}
             </div>
           </div>
@@ -10111,10 +10171,10 @@ function PsychologicalTestSystem() {
                 <p className="text-sm font-semibold text-green-700 mb-2">✅ {t("잘 맞는 유형","Compatible Types")}</p>
                 <div className="flex flex-wrap gap-2">
                   {typeInfo.match.map(m => {
-                    const matchType = Object.values(LOST_TYPES).find(t => t.name === m);
+                    const matchType = LOST_TYPES[m];
                     return (
                       <span key={m} className="bg-green-50 border border-green-200 text-green-800 px-3 py-1 rounded-full text-sm font-semibold">
-                        {matchType ? matchType.icon : "🤝"} {m}
+                        {matchType ? matchType.icon : "🤝"} {matchType ? matchType.name : m}
                       </span>
                     );
                   })}
@@ -10124,10 +10184,10 @@ function PsychologicalTestSystem() {
                 <p className="text-sm font-semibold text-red-600 mb-2">⚡ {t("마찰이 있을 수 있는 유형","Potentially Challenging Types")}</p>
                 <div className="flex flex-wrap gap-2">
                   {typeInfo.conflict.map(c => {
-                    const conflictType = Object.values(LOST_TYPES).find(t => t.name === c);
+                    const conflictType = LOST_TYPES[c];
                     return (
                       <span key={c} className="bg-red-50 border border-red-200 text-red-800 px-3 py-1 rounded-full text-sm font-semibold">
-                        {conflictType ? conflictType.icon : "⚡"} {c}
+                        {conflictType ? conflictType.icon : "⚡"} {conflictType ? conflictType.name : c}
                       </span>
                     );
                   })}
@@ -10140,10 +10200,10 @@ function PsychologicalTestSystem() {
           <div className="bg-white rounded-xl shadow p-5">
             <h2 className="text-base font-bold text-gray-800 mb-3">🗺️ {t("전체 16유형 맵","All 16 Types")}</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              {Object.entries(LOST_TYPES).map(([code, t]) => (
+              {Object.entries(LOST_TYPES).map(([code, typ]) => (
                 <div key={code} className={`rounded-lg p-2 border text-center text-xs transition ${code === typeCode ? "border-teal-500 bg-teal-50 shadow-md scale-105" : "border-gray-200 bg-gray-50"}`}>
-                  <div className="text-xl mb-0.5">{t.icon}</div>
-                  <div className={`font-bold text-xs ${code === typeCode ? "text-teal-800" : "text-gray-700"}`}>{t.name}</div>
+                  <div className="text-xl mb-0.5">{typ.icon}</div>
+                  <div className={`font-bold text-xs ${code === typeCode ? "text-teal-800" : "text-gray-700"}`}>{typ.name}</div>
                   <div className="text-gray-400 text-xs">{code}</div>
                 </div>
               ))}
@@ -10181,12 +10241,17 @@ function PsychologicalTestSystem() {
           })()}
 {/* AI 채팅 */}
           <div className="bg-white rounded-xl shadow p-5">
-            <ChatBox testType="LOST" initialPrompts={[
+            <ChatBox testType="LOST" initialPrompts={t([
               "이 유형의 가장 큰 강점을 상담에서 어떻게 활용할 수 있나요?",
               "행동 유형이 대인관계에 미치는 영향을 설명해 주세요",
               "스트레스 반응 방식을 개선하는 방법은 무엇인가요?",
               "이 내담자에게 가장 적합한 상담 접근법은?"
-            ]} />
+            ],[
+              "How can the key strengths of this behavioral type be used in counseling?",
+              "How does this behavioral style affect interpersonal relationships?",
+              "What are ways to improve stress response patterns?",
+              "What counseling approach is best suited for this type?"
+            ])} />
           </div>
           {returnToCouple && (
             <button onClick={goBackToCouple}
