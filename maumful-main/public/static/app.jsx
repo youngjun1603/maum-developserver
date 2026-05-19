@@ -1633,19 +1633,19 @@ function PsychologicalTestSystem() {
     if (e) e.preventDefault();
     const email    = (document.getElementById('login-email')?.value || '').trim();
     const password = document.getElementById('login-pw')?.value || '';
-    if (!email || !password) { setLoginMsg({ type: 'error', text: '이메일과 비밀번호를 입력해주세요.' }); return; }
+    if (!email || !password) { setLoginMsg({ type: 'error', text: t('이메일과 비밀번호를 입력해주세요.','Please enter your email and password.') }); return; }
 
-    setLoginMsg({ type: 'loading', text: '로그인 중...' });
+    setLoginMsg({ type: 'loading', text: t('로그인 중...','Signing in...') });
     const result = await api.login(email, password);
     if (!result.success) {
       if (result.requiresVerification) {
         setLoginMsg({
           type: 'error',
-          text: `📧 이메일 인증이 필요합니다. ${result.email || ''}로 발송된 인증 메일을 확인해주세요.`,
+          text: t(`📧 이메일 인증이 필요합니다. ${result.email || ''}로 발송된 인증 메일을 확인해주세요.`,`📧 Email verification required. Please check the email sent to ${result.email || ''}.`),
         });
         setPendingVerifyEmail(result.email || '');
       } else {
-        setLoginMsg({ type: 'error', text: result.error || '로그인에 실패했습니다.' });
+        setLoginMsg({ type: 'error', text: result.error || t('로그인에 실패했습니다.','Login failed.') });
       }
       return;
     }
@@ -1677,7 +1677,7 @@ function PsychologicalTestSystem() {
       }).then(r => r.json()).then(r => {
         if (r.success) {
           setCredits(r.data.balance);
-          setLoginMsg({ type: 'success', text: `초대 코드 적용! +${r.data.credits} 크레딧이 지급되었습니다.` });
+          setLoginMsg({ type: 'success', text: t(`초대 코드 적용! +${r.data.credits} 크레딧이 지급되었습니다.`,`Referral applied! +${r.data.credits} credits added.`) });
           setTimeout(() => setLoginMsg({ type: '', text: '' }), 4000);
         }
       }).catch(() => {});
@@ -1686,10 +1686,10 @@ function PsychologicalTestSystem() {
 
   // Google Sign-In 콜백 — GSI 라이브러리가 credential 반환 시 호출
   async function handleGoogleLogin(credential) {
-    setLoginMsg({ type: 'loading', text: 'Google 로그인 중...' });
+    setLoginMsg({ type: 'loading', text: t('Google 로그인 중...','Signing in with Google...') });
     const result = await api.loginGoogle(credential);
     if (!result.success) {
-      setLoginMsg({ type: 'error', text: result.error || 'Google 로그인에 실패했습니다.' });
+      setLoginMsg({ type: 'error', text: result.error || t('Google 로그인에 실패했습니다.','Google sign-in failed.') });
       return;
     }
     const { accessToken, refreshToken, user } = result.data;
@@ -1707,10 +1707,10 @@ function PsychologicalTestSystem() {
 
   // 카카오 로그인 콜백
   async function handleKakaoLogin(accessToken) {
-    setLoginMsg({ type: 'loading', text: '카카오 로그인 중...' });
+    setLoginMsg({ type: 'loading', text: t('카카오 로그인 중...','Signing in with Kakao...') });
     const result = await api.loginKakao(accessToken);
     if (!result.success) {
-      setLoginMsg({ type: 'error', text: result.error || '카카오 로그인에 실패했습니다.' });
+      setLoginMsg({ type: 'error', text: result.error || t('카카오 로그인에 실패했습니다.','Kakao sign-in failed.') });
       return;
     }
     const { accessToken: at, refreshToken: rt, user } = result.data;
@@ -1728,7 +1728,7 @@ function PsychologicalTestSystem() {
 
   // 네이버 로그인 콜백 (팝업 postMessage로 받은 JWT 데이터 처리)
   async function handleNaverLogin(data) {
-    if (!data?.accessToken) { setLoginMsg({ type: 'error', text: '네이버 로그인에 실패했습니다.' }); return; }
+    if (!data?.accessToken) { setLoginMsg({ type: 'error', text: t('네이버 로그인에 실패했습니다.','Naver sign-in failed.') }); return; }
     const { accessToken, refreshToken, user } = data;
     tokenStore.setTokens(accessToken, refreshToken);
     tokenStore.setUser(user);
@@ -1745,28 +1745,28 @@ function PsychologicalTestSystem() {
   async function handleSignup(e) {
     if (e) e.preventDefault();
     const { email, password, pwConfirm, nickname } = signupForm;
-    if (!email || !password) { setFormMsg({ type: 'error', text: '이메일과 비밀번호는 필수입니다.' }); return; }
-    if (password !== pwConfirm) { setFormMsg({ type: 'error', text: '비밀번호가 일치하지 않습니다.' }); return; }
-    if (password.length < 8) { setFormMsg({ type: 'error', text: '비밀번호는 8자 이상이어야 합니다.' }); return; }
+    if (!email || !password) { setFormMsg({ type: 'error', text: t('이메일과 비밀번호는 필수입니다.','Email and password are required.') }); return; }
+    if (password !== pwConfirm) { setFormMsg({ type: 'error', text: t('비밀번호가 일치하지 않습니다.','Passwords do not match.') }); return; }
+    if (password.length < 8) { setFormMsg({ type: 'error', text: t('비밀번호는 8자 이상이어야 합니다.','Password must be at least 8 characters.') }); return; }
 
     // 필수 동의 확인 (개인정보보호법 제22조)
     const { terms, privacy, sensitive, overseas, age } = signupConsents;
     if (!terms || !privacy || !sensitive || !overseas || !age) {
-      setFormMsg({ type: 'error', text: '모든 필수 항목에 동의해 주세요.' }); return;
+      setFormMsg({ type: 'error', text: t('모든 필수 항목에 동의해 주세요.','Please agree to all required terms.') }); return;
     }
 
-    setFormMsg({ type: 'loading', text: '가입 처리 중...' });
+    setFormMsg({ type: 'loading', text: t('가입 처리 중...','Creating your account...') });
     // 제휴 채널 파트너 코드 전달 (localStorage에서 읽기)
     let savedPartnerCode = null;
     try { savedPartnerCode = localStorage.getItem('maumful_partner_code'); } catch {}
     const result = await api.register(email, password, nickname || email.split('@')[0], savedPartnerCode, signupConsents.marketing);
-    if (!result.success) { setFormMsg({ type: 'error', text: result.error || '가입에 실패했습니다.' }); return; }
+    if (!result.success) { setFormMsg({ type: 'error', text: result.error || t('가입에 실패했습니다.','Sign-up failed. Please try again.') }); return; }
 
     // 가입 성공 → 자동 로그인
-    setFormMsg({ type: 'loading', text: '잠시만요...' });
+    setFormMsg({ type: 'loading', text: t('잠시만요...','Just a moment...') });
     const loginResult = await api.login(email, password);
     if (!loginResult.success) {
-      setFormMsg({ type: 'success', text: '가입 완료! 아래에서 로그인해주세요.' });
+      setFormMsg({ type: 'success', text: t('가입 완료! 아래에서 로그인해주세요.','Account created! Please sign in below.') });
       setTimeout(() => { setView('memberLogin'); setFormMsg({ type: '', text: '' }); }, 1500);
       return;
     }
@@ -8321,7 +8321,7 @@ function PsychologicalTestSystem() {
         <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-6">
           {pendingTests.length > 1 && (
             <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
-              <p className="text-xs font-bold text-purple-700 mb-2">📋 검사 진행 현황 ({currentTestIndex + 1}/{pendingTests.length})</p>
+              <p className="text-xs font-bold text-purple-700 mb-2"{t("📋 검사 진행 현황","📋 Test Progress")} ({currentTestIndex + 1}/{pendingTests.length})</p>
               <div className="flex gap-2 flex-wrap">
                 {pendingTests.map((t, i) => (
                   <span key={t} className={`px-3 py-1 rounded-full text-xs font-bold border ${i < currentTestIndex ? "bg-green-100 border-green-300 text-green-700" : i === currentTestIndex ? "bg-purple-600 text-white border-purple-600" : "bg-gray-100 border-gray-300 text-gray-400"}`}>
@@ -8334,13 +8334,13 @@ function PsychologicalTestSystem() {
           <div className="text-center mb-6">
             <div className="inline-flex items-center gap-2 bg-violet-50 border border-violet-200 rounded-full px-4 py-1.5 mb-3">
               <span className="text-violet-600 font-bold text-sm">✍️ SRCI</span>
-              <span className="text-violet-400 text-xs">자기반응 완성 검사</span>
+              <span className="text-violet-400 text-xs">{t("자기반응 완성 검사","Sentence Completion Test")}</span>
             </div>
-            <h1 className="text-2xl font-bold text-violet-900 mb-1">자기반응 완성 검사</h1>
-            <p className="text-gray-400 text-sm">빈칸에 가장 먼저 떠오르는 것을 솔직하게 완성해 주세요 (25문항)</p>
+            <h1 className="text-2xl font-bold text-violet-900 mb-1">{t("자기반응 완성 검사","Sentence Completion Test")}</h1>
+            <p className="text-gray-400 text-sm">{t("빈칸에 가장 먼저 떠오르는 것을 솔직하게 완성해 주세요 (25문항)","Complete each sentence with the first thought that comes to mind (25 items)")}</p>
           </div>
           <div className="bg-violet-50 border border-violet-200 rounded-lg p-3 mb-5 text-xs text-violet-800 text-center">
-            진행: <strong>{filled}</strong> / {sdriCompletionQ.length} 문항
+            {t("진행:","Progress:")} <strong>{filled}</strong> / {sdriCompletionQ.length} {t("문항","items")}
             <div className="mt-2 bg-violet-200 rounded-full h-1.5">
               <div className="bg-violet-500 h-1.5 rounded-full transition-all" style={{width:`${(filled/sdriCompletionQ.length)*100}%`}}/>
             </div>
@@ -8360,7 +8360,7 @@ function PsychologicalTestSystem() {
                 <input type="text"
                   value={srciResponses[q.num] || ''}
                   onChange={e => setSrciResponses(p => ({...p, [q.num]: e.target.value}))}
-                  placeholder="떠오르는 대로 자유롭게..."
+                  placeholder={t("떠오르는 대로 자유롭게...","Write freely what comes to mind...")}
                   className={`w-full px-4 py-2.5 border-2 rounded-lg outline-none text-sm transition ${srciResponses[q.num]?.trim() ? 'border-violet-300 bg-violet-50 focus:border-violet-500' : 'border-gray-200 focus:border-violet-400'}`}
                 />
               </div>
@@ -8370,8 +8370,8 @@ function PsychologicalTestSystem() {
             <button onClick={submitSrci}
               className="bg-violet-600 text-white px-10 py-3 rounded-xl font-bold text-lg hover:bg-violet-700 transition">
               {pendingTests.length > 1 && currentTestIndex < pendingTests.length - 1
-                ? `다음 검사로 → (${currentTestIndex+1}/${pendingTests.length})`
-                : '검사 제출'} ({filled}/{sdriCompletionQ.length})
+                ? t(`다음 검사로 → (${currentTestIndex+1}/${pendingTests.length})`,`Next → (${currentTestIndex+1}/${pendingTests.length})`)
+                : t('검사 제출','Submit')} ({filled}/{sdriCompletionQ.length})
             </button>
           </div>
         </div>
@@ -8388,7 +8388,7 @@ function PsychologicalTestSystem() {
         <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-6">
           {pendingTests.length > 1 && (
             <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
-              <p className="text-xs font-bold text-purple-700 mb-2">📋 검사 진행 현황 ({currentTestIndex + 1}/{pendingTests.length})</p>
+              <p className="text-xs font-bold text-purple-700 mb-2"{t("📋 검사 진행 현황","📋 Test Progress")} ({currentTestIndex + 1}/{pendingTests.length})</p>
               <div className="flex gap-2 flex-wrap">
                 {pendingTests.map((t, i) => (
                   <span key={t} className={`px-3 py-1 rounded-full text-xs font-bold border ${i < currentTestIndex ? "bg-green-100 border-green-300 text-green-700" : i === currentTestIndex ? "bg-teal-600 text-white border-teal-600" : "bg-gray-100 border-gray-300 text-gray-400"}`}>
@@ -8401,21 +8401,21 @@ function PsychologicalTestSystem() {
           <div className="text-center mb-6">
             <div className="inline-flex items-center gap-2 bg-teal-50 border border-teal-200 rounded-full px-4 py-1.5 mb-3">
               <span className="text-teal-600 font-bold text-sm">🪞 SDRI</span>
-              <span className="text-teal-400 text-xs">자기분화 반응성 검사</span>
+              <span className="text-teal-400 text-xs">{t("자기분화 반응성 검사","Self-Differentiation Response Index")}</span>
             </div>
-            <h1 className="text-2xl font-bold text-teal-900 mb-1">자기분화 반응성 검사</h1>
-            <p className="text-gray-400 text-sm">각 문항이 나와 얼마나 일치하는지 선택해 주세요 (25문항)</p>
+            <h1 className="text-2xl font-bold text-teal-900 mb-1">{t("자기분화 반응성 검사","Self-Differentiation Response Index")}</h1>
+            <p className="text-gray-400 text-sm">{t("각 문항이 나와 얼마나 일치하는지 선택해 주세요 (25문항)","Indicate how much each statement describes you (25 items)")}</p>
           </div>
           <div className="bg-teal-50 border border-teal-200 rounded-lg p-3 mb-5 text-xs text-teal-800">
             <div className="flex flex-wrap gap-3 justify-center mb-2">
-              {['1: 전혀 아니다','2: 거의 아니다','3: 가끔 그렇다','4: 자주 그렇다','5: 항상 그렇다'].map(t => (
-                <span key={t} className="font-semibold">{t}</span>
+              {t(["1: 전혀 아니다","2: 거의 아니다","3: 가끔 그렇다","4: 자주 그렇다","5: 항상 그렇다"],["1: Never","2: Rarely","3: Sometimes","4: Often","5: Always"]).map(s => (
+                <span key={s} className="font-semibold">{s}</span>
               ))}
             </div>
             <div className="bg-teal-200 rounded-full h-1.5">
               <div className="bg-teal-500 h-1.5 rounded-full transition-all" style={{width:`${(likertFilled/sdriLikertQ.length)*100}%`}}/>
             </div>
-            <div className="text-center mt-1">진행: <strong>{likertFilled}</strong> / {sdriLikertQ.length}</div>
+            <div className="text-center mt-1">{t("진행:","Progress:")} <strong>{likertFilled}</strong> / {sdriLikertQ.length}</div>
           </div>
           {saveStatus && <div className="mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded text-sm text-yellow-800 text-center">{saveStatus}</div>}
           <div className="space-y-3">
@@ -8431,7 +8431,7 @@ function PsychologicalTestSystem() {
                   </span>
                   <p className="text-sm font-semibold text-gray-700 leading-relaxed">
                     {q.num}. {q.content}
-                    {q.rev && <span className="ml-1 text-gray-400 font-normal text-xs">(역문항)</span>}
+                    {q.rev && <span className="ml-1 text-gray-400 font-normal text-xs">{t("(역문항)","(R)")}</span>}
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -8450,8 +8450,8 @@ function PsychologicalTestSystem() {
             <button onClick={submitSdri} disabled={likertFilled < sdriLikertQ.length}
               className="bg-teal-600 text-white px-10 py-3 rounded-xl font-bold text-lg hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition">
               {pendingTests.length > 1 && currentTestIndex < pendingTests.length - 1
-                ? `다음 검사로 → (${currentTestIndex+1}/${pendingTests.length})`
-                : '검사 제출'} ({likertFilled}/{sdriLikertQ.length})
+                ? t(`다음 검사로 → (${currentTestIndex+1}/${pendingTests.length})`,`Next → (${currentTestIndex+1}/${pendingTests.length})`)
+                : t('검사 제출','Submit')} ({likertFilled}/{sdriLikertQ.length})
             </button>
           </div>
         </div>
@@ -8465,7 +8465,7 @@ function PsychologicalTestSystem() {
       <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
         {pendingTests.length > 1 && (
           <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
-            <p className="text-xs font-bold text-purple-700 mb-2">📋 검사 진행 현황 ({currentTestIndex + 1}/{pendingTests.length})</p>
+            <p className="text-xs font-bold text-purple-700 mb-2"{t("📋 검사 진행 현황","📋 Test Progress")} ({currentTestIndex + 1}/{pendingTests.length})</p>
             <div className="flex gap-2 flex-wrap">
               {pendingTests.map((t, i) => (
                 <span key={t} className={`px-3 py-1 rounded-full text-xs font-bold border ${i < currentTestIndex ? "bg-green-100 border-green-300 text-green-700" : i === currentTestIndex ? "bg-purple-600 text-white border-purple-600" : "bg-gray-100 border-gray-300 text-gray-400"}`}>
@@ -8519,7 +8519,7 @@ function PsychologicalTestSystem() {
       <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
         {pendingTests.length > 1 && (
           <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
-            <p className="text-xs font-bold text-purple-700 mb-2">📋 검사 진행 현황 ({currentTestIndex + 1}/{pendingTests.length})</p>
+            <p className="text-xs font-bold text-purple-700 mb-2"{t("📋 검사 진행 현황","📋 Test Progress")} ({currentTestIndex + 1}/{pendingTests.length})</p>
             <div className="flex gap-2 flex-wrap">
               {pendingTests.map((t, i) => (
                 <span key={t} className={`px-3 py-1 rounded-full text-xs font-bold border ${i < currentTestIndex ? "bg-green-100 border-green-300 text-green-700" : i === currentTestIndex ? "bg-purple-600 text-white border-purple-600" : "bg-gray-100 border-gray-300 text-gray-400"}`}>
@@ -8573,7 +8573,7 @@ function PsychologicalTestSystem() {
       <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
         {pendingTests.length > 1 && (
           <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
-            <p className="text-xs font-bold text-purple-700 mb-2">📋 검사 진행 현황 ({currentTestIndex + 1}/{pendingTests.length})</p>
+            <p className="text-xs font-bold text-purple-700 mb-2"{t("📋 검사 진행 현황","📋 Test Progress")} ({currentTestIndex + 1}/{pendingTests.length})</p>
             <div className="flex gap-2 flex-wrap">
               {pendingTests.map((t, i) => (
                 <span key={t} className={`px-3 py-1 rounded-full text-xs font-bold border ${i < currentTestIndex ? "bg-green-100 border-green-300 text-green-700" : i === currentTestIndex ? "bg-purple-600 text-white border-purple-600" : "bg-gray-100 border-gray-300 text-gray-400"}`}>
@@ -8628,7 +8628,7 @@ function PsychologicalTestSystem() {
       <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
         {pendingTests.length > 1 && (
           <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
-            <p className="text-xs font-bold text-purple-700 mb-2">📋 검사 진행 현황 ({currentTestIndex + 1}/{pendingTests.length})</p>
+            <p className="text-xs font-bold text-purple-700 mb-2"{t("📋 검사 진행 현황","📋 Test Progress")} ({currentTestIndex + 1}/{pendingTests.length})</p>
             <div className="flex gap-2 flex-wrap">
               {pendingTests.map((t, i) => (
                 <span key={t} className={`px-3 py-1 rounded-full text-xs font-bold border ${i < currentTestIndex ? "bg-green-100 border-green-300 text-green-700" : i === currentTestIndex ? "bg-purple-600 text-white border-purple-600" : "bg-gray-100 border-gray-300 text-gray-400"}`}>
@@ -8683,7 +8683,7 @@ function PsychologicalTestSystem() {
       <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
         {pendingTests.length > 1 && (
           <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
-            <p className="text-xs font-bold text-purple-700 mb-2">📋 검사 진행 현황 ({currentTestIndex + 1}/{pendingTests.length})</p>
+            <p className="text-xs font-bold text-purple-700 mb-2"{t("📋 검사 진행 현황","📋 Test Progress")} ({currentTestIndex + 1}/{pendingTests.length})</p>
             <div className="flex gap-2 flex-wrap">
               {pendingTests.map((t, i) => (
                 <span key={t} className={`px-3 py-1 rounded-full text-xs font-bold border ${i < currentTestIndex ? "bg-green-100 border-green-300 text-green-700" : i === currentTestIndex ? "bg-purple-600 text-white border-purple-600" : "bg-gray-100 border-gray-300 text-gray-400"}`}>
@@ -8738,7 +8738,7 @@ function PsychologicalTestSystem() {
       <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-6">
         {pendingTests.length > 1 && (
           <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
-            <p className="text-xs font-bold text-purple-700 mb-2">📋 검사 진행 현황 ({currentTestIndex + 1}/{pendingTests.length})</p>
+            <p className="text-xs font-bold text-purple-700 mb-2"{t("📋 검사 진행 현황","📋 Test Progress")} ({currentTestIndex + 1}/{pendingTests.length})</p>
             <div className="flex gap-2 flex-wrap">
               {pendingTests.map((t, i) => (
                 <span key={t} className={`px-3 py-1 rounded-full text-xs font-bold border ${i < currentTestIndex ? "bg-green-100 border-green-300 text-green-700" : i === currentTestIndex ? "bg-purple-600 text-white border-purple-600" : "bg-gray-100 border-gray-300 text-gray-400"}`}>
@@ -8751,28 +8751,25 @@ function PsychologicalTestSystem() {
             </div>
           </div>
         )}
-        <h1 className="text-3xl font-bold text-center text-red-600 mb-2">🔥 번아웃 증후군 검사 (K-MBI+)</h1>
+        <h1 className="text-3xl font-bold text-center text-red-600 mb-2">🔥 {t("번아웃 증후군 검사 (K-MBI+)","Burnout Syndrome Test (K-MBI+)")}</h1>
         <p className="text-center text-gray-500 text-sm mb-4">
-          최근 한 달간 경험한 빈도를 선택해 주세요 (50문항)
+          {t("최근 한 달간 경험한 빈도를 선택해 주세요 (50문항)","Rate how often you experienced each over the past month (50 items)")}
         </p>
         
         {/* 응답 옵션 안내 */}
         <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
           <div className="grid grid-cols-7 gap-1 text-xs text-center font-semibold text-red-800">
-            <div>0: 전혀없음</div>
-            <div>1: 1년에 몇번</div>
-            <div>2: 한달에 한번</div>
-            <div>3: 한달에 몇번</div>
-            <div>4: 일주일에 한번</div>
-            <div>5: 일주일에 몇번</div>
-            <div>6: 매일</div>
+            {t(["0: 전혀없음","1: 1년에 몇번","2: 한달에 한번","3: 한달에 몇번","4: 일주일에 한번","5: 일주일에 몇번","6: 매일"],
+               ["0: Never","1: Few/year","2: Once/month","3: Few/month","4: Once/week","5: Few/week","6: Daily"]).map(s => (
+              <div key={s}>{s}</div>
+            ))}
           </div>
         </div>
         
         {/* 진행 상태 */}
         <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-6 text-center">
           <div className="text-sm text-red-700 mb-2">
-            진행: <strong className="text-xl">{Object.keys(burnoutResponses).length}</strong> / 50 문항
+            {t("진행:","Progress:")} <strong className="text-xl">{Object.keys(burnoutResponses).length}</strong> / 50 {t("문항","items")}
           </div>
           <div className="w-full bg-gray-200 rounded-full h-3">
             <div 
@@ -8788,7 +8785,7 @@ function PsychologicalTestSystem() {
             <div key={dIdx} className="border-2 border-gray-200 rounded-lg p-4 bg-gray-50">
               <h2 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
                 <span className="text-red-600">{domain.icon}</span>
-                {domain.name} ({domain.questions.length}문항)
+                {domain.name} ({domain.questions.length} {t("문항","items")})
               </h2>
               <div className="space-y-3">
                 {domain.questions.map((q, qIdx) => (
@@ -8824,7 +8821,7 @@ function PsychologicalTestSystem() {
             onClick={submitBurnout} 
             className="bg-red-600 text-white px-12 py-4 rounded-xl font-bold text-lg hover:bg-red-700 transition shadow-lg transform hover:scale-105"
           >
-            🔥 검사 제출 ({Object.keys(burnoutResponses).length}/50)
+            🔥 {t("검사 제출","Submit")} ({Object.keys(burnoutResponses).length}/50)
           </button>
         </div>
       </div>
@@ -8837,7 +8834,7 @@ function PsychologicalTestSystem() {
       <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
         {pendingTests.length > 1 && (
           <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
-            <p className="text-xs font-bold text-purple-700 mb-2">📋 검사 진행 현황 ({currentTestIndex + 1}/{pendingTests.length})</p>
+            <p className="text-xs font-bold text-purple-700 mb-2"{t("📋 검사 진행 현황","📋 Test Progress")} ({currentTestIndex + 1}/{pendingTests.length})</p>
             <div className="flex gap-2 flex-wrap">
               {pendingTests.map((t, i) => (
                 <span key={t} className={`px-3 py-1 rounded-full text-xs font-bold border ${i < currentTestIndex ? "bg-green-100 border-green-300 text-green-700" : i === currentTestIndex ? "bg-purple-600 text-white border-purple-600" : "bg-gray-100 border-gray-300 text-gray-400"}`}>
@@ -8913,7 +8910,7 @@ function PsychologicalTestSystem() {
         <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
           {pendingTests.length > 1 && (
             <div className="mb-4 bg-teal-50 border border-teal-200 rounded-xl p-3">
-              <p className="text-xs font-bold text-teal-700 mb-2">📋 검사 진행 현황 ({currentTestIndex + 1}/{pendingTests.length})</p>
+              <p className="text-xs font-bold text-teal-700 mb-2"{t("📋 검사 진행 현황","📋 Test Progress")} ({currentTestIndex + 1}/{pendingTests.length})</p>
               <div className="flex gap-2 flex-wrap">
                 {pendingTests.map((t, i) => (
                   <span key={t} className={`px-3 py-1 rounded-full text-xs font-bold border ${i < currentTestIndex ? "bg-green-100 border-green-300 text-green-700" : i === currentTestIndex ? "bg-teal-600 text-white border-teal-600" : "bg-gray-100 border-gray-300 text-gray-400"}`}>
