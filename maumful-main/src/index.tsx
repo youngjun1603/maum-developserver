@@ -2244,7 +2244,7 @@ app.post('/api/webhook/toss', async (c) => {
     .bind('completed', pgTid, 'toss', 'pending', parseInt(userId)).run()
   await gainCredits(DB, parseInt(userId), pkg.credits, 'charge', pgTid)
   console.log('[Toss Webhook] 크레딧 지급 완료 — userId:', userId, 'credits:', pkg.credits)
-  completeReferral(DB, parseInt(userId)).catch(() => {})
+  completeReferral(DB, parseInt(userId)).catch(err => console.error('[Referral] 완료 실패 userId=' + userId, err))
 
   // 영수증 이메일 (비동기)
   const twUser = await DB.prepare('SELECT email, nickname FROM users WHERE id=?').bind(parseInt(userId)).first<{ email: string; nickname: string | null }>()
@@ -2325,7 +2325,7 @@ app.post('/api/webhook/stripe', async (c) => {
     .bind('completed', pgTid, 'stripe', 'pending', parseInt(userId)).run()
   await gainCredits(DB, parseInt(userId), pkg.credits, 'charge', pgTid)
   console.log('[Stripe Webhook] 크레딧 지급 완료 — userId:', userId, 'credits:', pkg.credits)
-  completeReferral(DB, parseInt(userId)).catch(() => {})
+  completeReferral(DB, parseInt(userId)).catch(err => console.error('[Referral] 완료 실패 userId=' + userId, err))
 
   // 영수증 이메일 (비동기)
   const swUser = await DB.prepare('SELECT email, nickname FROM users WHERE id=?').bind(parseInt(userId)).first<{ email: string; nickname: string | null }>()
@@ -3102,7 +3102,8 @@ app.post('/api/admin/api-settings', async (c) => {
   if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
   const { key_name, key_value, description } = await c.req.json()
   if (!key_name || !key_value) return c.json({ success: false, error: '키와 값 필수' }, 400)
-  const secret = (c.env as unknown as Record<string, string>).ADMIN_SECRET || 'psy_system_secret_2026'
+  const secret = (c.env as unknown as Record<string, string>).ADMIN_SECRET
+  if (!secret) return c.json({ success: false, error: 'ADMIN_SECRET 미설정' }, 500)
   const kB  = new TextEncoder().encode(secret.padEnd(32,'0').slice(0,32))
   const vB  = new TextEncoder().encode(key_value)
   const enc = btoa(String.fromCharCode(...vB.map((b,i) => b ^ kB[i % kB.length])))
@@ -3140,7 +3141,8 @@ app.delete('/api/admin/error-logs', async (c) => {
 
 app.get('/api/admin/test-ai', async (c) => {
   const { DB } = c.env
-  const adminSecret = c.env.ADMIN_SECRET ?? 'psy_system_secret_2026'
+  const adminSecret = c.env.ADMIN_SECRET
+  if (!adminSecret) return c.html('<h2 style="font-family:sans-serif;color:red">서버 설정 오류: ADMIN_SECRET 미설정</h2>', 500)
   const qSecret = c.req.query('secret') ?? ''
   if (qSecret !== adminSecret) {
     return c.html('<h2 style="font-family:sans-serif;color:red">접근 거부: secret 파라미터가 올바르지 않습니다.</h2>', 403)
