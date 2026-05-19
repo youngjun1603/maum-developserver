@@ -1614,6 +1614,33 @@ FOLLOWUP:["PHQ9","GAD7"]
   return c.json({ success: true, analysis, suggestedGames, followUpTests })
 })
 
+// ── AI 상담 감정 점수 기록 ────────────────────────────────────
+app.post('/api/chat/mood-log', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false }, 401)
+  const { moodScore, testType } = await c.req.json()
+  const score = parseInt(moodScore)
+  if (isNaN(score) || score < 0 || score > 100) return c.json({ success: false }, 400)
+  await DB.prepare('INSERT INTO mood_logs (user_id, mood_score, test_type) VALUES (?, ?, ?)')
+    .bind(userId, score, testType ?? null).run()
+  return c.json({ success: true })
+})
+
+// ── AI 상담 감정 추이 조회 ────────────────────────────────────
+app.get('/api/chat/mood-trend', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+  const days = Math.min(parseInt(c.req.query('days') || '14'), 90)
+  const rows = await DB.prepare(
+    `SELECT DATE(created_at) AS day, ROUND(AVG(mood_score)) AS avg_score, COUNT(*) AS cnt
+     FROM mood_logs WHERE user_id=? AND created_at >= DATE('now', ? || ' days')
+     GROUP BY day ORDER BY day`
+  ).bind(userId, `-${days}`).all<{ day: string; avg_score: number; cnt: number }>()
+  return c.json({ success: true, data: rows.results || [] })
+})
+
 // ── 장기 트렌드 예측 ─────────────────────────────────────────
 app.get('/api/test/trend-prediction', async (c) => {
   const { DB, KV } = c.env
@@ -1923,7 +1950,9 @@ app.post('/api/ai-chat', async (c) => {
 답변 형식 (매번 이 순서로 작성, 총 350자 이내):
 **공감** - 감정을 1~2문장으로 따뜻하게 반영
 **말씀** - 위로가 되는 짧은 성경 구절 1개 (선택)
-**제안** - 지금 바로 할 수 있는 작은 것 1가지`
+**제안** - 지금 바로 할 수 있는 작은 것 1가지
+
+답변 맨 마지막에 빈 줄 후 [MOOD:N] 한 줄 추가. N은 0~100 정수 (0=극심한 고통, 50=보통, 100=매우 양호). 이 태그는 사용자에게 보이지 않으므로 설명하지 마세요.`
 
   const staticKoGeneral = `당신은 따뜻하고 전문적인 마음 돌봄 상담사입니다.
 
@@ -1937,7 +1966,9 @@ app.post('/api/ai-chat', async (c) => {
 답변 형식 (매번 이 순서로 작성, 총 350자 이내):
 **공감** - 감정을 1~2문장으로 따뜻하게 반영
 **탐색** - 마음을 열 수 있는 열린 질문 1개
-**제안** - 지금 바로 실천 가능한 작은 것 1가지`
+**제안** - 지금 바로 실천 가능한 작은 것 1가지
+
+답변 맨 마지막에 빈 줄 후 [MOOD:N] 한 줄 추가. N은 0~100 정수 (0=극심한 고통, 50=보통, 100=매우 양호). 이 태그는 사용자에게 보이지 않으므로 설명하지 마세요.`
 
   const dynamicKo = `검사 결과 맥락:
 ${summary ?? (counselingType === 'biblical' ? '검사 결과 없음 — 신앙 안에서의 마음 돌봄 상담으로 진행하세요.' : '검사 결과 없음 — 일반적인 마음 돌봄 상담으로 진행하세요.')}${trendContext}${memoryContext}${dailyCtxPart}`
@@ -1966,7 +1997,9 @@ Counseling principles:
 Always reply in this exact format (under 350 characters total):
 **Empathy** - reflect feelings warmly in 1-2 sentences
 **Scripture** - one short comforting verse (optional)
-**Suggest** - one small actionable step for right now`
+**Suggest** - one small actionable step for right now
+
+After your response, add a blank line then [MOOD:N] on the last line. N is 0-100 integer (0=severe distress, 50=neutral, 100=excellent). This tag is hidden from users — do not explain it.`
 
   const staticEnGeneral = `You are a warm and professional mental wellness counselor.
 
@@ -1980,7 +2013,9 @@ Counseling principles:
 Always reply in this exact format (under 350 characters total):
 **Empathy** - reflect feelings warmly in 1-2 sentences
 **Explore** - one open question to help the user open up
-**Suggest** - one small actionable step for right now`
+**Suggest** - one small actionable step for right now
+
+After your response, add a blank line then [MOOD:N] on the last line. N is 0-100 integer (0=severe distress, 50=neutral, 100=excellent). This tag is hidden from users — do not explain it.`
 
   const dynamicEn = `Assessment context:
 ${summary ?? (counselingType === 'biblical' ? 'No test result — proceed as faith-based wellness counseling.' : 'No test result — proceed as general wellness counseling.')}${trendContext}${memoryContext}${dailyCtxPart}`

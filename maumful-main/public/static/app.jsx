@@ -385,6 +385,7 @@ function PsychologicalTestSystem() {
     return euLangs.includes(lang);
   });
   const [testHistory, setTestHistory] = useState([]);
+  const [moodTrend, setMoodTrend] = useState([]);
   const [dailyCtxCard, setDailyCtxCard] = useState(null); // { greeting, chatContext } — AI 인사말 카드
   const [myPageTab, setMyPageTab]     = useState('credits'); // 'credits' | 'history' | 'settings' | 'appointments'
   const [changePwMsg, setChangePwMsg] = useState({ type: '', text: '' });
@@ -1919,6 +1920,11 @@ function PsychologicalTestSystem() {
       const r = await api.getTestHistory();
       if (r.success) setTestHistory(r.data);
     } catch { /* 무시 */ }
+    try {
+      const mr = await api._fetch('/api/chat/mood-trend?days=14');
+      const md = await mr.json();
+      if (md.success) setMoodTrend(md.data);
+    } catch { /* 무시 */ }
     // daily context — 하루 1회 캐시
     try {
       const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
@@ -2391,8 +2397,15 @@ function PsychologicalTestSystem() {
           } catch { /* 무시 */ }
         }
       }
+      // [MOOD:N] 태그 추출 후 제거
+      const moodMatch = fullText.match(/\[MOOD:(\d+)\]/);
+      const moodScore = moodMatch ? parseInt(moodMatch[1], 10) : null;
+      const cleanText = fullText.replace(/\s*\[MOOD:\d+\]\s*$/, '').trimEnd();
       incrementAiChatUsed();
-      setChatMessages(prev => prev.map(m => m.id === assistantId ? { ...m, streaming: false } : m));
+      setChatMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content: cleanText, streaming: false } : m));
+      if (moodScore !== null && isLoggedIn) {
+        api._fetch('/api/chat/mood-log', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ moodScore, testType }) }).catch(() => {});
+      }
     } catch (e) {
       const errMsg = e.message || 'AI 채팅 중 오류가 발생했습니다.';
       // 502는 API 키 미설정 가능성 안내
@@ -4379,6 +4392,47 @@ function PsychologicalTestSystem() {
               );
             })()}
 
+            {/* 감정 추이 위젯 */}
+            {moodTrend.length >= 2 && (() => {
+              const W = 320, H = 80, PAD = { top: 10, bottom: 20, left: 16, right: 8 };
+              const innerW = W - PAD.left - PAD.right;
+              const innerH = H - PAD.top - PAD.bottom;
+              const xScale = i => PAD.left + (i / (moodTrend.length - 1)) * innerW;
+              const yScale = s => PAD.top + innerH - (s / 100) * innerH;
+              const pts = moodTrend.map((d, i) => [xScale(i), yScale(d.avg_score)]);
+              const pathD = 'M ' + pts.map(p => p.join(',')).join(' L ');
+              const areaD = `${pathD} L ${pts[pts.length-1][0]},${PAD.top+innerH} L ${pts[0][0]},${PAD.top+innerH} Z`;
+              const lastScore = moodTrend[moodTrend.length - 1]?.avg_score;
+              const moodColor = lastScore >= 70 ? '#22c55e' : lastScore >= 40 ? '#f59e0b' : '#ef4444';
+              const moodLabel = lang === 'en'
+                ? (lastScore >= 70 ? 'Good' : lastScore >= 40 ? 'Moderate' : 'Struggling')
+                : (lastScore >= 70 ? '양호' : lastScore >= 40 ? '보통' : '힘듦');
+              return (
+                <div className="mb-4 p-4 bg-white rounded-2xl border border-gray-100">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-xs font-bold text-gray-600">💙 {t("AI 상담 감정 추이","Mood Trend from AI Sessions")}</div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-bold" style={{color:moodColor}}>{Math.round(lastScore)}</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{background:moodColor+'20',color:moodColor}}>{moodLabel}</span>
+                    </div>
+                  </div>
+                  <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',height:'auto',overflow:'visible'}}>
+                    <path d={areaD} fill={moodColor} fillOpacity="0.08"/>
+                    <path d={pathD} fill="none" stroke={moodColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    {pts.map(([x,y],i) => (
+                      <circle key={i} cx={x} cy={y} r="3" fill={moodColor}/>
+                    ))}
+                    {moodTrend.filter((_,i) => moodTrend.length <= 7 || i % Math.ceil(moodTrend.length/5) === 0 || i === moodTrend.length-1).map((d,_,arr) => {
+                      const i = moodTrend.indexOf(d);
+                      const dt = new Date(d.day); const label = `${dt.getMonth()+1}/${dt.getDate()}`;
+                      return <text key={d.day} x={xScale(i)} y={H-2} textAnchor="middle" fontSize="7" fill="#aaa">{label}</text>;
+                    })}
+                  </svg>
+                  <p className="text-xs text-gray-400 mt-1">{t(`최근 ${moodTrend.length}회 AI 상담 기반`,`Based on last ${moodTrend.length} AI sessions`)}</p>
+                </div>
+              );
+            })()}
+
             {/* 전체 이력 목록 */}
             <div className="space-y-2">
               {testHistory.map((h, i) => {
@@ -5621,10 +5675,16 @@ function PsychologicalTestSystem() {
           } catch {}
         }
       }
+      const moodMatch2 = fullText.match(/\[MOOD:(\d+)\]/);
+      const moodScore2 = moodMatch2 ? parseInt(moodMatch2[1], 10) : null;
+      const cleanText2 = fullText.replace(/\s*\[MOOD:\d+\]\s*$/, '').trimEnd();
       incrementAiChatUsed();
       setChatMessages(prev => prev.map(m =>
-        m.id === assistantId ? { ...m, streaming: false } : m
+        m.id === assistantId ? { ...m, content: cleanText2, streaming: false } : m
       ));
+      if (moodScore2 !== null && isLoggedIn) {
+        api._fetch('/api/chat/mood-log', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ moodScore: moodScore2, testType }) }).catch(() => {});
+      }
     } catch(e) {
       setChatError(e.message || 'AI 채팅 중 오류가 발생했습니다.');
       setChatMessages(prev => prev.filter(m => m.id !== assistantId));
