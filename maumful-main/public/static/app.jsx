@@ -4929,6 +4929,11 @@ function PsychologicalTestSystem() {
                   color: '#B5556A', colorL: '#FCF0F3', emoji: '💕',
                   features: [t('월 150 크레딧 지급','150 credits/month'), t('월 1회 커플 리포트 포함','1 couple report/month'), t('AI 관계 코치 무제한','Unlimited AI relationship coach'), t('데이트 코스 무제한','Unlimited date courses')],
                 },
+                {
+                  name: t('마음가족 플랜','Maumful Family'), priceKrw: 14900, priceUsd: 14.99,
+                  color: '#7C3AED', colorL: '#F5F3FF', emoji: '👨‍👩‍👧‍👦',
+                  features: [t('최대 4인 가족 계정 공유','Up to 4 family members'), t('월 500 크레딧 공유','500 shared credits/month'), t('AI 채팅 가족 전원 이용','AI chat for all members'), t('월 1회 가족 심리 리포트','1 family wellness report/month'), t('검사 이력 무제한 보관','Unlimited history')],
+                },
               ].map(plan => {
                 const isAnnual = billingCycle === 'annual';
                 const monthlyKrw = isAnnual ? Math.round(plan.priceKrw * 0.8) : plan.priceKrw;
