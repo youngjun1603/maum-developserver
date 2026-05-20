@@ -98,6 +98,7 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
   const { useState: useS, useEffect: useE } = React;
   const [scrolled, setScrolled]   = useS(false);
   const [mobileOpen, setMobileOpen] = useS(false);
+  const tl = (ko, en) => lang === 'en' ? en : ko;
 
   useE(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -106,12 +107,12 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
   }, []);
 
   const navItems = [
-    { label: '검사 소개',  view: 'testsIntro' },
-    { label: '심리검사',   view: 'memberDashboard', guestView: 'testsIntro' },
-    { label: 'AI 상담',   view: 'aiCounsel',       requireLogin: true },
-    { label: '상담센터',   view: 'counseling' },
-    { label: '마음 게임',  view: 'gameIntro', isGame: true },
-    { label: '마음커플',   view: 'couple',    isCouple: true },
+    { label: tl('검사 소개',  'Assessments'),    view: 'testsIntro' },
+    { label: tl('심리검사',   'My Tests'),        view: 'memberDashboard', guestView: 'testsIntro' },
+    { label: tl('AI 상담',   'AI Counseling'),   view: 'aiCounsel',       requireLogin: true },
+    { label: tl('상담센터',   'Centers'),         view: 'counseling' },
+    { label: tl('마음 게임',  'Healing Games'),   view: 'gameIntro', isGame: true },
+    { label: tl('마음커플',   'Maumful Couple'),  view: 'couple',    isCouple: true },
   ];
 
   const handleNavClick = (item) => {
@@ -233,7 +234,7 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
                 }}
               >
                 <span>🌿</span>
-                <span>{credits} 크레딧</span>
+                <span>{credits} {tl('크레딧', 'Credits')}</span>
               </button>
               <button
                 onClick={() => setView('myPage')}
@@ -264,7 +265,7 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
                 onMouseEnter={e => { e.currentTarget.style.background = '#F5F5F5'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
               >
-                로그인
+                {tl('로그인', 'Sign In')}
               </button>
               <button
                 onClick={() => setView(isLoggedIn ? 'memberDashboard' : 'testsIntro')}
@@ -278,7 +279,7 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
                 onMouseEnter={e => { e.currentTarget.style.background = '#1B5138'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = '#2D6A4F'; }}
               >
-                무료 시작 →
+                {tl('무료 시작 →', 'Get Started →')}
               </button>
             </>
           )}
@@ -344,7 +345,7 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
                   fontSize: 14, fontWeight: 500, cursor: 'pointer',
                   fontFamily: "'Noto Sans KR', sans-serif",
                 }}
-              >로그인</button>
+              >{tl('로그인', 'Sign In')}</button>
               <button
                 onClick={() => { setMobileOpen(false); setView(isLoggedIn ? 'memberDashboard' : 'testsIntro'); }}
                 style={{
@@ -353,7 +354,7 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
                   color: 'white', fontSize: 14, fontWeight: 600, cursor: 'pointer',
                   fontFamily: "'Noto Sans KR', sans-serif",
                 }}
-              >무료 시작</button>
+              >{tl('무료 시작', 'Get Started')}</button>
             </div>
           )}
         </div>
@@ -786,17 +787,21 @@ function LandingPage({ setView, isLoggedIn, lang }) {
                   alignItems: 'center', justifyContent: 'center', fontSize: 18,
                 }}>🤖</div>
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: 'white' }}>마음이 (AI 상담)</div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>● 온라인</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: 'white' }}>{tl('마음이 (AI 상담)', 'Maumi (AI Counselor)')}</div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>● {tl('온라인', 'Online')}</div>
                 </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {[
+                {tl([
                   { type: 'ai', text: 'PHQ-9 결과를 확인했어요. 중등도 수준의 우울 증상이 나타났는데, 특히 수면과 집중력 부분이 눈에 띄네요. 좀 더 이야기해볼까요?' },
                   { type: 'user', text: '네, 요즘 잠을 잘 못 자고 있어요' },
                   { type: 'ai', text: '수면 어려움이 얼마나 됐는지 알 수 있을까요? 최근에 특별히 스트레스받는 일이 있었나요?' },
-                ].map((msg, i) => (
+                ], [
+                  { type: 'ai', text: "I've reviewed your PHQ-9 results. You're showing moderate depression symptoms — particularly around sleep and concentration. Want to talk more about it?" },
+                  { type: 'user', text: "Yes, I've been having a hard time sleeping lately." },
+                  { type: 'ai', text: "How long have you been struggling with sleep? Has anything particularly stressful been happening recently?" },
+                ]).map((msg, i) => (
                   <div key={i} style={{
                     maxWidth: '82%', padding: '11px 15px', borderRadius: 14, fontSize: 13, lineHeight: 1.65,
                     alignSelf: msg.type === 'user' ? 'flex-end' : 'flex-start',
@@ -815,7 +820,7 @@ function LandingPage({ setView, isLoggedIn, lang }) {
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 color: 'rgba(255,255,255,0.35)', fontSize: 13,
               }}>
-                <span>메시지를 입력하세요...</span>
+                <span>{tl('메시지를 입력하세요...', 'Type your message...')}</span>
                 <span>↑</span>
               </div>
             </div>
@@ -831,12 +836,12 @@ function LandingPage({ setView, isLoggedIn, lang }) {
               display: 'inline-block', background: '#FEF3C7', color: '#B45309',
               fontSize: 12, fontWeight: 700, letterSpacing: '1.5px',
               textTransform: 'uppercase', padding: '5px 14px', borderRadius: 100, marginBottom: 14,
-            }}>마음풀만의 차이</div>
+            }}>{tl('마음풀만의 차이', "What makes Maumful different")}</div>
             <h2 style={{ fontSize: 34, fontWeight: 700, lineHeight: 1.3, marginBottom: 12 }}>
-              ChatGPT에게 물어보는 것과<br /><span style={{ color: '#2D6A4F' }}>무엇이 다른가요?</span>
+              {tl(<>ChatGPT에게 물어보는 것과<br /><span style={{ color: '#2D6A4F' }}>무엇이 다른가요?</span></>, <>How is this different<br />from <span style={{ color: '#2D6A4F' }}>asking ChatGPT?</span></>)}
             </h2>
             <p style={{ fontSize: 16, color: '#5A5A5A', maxWidth: 520, margin: '0 auto' }}>
-              일회성 대화가 아닌, 검사 기반 지속 관리 상담입니다
+              {tl('일회성 대화가 아닌, 검사 기반 지속 관리 상담입니다', 'Not a one-off chat — ongoing, assessment-based mental wellness support')}
             </p>
           </div>
 
@@ -943,15 +948,13 @@ function LandingPage({ setView, isLoggedIn, lang }) {
                 <span>📄</span> NEW FEATURE
               </div>
               <h3 style={{ fontSize: 26, fontWeight: 700, color: 'white', marginBottom: 12, lineHeight: 1.4, wordBreak: 'keep-all' }}>
-                MBTI, MMPI, K-WAIS…<br />외부 검사결과도 AI가 해석해 드립니다
+                {tl(<>MBTI, MMPI, K-WAIS…<br />외부 검사결과도 AI가 해석해 드립니다</>, <>MBTI, MMPI, K-WAIS…<br />AI interprets your external test results too</>)}
               </h3>
               <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, marginBottom: 20 }}>
-                다른 기관에서 받은 심리검사 결과지를 업로드하거나 점수를 입력하면,
-                마음풀 AI가 전문적으로 해석하고 마음풀 프로필에 통합합니다.
-                이후 AI 상담이 이 결과까지 반영해 더 깊이 있는 대화를 제공합니다.
+                {tl('다른 기관에서 받은 심리검사 결과지를 업로드하거나 점수를 입력하면, 마음풀 AI가 전문적으로 해석하고 마음풀 프로필에 통합합니다. 이후 AI 상담이 이 결과까지 반영해 더 깊이 있는 대화를 제공합니다.', 'Upload a report or enter scores from any assessment you received elsewhere — Maumful AI interprets them professionally and integrates them into your profile, so future AI counseling conversations reflect the full picture.')}
               </p>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {['📎 PDF 업로드', '✏️ 점수 직접 입력', '🔗 상담 이력 통합', '💬 AI 해석 즉시 제공'].map(chip => (
+                {tl(['📎 PDF 업로드', '✏️ 점수 직접 입력', '🔗 상담 이력 통합', '💬 AI 해석 즉시 제공'], ['📎 PDF Upload', '✏️ Enter Scores Manually', '🔗 Integrated History', '💬 Instant AI Interpretation']).map(chip => (
                   <span key={chip} style={{
                     background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.88)',
                     padding: '5px 12px', borderRadius: 100, fontSize: 12,
@@ -973,10 +976,10 @@ function LandingPage({ setView, isLoggedIn, lang }) {
                 onMouseEnter={e => { e.currentTarget.style.background = '#E76F51'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = '#F4A261'; }}
               >
-                외부 결과 해석하기 →
+                {tl('외부 결과 해석하기 →', 'Interpret External Results →')}
               </button>
               <div style={{ marginTop: 8, fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>
-                로그인 후 마이페이지 → 검사이력에서 사용
+                {tl('로그인 후 마이페이지 → 검사이력에서 사용', 'Sign in → My Page → Test History')}
               </div>
             </div>
           </div>
@@ -1107,18 +1110,21 @@ function LandingPage({ setView, isLoggedIn, lang }) {
                 textTransform: 'uppercase', padding: '5px 14px', borderRadius: 100, marginBottom: 20,
               }}>Counseling Centers</div>
               <h2 style={{ fontSize: 36, fontWeight: 700, lineHeight: 1.3, marginBottom: 16 }}>
-                가까운 상담센터를<br /><span style={{ color: '#2D6A4F' }}>바로 찾아보세요</span>
+                {tl(<>가까운 상담센터를<br /><span style={{ color: '#2D6A4F' }}>바로 찾아보세요</span></>, <>Find a counseling center<br /><span style={{ color: '#2D6A4F' }}>near you</span></>)}
               </h2>
               <p style={{ fontSize: 16, color: '#5A5A5A', lineHeight: 1.8, marginBottom: 28 }}>
-                검사 결과를 상담사에게 보여주면 첫 상담부터<br />
-                더 깊이 있는 대화를 시작할 수 있습니다.
+                {tl(<>검사 결과를 상담사에게 보여주면 첫 상담부터<br />더 깊이 있는 대화를 시작할 수 있습니다.</>, <>Sharing your test results with a counselor helps you skip the small talk and dive deeper from the very first session.</>)}
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
-                {[
+                {tl([
                   { icon: '📍', text: '카카오맵으로 내 근처 상담센터 즉시 검색' },
                   { icon: '🧠', text: '정신건강의학과 · 심리상담센터 · 복지센터' },
                   { icon: '📞', text: '24시간 무료 상담전화 바로 연결' },
-                ].map(item => (
+                ], [
+                  { icon: '📍', text: 'Search nearby centers instantly via Kakao Maps' },
+                  { icon: '🧠', text: 'Psychiatry · Counseling centers · Community centers' },
+                  { icon: '📞', text: '24-hour free crisis hotline direct connection' },
+                ]).map(item => (
                   <div key={item.text} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span style={{ fontSize: 18 }}>{item.icon}</span>
                     <span style={{ fontSize: 14, color: '#5A5A5A' }}>{item.text}</span>
@@ -1135,17 +1141,21 @@ function LandingPage({ setView, isLoggedIn, lang }) {
                 onMouseEnter={e => { e.currentTarget.style.background = '#1B4332'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = '#2D6A4F'; e.currentTarget.style.transform = 'none'; }}
               >
-                🏥 상담센터 찾기 →
+                🏥 {tl('상담센터 찾기 →', 'Find a Center →')}
               </button>
             </div>
 
             {/* 검색 카드 미리보기 */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {[
+              {tl([
                 { emoji: '🏥', name: '심리상담센터', desc: '우울·불안·대인관계·번아웃 전문', color: '#2D6A4F', bg: '#D8F3DC', query: '심리상담센터' },
                 { emoji: '🧠', name: '정신건강의학과', desc: '전문의 진료 · 건강보험 적용', color: '#0284C7', bg: '#E0F2FE', query: '정신건강의학과' },
                 { emoji: '🏢', name: '정신건강복지센터', desc: '시·군·구 운영 · 무료 방문 상담', color: '#D97706', bg: '#FEF3C7', query: '정신건강복지센터' },
-              ].map(card => (
+              ], [
+                { emoji: '🏥', name: 'Counseling Centers', desc: 'Depression · Anxiety · Relationships · Burnout', color: '#2D6A4F', bg: '#D8F3DC', query: '심리상담센터' },
+                { emoji: '🧠', name: 'Psychiatry Clinics', desc: 'Specialist care · National health insurance', color: '#0284C7', bg: '#E0F2FE', query: '정신건강의학과' },
+                { emoji: '🏢', name: 'Community Mental Health Centers', desc: 'Gov-run · Free walk-in counseling', color: '#D97706', bg: '#FEF3C7', query: '정신건강복지센터' },
+              ]).map(card => (
                 <div key={card.name}
                   onClick={() => window.open(`https://map.kakao.com/?q=${encodeURIComponent(card.query)}`, '_blank', 'noopener')}
                   style={{
@@ -1162,7 +1172,7 @@ function LandingPage({ setView, isLoggedIn, lang }) {
                     <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{card.name}</div>
                     <div style={{ fontSize: 12, color: '#6B7280' }}>{card.desc}</div>
                   </div>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: card.color, background: card.bg, padding: '3px 9px', borderRadius: 100, whiteSpace: 'nowrap', flexShrink: 0 }}>지도 검색</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: card.color, background: card.bg, padding: '3px 9px', borderRadius: 100, whiteSpace: 'nowrap', flexShrink: 0 }}>{tl('지도 검색', 'Map Search')}</span>
                 </div>
               ))}
             </div>
@@ -1182,19 +1192,23 @@ function LandingPage({ setView, isLoggedIn, lang }) {
                 textTransform: 'uppercase', padding: '5px 14px', borderRadius: 100, marginBottom: 20,
               }}>Healing Games</div>
               <h2 style={{ fontSize: 36, fontWeight: 700, lineHeight: 1.3, marginBottom: 16 }}>
-                마음을 가꾸는<br /><span style={{ color: '#2D6A4F' }}>치유 게임</span>
+                {tl(<>마음을 가꾸는<br /><span style={{ color: '#2D6A4F' }}>치유 게임</span></>, <>Games that<br /><span style={{ color: '#2D6A4F' }}>heal your mind</span></>)}
               </h2>
               <p style={{ fontSize: 16, color: '#5A5A5A', lineHeight: 1.8, marginBottom: 28 }}>
-                심리검사 결과와 연동된 치유 게임으로<br />
-                일상 속에서 마음 건강을 회복하세요.
+                {tl(<>심리검사 결과와 연동된 치유 게임으로<br />일상 속에서 마음 건강을 회복하세요.</>, <>Healing games linked to your test results — restore your mental wellness in everyday life.</>)}
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
-                {[
+                {tl([
                   { icon: '🌿', text: '마음의 정원 — 호흡 훈련 + 인지 교정 (무료)' },
                   { icon: '🌸', text: '감정꽃 찾기 — 감정 인식 훈련' },
                   { icon: '⭐', text: '별빛 감사 일기 — 긍정심리학 루틴' },
                   { icon: '🌳', text: '내면의 나무 — ACT 기반 자아 성장' },
-                ].map(item => (
+                ], [
+                  { icon: '🌿', text: 'Mind Garden — Breathing + Cognitive Training (Free)' },
+                  { icon: '🌸', text: 'Emotion Flower — Emotional Awareness Training' },
+                  { icon: '⭐', text: 'Starlight Gratitude — Positive Psychology Routine' },
+                  { icon: '🌳', text: 'Inner Tree — ACT-Based Self Growth' },
+                ]).map(item => (
                   <div key={item.text} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span style={{ fontSize: 18 }}>{item.icon}</span>
                     <span style={{ fontSize: 14, color: '#5A5A5A' }}>{item.text}</span>
@@ -1215,21 +1229,26 @@ function LandingPage({ setView, isLoggedIn, lang }) {
                 onMouseEnter={e => { e.currentTarget.style.background = '#1B5138'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = '#2D6A4F'; e.currentTarget.style.transform = 'none'; }}
               >
-                마음 게임 시작하기 →
+                {tl('마음 게임 시작하기 →', 'Start Healing Games →')}
               </button>
               <div style={{ marginTop: 12, fontSize: 12, color: '#9A9A9A' }}>
-                로그인 후 별도 로그인 없이 바로 이동합니다
+                {tl('로그인 후 별도 로그인 없이 바로 이동합니다', 'No separate login needed — seamlessly linked after sign-in')}
               </div>
             </div>
 
             {/* 게임 카드 */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-              {[
+              {tl([
                 { emoji: '🌿', name: '마음의 정원', tag: '레벨 1 · 무료', color: '#2D6A4F', bg: '#D8F3DC' },
                 { emoji: '🌸', name: '감정꽃 찾기', tag: 'PHQ-9 연동', color: '#EC4899', bg: '#FDF2F8' },
                 { emoji: '⭐', name: '별빛 감사 일기', tag: '레벨 2', color: '#F59E0B', bg: '#FFFBEB' },
                 { emoji: '🌳', name: '내면의 나무', tag: 'SDRI 연동', color: '#059669', bg: '#ECFDF5' },
-              ].map(g => (
+              ], [
+                { emoji: '🌿', name: 'Mind Garden', tag: 'Level 1 · Free', color: '#2D6A4F', bg: '#D8F3DC' },
+                { emoji: '🌸', name: 'Emotion Flower', tag: 'PHQ-9 Linked', color: '#EC4899', bg: '#FDF2F8' },
+                { emoji: '⭐', name: 'Starlight Gratitude', tag: 'Level 2', color: '#F59E0B', bg: '#FFFBEB' },
+                { emoji: '🌳', name: 'Inner Tree', tag: 'SDRI Linked', color: '#059669', bg: '#ECFDF5' },
+              ]).map(g => (
                 <div key={g.name}
                   onClick={() => {
                     if (!isLoggedIn) { setView('memberLogin'); return; }
@@ -1267,12 +1286,17 @@ function LandingPage({ setView, isLoggedIn, lang }) {
 
             {/* 커플 카드 2×2 */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-              {[
+              {tl([
                 { emoji: '💕', name: 'BIG5 궁합 분석',    tag: '성격 차이를 강점으로', color: '#E05A8A', bg: '#FFE4EE' },
                 { emoji: '🤖', name: 'AI 커플 리포트',     tag: '맞춤 관계 인사이트',   color: '#9333EA', bg: '#F3E8FF' },
                 { emoji: '📊', name: '관계 건강도 체크인', tag: '월 1회 무료',           color: '#0891B2', bg: '#E0F7FA' },
                 { emoji: '🗓️', name: '데이트 코스 추천',  tag: 'AI 개인화 추천',        color: '#D97706', bg: '#FEF3C7' },
-              ].map(g => (
+              ], [
+                { emoji: '💕', name: 'BIG5 Compatibility', tag: 'Turn differences into strengths', color: '#E05A8A', bg: '#FFE4EE' },
+                { emoji: '🤖', name: 'AI Couple Report',   tag: 'Personalized relationship insights', color: '#9333EA', bg: '#F3E8FF' },
+                { emoji: '📊', name: 'Relationship Check-In', tag: 'Free once a month',           color: '#0891B2', bg: '#E0F7FA' },
+                { emoji: '🗓️', name: 'Date Ideas',         tag: 'AI-personalized picks',          color: '#D97706', bg: '#FEF3C7' },
+              ]).map(g => (
                 <div key={g.name}
                   onClick={() => {
                     if (!isLoggedIn) { setView('memberLogin'); return; }
@@ -1311,19 +1335,23 @@ function LandingPage({ setView, isLoggedIn, lang }) {
                 textTransform: 'uppercase', padding: '5px 14px', borderRadius: 100, marginBottom: 20,
               }}>Couple Insights</div>
               <h2 style={{ fontSize: 36, fontWeight: 700, lineHeight: 1.3, marginBottom: 16 }}>
-                함께 성장하는<br /><span style={{ color: '#E05A8A' }}>마음커플</span>
+                {tl(<>함께 성장하는<br /><span style={{ color: '#E05A8A' }}>마음커플</span></>, <>Grow together with<br /><span style={{ color: '#E05A8A' }}>Maumful Couple</span></>)}
               </h2>
               <p style={{ fontSize: 16, color: '#5A5A5A', lineHeight: 1.8, marginBottom: 28 }}>
-                BIG5 성격 검사를 기반으로 우리 둘의 궁합을 분석하고,<br />
-                AI가 생성한 맞춤 관계 리포트로 더 깊이 이해하세요.
+                {tl(<>BIG5 성격 검사를 기반으로 우리 둘의 궁합을 분석하고,<br />AI가 생성한 맞춤 관계 리포트로 더 깊이 이해하세요.</>, <>Analyze your compatibility based on BIG5 personality scores — and understand each other more deeply through AI-generated relationship reports.</>)}
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
-                {[
+                {tl([
                   { icon: '💕', text: 'BIG5 궁합 분석 — 성격 차이를 강점으로 전환' },
                   { icon: '🤖', text: 'AI 커플 리포트 — 파트너와 함께 분석 (무료)' },
                   { icon: '📊', text: '관계 건강도 체크인 — 월 1회 무료 진단' },
                   { icon: '🗓️', text: '데이트 코스 추천 — 취향 기반 AI 개인화' },
-                ].map(item => (
+                ], [
+                  { icon: '💕', text: 'BIG5 Compatibility — Turn personality differences into strengths' },
+                  { icon: '🤖', text: 'AI Couple Report — Analyze together with your partner (Free)' },
+                  { icon: '📊', text: 'Relationship Check-In — Free monthly diagnosis' },
+                  { icon: '🗓️', text: 'Date Ideas — AI-personalized for your tastes' },
+                ]).map(item => (
                   <div key={item.text} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span style={{ fontSize: 18 }}>{item.icon}</span>
                     <span style={{ fontSize: 14, color: '#5A5A5A' }}>{item.text}</span>
@@ -1350,10 +1378,10 @@ function LandingPage({ setView, isLoggedIn, lang }) {
                 onMouseEnter={e => { e.currentTarget.style.background = '#C0456F'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = '#E05A8A'; e.currentTarget.style.transform = 'none'; }}
               >
-                마음커플 시작하기 →
+                {tl('마음커플 시작하기 →', 'Start Maumful Couple →')}
               </button>
               <div style={{ marginTop: 12, fontSize: 12, color: '#9A9A9A' }}>
-                로그인 후 별도 로그인 없이 바로 이동합니다
+                {tl('로그인 후 별도 로그인 없이 바로 이동합니다', 'No separate login needed — seamlessly linked after sign-in')}
               </div>
             </div>
 
@@ -1372,9 +1400,10 @@ function LandingPage({ setView, isLoggedIn, lang }) {
       }}>
         <span>ℹ️</span>
         <span>
-          <strong>본 서비스는 자기이해 및 정보 제공 목적의 콘텐츠 서비스입니다.</strong>
-          {' '}심리검사 결과와 AI 상담은 의료적 진단·치료를 대체하지 않습니다.
-          {' '}마음이 힘드실 땐 상담 연결을 이용해 보세요.
+          {tl(
+            <><strong>본 서비스는 자기이해 및 정보 제공 목적의 콘텐츠 서비스입니다.</strong>{' '}심리검사 결과와 AI 상담은 의료적 진단·치료를 대체하지 않습니다.{' '}마음이 힘드실 땐 상담 연결을 이용해 보세요.</>,
+            <><strong>This service is for self-understanding and informational purposes only.</strong>{' '}Test results and AI counseling do not replace medical diagnosis or treatment.{' '}If you are struggling, please reach out for professional support.</>
+          )}
         </span>
       </div>
 
@@ -1386,11 +1415,11 @@ function LandingPage({ setView, isLoggedIn, lang }) {
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap',
       }}>
         <span>🆘</span>
-        <strong>자살예방상담전화 109</strong>
+        <strong>{tl('자살예방상담전화', 'Suicide Prevention Hotline')} 109</strong>
         <span>·</span>
-        <strong>정신건강위기상담전화 1577-0199</strong>
+        <strong>{tl('정신건강위기상담전화', 'Mental Health Crisis Line')} 1577-0199</strong>
         <span>—</span>
-        <span>24시간 무료 · 보건복지부</span>
+        <span>{tl('24시간 무료 · 보건복지부', '24/7 Free · Ministry of Health and Welfare (Korea)')}</span>
       </div>
 
       {/* ── FOOTER ──────────────────────────────────────── */}
@@ -1403,9 +1432,9 @@ function LandingPage({ setView, isLoggedIn, lang }) {
                 fontSize: 20, fontWeight: 700, color: 'white',
                 marginBottom: 12, fontFamily: "'Noto Sans KR', sans-serif",
               }}>🌿 마음풀</div>
-              <p style={{ fontSize: 13, lineHeight: 1.8 }}>나를 이해하는 첫걸음.<br />전문 심리검사와 AI 상담을 한 곳에서.</p>
+              <p style={{ fontSize: 13, lineHeight: 1.8 }}>{tl(<>나를 이해하는 첫걸음.<br />전문 심리검사와 AI 상담을 한 곳에서.</>, <>Your journey to self-understanding.<br />Assessments &amp; AI counseling in one place.</>)}</p>
             </div>
-            {[
+            {tl([
               {
                 title: '심리검사',
                 links: ['PHQ-9 우울 자가점검', 'GAD-7 불안', 'DASS-21', 'Big5 성격', '전체 검사 보기'],
@@ -1418,7 +1447,20 @@ function LandingPage({ setView, isLoggedIn, lang }) {
                 title: '고객지원',
                 links: ['이용약관', '개인정보처리방침', 'FAQ', '문의하기'],
               },
-            ].map(col => (
+            ], [
+              {
+                title: 'Assessments',
+                links: ['PHQ-9 Depression', 'GAD-7 Anxiety', 'DASS-21', 'Big5 Personality', 'View All Assessments'],
+              },
+              {
+                title: 'Services',
+                links: ['AI Counseling', 'Healing Games', 'Maumful Couple', 'Buy Credits'],
+              },
+              {
+                title: 'Support',
+                links: ['이용약관', '개인정보처리방침', 'FAQ', '문의하기'],
+              },
+            ]).map(col => (
               <div key={col.title}>
                 <h4 style={{ color: 'white', fontSize: 14, fontWeight: 600, marginBottom: 14 }}>{col.title}</h4>
                 {col.links.map(l => (

@@ -3336,9 +3336,9 @@ app.get('/', (c) => {
   <script src="https://cdn.tailwindcss.com"></script>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <!-- jsPDF: PDF 내보내기 전용, async 로드로 초기 렌더 블로킹 방지 -->
+  <script async src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script async src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   ${googleClientId ? `<script src="https://accounts.google.com/gsi/client" async defer></script>` : ''}
   <script>window.GOOGLE_CLIENT_ID = ${JSON.stringify(googleClientId)};</script>
   ${kakaoAppKey ? `<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js" crossorigin="anonymous"></script>` : ''}
@@ -3351,10 +3351,11 @@ app.get('/', (c) => {
 </head>
 <body>
   <div id="root"></div>
-  <script type="text/babel" src="/static/landing.jsx?v=${v}"></script>
-  <script type="text/babel" src="/static/counseling.jsx?v=${v}"></script>
-  <script type="text/babel" src="/static/counseling_admin.jsx?v=${v}"></script>
-  <script type="text/babel" src="/static/app.jsx?v=${v}"></script>
+  <!-- esbuild 사전 컴파일 JS (Babel standalone 불필요) -->
+  <script src="/static/compiled/landing.js?v=${v}"></script>
+  <script src="/static/compiled/counseling.js?v=${v}"></script>
+  <script src="/static/compiled/counseling_admin.js?v=${v}"></script>
+  <script src="/static/compiled/app.js?v=${v}"></script>
   <script>
     // Service Worker 등록 (PWA)
     if ('serviceWorker' in navigator) {

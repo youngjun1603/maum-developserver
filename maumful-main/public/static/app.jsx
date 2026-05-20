@@ -5111,10 +5111,23 @@ function PsychologicalTestSystem() {
     
   }
 
+  // jsPDF async 로드 대기 (최대 8초)
+  function waitForJsPDF() {
+    if (window.jspdf) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const t0 = Date.now();
+      const id = setInterval(() => {
+        if (window.jspdf) { clearInterval(id); resolve(); }
+        else if (Date.now() - t0 > 8000) { clearInterval(id); reject(new Error('jsPDF 로드 시간 초과')); }
+      }, 100);
+    });
+  }
+
   // 📄 PDF 생성 함수들
   async function generateSctPdf(sessionData) {
     try {
       console.log('📄 SRCI PDF 생성 시작...');
+      await waitForJsPDF();
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({
         orientation: 'portrait',
@@ -5251,6 +5264,7 @@ function PsychologicalTestSystem() {
   async function generateDsiPdf(sessionData) {
     try {
       console.log('📄 SDRI PDF 생성 시작...');
+      await waitForJsPDF();
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({
         orientation: 'portrait',
