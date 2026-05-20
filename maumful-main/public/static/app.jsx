@@ -8386,7 +8386,7 @@ function PsychologicalTestSystem() {
         <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-6">
           {pendingTests.length > 1 && (
             <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
-              <p className="text-xs font-bold text-purple-700 mb-2"{t("📋 검사 진행 현황","📋 Test Progress")} ({currentTestIndex + 1}/{pendingTests.length})</p>
+              <p className="text-xs font-bold text-purple-700 mb-2">{t("📋 검사 진행 현황","📋 Test Progress")} ({currentTestIndex + 1}/{pendingTests.length})</p>
               <div className="flex gap-2 flex-wrap">
                 {pendingTests.map((t, i) => (
                   <span key={t} className={`px-3 py-1 rounded-full text-xs font-bold border ${i < currentTestIndex ? "bg-green-100 border-green-300 text-green-700" : i === currentTestIndex ? "bg-purple-600 text-white border-purple-600" : "bg-gray-100 border-gray-300 text-gray-400"}`}>
@@ -8453,7 +8453,7 @@ function PsychologicalTestSystem() {
         <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-6">
           {pendingTests.length > 1 && (
             <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
-              <p className="text-xs font-bold text-purple-700 mb-2"{t("📋 검사 진행 현황","📋 Test Progress")} ({currentTestIndex + 1}/{pendingTests.length})</p>
+              <p className="text-xs font-bold text-purple-700 mb-2">{t("📋 검사 진행 현황","📋 Test Progress")} ({currentTestIndex + 1}/{pendingTests.length})</p>
               <div className="flex gap-2 flex-wrap">
                 {pendingTests.map((t, i) => (
                   <span key={t} className={`px-3 py-1 rounded-full text-xs font-bold border ${i < currentTestIndex ? "bg-green-100 border-green-300 text-green-700" : i === currentTestIndex ? "bg-teal-600 text-white border-teal-600" : "bg-gray-100 border-gray-300 text-gray-400"}`}>
@@ -8530,7 +8530,7 @@ function PsychologicalTestSystem() {
       <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
         {pendingTests.length > 1 && (
           <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
-            <p className="text-xs font-bold text-purple-700 mb-2"{t("📋 검사 진행 현황","📋 Test Progress")} ({currentTestIndex + 1}/{pendingTests.length})</p>
+            <p className="text-xs font-bold text-purple-700 mb-2">{t("📋 검사 진행 현황","📋 Test Progress")} ({currentTestIndex + 1}/{pendingTests.length})</p>
             <div className="flex gap-2 flex-wrap">
               {pendingTests.map((t, i) => (
                 <span key={t} className={`px-3 py-1 rounded-full text-xs font-bold border ${i < currentTestIndex ? "bg-green-100 border-green-300 text-green-700" : i === currentTestIndex ? "bg-purple-600 text-white border-purple-600" : "bg-gray-100 border-gray-300 text-gray-400"}`}>
@@ -8584,7 +8584,7 @@ function PsychologicalTestSystem() {
       <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
         {pendingTests.length > 1 && (
           <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
-            <p className="text-xs font-bold text-purple-700 mb-2"{t("📋 검사 진행 현황","📋 Test Progress")} ({currentTestIndex + 1}/{pendingTests.length})</p>
+            <p className="text-xs font-bold text-purple-700 mb-2">{t("📋 검사 진행 현황","📋 Test Progress")} ({currentTestIndex + 1}/{pendingTests.length})</p>
             <div className="flex gap-2 flex-wrap">
               {pendingTests.map((t, i) => (
                 <span key={t} className={`px-3 py-1 rounded-full text-xs font-bold border ${i < currentTestIndex ? "bg-green-100 border-green-300 text-green-700" : i === currentTestIndex ? "bg-purple-600 text-white border-purple-600" : "bg-gray-100 border-gray-300 text-gray-400"}`}>
@@ -8638,7 +8638,7 @@ function PsychologicalTestSystem() {
       <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
         {pendingTests.length > 1 && (
           <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
-            <p className="text-xs font-bold text-purple-700 mb-2"{t("📋 검사 진행 현황","📋 Test Progress")} ({currentTestIndex + 1}/{pendingTests.length})</p>
+            <p className="text-xs font-bold text-purple-700 mb-2">{t("📋 검사 진행 현황","📋 Test Progress")} ({currentTestIndex + 1}/{pendingTests.length})</p>
             <div className="flex gap-2 flex-wrap">
               {pendingTests.map((t, i) => (
                 <span key={t} className={`px-3 py-1 rounded-full text-xs font-bold border ${i < currentTestIndex ? "bg-green-100 border-green-300 text-green-700" : i === currentTestIndex ? "bg-purple-600 text-white border-purple-600" : "bg-gray-100 border-gray-300 text-gray-400"}`}>
@@ -8693,7 +8693,7 @@ function PsychologicalTestSystem() {
       <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
         {pendingTests.length > 1 && (
           <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
-            <p className="text-xs font-bold text-purple-700 mb-2"{t("📋 검사 진행 현황","📋 Test Progress")} ({currentTestIndex + 1}/{pendingTests.length})</p>
+            <p className="text-xs font-bold text-purple-700 mb-2">{t("📋 검사 진행 현황","📋 Test Progress")} ({currentTestIndex + 1}/{pendingTests.length})</p>
             <div className="flex gap-2 flex-wrap">
               {pendingTests.map((t, i) => (
                 <span key={t} className={`px-3 py-1 rounded-full text-xs font-bold border ${i < currentTestIndex ? "bg-green-100 border-green-300 text-green-700" : i === currentTestIndex ? "bg-purple-600 text-white border-purple-600" : "bg-gray-100 border-gray-300 text-gray-400"}`}>
@@ -8748,7 +8748,7 @@ function PsychologicalTestSystem() {
       <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
         {pendingTests.length > 1 && (
           <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
-            <p className="text-xs font-bold text-purple-700 mb-2"{t("📋 검사 진행 현황","📋 Test Progress")} ({currentTestIndex + 1}/{pendingTests.length})</p>
+            <p className="text-xs font-bold text-purple-700 mb-2">{t("📋 검사 진행 현황","📋 Test Progress")} ({currentTestIndex + 1}/{pendingTests.length})</p>
             <div className="flex gap-2 flex-wrap">
               {pendingTests.map((t, i) => (
                 <span key={t} className={`px-3 py-1 rounded-full text-xs font-bold border ${i < currentTestIndex ? "bg-green-100 border-green-300 text-green-700" : i === currentTestIndex ? "bg-purple-600 text-white border-purple-600" : "bg-gray-100 border-gray-300 text-gray-400"}`}>
@@ -8803,7 +8803,7 @@ function PsychologicalTestSystem() {
       <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-6">
         {pendingTests.length > 1 && (
           <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
-            <p className="text-xs font-bold text-purple-700 mb-2"{t("📋 검사 진행 현황","📋 Test Progress")} ({currentTestIndex + 1}/{pendingTests.length})</p>
+            <p className="text-xs font-bold text-purple-700 mb-2">{t("📋 검사 진행 현황","📋 Test Progress")} ({currentTestIndex + 1}/{pendingTests.length})</p>
             <div className="flex gap-2 flex-wrap">
               {pendingTests.map((t, i) => (
                 <span key={t} className={`px-3 py-1 rounded-full text-xs font-bold border ${i < currentTestIndex ? "bg-green-100 border-green-300 text-green-700" : i === currentTestIndex ? "bg-purple-600 text-white border-purple-600" : "bg-gray-100 border-gray-300 text-gray-400"}`}>
@@ -8899,7 +8899,7 @@ function PsychologicalTestSystem() {
       <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
         {pendingTests.length > 1 && (
           <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
-            <p className="text-xs font-bold text-purple-700 mb-2"{t("📋 검사 진행 현황","📋 Test Progress")} ({currentTestIndex + 1}/{pendingTests.length})</p>
+            <p className="text-xs font-bold text-purple-700 mb-2">{t("📋 검사 진행 현황","📋 Test Progress")} ({currentTestIndex + 1}/{pendingTests.length})</p>
             <div className="flex gap-2 flex-wrap">
               {pendingTests.map((t, i) => (
                 <span key={t} className={`px-3 py-1 rounded-full text-xs font-bold border ${i < currentTestIndex ? "bg-green-100 border-green-300 text-green-700" : i === currentTestIndex ? "bg-purple-600 text-white border-purple-600" : "bg-gray-100 border-gray-300 text-gray-400"}`}>
@@ -8975,7 +8975,7 @@ function PsychologicalTestSystem() {
         <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
           {pendingTests.length > 1 && (
             <div className="mb-4 bg-teal-50 border border-teal-200 rounded-xl p-3">
-              <p className="text-xs font-bold text-teal-700 mb-2"{t("📋 검사 진행 현황","📋 Test Progress")} ({currentTestIndex + 1}/{pendingTests.length})</p>
+              <p className="text-xs font-bold text-teal-700 mb-2">{t("📋 검사 진행 현황","📋 Test Progress")} ({currentTestIndex + 1}/{pendingTests.length})</p>
               <div className="flex gap-2 flex-wrap">
                 {pendingTests.map((t, i) => (
                   <span key={t} className={`px-3 py-1 rounded-full text-xs font-bold border ${i < currentTestIndex ? "bg-green-100 border-green-300 text-green-700" : i === currentTestIndex ? "bg-teal-600 text-white border-teal-600" : "bg-gray-100 border-gray-300 text-gray-400"}`}>
