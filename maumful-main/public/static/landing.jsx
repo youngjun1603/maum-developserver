@@ -373,7 +373,7 @@ function MfSnsHeroBtn({ tl }) {
     if (!k.isInitialized()) k.init(window.KAKAO_APP_KEY);
     k.Share.sendDefault({
       objectType: 'feed',
-      content: { title: '마음풀 — 심리검사 · AI상담 · 치유게임', description: '마음의 무게를 가볍게.', imageUrl: window.location.origin + '/static/icon-512.png', link: { mobileWebUrl: window.location.origin, webUrl: window.location.origin } },
+      content: { title: '마음풀 — 심리검사 · AI상담 · 치유게임', description: '마음의 무게를 가볍게.', imageUrl: window.location.origin + '/static/og-share.png', link: { mobileWebUrl: window.location.origin, webUrl: window.location.origin } },
       buttons: [{ title: tl('무료로 시작하기', 'Get Started'), link: { mobileWebUrl: window.location.origin, webUrl: window.location.origin } }],
     });
   };

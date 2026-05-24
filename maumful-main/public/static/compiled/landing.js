@@ -502,7 +502,7 @@ function MfSnsHeroBtn({ tl }) {
     if (!k.isInitialized()) k.init(window.KAKAO_APP_KEY);
     k.Share.sendDefault({
       objectType: "feed",
-      content: { title: "\uB9C8\uC74C\uD480 \u2014 \uC2EC\uB9AC\uAC80\uC0AC \xB7 AI\uC0C1\uB2F4 \xB7 \uCE58\uC720\uAC8C\uC784", description: "\uB9C8\uC74C\uC758 \uBB34\uAC8C\uB97C \uAC00\uBCCD\uAC8C.", imageUrl: window.location.origin + "/static/icon-512.png", link: { mobileWebUrl: window.location.origin, webUrl: window.location.origin } },
+      content: { title: "\uB9C8\uC74C\uD480 \u2014 \uC2EC\uB9AC\uAC80\uC0AC \xB7 AI\uC0C1\uB2F4 \xB7 \uCE58\uC720\uAC8C\uC784", description: "\uB9C8\uC74C\uC758 \uBB34\uAC8C\uB97C \uAC00\uBCCD\uAC8C.", imageUrl: window.location.origin + "/static/og-share.png", link: { mobileWebUrl: window.location.origin, webUrl: window.location.origin } },
       buttons: [{ title: tl("\uBB34\uB8CC\uB85C \uC2DC\uC791\uD558\uAE30", "Get Started"), link: { mobileWebUrl: window.location.origin, webUrl: window.location.origin } }]
     });
   };
