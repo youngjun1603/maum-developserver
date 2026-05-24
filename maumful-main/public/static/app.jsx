@@ -2932,7 +2932,6 @@ function PsychologicalTestSystem() {
         {(window.KAKAO_APP_KEY || window.GOOGLE_CLIENT_ID || window.NAVER_CLIENT_ID) && (
           <div className="space-y-2 mb-4">
             {window.NAVER_CLIENT_ID && <NaverLoginBtn onLogin={handleNaverLogin} />}
-            {window.KAKAO_APP_KEY && <KakaoLoginBtn onLogin={handleKakaoLogin} />}
             {window.GOOGLE_CLIENT_ID && <GoogleSignInBtn onLogin={handleGoogleLogin} btnText="signin_with" />}
           </div>
         )}
@@ -3126,7 +3125,6 @@ function PsychologicalTestSystem() {
             </div>
             <div className="space-y-2">
               {window.NAVER_CLIENT_ID && <NaverLoginBtn onLogin={handleNaverLogin} />}
-              {window.KAKAO_APP_KEY && <KakaoLoginBtn onLogin={handleKakaoLogin} />}
               {window.GOOGLE_CLIENT_ID && <GoogleSignInBtn onLogin={handleGoogleLogin} btnText="signup_with" />}
             </div>
           </>
