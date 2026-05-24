@@ -507,7 +507,7 @@ function MfSnsHeroBtn({ tl }) {
     });
   };
   if (!window.KAKAO_APP_KEY) return null;
-  return /* @__PURE__ */ React.createElement("button", { onClick: share, style: { marginTop: 14, display: "inline-flex", alignItems: "center", gap: 8, background: "#FEE500", color: "#3C1E1E", border: "none", borderRadius: 24, padding: "9px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Noto Sans KR',sans-serif", boxShadow: "0 2px 10px rgba(254,229,0,0.4)" } }, /* @__PURE__ */ React.createElement("svg", { viewBox: "0 0 24 24", style: { width: 17, height: 17, flexShrink: 0 }, fill: "#3C1E1E" }, /* @__PURE__ */ React.createElement("ellipse", { cx: "12", cy: "11", rx: "10", ry: "9" }), /* @__PURE__ */ React.createElement("path", { d: "M9 17C7.5 20 6 20.5 6 20.5 8 19 9 17.5 9.5 16.8", fill: "#FEE500" })), tl("\uCE74\uCE74\uC624\uD1A1\uC73C\uB85C \uACF5\uC720\uD558\uAE30", "Share on KakaoTalk"));
+  return /* @__PURE__ */ React.createElement("button", { onClick: share, style: { marginTop: 14, display: "inline-flex", alignItems: "center", gap: 8, background: "#FEE500", color: "#3C1E1E", border: "none", borderRadius: 24, padding: "9px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Noto Sans KR',sans-serif", boxShadow: "0 2px 10px rgba(254,229,0,0.4)" } }, /* @__PURE__ */ React.createElement("svg", { viewBox: "0 0 24 24", style: { width: 17, height: 17, flexShrink: 0 }, fill: "#3C1E1E" }, /* @__PURE__ */ React.createElement("path", { d: "M12 2C6.48 2 2 6.02 2 11c0 2.75 1.3 5.2 3.35 6.88L4 22l4.67-2.34C9.73 19.87 10.84 20 12 20c5.52 0 10-4.02 10-9S17.52 2 12 2z" })), tl("\uCE74\uCE74\uC624\uD1A1\uC73C\uB85C \uACF5\uC720\uD558\uAE30", "Share on KakaoTalk"));
 }
 function MfSnsFooter({ tl }) {
   const { useState: useS } = React;
@@ -534,7 +534,7 @@ function MfSnsFooter({ tl }) {
       lbl: tl("\uCE74\uCE74\uC624\uD1A1", "KakaoTalk"),
       bg: "#FEE500",
       fn: kakao,
-      ico: /* @__PURE__ */ React.createElement("svg", { viewBox: "0 0 24 24", style: S, fill: "#3C1E1E" }, /* @__PURE__ */ React.createElement("ellipse", { cx: "12", cy: "11", rx: "10", ry: "9" }), /* @__PURE__ */ React.createElement("path", { d: "M9 17C7.5 20 6 20.5 6 20.5 8 19 9 17.5 9.5 16.8", fill: "#FEE500" }))
+      ico: /* @__PURE__ */ React.createElement("svg", { viewBox: "0 0 24 24", style: S, fill: "#3C1E1E" }, /* @__PURE__ */ React.createElement("path", { d: "M12 2C6.48 2 2 6.02 2 11c0 2.75 1.3 5.2 3.35 6.88L4 22l4.67-2.34C9.73 19.87 10.84 20 12 20c5.52 0 10-4.02 10-9S17.52 2 12 2z" }))
     },
     {
       id: "facebook",

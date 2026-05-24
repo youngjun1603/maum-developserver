@@ -380,7 +380,7 @@ function MfSnsHeroBtn({ tl }) {
   if (!window.KAKAO_APP_KEY) return null;
   return (
     <button onClick={share} style={{ marginTop: 14, display: 'inline-flex', alignItems: 'center', gap: 8, background: '#FEE500', color: '#3C1E1E', border: 'none', borderRadius: 24, padding: '9px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'Noto Sans KR',sans-serif", boxShadow: '0 2px 10px rgba(254,229,0,0.4)' }}>
-      <svg viewBox="0 0 24 24" style={{ width: 17, height: 17, flexShrink: 0 }} fill="#3C1E1E"><ellipse cx="12" cy="11" rx="10" ry="9"/><path d="M9 17C7.5 20 6 20.5 6 20.5 8 19 9 17.5 9.5 16.8" fill="#FEE500"/></svg>
+      <svg viewBox="0 0 24 24" style={{ width: 17, height: 17, flexShrink: 0 }} fill="#3C1E1E"><path d="M12 2C6.48 2 2 6.02 2 11c0 2.75 1.3 5.2 3.35 6.88L4 22l4.67-2.34C9.73 19.87 10.84 20 12 20c5.52 0 10-4.02 10-9S17.52 2 12 2z"/></svg>
       {tl('카카오톡으로 공유하기', 'Share on KakaoTalk')}
     </button>
   );
@@ -403,7 +403,7 @@ function MfSnsFooter({ tl }) {
   const IG = 'linear-gradient(45deg,#f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%)';
   const btns = [
     { id: 'kakao',     lbl: tl('카카오톡', 'KakaoTalk'), bg: '#FEE500', fn: kakao,
-      ico: <svg viewBox="0 0 24 24" style={S} fill="#3C1E1E"><ellipse cx="12" cy="11" rx="10" ry="9"/><path d="M9 17C7.5 20 6 20.5 6 20.5 8 19 9 17.5 9.5 16.8" fill="#FEE500"/></svg> },
+      ico: <svg viewBox="0 0 24 24" style={S} fill="#3C1E1E"><path d="M12 2C6.48 2 2 6.02 2 11c0 2.75 1.3 5.2 3.35 6.88L4 22l4.67-2.34C9.73 19.87 10.84 20 12 20c5.52 0 10-4.02 10-9S17.52 2 12 2z"/></svg> },
     { id: 'facebook',  lbl: 'Facebook',  bg: '#1877F2', fn: () => pop('https://www.facebook.com/sharer/sharer.php?u=' + enc(url)),
       ico: <svg viewBox="0 0 24 24" style={S} fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg> },
     { id: 'x',         lbl: 'X',         bg: '#101010', fn: () => pop('https://twitter.com/intent/tweet?url=' + enc(url) + '&text=' + enc(ttl)),
