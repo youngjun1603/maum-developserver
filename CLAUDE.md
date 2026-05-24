@@ -160,6 +160,59 @@ npm run build:jsx
 
 ---
 
+## 지자체 화이트라벨 (구현 대기)
+
+사용자가 요청 시 구현 시작. 지금은 설계만 확정된 상태.
+
+### 아키텍처: 멀티테넌트 단일 Worker
+
+- `organizations` 테이블 + `users.org_id` FK
+- Worker가 `host` 헤더로 org 식별 → `/api/org-config` 반환
+- 지자체 도메인 → Cloudflare DNS CNAME → 마음풀 Worker
+- org 설정 없으면 마음풀 기본 디자인으로 폴백
+
+### landing_config JSON 구조
+
+```json
+{
+  "hero": {
+    "bg_image": "https://cdn.../hero.jpg",
+    "overlay": 0.55,
+    "title": "서울시민 마음건강 플랫폼",
+    "subtitle": "서울특별시와 마음풀이 함께합니다"
+  },
+  "brand": {
+    "name": "서울 마음풀",
+    "logo": "https://cdn.../logo.png",
+    "color": "#0033A0"
+  },
+  "footer": {
+    "org_name": "서울특별시 정신건강복지센터",
+    "address": "서울특별시 ...",
+    "phone": "02-XXX-XXXX"
+  }
+}
+```
+
+### 히어로 영역 규칙
+- 배경 사진 + 반투명 오버레이(0.5~0.6) + 흰색 텍스트 고정
+- overlay 값으로 사진 밝기 무관하게 가독성 유지
+
+### 구현 시 작업 목록
+1. `organizations` 테이블 migration (id, domain, name, landing_config JSON, ...)
+2. `users` 테이블에 `org_id` FK 추가
+3. `GET /api/org-config` 엔드포인트 (host 헤더 → org 조회)
+4. `landing.jsx` — org_config 로드 후 히어로/브랜드/푸터 적용
+5. 어드민: 지자체 설정 관리 UI (landing_config JSON 편집)
+
+### 데이터 분리 기준
+| 지자체 규모 | 방식 |
+|------------|------|
+| 소규모·파일럿 | 멀티테넌트 단일 Worker (A안) |
+| 대형·데이터 분리 요구 | CTS 트윈 모델 (B안) |
+
+---
+
 ## 버전 관리 원칙 ⚠️ 필수 준수
 
 ### 서비스별 커밋 분리 (매우 중요)
