@@ -727,6 +727,102 @@ app.post('/api/auth/kakao', async (c) => {
   return c.json({ success: true, data: { accessToken: accessTok, refreshToken: refreshTok, user: { id: user.id, email: user.email, nickname: user.nickname, locale: user.locale, credits: user.credits } } })
 })
 
+// 카카오 로그인 — OAuth 2.0 Authorization URL 반환
+app.get('/api/auth/kakao/url', (c) => {
+  const clientId = c.env.KAKAO_REST_API_KEY
+  if (!clientId) return c.json({ success: false, error: '카카오 로그인 미설정' }, 500)
+  const serviceUrl = (c.env as unknown as Record<string,string>).SERVICE_URL || ''
+  const redirectUri = `${serviceUrl}/api/auth/kakao/callback`
+  const url = `https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}`
+  return c.json({ success: true, url })
+})
+
+// 카카오 로그인 — OAuth 콜백 (code → token → user → JWT → postMessage)
+app.get('/api/auth/kakao/callback', async (c) => {
+  const { DB, KV } = c.env
+  const code     = c.req.query('code')
+  const clientId = c.env.KAKAO_REST_API_KEY
+
+  const errPage = (msg: string) => new Response(
+    `<!DOCTYPE html><html><body><script>window.opener?.postMessage({type:'kakao_error',error:${JSON.stringify(msg)}},window.location.origin);window.close();</script></body></html>`,
+    { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+  )
+
+  if (!code || !clientId) return errPage('설정 오류')
+
+  // code → access_token
+  const serviceUrl = (c.env as unknown as Record<string,string>).SERVICE_URL || ''
+  const redirectUri = `${serviceUrl}/api/auth/kakao/callback`
+  const tokenRes = await fetch('https://kauth.kakao.com/oauth/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ grant_type: 'authorization_code', client_id: clientId, redirect_uri: redirectUri, code }),
+  }).catch(() => null)
+  if (!tokenRes?.ok) return errPage('토큰 발급 실패')
+
+  const tokenData = await tokenRes.json() as { access_token?: string; error?: string }
+  if (!tokenData.access_token) return errPage('액세스 토큰 없음')
+
+  // access_token → user info
+  const userRes = await fetch('https://kapi.kakao.com/v2/user/me', {
+    headers: { Authorization: `Bearer ${tokenData.access_token}` },
+  }).catch(() => null)
+  if (!userRes?.ok) return errPage('사용자 정보 조회 실패')
+
+  const info = await userRes.json() as {
+    id: number
+    kakao_account?: { email?: string; profile?: { nickname?: string } }
+  }
+
+  const kakaoId  = String(info.id)
+  const email    = info.kakao_account?.email
+  const nickname = info.kakao_account?.profile?.nickname
+
+  let user = await DB.prepare('SELECT * FROM users WHERE social_provider=? AND social_id=?')
+    .bind('kakao', kakaoId).first<User>()
+
+  if (!user) {
+    if (email) {
+      const existing = await DB.prepare('SELECT * FROM users WHERE email=?')
+        .bind(email.toLowerCase()).first<User>()
+      if (existing) {
+        await DB.prepare('UPDATE users SET social_provider=?,social_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=?')
+          .bind('kakao', kakaoId, existing.id).run()
+        user = { ...existing, social_provider: 'kakao', social_id: kakaoId }
+      }
+    }
+    if (!user) {
+      const country  = (c.req.header('cf-ipcountry') ?? 'KR').toUpperCase()
+      const emailVal = email?.toLowerCase() ?? `kakao_${kakaoId}@kakao.local`
+      const r = await DB.prepare(
+        'INSERT INTO users (email,social_provider,social_id,nickname,locale,country_code,is_email_verified,credits) VALUES (?,?,?,?,?,?,?,20)'
+      ).bind(emailVal, 'kakao', kakaoId, nickname ?? '카카오사용자', 'ko', country, email ? 1 : 0).run()
+      const newId = r.meta.last_row_id as number
+      await DB.prepare('INSERT INTO credit_transactions (user_id,type,amount,reason,balance_after) VALUES (?,?,?,?,?)')
+        .bind(newId, 'gain', 20, 'signup_bonus', 20).run()
+      user = await DB.prepare('SELECT * FROM users WHERE id=?').bind(newId).first<User>() as User
+    }
+  }
+
+  const secret       = await getJwtSecret(KV)
+  const now          = Math.floor(Date.now() / 1000)
+  const accessToken  = await signJwt({ sub: user.id, email: user.email, iat: now, exp: now + 3600 }, secret)
+  const refreshToken = await signJwt({ sub: user.id, type: 'refresh', iat: now, exp: now + 30 * 86400 }, secret)
+  await KV.put(`refresh:${user.id}`, refreshToken, { expirationTtl: 30 * 86400 })
+
+  const loginData = JSON.stringify({
+    type: 'kakao_login',
+    accessToken,
+    refreshToken,
+    user: { id: user.id, email: user.email, nickname: user.nickname, locale: user.locale, credits: user.credits },
+  })
+
+  return new Response(
+    `<!DOCTYPE html><html><body><script>window.opener?.postMessage(${loginData},window.location.origin);window.close();</script></body></html>`,
+    { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+  )
+})
+
 // 네이버 로그인 — OAuth 2.0 Authorization URL 반환
 app.get('/api/auth/naver/url', (c) => {
   const clientId = c.env.NAVER_CLIENT_ID
@@ -1619,8 +1715,10 @@ app.post('/api/chat/mood-log', async (c) => {
   const { DB, KV } = c.env
   const userId = await getAuthUserId(c.req.raw, KV)
   if (!userId) return c.json({ success: false }, 401)
-  const { moodScore, testType } = await c.req.json()
-  const score = parseInt(moodScore)
+  const body = await c.req.json().catch(() => null)
+  if (!body) return c.json({ success: false }, 400)
+  const { moodScore, testType } = body
+  const score = Math.round(Number(moodScore))
   if (isNaN(score) || score < 0 || score > 100) return c.json({ success: false }, 400)
   await DB.prepare('INSERT INTO mood_logs (user_id, mood_score, test_type) VALUES (?, ?, ?)')
     .bind(userId, score, testType ?? null).run()
@@ -1632,7 +1730,8 @@ app.get('/api/chat/mood-trend', async (c) => {
   const { DB, KV } = c.env
   const userId = await getAuthUserId(c.req.raw, KV)
   if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
-  const days = Math.min(parseInt(c.req.query('days') || '14'), 90)
+  const rawDays = parseInt(c.req.query('days') || '14')
+  const days = Math.min(isNaN(rawDays) ? 14 : rawDays, 90)
   const rows = await DB.prepare(
     `SELECT DATE(created_at) AS day, ROUND(AVG(mood_score)) AS avg_score, COUNT(*) AS cnt
      FROM mood_logs WHERE user_id=? AND created_at >= DATE('now', ? || ' days')

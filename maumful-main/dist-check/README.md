@@ -1,0 +1,1 @@
+This folder contains the built output assets for the worker "maumful" generated at 2026-05-19T20:58:09.951Z.

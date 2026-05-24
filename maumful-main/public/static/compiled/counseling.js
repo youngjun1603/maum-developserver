@@ -607,19 +607,20 @@ function _CounselingPageBooking({ setView, isLoggedIn, currentUser }) {
     setCompletedAppt(a);
   }, isLoggedIn, setView }))));
 }
-function CounselingPage({ setView }) {
+function CounselingPage({ setView, lang }) {
   const { useState: useS, useEffect: useE, useRef } = React;
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const s = { fontFamily: "'Noto Sans KR',sans-serif" };
+  const tl = (ko, en) => lang === "en" ? en : ko;
   const [phase, setPhase] = useS("init");
   const [places, setPlaces] = useS([]);
   const [userPos, setUserPos] = useS(null);
   const [activeFilter, setFilter] = useS("all");
   const CATS = {
-    psych: { label: "\uC815\uC2E0\uAC74\uAC15\uC758\uD559\uACFC", color: "#0284C7", bg: "#EFF6FF", border: "#BAE6FD", emoji: "\u{1F9E0}" },
-    center: { label: "\uC815\uC2E0\uAC74\uAC15\uBCF5\uC9C0\uC13C\uD130", color: "#D97706", bg: "#FFFBEB", border: "#FCD34D", emoji: "\u{1F3E2}" },
-    counsel: { label: "\uC2EC\uB9AC\uC0C1\uB2F4\uC13C\uD130", color: "#2D6A4F", bg: "#F0FDF4", border: "#86EFAC", emoji: "\u{1F3E5}" }
+    psych: { label: "\uC815\uC2E0\uAC74\uAC15\uC758\uD559\uACFC", labelEn: "Psychiatry", color: "#0284C7", bg: "#EFF6FF", border: "#BAE6FD", emoji: "\u{1F9E0}" },
+    center: { label: "\uC815\uC2E0\uAC74\uAC15\uBCF5\uC9C0\uC13C\uD130", labelEn: "Mental Health Center", color: "#D97706", bg: "#FFFBEB", border: "#FCD34D", emoji: "\u{1F3E2}" },
+    counsel: { label: "\uC2EC\uB9AC\uC0C1\uB2F4\uC13C\uD130", labelEn: "Counseling Center", color: "#2D6A4F", bg: "#F0FDF4", border: "#86EFAC", emoji: "\u{1F3E5}" }
   };
   const getCat = (p) => {
     const c = p.category_name || "";
@@ -628,9 +629,9 @@ function CounselingPage({ setView }) {
     return CATS.counsel;
   };
   const HOTLINES = [
-    { name: "\uC790\uC0B4\uC608\uBC29\uC0C1\uB2F4\uC804\uD654", tel: "109", desc: "24\uC2DC\uAC04 \uBB34\uB8CC \xB7 \uBCF4\uAC74\uBCF5\uC9C0\uBD80", color: "#EF4444", bg: "#FEF2F2", border: "#FCA5A5" },
-    { name: "\uC815\uC2E0\uAC74\uAC15\uC704\uAE30\uC0C1\uB2F4\uC804\uD654", tel: "1577-0199", desc: "24\uC2DC\uAC04 \uBB34\uB8CC \xB7 \uC804\uAD6D \uC5F0\uACB0", color: "#3B82F6", bg: "#EFF6FF", border: "#BFDBFE" },
-    { name: "\uCCAD\uC18C\uB144\uC0C1\uB2F4\uC804\uD654", tel: "1388", desc: "24\uC2DC\uAC04 \uBB34\uB8CC \xB7 \uC5EC\uC131\uAC00\uC871\uBD80", color: "#8B5CF6", bg: "#F5F3FF", border: "#C4B5FD" }
+    { name: tl("\uC790\uC0B4\uC608\uBC29\uC0C1\uB2F4\uC804\uD654", "Suicide Prevention"), tel: "109", desc: tl("24\uC2DC\uAC04 \uBB34\uB8CC \xB7 \uBCF4\uAC74\uBCF5\uC9C0\uBD80", "24h Free \xB7 Ministry of Health"), color: "#EF4444", bg: "#FEF2F2", border: "#FCA5A5" },
+    { name: tl("\uC815\uC2E0\uAC74\uAC15\uC704\uAE30\uC0C1\uB2F4\uC804\uD654", "Mental Health Crisis"), tel: "1577-0199", desc: tl("24\uC2DC\uAC04 \uBB34\uB8CC \xB7 \uC804\uAD6D \uC5F0\uACB0", "24h Free \xB7 Nationwide"), color: "#3B82F6", bg: "#EFF6FF", border: "#BFDBFE" },
+    { name: tl("\uCCAD\uC18C\uB144\uC0C1\uB2F4\uC804\uD654", "Youth Counseling"), tel: "1388", desc: tl("24\uC2DC\uAC04 \uBB34\uB8CC \xB7 \uC5EC\uC131\uAC00\uC871\uBD80", "24h Free \xB7 Ministry of Gender"), color: "#8B5CF6", bg: "#F5F3FF", border: "#C4B5FD" }
   ];
   useE(() => {
     if (!window.KAKAO_APP_KEY) {
@@ -697,7 +698,7 @@ function CounselingPage({ setView }) {
       });
     });
   }, [phase, userPos, places]);
-  const SearchFallback = () => /* @__PURE__ */ React.createElement("div", { style: { padding: "28px 16px 0" } }, /* @__PURE__ */ React.createElement("div", { style: { background: "#FEF3C7", border: "1px solid #FCD34D", borderRadius: 12, padding: "12px 14px", marginBottom: 20, fontSize: 13, color: "#92400E", ...s } }, phase === "nogeo" ? "\u{1F4CD} \uC704\uCE58 \uAD8C\uD55C\uC744 \uD5C8\uC6A9\uD558\uBA74 \uC9C0\uB3C4\uC5D0\uC11C \uBC14\uB85C \uD655\uC778\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4. \uC544\uB798 \uBC84\uD2BC\uC73C\uB85C \uCE74\uCE74\uC624\uB9F5\uC5D0\uC11C \uAC80\uC0C9\uD558\uC138\uC694." : "\u{1F50D} \uCE74\uCE74\uC624\uB9F5\uC5D0\uC11C \uC8FC\uBCC0 \uC0C1\uB2F4 \uAE30\uAD00\uC744 \uAC80\uC0C9\uD574 \uBCF4\uC138\uC694."), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 } }, [{ q: "\uC2EC\uB9AC\uC0C1\uB2F4\uC13C\uD130", e: "\u{1F3E5}" }, { q: "\uC815\uC2E0\uAC74\uAC15\uC758\uD559\uACFC", e: "\u{1F9E0}" }, { q: "\uC815\uC2E0\uAC74\uAC15\uBCF5\uC9C0\uC13C\uD130", e: "\u{1F3E2}" }, { q: "\uCCAD\uC18C\uB144\uC0C1\uB2F4\uBCF5\uC9C0\uC13C\uD130", e: "\u{1F468}\u200D\u{1F469}\u200D\u{1F467}" }].map(({ q, e }) => /* @__PURE__ */ React.createElement(
+  const SearchFallback = () => /* @__PURE__ */ React.createElement("div", { style: { padding: "28px 16px 0" } }, /* @__PURE__ */ React.createElement("div", { style: { background: "#FEF3C7", border: "1px solid #FCD34D", borderRadius: 12, padding: "12px 14px", marginBottom: 20, fontSize: 13, color: "#92400E", ...s } }, phase === "nogeo" ? tl("\u{1F4CD} \uC704\uCE58 \uAD8C\uD55C\uC744 \uD5C8\uC6A9\uD558\uBA74 \uC9C0\uB3C4\uC5D0\uC11C \uBC14\uB85C \uD655\uC778\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4. \uC544\uB798 \uBC84\uD2BC\uC73C\uB85C \uCE74\uCE74\uC624\uB9F5\uC5D0\uC11C \uAC80\uC0C9\uD558\uC138\uC694.", "\u{1F4CD} Allow location access to view the map. Use the buttons below to search on Kakao Map.") : tl("\u{1F50D} \uCE74\uCE74\uC624\uB9F5\uC5D0\uC11C \uC8FC\uBCC0 \uC0C1\uB2F4 \uAE30\uAD00\uC744 \uAC80\uC0C9\uD574 \uBCF4\uC138\uC694.", "\u{1F50D} Search for nearby counseling centers on Kakao Map.")), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 } }, [{ q: "\uC2EC\uB9AC\uC0C1\uB2F4\uC13C\uD130", e: "\u{1F3E5}" }, { q: "\uC815\uC2E0\uAC74\uAC15\uC758\uD559\uACFC", e: "\u{1F9E0}" }, { q: "\uC815\uC2E0\uAC74\uAC15\uBCF5\uC9C0\uC13C\uD130", e: "\u{1F3E2}" }, { q: "\uCCAD\uC18C\uB144\uC0C1\uB2F4\uBCF5\uC9C0\uC13C\uD130", e: "\u{1F468}\u200D\u{1F469}\u200D\u{1F467}" }].map(({ q, e }) => /* @__PURE__ */ React.createElement(
     "button",
     {
       key: q,
@@ -725,12 +726,12 @@ function CounselingPage({ setView }) {
       onClick: () => setView("landing"),
       style: { ...s, background: "none", border: "none", color: "#9A9A9A", fontSize: 14, cursor: "pointer", marginBottom: 10, display: "flex", alignItems: "center", gap: 4 }
     },
-    "\u2190 \uD648\uC73C\uB85C"
-  ), /* @__PURE__ */ React.createElement("h1", { style: { ...s, fontSize: 20, fontWeight: 700, color: "#1A1A1A", marginBottom: 3 } }, "\u{1F3E5} \uC778\uADFC \uC0C1\uB2F4 \uAE30\uAD00 \uCC3E\uAE30"), /* @__PURE__ */ React.createElement("p", { style: { ...s, fontSize: 13, color: "#6B7280" } }, "\uB0B4 \uC704\uCE58 \uAE30\uC900 3km \uC774\uB0B4 \uC2EC\uB9AC\uC0C1\uB2F4\uC13C\uD130\xB7\uC815\uC2E0\uAC74\uAC15\uC758\uD559\uACFC\xB7\uBCF5\uC9C0\uC13C\uD130")), (phase === "init" || phase === "loading") && /* @__PURE__ */ React.createElement("div", { style: { height: 320, background: "#E5E7EB", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 10 } }, /* @__PURE__ */ React.createElement("style", null, `@keyframes spin{to{transform:rotate(360deg)}}`), /* @__PURE__ */ React.createElement("div", { style: { width: 32, height: 32, border: "3px solid #2D6A4F", borderTopColor: "transparent", borderRadius: "50%", animation: "spin .8s linear infinite" } }), /* @__PURE__ */ React.createElement("p", { style: { ...s, fontSize: 13, color: "#6B7280" } }, "\uC704\uCE58 \uD655\uC778 \uC911...")), phase === "done" && /* @__PURE__ */ React.createElement("div", { ref: mapContainerRef, style: { width: "100%", height: 340 } }), (phase === "nogeo" || phase === "error" || phase === "nokey") && /* @__PURE__ */ React.createElement(SearchFallback, null), phase === "done" && places.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { padding: "10px 16px", display: "flex", gap: 7, overflowX: "auto" } }, [
-    { key: "all", label: `\uC804\uCCB4 (${places.length})`, color: "#374151", bg: "#F3F4F6", border: "#D1D5DB" },
+    tl("\u2190 \uD648\uC73C\uB85C", "\u2190 Home")
+  ), /* @__PURE__ */ React.createElement("h1", { style: { ...s, fontSize: 20, fontWeight: 700, color: "#1A1A1A", marginBottom: 3 } }, "\u{1F3E5} ", tl("\uC778\uADFC \uC0C1\uB2F4 \uAE30\uAD00 \uCC3E\uAE30", "Nearby Counseling Centers")), /* @__PURE__ */ React.createElement("p", { style: { ...s, fontSize: 13, color: "#6B7280" } }, tl("\uB0B4 \uC704\uCE58 \uAE30\uC900 3km \uC774\uB0B4 \uC2EC\uB9AC\uC0C1\uB2F4\uC13C\uD130\xB7\uC815\uC2E0\uAC74\uAC15\uC758\uD559\uACFC\xB7\uBCF5\uC9C0\uC13C\uD130", "Counseling centers \xB7 Psychiatry \xB7 Welfare centers within 3km of your location"))), (phase === "init" || phase === "loading") && /* @__PURE__ */ React.createElement("div", { style: { height: 320, background: "#E5E7EB", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 10 } }, /* @__PURE__ */ React.createElement("style", null, `@keyframes spin{to{transform:rotate(360deg)}}`), /* @__PURE__ */ React.createElement("div", { style: { width: 32, height: 32, border: "3px solid #2D6A4F", borderTopColor: "transparent", borderRadius: "50%", animation: "spin .8s linear infinite" } }), /* @__PURE__ */ React.createElement("p", { style: { ...s, fontSize: 13, color: "#6B7280" } }, tl("\uC704\uCE58 \uD655\uC778 \uC911...", "Locating you..."))), phase === "done" && /* @__PURE__ */ React.createElement("div", { ref: mapContainerRef, style: { width: "100%", height: 340 } }), (phase === "nogeo" || phase === "error" || phase === "nokey") && /* @__PURE__ */ React.createElement(SearchFallback, null), phase === "done" && places.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { padding: "10px 16px", display: "flex", gap: 7, overflowX: "auto" } }, [
+    { key: "all", label: `${tl("\uC804\uCCB4", "All")} (${places.length})`, color: "#374151", bg: "#F3F4F6", border: "#D1D5DB" },
     ...Object.values(CATS).map((c) => ({
       key: c.label,
-      label: `${c.emoji} ${c.label} (${places.filter((p) => getCat(p).label === c.label).length})`,
+      label: `${c.emoji} ${tl(c.label, c.labelEn)} (${places.filter((p) => getCat(p).label === c.label).length})`,
       color: c.color,
       bg: c.bg,
       border: c.border
@@ -755,7 +756,7 @@ function CounselingPage({ setView }) {
       }
     },
     f.label
-  ))), phase === "done" && /* @__PURE__ */ React.createElement("div", { style: { padding: "4px 16px 0" } }, filtered.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { ...s, textAlign: "center", padding: "24px 0", color: "#9A9A9A", fontSize: 13 } }, "\uD574\uB2F9 \uCE74\uD14C\uACE0\uB9AC \uAE30\uAD00\uC774 \uC5C6\uC2B5\uB2C8\uB2E4") : filtered.map((p) => {
+  ))), phase === "done" && /* @__PURE__ */ React.createElement("div", { style: { padding: "4px 16px 0" } }, filtered.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { ...s, textAlign: "center", padding: "24px 0", color: "#9A9A9A", fontSize: 13 } }, tl("\uD574\uB2F9 \uCE74\uD14C\uACE0\uB9AC \uAE30\uAD00\uC774 \uC5C6\uC2B5\uB2C8\uB2E4", "No centers in this category")) : filtered.map((p) => {
     const cat = getCat(p);
     const dist = p.distance >= 1e3 ? `${(p.distance / 1e3).toFixed(1)}km` : `${p.distance}m`;
     return /* @__PURE__ */ React.createElement("div", { key: p.id, style: {
@@ -778,7 +779,7 @@ function CounselingPage({ setView }) {
       alignItems: "center",
       justifyContent: "center",
       flexShrink: 0
-    } }, cat.emoji), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement("span", { style: { ...s, fontSize: 14, fontWeight: 700, color: "#1A1A1A" } }, p.place_name), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 100, background: cat.bg, color: cat.color, flexShrink: 0 } }, cat.label)), /* @__PURE__ */ React.createElement("div", { style: { ...s, fontSize: 12, color: "#6B7280", marginBottom: 8 } }, "\u{1F4CD} ", p.road_address_name || p.address_name, "\xA0\xB7\xA0", /* @__PURE__ */ React.createElement("span", { style: { color: cat.color, fontWeight: 600 } }, dist)), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 7, flexWrap: "wrap" } }, p.phone && /* @__PURE__ */ React.createElement(
+    } }, cat.emoji), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement("span", { style: { ...s, fontSize: 14, fontWeight: 700, color: "#1A1A1A" } }, p.place_name), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 100, background: cat.bg, color: cat.color, flexShrink: 0 } }, tl(cat.label, cat.labelEn))), /* @__PURE__ */ React.createElement("div", { style: { ...s, fontSize: 12, color: "#6B7280", marginBottom: 8 } }, "\u{1F4CD} ", p.road_address_name || p.address_name, "\xA0\xB7\xA0", /* @__PURE__ */ React.createElement("span", { style: { color: cat.color, fontWeight: 600 } }, dist)), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 7, flexWrap: "wrap" } }, p.phone && /* @__PURE__ */ React.createElement(
       "a",
       {
         href: `tel:${p.phone.replace(/-/g, "")}`,
@@ -813,7 +814,7 @@ function CounselingPage({ setView }) {
           border: `1px solid ${cat.border}`
         }
       },
-      "\uC9C0\uB3C4 \uBCF4\uAE30"
+      tl("\uC9C0\uB3C4 \uBCF4\uAE30", "View Map")
     ))));
   })), phase === "done" && /* @__PURE__ */ React.createElement("div", { style: {
     ...s,
@@ -825,7 +826,7 @@ function CounselingPage({ setView }) {
     fontSize: 12,
     color: "#065F46",
     lineHeight: 1.7
-  } }, "\u2139\uFE0F \uC0C1\uB2F4 \uC608\uC57D\uACFC \uBE44\uC6A9 \uACB0\uC81C\uB294 \uAC01 \uAE30\uAD00\uC5D0 \uC9C1\uC811 \uBB38\uC758\uD574 \uC8FC\uC138\uC694. \uB9C8\uC74C\uD480\uC740 \uC815\uBCF4 \uC548\uB0B4\uB9CC \uC81C\uACF5\uD569\uB2C8\uB2E4."), /* @__PURE__ */ React.createElement("div", { style: { padding: "8px 16px 0" } }, /* @__PURE__ */ React.createElement("h2", { style: { ...s, fontSize: 14, fontWeight: 700, color: "#374151", marginBottom: 10 } }, "\u{1F4DE} 24\uC2DC\uAC04 \uBB34\uB8CC \uC0C1\uB2F4\uC804\uD654"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, HOTLINES.map((h) => /* @__PURE__ */ React.createElement("div", { key: h.name, style: {
+  } }, tl("\u2139\uFE0F \uC0C1\uB2F4 \uC608\uC57D\uACFC \uBE44\uC6A9 \uACB0\uC81C\uB294 \uAC01 \uAE30\uAD00\uC5D0 \uC9C1\uC811 \uBB38\uC758\uD574 \uC8FC\uC138\uC694. \uB9C8\uC74C\uD480\uC740 \uC815\uBCF4 \uC548\uB0B4\uB9CC \uC81C\uACF5\uD569\uB2C8\uB2E4.", "\u2139\uFE0F Please contact each center directly for appointments and fees. Maumful only provides directory information.")), /* @__PURE__ */ React.createElement("div", { style: { padding: "8px 16px 0" } }, /* @__PURE__ */ React.createElement("h2", { style: { ...s, fontSize: 14, fontWeight: 700, color: "#374151", marginBottom: 10 } }, "\u{1F4DE} ", tl("24\uC2DC\uAC04 \uBB34\uB8CC \uC0C1\uB2F4\uC804\uD654", "24h Free Hotlines")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, HOTLINES.map((h) => /* @__PURE__ */ React.createElement("div", { key: h.name, style: {
     background: h.bg,
     border: `1px solid ${h.border}`,
     borderRadius: 12,

@@ -212,13 +212,25 @@ function GoogleSignInBtn({ onLogin, btnText = 'signin_with' }) {
 
 // 카카오 로그인 버튼 (App 외부에 정의해야 Hook 규칙 준수)
 function KakaoLoginBtn({ onLogin }) {
-  const handleClick = () => {
-    if (!window.Kakao || !window.KAKAO_APP_KEY) return;
-    if (!window.Kakao.isInitialized()) window.Kakao.init(window.KAKAO_APP_KEY);
-    window.Kakao.Auth.login({
-      success: (auth) => onLogin(auth.access_token),
-      fail: (err) => console.error('카카오 로그인 실패', err),
-    });
+  const handleClick = async () => {
+    if (!window.KAKAO_APP_KEY) return;
+    try {
+      const { url } = await fetch('/api/auth/kakao/url').then(r => r.json());
+      if (!url) return;
+      const popup = window.open(url, 'kakao_login', 'width=500,height=640,top=100,left=200');
+      const handler = (e) => {
+        if (e.origin !== window.location.origin) return;
+        if (e.data?.type === 'kakao_login') {
+          window.removeEventListener('message', handler);
+          onLogin(e.data);
+        } else if (e.data?.type === 'kakao_error') {
+          window.removeEventListener('message', handler);
+          console.error('카카오 로그인 오류:', e.data.error);
+        }
+      };
+      window.addEventListener('message', handler);
+      const timer = setInterval(() => { if (popup?.closed) { clearInterval(timer); window.removeEventListener('message', handler); } }, 500);
+    } catch {}
   };
   if (!window.KAKAO_APP_KEY) return null;
   return (
@@ -588,46 +600,11 @@ function PsychologicalTestSystem() {
     }
 
   const getBurnoutDomains = () => [
-      { 
-        id: "EE", 
-        name: "정서적 소진", 
-        icon: "😰",
-        color: "#f97316", 
-        max: 72,
-        questions: burnoutQ.filter(q => q.domain === "EE")
-      },
-      { 
-        id: "DP", 
-        name: "비인격화", 
-        icon: "😶",
-        color: "#ef4444", 
-        max: 48,
-        questions: burnoutQ.filter(q => q.domain === "DP")
-      },
-      { 
-        id: "PA", 
-        name: "성취감 저하", 
-        icon: "📉",
-        color: "#c084fc", 
-        max: 60,
-        questions: burnoutQ.filter(q => q.domain === "PA")
-      },
-      { 
-        id: "WO", 
-        name: "업무 과부하", 
-        icon: "⚡",
-        color: "#f59e0b", 
-        max: 60,
-        questions: burnoutQ.filter(q => q.domain === "WO")
-      },
-      { 
-        id: "PC", 
-        name: "신체·인지", 
-        icon: "🤕",
-        color: "#4ade80", 
-        max: 60,
-        questions: burnoutQ.filter(q => q.domain === "PC")
-      }
+      { id: "EE", name: "정서적 소진",  nameEn: "Emotional Exhaustion",           icon: "😰", color: "#f97316", max: 72, questions: burnoutQ.filter(q => q.domain === "EE") },
+      { id: "DP", name: "비인격화",     nameEn: "Depersonalization",              icon: "😶", color: "#ef4444", max: 48, questions: burnoutQ.filter(q => q.domain === "DP") },
+      { id: "PA", name: "성취감 저하",  nameEn: "Reduced Accomplishment",         icon: "📉", color: "#c084fc", max: 60, questions: burnoutQ.filter(q => q.domain === "PA") },
+      { id: "WO", name: "업무 과부하",  nameEn: "Work Overload",                  icon: "⚡", color: "#f59e0b", max: 60, questions: burnoutQ.filter(q => q.domain === "WO") },
+      { id: "PC", name: "신체·인지",    nameEn: "Physical & Cognitive",           icon: "🤕", color: "#4ade80", max: 60, questions: burnoutQ.filter(q => q.domain === "PC") },
     ];
 
   const phq9Q = [
@@ -780,96 +757,92 @@ function PsychologicalTestSystem() {
 
   const sdriLikertQ = [
   // ── 자기입장 유지 ───────────────────────────────────────
-  { num:1,  content:"가족·친구와 의견이 달라도 나는 의연하게 내 생각을 표현한다.",     scale:"자기입장 유지", rev:false },
-  { num:2,  content:"상대의 요구에 쉽게 휘둘리지 않는다.",                           scale:"자기입장 유지", rev:false },
-  { num:5,  content:"중요한 목표를 위해서는 사람들이 뭐라 하든 내 기준을 고수한다.",  scale:"자기입장 유지", rev:false },
-  { num:6,  content:"나는 보통 상대의 기대에 먼저 내 생각을 맞추는 편이다.",         scale:"자기입장 유지", rev:true  },
-  { num:8,  content:"어려운 상황에서도 나는 대화를 통해 문제를 해결하려 한다.",       scale:"자기입장 유지", rev:false },
-  { num:12, content:"내 기분이 나빠도 중요한 약속은 미루지 않고 지키려 한다.",        scale:"자기입장 유지", rev:false },
-  { num:15, content:"가족이나 친구가 내 생각과 달라도 나는 내 입장을 유지한다.",      scale:"자기입장 유지", rev:false },
-  { num:18, content:"내 의견이 틀릴 수도 있지만, 우선 내 기준을 지키려고 한다.",     scale:"자기입장 유지", rev:false },
-  { num:21, content:"타인을 먼저 만족시키기보다 우선 내 기준을 지킨다.",             scale:"자기입장 유지", rev:false },
-  { num:24, content:"중요한 결정을 내리기 전에는 혼자 충분히 고민한다.",             scale:"자기입장 유지", rev:false },
+  { num:1,  content:"가족·친구와 의견이 달라도 나는 의연하게 내 생각을 표현한다.",      en:"Even when my family or friends disagree, I calmly express my own views.",                       scale:"자기입장 유지", scaleEn:"Self-Position", rev:false },
+  { num:2,  content:"상대의 요구에 쉽게 휘둘리지 않는다.",                            en:"I am not easily swayed by others' demands.",                                                      scale:"자기입장 유지", scaleEn:"Self-Position", rev:false },
+  { num:5,  content:"중요한 목표를 위해서는 사람들이 뭐라 하든 내 기준을 고수한다.",   en:"I hold to my own standards regardless of what others say, when it matters.",                     scale:"자기입장 유지", scaleEn:"Self-Position", rev:false },
+  { num:6,  content:"나는 보통 상대의 기대에 먼저 내 생각을 맞추는 편이다.",          en:"I usually adjust my thinking to fit others' expectations first.",                                 scale:"자기입장 유지", scaleEn:"Self-Position", rev:true  },
+  { num:8,  content:"어려운 상황에서도 나는 대화를 통해 문제를 해결하려 한다.",        en:"Even in difficult situations, I try to resolve problems through dialogue.",                       scale:"자기입장 유지", scaleEn:"Self-Position", rev:false },
+  { num:12, content:"내 기분이 나빠도 중요한 약속은 미루지 않고 지키려 한다.",         en:"Even when I'm in a bad mood, I keep important commitments without delay.",                        scale:"자기입장 유지", scaleEn:"Self-Position", rev:false },
+  { num:15, content:"가족이나 친구가 내 생각과 달라도 나는 내 입장을 유지한다.",       en:"I maintain my position even when family or friends think differently.",                           scale:"자기입장 유지", scaleEn:"Self-Position", rev:false },
+  { num:18, content:"내 의견이 틀릴 수도 있지만, 우선 내 기준을 지키려고 한다.",      en:"My opinion may be wrong, but I still try to uphold my own standards first.",                      scale:"자기입장 유지", scaleEn:"Self-Position", rev:false },
+  { num:21, content:"타인을 먼저 만족시키기보다 우선 내 기준을 지킨다.",              en:"I uphold my own standards before trying to satisfy others.",                                       scale:"자기입장 유지", scaleEn:"Self-Position", rev:false },
+  { num:24, content:"중요한 결정을 내리기 전에는 혼자 충분히 고민한다.",              en:"Before making important decisions, I take time to reflect on my own.",                             scale:"자기입장 유지", scaleEn:"Self-Position", rev:false },
   // ── 정서반응성 ─────────────────────────────────────────
-  { num:3,  content:"갈등 상황에서도 나는 감정적 폭발을 억누르고 상황을 정리하려 한다.", scale:"정서반응성", rev:false },
-  { num:7,  content:"다른 사람의 말 한마디에 나는 쉽게 기분이 달라진다.",            scale:"정서반응성", rev:false },
-  { num:9,  content:"화가 나도 나는 곧바로 감정을 터뜨리지 않는다.",                scale:"정서반응성", rev:false },
-  { num:14, content:"갈등 시 나는 감정을 억제하고 대화를 이어가려 한다.",            scale:"정서반응성", rev:false },
-  { num:16, content:"내 기분에 따라 주변 사람들의 행동이 쉽게 달라진다.",            scale:"정서반응성", rev:false },
-  { num:23, content:"친구가 화를 내면 나는 바로 우울해진다.",                       scale:"정서반응성", rev:false },
-  { num:25, content:"긴장되는 상황에서는 혼자만의 시간을 가지며 마음을 가라앉힌다.", scale:"정서반응성", rev:false },
+  { num:3,  content:"갈등 상황에서도 나는 감정적 폭발을 억누르고 상황을 정리하려 한다.", en:"Even in conflict, I suppress emotional outbursts and try to calm the situation.",               scale:"정서반응성", scaleEn:"Emotional Reactivity", rev:false },
+  { num:7,  content:"다른 사람의 말 한마디에 나는 쉽게 기분이 달라진다.",             en:"My mood is easily changed by a single word from someone else.",                                    scale:"정서반응성", scaleEn:"Emotional Reactivity", rev:false },
+  { num:9,  content:"화가 나도 나는 곧바로 감정을 터뜨리지 않는다.",                 en:"Even when angry, I do not immediately express my emotions.",                                       scale:"정서반응성", scaleEn:"Emotional Reactivity", rev:false },
+  { num:14, content:"갈등 시 나는 감정을 억제하고 대화를 이어가려 한다.",             en:"During conflict, I suppress my emotions and try to continue the conversation.",                    scale:"정서반응성", scaleEn:"Emotional Reactivity", rev:false },
+  { num:16, content:"내 기분에 따라 주변 사람들의 행동이 쉽게 달라진다.",             en:"My mood easily affects how the people around me behave.",                                          scale:"정서반응성", scaleEn:"Emotional Reactivity", rev:false },
+  { num:23, content:"친구가 화를 내면 나는 바로 우울해진다.",                        en:"When a friend gets angry, I immediately feel depressed.",                                          scale:"정서반응성", scaleEn:"Emotional Reactivity", rev:false },
+  { num:25, content:"긴장되는 상황에서는 혼자만의 시간을 가지며 마음을 가라앉힌다.",  en:"In tense situations, I take time alone to calm my mind.",                                         scale:"정서반응성", scaleEn:"Emotional Reactivity", rev:false },
   // ── 정서적 단절 ────────────────────────────────────────
-  { num:4,  content:"스트레스 상황이 되면 나는 대인관계에서 거리를 두려는 편이다.",   scale:"정서적 단절", rev:false },
-  { num:10, content:"갈등이 생기면 나는 먼저 뒤로 물러서는 편이다.",                scale:"정서적 단절", rev:true  },
-  { num:17, content:"갈등이 생기면 나는 혼자 생각에 잠기며 자리를 피하려 든다.",     scale:"정서적 단절", rev:false },
-  { num:22, content:"혼자 있으면 편하지만, 가족 모임 등에는 부담을 느낀다.",         scale:"정서적 단절", rev:true  },
+  { num:4,  content:"스트레스 상황이 되면 나는 대인관계에서 거리를 두려는 편이다.",    en:"When stressed, I tend to distance myself from others.",                                           scale:"정서적 단절", scaleEn:"Emotional Cutoff", rev:false },
+  { num:10, content:"갈등이 생기면 나는 먼저 뒤로 물러서는 편이다.",                 en:"When conflict arises, I tend to step back first.",                                                 scale:"정서적 단절", scaleEn:"Emotional Cutoff", rev:true  },
+  { num:17, content:"갈등이 생기면 나는 혼자 생각에 잠기며 자리를 피하려 든다.",      en:"When conflict arises, I tend to withdraw and lose myself in thought.",                            scale:"정서적 단절", scaleEn:"Emotional Cutoff", rev:false },
+  { num:22, content:"혼자 있으면 편하지만, 가족 모임 등에는 부담을 느낀다.",          en:"I'm comfortable alone but feel burdened by family gatherings and similar events.",                 scale:"정서적 단절", scaleEn:"Emotional Cutoff", rev:true  },
   // ── 융합·관계의존 ──────────────────────────────────────
-  { num:11, content:"사람들의 부탁을 거절하기 어려운 편이다.",                       scale:"융합·관계의존", rev:true  },
-  { num:13, content:"타인이 먼저 양보해 주지 않으면 보통 내가 먼저 양보한다.",        scale:"융합·관계의존", rev:true  },
-  { num:19, content:"타인의 감정에 너무 쉽게 동조하는 편이다.",                      scale:"융합·관계의존", rev:false },
-  { num:20, content:"사람들을 기쁘게 하기 위해 가끔 내 생각을 접어둔다.",            scale:"융합·관계의존", rev:false },
+  { num:11, content:"사람들의 부탁을 거절하기 어려운 편이다.",                        en:"I find it difficult to refuse others' requests.",                                                  scale:"융합·관계의존", scaleEn:"Fusion/Dependence", rev:true  },
+  { num:13, content:"타인이 먼저 양보해 주지 않으면 보통 내가 먼저 양보한다.",         en:"If others don't yield first, I usually yield first.",                                              scale:"융합·관계의존", scaleEn:"Fusion/Dependence", rev:true  },
+  { num:19, content:"타인의 감정에 너무 쉽게 동조하는 편이다.",                       en:"I tend to go along with others' emotions too easily.",                                             scale:"융합·관계의존", scaleEn:"Fusion/Dependence", rev:false },
+  { num:20, content:"사람들을 기쁘게 하기 위해 가끔 내 생각을 접어둔다.",             en:"I sometimes set aside my own views to please others.",                                             scale:"융합·관계의존", scaleEn:"Fusion/Dependence", rev:false },
 ];
 
   const burnoutQ = [
       // I. 정서적 소진 (12문항)
-      { num: 1, content: "업무로 인해 감정적으로 완전히 소진된 느낌이 든다", domain: "EE", rev: false },
-      { num: 2, content: "퇴근 후에도 업무 생각으로 머리가 꽉 차 있다", domain: "EE", rev: false },
-      { num: 3, content: "아침에 출근할 생각만 해도 기력이 없고 피곤하다", domain: "EE", rev: false },
-      { num: 4, content: "하루 종일 일하고 나면 극도로 지쳐 아무것도 하기 싫다", domain: "EE", rev: false },
-      { num: 5, content: "사람들을 응대하거나 돕는 것이 감정적으로 너무 힘들다", domain: "EE", rev: false },
-      { num: 6, content: "직장 생활이 나를 내부에서 태워 없애는 느낌이 든다", domain: "EE", rev: false },
-      { num: 7, content: "감정을 쏟아내다가 이제 더 이상 줄 것이 없다는 느낌이 든다", domain: "EE", rev: false },
-      { num: 8, content: "업무나 동료에 대한 정서적 여유가 전혀 없다", domain: "EE", rev: false },
-      { num: 9, content: "일과 중 작은 일에도 감정적으로 폭발할 것 같다", domain: "EE", rev: false },
-      { num: 10, content: "직장 일이 나의 개인 삶 전체를 잠식하는 것 같다", domain: "EE", rev: false },
-      { num: 11, content: "이직이나 퇴직을 진지하게 고민하고 있다", domain: "EE", rev: false },
-      { num: 12, content: "업무를 마친 후에도 회복이 되지 않고 지속적으로 지쳐 있다", domain: "EE", rev: false },
-    
+      { num: 1,  content: "업무로 인해 감정적으로 완전히 소진된 느낌이 든다",                en: "I feel emotionally drained by my work.",                                                                  domain: "EE", rev: false },
+      { num: 2,  content: "퇴근 후에도 업무 생각으로 머리가 꽉 차 있다",                    en: "Even after work, my mind is filled with work-related thoughts.",                                          domain: "EE", rev: false },
+      { num: 3,  content: "아침에 출근할 생각만 해도 기력이 없고 피곤하다",                  en: "Just thinking about going to work in the morning makes me feel tired.",                                    domain: "EE", rev: false },
+      { num: 4,  content: "하루 종일 일하고 나면 극도로 지쳐 아무것도 하기 싫다",            en: "After working all day, I feel so exhausted I don't want to do anything.",                                  domain: "EE", rev: false },
+      { num: 5,  content: "사람들을 응대하거나 돕는 것이 감정적으로 너무 힘들다",            en: "Dealing with or helping people is emotionally too draining.",                                              domain: "EE", rev: false },
+      { num: 6,  content: "직장 생활이 나를 내부에서 태워 없애는 느낌이 든다",              en: "My work life feels like it is burning me out from the inside.",                                            domain: "EE", rev: false },
+      { num: 7,  content: "감정을 쏟아내다가 이제 더 이상 줄 것이 없다는 느낌이 든다",      en: "I feel I have nothing left to give emotionally.",                                                          domain: "EE", rev: false },
+      { num: 8,  content: "업무나 동료에 대한 정서적 여유가 전혀 없다",                      en: "I have no emotional capacity left for my work or colleagues.",                                             domain: "EE", rev: false },
+      { num: 9,  content: "일과 중 작은 일에도 감정적으로 폭발할 것 같다",                  en: "Even minor things at work feel like they could push me to an emotional breaking point.",                   domain: "EE", rev: false },
+      { num: 10, content: "직장 일이 나의 개인 삶 전체를 잠식하는 것 같다",                  en: "Work feels like it is consuming my entire personal life.",                                                 domain: "EE", rev: false },
+      { num: 11, content: "이직이나 퇴직을 진지하게 고민하고 있다",                          en: "I am seriously considering changing jobs or quitting.",                                                    domain: "EE", rev: false },
+      { num: 12, content: "업무를 마친 후에도 회복이 되지 않고 지속적으로 지쳐 있다",        en: "Even after finishing work, I cannot recover and remain persistently exhausted.",                           domain: "EE", rev: false },
       // II. 비인격화 (8문항)
-      { num: 13, content: "고객이나 동료가 마치 무감각한 대상처럼 느껴진다", domain: "DP", rev: false },
-      { num: 14, content: "요즘 들어 나 자신이 점점 냉담하고 무감각해졌다", domain: "DP", rev: false },
-      { num: 15, content: "업무 관련 사람들의 문제에 무관심해지거나 귀찮아진다", domain: "DP", rev: false },
-      { num: 16, content: "사람을 대하는 일이 내 에너지를 심하게 소모시킨다", domain: "DP", rev: false },
-      { num: 17, content: "회사나 조직의 방향성·목표가 무의미하게 느껴진다", domain: "DP", rev: false },
-      { num: 18, content: "이 직장이 나에게 아무 의미도 없다는 생각이 든다", domain: "DP", rev: false },
-      { num: 19, content: "사람들의 감정적 문제에 실제로 관심이 없어졌다", domain: "DP", rev: false },
-      { num: 20, content: "일하면서 점점 공감 능력을 잃어가는 것 같다", domain: "DP", rev: false },
-    
+      { num: 13, content: "고객이나 동료가 마치 무감각한 대상처럼 느껴진다",                en: "Clients or colleagues feel like impersonal objects to me.",                                                domain: "DP", rev: false },
+      { num: 14, content: "요즘 들어 나 자신이 점점 냉담하고 무감각해졌다",                  en: "Lately I have become increasingly cold and emotionally numb.",                                             domain: "DP", rev: false },
+      { num: 15, content: "업무 관련 사람들의 문제에 무관심해지거나 귀찮아진다",              en: "I have become indifferent to or annoyed by the problems of people at work.",                               domain: "DP", rev: false },
+      { num: 16, content: "사람을 대하는 일이 내 에너지를 심하게 소모시킨다",                en: "Dealing with people drains my energy severely.",                                                           domain: "DP", rev: false },
+      { num: 17, content: "회사나 조직의 방향성·목표가 무의미하게 느껴진다",                en: "The direction and goals of my company or organization feel meaningless.",                                   domain: "DP", rev: false },
+      { num: 18, content: "이 직장이 나에게 아무 의미도 없다는 생각이 든다",                en: "I feel that this job means nothing to me.",                                                                domain: "DP", rev: false },
+      { num: 19, content: "사람들의 감정적 문제에 실제로 관심이 없어졌다",                  en: "I have genuinely lost interest in people's emotional problems.",                                           domain: "DP", rev: false },
+      { num: 20, content: "일하면서 점점 공감 능력을 잃어가는 것 같다",                      en: "I feel like I am gradually losing my ability to empathize at work.",                                       domain: "DP", rev: false },
       // III. 성취감 저하 (10문항, 역채점)
-      { num: 21, content: "이 일을 통해 다른 사람의 삶에 긍정적인 영향을 준다고 느낀다", domain: "PA", rev: true },
-      { num: 22, content: "업무에서 가치 있는 일을 해내고 있다는 보람을 느낀다", domain: "PA", rev: true },
-      { num: 23, content: "어려운 문제를 스스로 해결했을 때 뿌듯함을 느낀다", domain: "PA", rev: true },
-      { num: 24, content: "내 업무가 조직에 의미 있게 기여한다고 생각한다", domain: "PA", rev: true },
-      { num: 25, content: "직장에서 나 자신이 성장하고 있다는 느낌이 든다", domain: "PA", rev: true },
-      { num: 26, content: "업무 중 즐거움이나 몰입을 경험한다", domain: "PA", rev: true },
-      { num: 27, content: "내 직업 선택이 옳았다는 확신이 있다", domain: "PA", rev: true },
-      { num: 28, content: "사람들을 효과적으로 도왔다는 만족감을 느낀다", domain: "PA", rev: true },
-      { num: 29, content: "이 일을 통해 내가 사회에 기여하고 있다는 자긍심이 있다", domain: "PA", rev: true },
-      { num: 30, content: "현재 내 역량이 잘 발휘되고 있다고 느낀다", domain: "PA", rev: true },
-    
+      { num: 21, content: "이 일을 통해 다른 사람의 삶에 긍정적인 영향을 준다고 느낀다",    en: "I feel I am positively influencing others' lives through my work.",                                        domain: "PA", rev: true  },
+      { num: 22, content: "업무에서 가치 있는 일을 해내고 있다는 보람을 느낀다",            en: "I feel a sense of fulfillment in doing worthwhile work.",                                                  domain: "PA", rev: true  },
+      { num: 23, content: "어려운 문제를 스스로 해결했을 때 뿌듯함을 느낀다",              en: "I feel proud when I solve a difficult problem on my own.",                                                 domain: "PA", rev: true  },
+      { num: 24, content: "내 업무가 조직에 의미 있게 기여한다고 생각한다",                  en: "I believe my work contributes meaningfully to the organization.",                                          domain: "PA", rev: true  },
+      { num: 25, content: "직장에서 나 자신이 성장하고 있다는 느낌이 든다",                  en: "I feel I am growing as a person at work.",                                                                domain: "PA", rev: true  },
+      { num: 26, content: "업무 중 즐거움이나 몰입을 경험한다",                              en: "I experience enjoyment or flow during my work.",                                                          domain: "PA", rev: true  },
+      { num: 27, content: "내 직업 선택이 옳았다는 확신이 있다",                            en: "I am confident that I made the right career choice.",                                                     domain: "PA", rev: true  },
+      { num: 28, content: "사람들을 효과적으로 도왔다는 만족감을 느낀다",                    en: "I feel satisfied that I have helped people effectively.",                                                  domain: "PA", rev: true  },
+      { num: 29, content: "이 일을 통해 내가 사회에 기여하고 있다는 자긍심이 있다",          en: "I take pride in contributing to society through my work.",                                                 domain: "PA", rev: true  },
+      { num: 30, content: "현재 내 역량이 잘 발휘되고 있다고 느낀다",                        en: "I feel my abilities are being well utilized right now.",                                                   domain: "PA", rev: true  },
       // IV. 업무 과부하 (10문항)
-      { num: 31, content: "업무량이 나 혼자 감당하기에 너무 많다", domain: "WO", rev: false },
-      { num: 32, content: "업무 마감이나 요구사항이 불합리하게 느껴진다", domain: "WO", rev: false },
-      { num: 33, content: "업무 방식이나 우선순위에 대한 결정권이 없다고 느낀다", domain: "WO", rev: false },
-      { num: 34, content: "야근이나 초과 근무가 일상화되어 있다", domain: "WO", rev: false },
-      { num: 35, content: "모순되거나 충돌하는 업무 지시를 동시에 받는다", domain: "WO", rev: false },
-      { num: 36, content: "업무 성과에 비해 인정·보상이 부족하다고 느낀다", domain: "WO", rev: false },
-      { num: 37, content: "직장 내 공정성이 부족하다고 느낀다", domain: "WO", rev: false },
-      { num: 38, content: "개인 삶과 업무 간의 균형을 맞추기 어렵다", domain: "WO", rev: false },
-      { num: 39, content: "업무 중 지속적인 방해나 중단으로 집중이 불가능하다", domain: "WO", rev: false },
-      { num: 40, content: "조직의 가치관이 내 개인 가치관과 심하게 충돌한다", domain: "WO", rev: false },
-    
+      { num: 31, content: "업무량이 나 혼자 감당하기에 너무 많다",                          en: "The workload is too much for me to handle on my own.",                                                    domain: "WO", rev: false },
+      { num: 32, content: "업무 마감이나 요구사항이 불합리하게 느껴진다",                    en: "Work deadlines or requirements feel unreasonable.",                                                        domain: "WO", rev: false },
+      { num: 33, content: "업무 방식이나 우선순위에 대한 결정권이 없다고 느낀다",            en: "I feel I have no say in how I work or what to prioritize.",                                               domain: "WO", rev: false },
+      { num: 34, content: "야근이나 초과 근무가 일상화되어 있다",                            en: "Overtime or overwork has become a daily norm.",                                                           domain: "WO", rev: false },
+      { num: 35, content: "모순되거나 충돌하는 업무 지시를 동시에 받는다",                  en: "I receive contradictory or conflicting work instructions simultaneously.",                                  domain: "WO", rev: false },
+      { num: 36, content: "업무 성과에 비해 인정·보상이 부족하다고 느낀다",                en: "I feel underrecognized or underrewarded relative to my performance.",                                      domain: "WO", rev: false },
+      { num: 37, content: "직장 내 공정성이 부족하다고 느낀다",                              en: "I feel there is a lack of fairness in my workplace.",                                                     domain: "WO", rev: false },
+      { num: 38, content: "개인 삶과 업무 간의 균형을 맞추기 어렵다",                        en: "I find it difficult to maintain a balance between personal life and work.",                                 domain: "WO", rev: false },
+      { num: 39, content: "업무 중 지속적인 방해나 중단으로 집중이 불가능하다",              en: "Constant interruptions at work make it impossible to concentrate.",                                         domain: "WO", rev: false },
+      { num: 40, content: "조직의 가치관이 내 개인 가치관과 심하게 충돌한다",                en: "The organization's values seriously conflict with my personal values.",                                     domain: "WO", rev: false },
       // V. 신체·인지 (10문항)
-      { num: 41, content: "충분히 잤는데도 개운하지 않고 지속적으로 피로하다", domain: "PC", rev: false },
-      { num: 42, content: "두통, 근육 긴장, 어깨·목 통증이 자주 생긴다", domain: "PC", rev: false },
-      { num: 43, content: "업무 중 기억력이나 집중력이 현저히 저하된 것 같다", domain: "PC", rev: false },
-      { num: 44, content: "소화불량, 위경련, 식욕 변화 등 소화 문제가 있다", domain: "PC", rev: false },
-      { num: 45, content: "잠들기 어렵거나 중간에 자꾸 깬다", domain: "PC", rev: false },
-      { num: 46, content: "면역력이 떨어져 자주 감기나 잔병에 걸린다", domain: "PC", rev: false },
-      { num: 47, content: "카페인·알코올·약물에 점점 더 의존하게 된다", domain: "PC", rev: false },
-      { num: 48, content: "업무 외 취미·운동 등 즐기던 활동을 완전히 포기했다", domain: "PC", rev: false },
-      { num: 49, content: "간단한 결정도 내리기 어렵고 판단력이 흐려졌다", domain: "PC", rev: false },
-      { num: 50, content: "심장 두근거림, 식은땀, 만성 긴장감 등 신체 증상이 있다", domain: "PC", rev: false }
+      { num: 41, content: "충분히 잤는데도 개운하지 않고 지속적으로 피로하다",              en: "Even after enough sleep, I still feel unrefreshed and persistently tired.",                                 domain: "PC", rev: false },
+      { num: 42, content: "두통, 근육 긴장, 어깨·목 통증이 자주 생긴다",                    en: "I frequently experience headaches, muscle tension, or shoulder and neck pain.",                             domain: "PC", rev: false },
+      { num: 43, content: "업무 중 기억력이나 집중력이 현저히 저하된 것 같다",              en: "My memory and concentration seem significantly impaired at work.",                                          domain: "PC", rev: false },
+      { num: 44, content: "소화불량, 위경련, 식욕 변화 등 소화 문제가 있다",                en: "I have digestive issues such as indigestion, stomach cramps, or changes in appetite.",                     domain: "PC", rev: false },
+      { num: 45, content: "잠들기 어렵거나 중간에 자꾸 깬다",                              en: "I have trouble falling asleep or wake up frequently during the night.",                                    domain: "PC", rev: false },
+      { num: 46, content: "면역력이 떨어져 자주 감기나 잔병에 걸린다",                      en: "My immunity seems weakened and I frequently catch colds or minor illnesses.",                               domain: "PC", rev: false },
+      { num: 47, content: "카페인·알코올·약물에 점점 더 의존하게 된다",                    en: "I am becoming increasingly dependent on caffeine, alcohol, or other substances.",                           domain: "PC", rev: false },
+      { num: 48, content: "업무 외 취미·운동 등 즐기던 활동을 완전히 포기했다",            en: "I have completely given up hobbies or activities I used to enjoy outside of work.",                         domain: "PC", rev: false },
+      { num: 49, content: "간단한 결정도 내리기 어렵고 판단력이 흐려졌다",                  en: "Even simple decisions are hard to make and my judgment feels clouded.",                                    domain: "PC", rev: false },
+      { num: 50, content: "심장 두근거림, 식은땀, 만성 긴장감 등 신체 증상이 있다",          en: "I experience physical symptoms such as heart palpitations, cold sweats, or chronic tension.",               domain: "PC", rev: false },
     ];
 
   const lostQ = [
@@ -1707,18 +1680,13 @@ function PsychologicalTestSystem() {
   }
 
   // 카카오 로그인 콜백
-  async function handleKakaoLogin(accessToken) {
-    setLoginMsg({ type: 'loading', text: t('카카오 로그인 중...','Signing in with Kakao...') });
-    const result = await api.loginKakao(accessToken);
-    if (!result.success) {
-      setLoginMsg({ type: 'error', text: result.error || t('카카오 로그인에 실패했습니다.','Kakao sign-in failed.') });
-      return;
-    }
-    const { accessToken: at, refreshToken: rt, user } = result.data;
-    tokenStore.setTokens(at, rt);
+  async function handleKakaoLogin(data) {
+    if (!data?.accessToken) { setLoginMsg({ type: 'error', text: t('카카오 로그인에 실패했습니다.','Kakao sign-in failed.') }); return; }
+    const { accessToken, refreshToken, user } = data;
+    tokenStore.setTokens(accessToken, refreshToken);
     tokenStore.setUser(user);
     setCurrentUser(user);
-    setCredits(user.credits);
+    setCredits(user.credits || 0);
     setIsLoggedIn(true);
     setLoginMsg({ type: '', text: '' });
     const postLoginView = sessionStorage.getItem('post_login_view');
@@ -2441,7 +2409,7 @@ function PsychologicalTestSystem() {
       onClick={() => setShowChargeView(true)}
       className="flex items-center gap-1.5 bg-green-50 border border-green-200 text-green-800 px-3 py-1.5 rounded-full text-sm font-semibold hover:bg-green-100 transition"
     >
-      ✦ {credits} 크레딧
+      ✦ {credits} {t('크레딧','cr')}
     </button>
   );
 
@@ -2484,7 +2452,7 @@ function PsychologicalTestSystem() {
             </div>
             <div className="space-y-2 mb-4">
               {window.KAKAO_APP_KEY && (
-                <button onClick={() => { sessionStorage.setItem('post_login_view', 'aiCounsel'); setShowAiLimitModal(false); handleKakaoLogin && window.Kakao?.Auth?.login({ success: (a) => handleKakaoLogin(a.access_token), fail: () => {} }); }}
+                <button onClick={() => { sessionStorage.setItem('post_login_view', 'aiCounsel'); setShowAiLimitModal(false); fetch('/api/auth/kakao/url').then(r=>r.json()).then(({url})=>{ if(!url)return; const p=window.open(url,'kakao_login','width=500,height=640,top=100,left=200'); window.addEventListener('message',function h(e){if(e.origin!==location.origin)return;if(e.data?.type==='kakao_login'){window.removeEventListener('message',h);handleKakaoLogin(e.data);}else if(e.data?.type==='kakao_error'){window.removeEventListener('message',h);} const t=setInterval(()=>{if(p?.closed)clearInterval(t),window.removeEventListener('message',h)},500);}); }).catch(()=>{}); }}
                   style={{ background:'#FEE500', border:'none', borderRadius:10, width:'100%', height:44,
                     display:'flex', alignItems:'center', justifyContent:'center', gap:8,
                     cursor:'pointer', fontWeight:'bold', fontSize:14, color:'#3C1E1E' }}>
@@ -2871,6 +2839,7 @@ function PsychologicalTestSystem() {
       />
       <CounselingPage
         setView={setView}
+        lang={lang}
       />
     </>
   );
@@ -4437,7 +4406,7 @@ function PsychologicalTestSystem() {
             <div className="space-y-2">
               {testHistory.map((h, i) => {
                 const prevSame = testHistory.slice(i + 1).find(p => p.test_type === h.test_type);
-                const testEmoji2 = { PHQ9:'😔', GAD7:'😰', DASS21:'📊', BIG5:'🌟', LOST:'🧭', SCT:'✍️', DSI:'🪞', BURNOUT:'🔥' };
+                const testEmoji2 = { PHQ9:'😔', GAD7:'😰', DASS21:'📊', BIG5:'🌟', LOST:'🧭', SCT:'✍️', DSI:'🪞', BURNOUT:'🔥', RIASEC:'🔍', VALUES:'💎' };
                 return (
                   <div key={i} className="bg-white rounded-xl p-3 border border-gray-100">
                     <div className="flex items-center justify-between">
@@ -5843,31 +5812,31 @@ function PsychologicalTestSystem() {
         <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 border-b border-gray-200">
           <div className="flex items-center gap-2">
             <span className="text-base">💬</span>
-            <span className="font-bold text-sm text-gray-800">AI 상담 대화</span>
+            <span className="font-bold text-sm text-gray-800">{t('AI 상담 대화','AI Counseling')}</span>
             {hasMemory && (
               <span className="bg-indigo-50 text-indigo-600 text-xs px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
-                📝 이전 대화 기억 중
-                <button onClick={clearMemory} className="ml-1 text-indigo-300 hover:text-indigo-500" title="기억 초기화">✕</button>
+                {t('📝 이전 대화 기억 중','📝 Memory active')}
+                <button onClick={clearMemory} className="ml-1 text-indigo-300 hover:text-indigo-500" title={t('기억 초기화','Clear memory')}>✕</button>
               </span>
             )}
             {chatMessages.length > 0 && (
               <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full font-bold">
-                {chatMessages.filter(m => m.role === 'user').length}회 대화
+                {t(`${chatMessages.filter(m => m.role === 'user').length}회 대화`,`${chatMessages.filter(m => m.role === 'user').length} chats`)}
               </span>
             )}
           </div>
           <span className="text-xs text-gray-400">
-            오늘 {aiChatUsed}/{isLoggedIn && credits > 0 ? AI_LIMIT_PAID : AI_LIMIT_FREE}회 사용
+            {t(`오늘 ${aiChatUsed}/${isLoggedIn && credits > 0 ? AI_LIMIT_PAID : AI_LIMIT_FREE}회 사용`,`Today: ${aiChatUsed}/${isLoggedIn && credits > 0 ? AI_LIMIT_PAID : AI_LIMIT_FREE} used`)}
           </span>
         </div>
 
           <div className="bg-white">
             {/* ⚠️ 한 줄 면책 고지 */}
-            <p className="px-4 pt-2 pb-1 text-xs text-gray-400">⚠️ AI 상담은 참고용이며 의학적 진단을 대체하지 않습니다</p>
+            <p className="px-4 pt-2 pb-1 text-xs text-gray-400">{t('⚠️ AI 상담은 참고용이며 의학적 진단을 대체하지 않습니다','⚠️ AI counseling is for reference only and does not replace medical diagnosis.')}</p>
             {/* 빠른 질문 버튼 */}
             {chatMessages.length === 0 && (
               <div className="p-4 border-b border-gray-100">
-                <p className="text-xs text-gray-500 mb-2 font-semibold">💡 자주 묻는 질문</p>
+                <p className="text-xs text-gray-500 mb-2 font-semibold">💡 {t('자주 묻는 질문','Common questions')}</p>
                 <div className="flex flex-wrap gap-2">
                   {(initialPrompts || []).map((prompt, i) => (
                     <button
@@ -5918,10 +5887,16 @@ function PsychologicalTestSystem() {
                           function processStream() {
                             reader.read().then(({ done, value }) => {
                               if (done) {
+                                const moodMatch = fullText.match(/\[MOOD:(\d+)\]/);
+                                const moodScore = moodMatch ? parseInt(moodMatch[1], 10) : null;
+                                const cleanText = fullText.replace(/\s*\[MOOD:\d+\]\s*$/, '').trimEnd();
                                 setChatMessages(prev => prev.map(m =>
-                                  m.id === assistantId ? { ...m, streaming: false } : m
+                                  m.id === assistantId ? { ...m, content: cleanText, streaming: false } : m
                                 ));
                                 setChatStreaming(false);
+                                if (moodScore !== null && isLoggedIn) {
+                                  api._fetch('/api/chat/mood-log', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ moodScore, testType: 'chat' }) }).catch(() => {});
+                                }
                                 return;
                               }
                               buffer += decoder.decode(value, { stream: true });
@@ -5947,7 +5922,7 @@ function PsychologicalTestSystem() {
                           processStream();
                         })
                         .catch(e => {
-                          setChatError(e.message || 'AI 채팅 중 오류가 발생했습니다.');
+                          setChatError(e.message || t('AI 채팅 중 오류가 발생했습니다.','An error occurred during AI chat.'));
                           setChatMessages(prev => prev.filter(m => m.id !== assistantId));
                           setChatStreaming(false);
                         });
@@ -5966,11 +5941,11 @@ function PsychologicalTestSystem() {
               {chatMessages.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-full text-center">
                   <p className="text-4xl mb-3">🤝</p>
-                  <p className="text-sm font-semibold text-gray-600">검사 결과에 대해 AI와 대화해 보세요</p>
-                  <p className="text-xs text-gray-400 mt-1">상담 전략, 해석 방법, 활용 방안 등을 질문하세요</p>
+                  <p className="text-sm font-semibold text-gray-600">{t('검사 결과에 대해 AI와 대화해 보세요','Chat with AI about your test results')}</p>
+                  <p className="text-xs text-gray-400 mt-1">{t('상담 전략, 해석 방법, 활용 방안 등을 질문하세요','Ask about counseling strategies, interpretation, and how to apply results')}</p>
                   {!isLoggedIn && (
                     <p className="text-xs text-blue-500 mt-2 font-semibold">
-                      💬 무료 체험 {AI_LIMIT_FREE}회 · 가입하면 더 많이 이용 가능
+                      {t(`💬 무료 체험 ${AI_LIMIT_FREE}회 · 가입하면 더 많이 이용 가능`,`💬 ${AI_LIMIT_FREE} free sessions · Sign up for more`)}
                     </p>
                   )}
                 </div>
@@ -5994,9 +5969,9 @@ function PsychologicalTestSystem() {
                               <button
                                 onClick={() => speakText(msg.content, msg.id)}
                                 className={`text-xs flex items-center gap-1 transition ${speakingMsgId === msg.id ? 'text-blue-500 font-semibold' : 'text-gray-300 hover:text-gray-500'}`}
-                                title={speakingMsgId === msg.id ? '음성 정지' : '음성으로 듣기'}
+                                title={speakingMsgId === msg.id ? t('음성 정지','Stop audio') : t('음성으로 듣기','Listen')}
                               >
-                                {speakingMsgId === msg.id ? '⏸ 정지' : '🔊 듣기'}
+                                {speakingMsgId === msg.id ? t('⏸ 정지','⏸ Stop') : t('🔊 듣기','🔊 Listen')}
                               </button>
                             </div>
                           )}
@@ -6016,7 +5991,7 @@ function PsychologicalTestSystem() {
               {chatError && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700">
                   ⚠️ {chatError}
-                  <button onClick={() => setChatError('')} className="ml-2 underline">닫기</button>
+                  <button onClick={() => setChatError('')} className="ml-2 underline">{t('닫기','Close')}</button>
                 </div>
               )}
               <div ref={messagesEndRef} />
@@ -6082,10 +6057,16 @@ function PsychologicalTestSystem() {
                           function processStream() {
                             reader.read().then(({ done, value }) => {
                               if (done) {
+                                const moodMatch = fullText.match(/\[MOOD:(\d+)\]/);
+                                const moodScore = moodMatch ? parseInt(moodMatch[1], 10) : null;
+                                const cleanText = fullText.replace(/\s*\[MOOD:\d+\]\s*$/, '').trimEnd();
                                 setChatMessages(prev => prev.map(m =>
-                                  m.id === assistantId ? { ...m, streaming: false } : m
+                                  m.id === assistantId ? { ...m, content: cleanText, streaming: false } : m
                                 ));
                                 setChatStreaming(false);
+                                if (moodScore !== null && isLoggedIn) {
+                                  api._fetch('/api/chat/mood-log', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ moodScore, testType: 'chat' }) }).catch(() => {});
+                                }
                                 return;
                               }
                               buffer += decoder.decode(value, { stream: true });
@@ -6118,7 +6099,7 @@ function PsychologicalTestSystem() {
                       }
                     }
                   }}
-                  placeholder="검사 결과 활용 방법, 상담 전략 등을 질문하세요... (Enter 전송, Shift+Enter 줄바꿈)"
+                  placeholder={t("검사 결과 활용 방법, 상담 전략 등을 질문하세요... (Enter 전송, Shift+Enter 줄바꿈)","Ask about your results, counseling strategies... (Enter to send, Shift+Enter for newline)")}
                   rows={2}
                   disabled={chatStreaming}
                   className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm resize-none focus:outline-none focus:border-blue-400 disabled:bg-gray-50"
@@ -6127,7 +6108,7 @@ function PsychologicalTestSystem() {
                   <button
                     onClick={startVoiceInput}
                     disabled={isListening || chatStreaming}
-                    title={isListening ? '듣는 중...' : '음성 입력'}
+                    title={isListening ? t('듣는 중...','Listening...') : t('음성 입력','Voice input')}
                     className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-lg transition ${isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-100 hover:bg-gray-200 text-gray-600 disabled:opacity-40'}`}
                   >🎤</button>
                 )}
@@ -6182,10 +6163,16 @@ function PsychologicalTestSystem() {
                           function processStream() {
                             reader.read().then(({ done, value }) => {
                               if (done) {
+                                const moodMatch = fullText.match(/\[MOOD:(\d+)\]/);
+                                const moodScore = moodMatch ? parseInt(moodMatch[1], 10) : null;
+                                const cleanText = fullText.replace(/\s*\[MOOD:\d+\]\s*$/, '').trimEnd();
                                 setChatMessages(prev => prev.map(m =>
-                                  m.id === assistantId ? { ...m, streaming: false } : m
+                                  m.id === assistantId ? { ...m, content: cleanText, streaming: false } : m
                                 ));
                                 setChatStreaming(false);
+                                if (moodScore !== null && isLoggedIn) {
+                                  api._fetch('/api/chat/mood-log', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ moodScore, testType: 'chat' }) }).catch(() => {});
+                                }
                                 return;
                               }
                               buffer += decoder.decode(value, { stream: true });
@@ -6220,13 +6207,13 @@ function PsychologicalTestSystem() {
                     disabled={chatStreaming}
                     className={`${isAiChatExhausted() ? 'bg-orange-500 hover:bg-orange-600' : 'bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed'} text-white px-4 py-2 rounded-xl text-sm font-bold transition`}
                   >
-                    {chatStreaming ? '•••' : isAiChatExhausted() ? '가입하기' : '전송'}
+                    {chatStreaming ? '•••' : isAiChatExhausted() ? t('가입하기','Sign up') : t('전송','Send')}
                   </button>
                   {chatMessages.length > 0 && (
                     <button
                       onClick={resetChat}
                       className="text-xs text-gray-400 hover:text-gray-600 text-center"
-                    >초기화</button>
+                    >{t('초기화','Clear')}</button>
                   )}
                 </div>
               </div>
@@ -6238,10 +6225,10 @@ function PsychologicalTestSystem() {
                 onClick={() => { setView('counseling'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                 className="w-full py-2.5 bg-white border border-teal-200 text-teal-700 rounded-xl text-sm font-semibold hover:bg-teal-50 hover:border-teal-400 transition flex items-center justify-center gap-2 group">
                 <span>🏥</span>
-                <span>전문 상담 기관 찾기</span>
+                <span>{t('전문 상담 기관 찾기','Find a Counseling Center')}</span>
                 <span className="text-teal-300 group-hover:text-teal-500 transition">→</span>
               </button>
-              <p className="text-center text-xs text-gray-400 mt-1">AI 상담은 참고용입니다. 전문 상담사의 도움이 필요하시면 클릭하세요.</p>
+              <p className="text-center text-xs text-gray-400 mt-1">{t('AI 상담은 참고용입니다. 전문 상담사의 도움이 필요하시면 클릭하세요.','AI counseling is for reference only. Click if you need professional support.')}</p>
             </div>
           </div>
       </div>
@@ -7181,7 +7168,7 @@ function PsychologicalTestSystem() {
         <div className="flex justify-end mb-3">
           <button onClick={() => setShowModal(true)}
             className="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 font-semibold">
-            📥 외부 검사 결과 입력 · AI 해석
+            {t('📥 외부 검사 결과 입력 · AI 해석','📥 Enter External Results · AI Analysis')}
           </button>
         </div>
         {showModal && (
@@ -7400,10 +7387,10 @@ function PsychologicalTestSystem() {
           <div className="flex items-center gap-3">
             <span className="text-2xl">📅</span>
             <div className="text-left">
-              <div className="font-bold text-emerald-800 text-sm">맞춤 8주 자기관리 플랜</div>
+              <div className="font-bold text-emerald-800 text-sm">{t('맞춤 8주 자기관리 플랜','Personalized 8-Week Self-Care Plan')}</div>
               {plan
-                ? <div className="text-xs text-emerald-600 mt-0.5">{completedCount}/8주 진행 중 · {progress}% 완료</div>
-                : <div className="text-xs text-gray-400 mt-0.5">검사 결과 기반 AI 맞춤 8주 플랜</div>
+                ? <div className="text-xs text-emerald-600 mt-0.5">{completedCount}/{t('8주 진행 중','wks done')} · {progress}% {t('완료','complete')}</div>
+                : <div className="text-xs text-gray-400 mt-0.5">{t('검사 결과 기반 AI 맞춤 8주 플랜','AI-personalized 8-week plan based on your results')}</div>
               }
             </div>
           </div>
@@ -7421,7 +7408,7 @@ function PsychologicalTestSystem() {
             {loading && (
               <div className="flex items-center justify-center py-8 gap-2 text-emerald-600">
                 <div className="w-4 h-4 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
-                <span className="text-sm">AI가 맞춤 플랜을 생성 중이에요...</span>
+                <span className="text-sm">{t('AI가 맞춤 플랜을 생성 중이에요...','AI is generating your personalized plan...')}</span>
               </div>
             )}
             {plan && !loading && (
@@ -7433,11 +7420,13 @@ function PsychologicalTestSystem() {
                       <div className="flex flex-wrap gap-1.5">
                         {Object.entries(plan.scores).map(([type, score]) => {
                           const cMap = { PHQ9:'#0EA5E9', GAD7:'#8B5CF6', BURNOUT:'#F97316', DASS21:'#EC4899' };
-                          const nMap = { PHQ9:'우울', GAD7:'불안', BURNOUT:'번아웃', DASS21:'스트레스' };
+                          const nMap = lang === 'en'
+                            ? { PHQ9:'Depression', GAD7:'Anxiety', BURNOUT:'Burnout', DASS21:'Stress' }
+                            : { PHQ9:'우울', GAD7:'불안', BURNOUT:'번아웃', DASS21:'스트레스' };
                           const c = cMap[type] || '#6B7280';
                           return (
                             <span key={type} style={{ background:`${c}18`, border:`1px solid ${c}35`, borderRadius:6, padding:'2px 7px', fontSize:10, color:c, fontWeight:700 }}>
-                              {nMap[type]||type} {score}점
+                              {nMap[type]||type} {score}{t('점','pts')}
                             </span>
                           );
                         })}
@@ -7467,7 +7456,7 @@ function PsychologicalTestSystem() {
                         {isOpen && (
                           <div className="px-4 pb-4 space-y-2">
                             <div className="bg-blue-50 rounded-xl px-3 py-2">
-                              <div className="text-xs font-bold text-blue-700 mb-0.5">매일 실천</div>
+                              <div className="text-xs font-bold text-blue-700 mb-0.5">{t('매일 실천','Daily Practice')}</div>
                               <div className="text-xs text-blue-800">{wk.practice}</div>
                             </div>
                             {wk.game && GAME_NAMES[wk.game] && (
@@ -7476,11 +7465,11 @@ function PsychologicalTestSystem() {
                                 className="w-full bg-emerald-50 hover:bg-emerald-100 rounded-xl px-3 py-2 text-left transition"
                               >
                                 <div className="flex items-center justify-between">
-                                  <div className="text-xs font-bold text-emerald-700 mb-0.5">추천 게임</div>
-                                  <div className="text-xs text-emerald-400">▶ 시작</div>
+                                  <div className="text-xs font-bold text-emerald-700 mb-0.5">{t('추천 게임','Recommended Game')}</div>
+                                  <div className="text-xs text-emerald-400">▶ {t('시작','Start')}</div>
                                 </div>
                                 <div className="text-xs text-emerald-800">{GAME_NAMES[wk.game]}</div>
-                                <div className="text-xs text-emerald-500 mt-0.5 opacity-70">검사 결과 기반 · {wk.week}주차 맞춤</div>
+                                <div className="text-xs text-emerald-500 mt-0.5 opacity-70">{t(`검사 결과 기반 · ${wk.week}주차 맞춤`,`Based on results · Week ${wk.week}`)}</div>
                               </button>
                             )}
                             {wk.tip && (
@@ -7490,7 +7479,7 @@ function PsychologicalTestSystem() {
                               onClick={() => toggleWeekDone(wk.week)}
                               className={`w-full mt-1 py-2 rounded-xl text-xs font-bold transition ${done ? 'bg-gray-100 text-gray-500 hover:bg-gray-200' : 'bg-emerald-500 text-white hover:bg-emerald-600'}`}
                             >
-                              {done ? '↩ 완료 취소' : '✅ 이번 주 완료'}
+                              {done ? t('↩ 완료 취소','↩ Undo') : t('✅ 이번 주 완료','✅ Complete Week')}
                             </button>
                           </div>
                         )}
@@ -7500,7 +7489,7 @@ function PsychologicalTestSystem() {
                 </div>
                 {progress === 100 && (
                   <div className="px-4 py-4 bg-emerald-500 text-white text-center text-sm font-bold">
-                    🎉 8주 플랜 완주! 꾸준한 실천이 빛났어요!
+                    {t('🎉 8주 플랜 완주! 꾸준한 실천이 빛났어요!','🎉 8-Week Plan Complete! Your consistency paid off!')}
                   </div>
                 )}
               </>
@@ -8506,10 +8495,10 @@ function PsychologicalTestSystem() {
                     q.scale === '정서반응성'   ? 'bg-rose-100 text-rose-700' :
                     q.scale === '정서적 단절'  ? 'bg-amber-100 text-amber-700' :
                                                  'bg-purple-100 text-purple-700'}`}>
-                    {q.scale}
+                    {t(q.scale, q.scaleEn)}
                   </span>
                   <p className="text-sm font-semibold text-gray-700 leading-relaxed">
-                    {q.num}. {q.content}
+                    {q.num}. {t(q.content, q.en)}
                     {q.rev && <span className="ml-1 text-gray-400 font-normal text-xs">{t("(역문항)","(R)")}</span>}
                   </p>
                 </div>
@@ -8864,13 +8853,13 @@ function PsychologicalTestSystem() {
             <div key={dIdx} className="border-2 border-gray-200 rounded-lg p-4 bg-gray-50">
               <h2 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
                 <span className="text-red-600">{domain.icon}</span>
-                {domain.name} ({domain.questions.length} {t("문항","items")})
+                {t(domain.name, domain.nameEn)} ({domain.questions.length} {t("문항","items")})
               </h2>
               <div className="space-y-3">
                 {domain.questions.map((q, qIdx) => (
                   <div key={q.num} className="bg-white border border-gray-200 rounded-lg p-3">
                     <label className="block mb-2 font-semibold text-gray-700 text-sm">
-                      {q.num}. {q.content}
+                      {q.num}. {t(q.content, q.en)}
                     </label>
                     <div className="grid grid-cols-7 gap-1">
                       {[0, 1, 2, 3, 4, 5, 6].map(v => (

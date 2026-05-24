@@ -48,7 +48,7 @@ const aApi = {
 };
 
 const fmtW  = n => Number(n||0).toLocaleString('ko-KR')+'원';
-const fmtDt = iso => { if(!iso)return'-'; const d=new Date(iso); return d.toLocaleString('ko-KR',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}); };
+const fmtDtAdmin = iso => { if(!iso)return'-'; const d=new Date(iso); return d.toLocaleString('ko-KR',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}); };
 const fmtDate = iso => { if(!iso)return'-'; return new Date(iso).toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'}); };
 
 function Chip({label,color='gray'}){
@@ -416,7 +416,7 @@ function AdminOnboarding(){
                     <span style={{fontSize:15,fontWeight:700}}>{req.center_name}</span>
                     <Chip label={statusLabel[req.status]||req.status} color={statusColor[req.status]||'gray'}/>
                   </div>
-                  <div style={{fontSize:12,color:'#9A9A9A'}}>신청일: {fmtDt(req.created_at)}</div>
+                  <div style={{fontSize:12,color:'#9A9A9A'}}>신청일: {fmtDtAdmin(req.created_at)}</div>
                 </div>
                 {req.status==='pending'&&(
                   <div style={{display:'flex',gap:7}}>
@@ -929,7 +929,7 @@ function AdminAppointments(){
               </td>
               <td style={{padding:'8px 10px'}}><div style={{fontSize:12,fontWeight:600}}>{a.photo_emoji} {a.counselor_name}</div></td>
               <td style={{padding:'8px 10px',fontSize:11,color:'#5A5A5A'}}>{a.center_name}</td>
-              <td style={{padding:'8px 10px',fontSize:11,whiteSpace:'nowrap'}}>{fmtDt(a.scheduled_at)}</td>
+              <td style={{padding:'8px 10px',fontSize:11,whiteSpace:'nowrap'}}>{fmtDtAdmin(a.scheduled_at)}</td>
               <td style={{padding:'8px 10px',fontSize:12}}>{typeIcon[a.session_type]}</td>
               <td style={{padding:'8px 10px',fontWeight:600,fontSize:12,color:'#2D6A4F'}}>{fmtW(a.fee_amount)}</td>
               <td style={{padding:'8px 10px'}}><Chip label={statusLabel[a.status]||a.status} color={statusColor[a.status]||'gray'}/></td>
@@ -1059,7 +1059,7 @@ function AdminSettlements(){
                 {s.status==='pending'&&(
                   <button onClick={()=>process(s.id)} disabled={processing===s.id} style={{padding:'5px 10px',borderRadius:5,border:'none',background:'#EEF0FF',color:'#5B21B6',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:"'Noto Sans KR',sans-serif"}}>지급 완료</button>
                 )}
-                {s.processed_at&&<div style={{fontSize:10,color:'#9A9A9A',marginTop:2}}>{fmtDt(s.processed_at)}</div>}
+                {s.processed_at&&<div style={{fontSize:10,color:'#9A9A9A',marginTop:2}}>{fmtDtAdmin(s.processed_at)}</div>}
               </td>
             </tr>
           )}
@@ -1392,7 +1392,7 @@ function AdminErrorLogs(){
                     {log.method&&<span style={{fontSize:11,fontWeight:700,color:'#5B21B6',background:'#EEF0FF',padding:'2px 7px',borderRadius:5}}>{log.method}</span>}
                     {log.path&&<code style={{fontSize:12,color:'#1A1A1A',background:'#F5F5F0',padding:'2px 8px',borderRadius:5,wordBreak:'break-all'}}>{log.path}</code>}
                   </div>
-                  <span style={{fontSize:11,color:'#9A9A9A',whiteSpace:'nowrap'}}>{fmtDt(log.created_at)}</span>
+                  <span style={{fontSize:11,color:'#9A9A9A',whiteSpace:'nowrap'}}>{fmtDtAdmin(log.created_at)}</span>
                 </div>
                 {log.message&&<div style={{fontSize:13,color:'#E24B4A',fontWeight:500,marginBottom:log.stack?6:0}}>{log.message}</div>}
                 {log.stack&&(

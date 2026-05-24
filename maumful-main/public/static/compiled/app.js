@@ -281,13 +281,32 @@ function GoogleSignInBtn({ onLogin, btnText = "signin_with" }) {
   return /* @__PURE__ */ React.createElement("div", { ref, className: "w-full", style: { minHeight: 44 } });
 }
 function KakaoLoginBtn({ onLogin }) {
-  const handleClick = () => {
-    if (!window.Kakao || !window.KAKAO_APP_KEY) return;
-    if (!window.Kakao.isInitialized()) window.Kakao.init(window.KAKAO_APP_KEY);
-    window.Kakao.Auth.login({
-      success: (auth) => onLogin(auth.access_token),
-      fail: (err) => console.error("\uCE74\uCE74\uC624 \uB85C\uADF8\uC778 \uC2E4\uD328", err)
-    });
+  const handleClick = async () => {
+    if (!window.KAKAO_APP_KEY) return;
+    try {
+      const { url } = await fetch("/api/auth/kakao/url").then((r) => r.json());
+      if (!url) return;
+      const popup = window.open(url, "kakao_login", "width=500,height=640,top=100,left=200");
+      const handler = (e) => {
+        var _a, _b;
+        if (e.origin !== window.location.origin) return;
+        if (((_a = e.data) == null ? void 0 : _a.type) === "kakao_login") {
+          window.removeEventListener("message", handler);
+          onLogin(e.data);
+        } else if (((_b = e.data) == null ? void 0 : _b.type) === "kakao_error") {
+          window.removeEventListener("message", handler);
+          console.error("\uCE74\uCE74\uC624 \uB85C\uADF8\uC778 \uC624\uB958:", e.data.error);
+        }
+      };
+      window.addEventListener("message", handler);
+      const timer = setInterval(() => {
+        if (popup == null ? void 0 : popup.closed) {
+          clearInterval(timer);
+          window.removeEventListener("message", handler);
+        }
+      }, 500);
+    } catch {
+    }
   };
   if (!window.KAKAO_APP_KEY) return null;
   return /* @__PURE__ */ React.createElement(
@@ -632,46 +651,11 @@ function PsychologicalTestSystem() {
     return { ok: kws.length > 0, kws };
   }
   const getBurnoutDomains = () => [
-    {
-      id: "EE",
-      name: "\uC815\uC11C\uC801 \uC18C\uC9C4",
-      icon: "\u{1F630}",
-      color: "#f97316",
-      max: 72,
-      questions: burnoutQ.filter((q) => q.domain === "EE")
-    },
-    {
-      id: "DP",
-      name: "\uBE44\uC778\uACA9\uD654",
-      icon: "\u{1F636}",
-      color: "#ef4444",
-      max: 48,
-      questions: burnoutQ.filter((q) => q.domain === "DP")
-    },
-    {
-      id: "PA",
-      name: "\uC131\uCDE8\uAC10 \uC800\uD558",
-      icon: "\u{1F4C9}",
-      color: "#c084fc",
-      max: 60,
-      questions: burnoutQ.filter((q) => q.domain === "PA")
-    },
-    {
-      id: "WO",
-      name: "\uC5C5\uBB34 \uACFC\uBD80\uD558",
-      icon: "\u26A1",
-      color: "#f59e0b",
-      max: 60,
-      questions: burnoutQ.filter((q) => q.domain === "WO")
-    },
-    {
-      id: "PC",
-      name: "\uC2E0\uCCB4\xB7\uC778\uC9C0",
-      icon: "\u{1F915}",
-      color: "#4ade80",
-      max: 60,
-      questions: burnoutQ.filter((q) => q.domain === "PC")
-    }
+    { id: "EE", name: "\uC815\uC11C\uC801 \uC18C\uC9C4", nameEn: "Emotional Exhaustion", icon: "\u{1F630}", color: "#f97316", max: 72, questions: burnoutQ.filter((q) => q.domain === "EE") },
+    { id: "DP", name: "\uBE44\uC778\uACA9\uD654", nameEn: "Depersonalization", icon: "\u{1F636}", color: "#ef4444", max: 48, questions: burnoutQ.filter((q) => q.domain === "DP") },
+    { id: "PA", name: "\uC131\uCDE8\uAC10 \uC800\uD558", nameEn: "Reduced Accomplishment", icon: "\u{1F4C9}", color: "#c084fc", max: 60, questions: burnoutQ.filter((q) => q.domain === "PA") },
+    { id: "WO", name: "\uC5C5\uBB34 \uACFC\uBD80\uD558", nameEn: "Work Overload", icon: "\u26A1", color: "#f59e0b", max: 60, questions: burnoutQ.filter((q) => q.domain === "WO") },
+    { id: "PC", name: "\uC2E0\uCCB4\xB7\uC778\uC9C0", nameEn: "Physical & Cognitive", icon: "\u{1F915}", color: "#4ade80", max: 60, questions: burnoutQ.filter((q) => q.domain === "PC") }
   ];
   const phq9Q = [
     { num: 1, content: t("\uAE30\uBD84\uC774 \uAC00\uB77C\uC549\uAC70\uB098, \uC6B0\uC6B8\uD558\uAC70\uB098, \uD76C\uB9DD\uC774 \uC5C6\uB2E4\uACE0 \uB290\uAF08\uB2E4", "Feeling down, depressed, or hopeless") },
@@ -812,91 +796,91 @@ function PsychologicalTestSystem() {
   ];
   const sdriLikertQ = [
     // ── 자기입장 유지 ───────────────────────────────────────
-    { num: 1, content: "\uAC00\uC871\xB7\uCE5C\uAD6C\uC640 \uC758\uACAC\uC774 \uB2EC\uB77C\uB3C4 \uB098\uB294 \uC758\uC5F0\uD558\uAC8C \uB0B4 \uC0DD\uAC01\uC744 \uD45C\uD604\uD55C\uB2E4.", scale: "\uC790\uAE30\uC785\uC7A5 \uC720\uC9C0", rev: false },
-    { num: 2, content: "\uC0C1\uB300\uC758 \uC694\uAD6C\uC5D0 \uC27D\uAC8C \uD718\uB458\uB9AC\uC9C0 \uC54A\uB294\uB2E4.", scale: "\uC790\uAE30\uC785\uC7A5 \uC720\uC9C0", rev: false },
-    { num: 5, content: "\uC911\uC694\uD55C \uBAA9\uD45C\uB97C \uC704\uD574\uC11C\uB294 \uC0AC\uB78C\uB4E4\uC774 \uBB50\uB77C \uD558\uB4E0 \uB0B4 \uAE30\uC900\uC744 \uACE0\uC218\uD55C\uB2E4.", scale: "\uC790\uAE30\uC785\uC7A5 \uC720\uC9C0", rev: false },
-    { num: 6, content: "\uB098\uB294 \uBCF4\uD1B5 \uC0C1\uB300\uC758 \uAE30\uB300\uC5D0 \uBA3C\uC800 \uB0B4 \uC0DD\uAC01\uC744 \uB9DE\uCD94\uB294 \uD3B8\uC774\uB2E4.", scale: "\uC790\uAE30\uC785\uC7A5 \uC720\uC9C0", rev: true },
-    { num: 8, content: "\uC5B4\uB824\uC6B4 \uC0C1\uD669\uC5D0\uC11C\uB3C4 \uB098\uB294 \uB300\uD654\uB97C \uD1B5\uD574 \uBB38\uC81C\uB97C \uD574\uACB0\uD558\uB824 \uD55C\uB2E4.", scale: "\uC790\uAE30\uC785\uC7A5 \uC720\uC9C0", rev: false },
-    { num: 12, content: "\uB0B4 \uAE30\uBD84\uC774 \uB098\uBE60\uB3C4 \uC911\uC694\uD55C \uC57D\uC18D\uC740 \uBBF8\uB8E8\uC9C0 \uC54A\uACE0 \uC9C0\uD0A4\uB824 \uD55C\uB2E4.", scale: "\uC790\uAE30\uC785\uC7A5 \uC720\uC9C0", rev: false },
-    { num: 15, content: "\uAC00\uC871\uC774\uB098 \uCE5C\uAD6C\uAC00 \uB0B4 \uC0DD\uAC01\uACFC \uB2EC\uB77C\uB3C4 \uB098\uB294 \uB0B4 \uC785\uC7A5\uC744 \uC720\uC9C0\uD55C\uB2E4.", scale: "\uC790\uAE30\uC785\uC7A5 \uC720\uC9C0", rev: false },
-    { num: 18, content: "\uB0B4 \uC758\uACAC\uC774 \uD2C0\uB9B4 \uC218\uB3C4 \uC788\uC9C0\uB9CC, \uC6B0\uC120 \uB0B4 \uAE30\uC900\uC744 \uC9C0\uD0A4\uB824\uACE0 \uD55C\uB2E4.", scale: "\uC790\uAE30\uC785\uC7A5 \uC720\uC9C0", rev: false },
-    { num: 21, content: "\uD0C0\uC778\uC744 \uBA3C\uC800 \uB9CC\uC871\uC2DC\uD0A4\uAE30\uBCF4\uB2E4 \uC6B0\uC120 \uB0B4 \uAE30\uC900\uC744 \uC9C0\uD0A8\uB2E4.", scale: "\uC790\uAE30\uC785\uC7A5 \uC720\uC9C0", rev: false },
-    { num: 24, content: "\uC911\uC694\uD55C \uACB0\uC815\uC744 \uB0B4\uB9AC\uAE30 \uC804\uC5D0\uB294 \uD63C\uC790 \uCDA9\uBD84\uD788 \uACE0\uBBFC\uD55C\uB2E4.", scale: "\uC790\uAE30\uC785\uC7A5 \uC720\uC9C0", rev: false },
+    { num: 1, content: "\uAC00\uC871\xB7\uCE5C\uAD6C\uC640 \uC758\uACAC\uC774 \uB2EC\uB77C\uB3C4 \uB098\uB294 \uC758\uC5F0\uD558\uAC8C \uB0B4 \uC0DD\uAC01\uC744 \uD45C\uD604\uD55C\uB2E4.", en: "Even when my family or friends disagree, I calmly express my own views.", scale: "\uC790\uAE30\uC785\uC7A5 \uC720\uC9C0", scaleEn: "Self-Position", rev: false },
+    { num: 2, content: "\uC0C1\uB300\uC758 \uC694\uAD6C\uC5D0 \uC27D\uAC8C \uD718\uB458\uB9AC\uC9C0 \uC54A\uB294\uB2E4.", en: "I am not easily swayed by others' demands.", scale: "\uC790\uAE30\uC785\uC7A5 \uC720\uC9C0", scaleEn: "Self-Position", rev: false },
+    { num: 5, content: "\uC911\uC694\uD55C \uBAA9\uD45C\uB97C \uC704\uD574\uC11C\uB294 \uC0AC\uB78C\uB4E4\uC774 \uBB50\uB77C \uD558\uB4E0 \uB0B4 \uAE30\uC900\uC744 \uACE0\uC218\uD55C\uB2E4.", en: "I hold to my own standards regardless of what others say, when it matters.", scale: "\uC790\uAE30\uC785\uC7A5 \uC720\uC9C0", scaleEn: "Self-Position", rev: false },
+    { num: 6, content: "\uB098\uB294 \uBCF4\uD1B5 \uC0C1\uB300\uC758 \uAE30\uB300\uC5D0 \uBA3C\uC800 \uB0B4 \uC0DD\uAC01\uC744 \uB9DE\uCD94\uB294 \uD3B8\uC774\uB2E4.", en: "I usually adjust my thinking to fit others' expectations first.", scale: "\uC790\uAE30\uC785\uC7A5 \uC720\uC9C0", scaleEn: "Self-Position", rev: true },
+    { num: 8, content: "\uC5B4\uB824\uC6B4 \uC0C1\uD669\uC5D0\uC11C\uB3C4 \uB098\uB294 \uB300\uD654\uB97C \uD1B5\uD574 \uBB38\uC81C\uB97C \uD574\uACB0\uD558\uB824 \uD55C\uB2E4.", en: "Even in difficult situations, I try to resolve problems through dialogue.", scale: "\uC790\uAE30\uC785\uC7A5 \uC720\uC9C0", scaleEn: "Self-Position", rev: false },
+    { num: 12, content: "\uB0B4 \uAE30\uBD84\uC774 \uB098\uBE60\uB3C4 \uC911\uC694\uD55C \uC57D\uC18D\uC740 \uBBF8\uB8E8\uC9C0 \uC54A\uACE0 \uC9C0\uD0A4\uB824 \uD55C\uB2E4.", en: "Even when I'm in a bad mood, I keep important commitments without delay.", scale: "\uC790\uAE30\uC785\uC7A5 \uC720\uC9C0", scaleEn: "Self-Position", rev: false },
+    { num: 15, content: "\uAC00\uC871\uC774\uB098 \uCE5C\uAD6C\uAC00 \uB0B4 \uC0DD\uAC01\uACFC \uB2EC\uB77C\uB3C4 \uB098\uB294 \uB0B4 \uC785\uC7A5\uC744 \uC720\uC9C0\uD55C\uB2E4.", en: "I maintain my position even when family or friends think differently.", scale: "\uC790\uAE30\uC785\uC7A5 \uC720\uC9C0", scaleEn: "Self-Position", rev: false },
+    { num: 18, content: "\uB0B4 \uC758\uACAC\uC774 \uD2C0\uB9B4 \uC218\uB3C4 \uC788\uC9C0\uB9CC, \uC6B0\uC120 \uB0B4 \uAE30\uC900\uC744 \uC9C0\uD0A4\uB824\uACE0 \uD55C\uB2E4.", en: "My opinion may be wrong, but I still try to uphold my own standards first.", scale: "\uC790\uAE30\uC785\uC7A5 \uC720\uC9C0", scaleEn: "Self-Position", rev: false },
+    { num: 21, content: "\uD0C0\uC778\uC744 \uBA3C\uC800 \uB9CC\uC871\uC2DC\uD0A4\uAE30\uBCF4\uB2E4 \uC6B0\uC120 \uB0B4 \uAE30\uC900\uC744 \uC9C0\uD0A8\uB2E4.", en: "I uphold my own standards before trying to satisfy others.", scale: "\uC790\uAE30\uC785\uC7A5 \uC720\uC9C0", scaleEn: "Self-Position", rev: false },
+    { num: 24, content: "\uC911\uC694\uD55C \uACB0\uC815\uC744 \uB0B4\uB9AC\uAE30 \uC804\uC5D0\uB294 \uD63C\uC790 \uCDA9\uBD84\uD788 \uACE0\uBBFC\uD55C\uB2E4.", en: "Before making important decisions, I take time to reflect on my own.", scale: "\uC790\uAE30\uC785\uC7A5 \uC720\uC9C0", scaleEn: "Self-Position", rev: false },
     // ── 정서반응성 ─────────────────────────────────────────
-    { num: 3, content: "\uAC08\uB4F1 \uC0C1\uD669\uC5D0\uC11C\uB3C4 \uB098\uB294 \uAC10\uC815\uC801 \uD3ED\uBC1C\uC744 \uC5B5\uB204\uB974\uACE0 \uC0C1\uD669\uC744 \uC815\uB9AC\uD558\uB824 \uD55C\uB2E4.", scale: "\uC815\uC11C\uBC18\uC751\uC131", rev: false },
-    { num: 7, content: "\uB2E4\uB978 \uC0AC\uB78C\uC758 \uB9D0 \uD55C\uB9C8\uB514\uC5D0 \uB098\uB294 \uC27D\uAC8C \uAE30\uBD84\uC774 \uB2EC\uB77C\uC9C4\uB2E4.", scale: "\uC815\uC11C\uBC18\uC751\uC131", rev: false },
-    { num: 9, content: "\uD654\uAC00 \uB098\uB3C4 \uB098\uB294 \uACE7\uBC14\uB85C \uAC10\uC815\uC744 \uD130\uB728\uB9AC\uC9C0 \uC54A\uB294\uB2E4.", scale: "\uC815\uC11C\uBC18\uC751\uC131", rev: false },
-    { num: 14, content: "\uAC08\uB4F1 \uC2DC \uB098\uB294 \uAC10\uC815\uC744 \uC5B5\uC81C\uD558\uACE0 \uB300\uD654\uB97C \uC774\uC5B4\uAC00\uB824 \uD55C\uB2E4.", scale: "\uC815\uC11C\uBC18\uC751\uC131", rev: false },
-    { num: 16, content: "\uB0B4 \uAE30\uBD84\uC5D0 \uB530\uB77C \uC8FC\uBCC0 \uC0AC\uB78C\uB4E4\uC758 \uD589\uB3D9\uC774 \uC27D\uAC8C \uB2EC\uB77C\uC9C4\uB2E4.", scale: "\uC815\uC11C\uBC18\uC751\uC131", rev: false },
-    { num: 23, content: "\uCE5C\uAD6C\uAC00 \uD654\uB97C \uB0B4\uBA74 \uB098\uB294 \uBC14\uB85C \uC6B0\uC6B8\uD574\uC9C4\uB2E4.", scale: "\uC815\uC11C\uBC18\uC751\uC131", rev: false },
-    { num: 25, content: "\uAE34\uC7A5\uB418\uB294 \uC0C1\uD669\uC5D0\uC11C\uB294 \uD63C\uC790\uB9CC\uC758 \uC2DC\uAC04\uC744 \uAC00\uC9C0\uBA70 \uB9C8\uC74C\uC744 \uAC00\uB77C\uC549\uD78C\uB2E4.", scale: "\uC815\uC11C\uBC18\uC751\uC131", rev: false },
+    { num: 3, content: "\uAC08\uB4F1 \uC0C1\uD669\uC5D0\uC11C\uB3C4 \uB098\uB294 \uAC10\uC815\uC801 \uD3ED\uBC1C\uC744 \uC5B5\uB204\uB974\uACE0 \uC0C1\uD669\uC744 \uC815\uB9AC\uD558\uB824 \uD55C\uB2E4.", en: "Even in conflict, I suppress emotional outbursts and try to calm the situation.", scale: "\uC815\uC11C\uBC18\uC751\uC131", scaleEn: "Emotional Reactivity", rev: false },
+    { num: 7, content: "\uB2E4\uB978 \uC0AC\uB78C\uC758 \uB9D0 \uD55C\uB9C8\uB514\uC5D0 \uB098\uB294 \uC27D\uAC8C \uAE30\uBD84\uC774 \uB2EC\uB77C\uC9C4\uB2E4.", en: "My mood is easily changed by a single word from someone else.", scale: "\uC815\uC11C\uBC18\uC751\uC131", scaleEn: "Emotional Reactivity", rev: false },
+    { num: 9, content: "\uD654\uAC00 \uB098\uB3C4 \uB098\uB294 \uACE7\uBC14\uB85C \uAC10\uC815\uC744 \uD130\uB728\uB9AC\uC9C0 \uC54A\uB294\uB2E4.", en: "Even when angry, I do not immediately express my emotions.", scale: "\uC815\uC11C\uBC18\uC751\uC131", scaleEn: "Emotional Reactivity", rev: false },
+    { num: 14, content: "\uAC08\uB4F1 \uC2DC \uB098\uB294 \uAC10\uC815\uC744 \uC5B5\uC81C\uD558\uACE0 \uB300\uD654\uB97C \uC774\uC5B4\uAC00\uB824 \uD55C\uB2E4.", en: "During conflict, I suppress my emotions and try to continue the conversation.", scale: "\uC815\uC11C\uBC18\uC751\uC131", scaleEn: "Emotional Reactivity", rev: false },
+    { num: 16, content: "\uB0B4 \uAE30\uBD84\uC5D0 \uB530\uB77C \uC8FC\uBCC0 \uC0AC\uB78C\uB4E4\uC758 \uD589\uB3D9\uC774 \uC27D\uAC8C \uB2EC\uB77C\uC9C4\uB2E4.", en: "My mood easily affects how the people around me behave.", scale: "\uC815\uC11C\uBC18\uC751\uC131", scaleEn: "Emotional Reactivity", rev: false },
+    { num: 23, content: "\uCE5C\uAD6C\uAC00 \uD654\uB97C \uB0B4\uBA74 \uB098\uB294 \uBC14\uB85C \uC6B0\uC6B8\uD574\uC9C4\uB2E4.", en: "When a friend gets angry, I immediately feel depressed.", scale: "\uC815\uC11C\uBC18\uC751\uC131", scaleEn: "Emotional Reactivity", rev: false },
+    { num: 25, content: "\uAE34\uC7A5\uB418\uB294 \uC0C1\uD669\uC5D0\uC11C\uB294 \uD63C\uC790\uB9CC\uC758 \uC2DC\uAC04\uC744 \uAC00\uC9C0\uBA70 \uB9C8\uC74C\uC744 \uAC00\uB77C\uC549\uD78C\uB2E4.", en: "In tense situations, I take time alone to calm my mind.", scale: "\uC815\uC11C\uBC18\uC751\uC131", scaleEn: "Emotional Reactivity", rev: false },
     // ── 정서적 단절 ────────────────────────────────────────
-    { num: 4, content: "\uC2A4\uD2B8\uB808\uC2A4 \uC0C1\uD669\uC774 \uB418\uBA74 \uB098\uB294 \uB300\uC778\uAD00\uACC4\uC5D0\uC11C \uAC70\uB9AC\uB97C \uB450\uB824\uB294 \uD3B8\uC774\uB2E4.", scale: "\uC815\uC11C\uC801 \uB2E8\uC808", rev: false },
-    { num: 10, content: "\uAC08\uB4F1\uC774 \uC0DD\uAE30\uBA74 \uB098\uB294 \uBA3C\uC800 \uB4A4\uB85C \uBB3C\uB7EC\uC11C\uB294 \uD3B8\uC774\uB2E4.", scale: "\uC815\uC11C\uC801 \uB2E8\uC808", rev: true },
-    { num: 17, content: "\uAC08\uB4F1\uC774 \uC0DD\uAE30\uBA74 \uB098\uB294 \uD63C\uC790 \uC0DD\uAC01\uC5D0 \uC7A0\uAE30\uBA70 \uC790\uB9AC\uB97C \uD53C\uD558\uB824 \uB4E0\uB2E4.", scale: "\uC815\uC11C\uC801 \uB2E8\uC808", rev: false },
-    { num: 22, content: "\uD63C\uC790 \uC788\uC73C\uBA74 \uD3B8\uD558\uC9C0\uB9CC, \uAC00\uC871 \uBAA8\uC784 \uB4F1\uC5D0\uB294 \uBD80\uB2F4\uC744 \uB290\uB080\uB2E4.", scale: "\uC815\uC11C\uC801 \uB2E8\uC808", rev: true },
+    { num: 4, content: "\uC2A4\uD2B8\uB808\uC2A4 \uC0C1\uD669\uC774 \uB418\uBA74 \uB098\uB294 \uB300\uC778\uAD00\uACC4\uC5D0\uC11C \uAC70\uB9AC\uB97C \uB450\uB824\uB294 \uD3B8\uC774\uB2E4.", en: "When stressed, I tend to distance myself from others.", scale: "\uC815\uC11C\uC801 \uB2E8\uC808", scaleEn: "Emotional Cutoff", rev: false },
+    { num: 10, content: "\uAC08\uB4F1\uC774 \uC0DD\uAE30\uBA74 \uB098\uB294 \uBA3C\uC800 \uB4A4\uB85C \uBB3C\uB7EC\uC11C\uB294 \uD3B8\uC774\uB2E4.", en: "When conflict arises, I tend to step back first.", scale: "\uC815\uC11C\uC801 \uB2E8\uC808", scaleEn: "Emotional Cutoff", rev: true },
+    { num: 17, content: "\uAC08\uB4F1\uC774 \uC0DD\uAE30\uBA74 \uB098\uB294 \uD63C\uC790 \uC0DD\uAC01\uC5D0 \uC7A0\uAE30\uBA70 \uC790\uB9AC\uB97C \uD53C\uD558\uB824 \uB4E0\uB2E4.", en: "When conflict arises, I tend to withdraw and lose myself in thought.", scale: "\uC815\uC11C\uC801 \uB2E8\uC808", scaleEn: "Emotional Cutoff", rev: false },
+    { num: 22, content: "\uD63C\uC790 \uC788\uC73C\uBA74 \uD3B8\uD558\uC9C0\uB9CC, \uAC00\uC871 \uBAA8\uC784 \uB4F1\uC5D0\uB294 \uBD80\uB2F4\uC744 \uB290\uB080\uB2E4.", en: "I'm comfortable alone but feel burdened by family gatherings and similar events.", scale: "\uC815\uC11C\uC801 \uB2E8\uC808", scaleEn: "Emotional Cutoff", rev: true },
     // ── 융합·관계의존 ──────────────────────────────────────
-    { num: 11, content: "\uC0AC\uB78C\uB4E4\uC758 \uBD80\uD0C1\uC744 \uAC70\uC808\uD558\uAE30 \uC5B4\uB824\uC6B4 \uD3B8\uC774\uB2E4.", scale: "\uC735\uD569\xB7\uAD00\uACC4\uC758\uC874", rev: true },
-    { num: 13, content: "\uD0C0\uC778\uC774 \uBA3C\uC800 \uC591\uBCF4\uD574 \uC8FC\uC9C0 \uC54A\uC73C\uBA74 \uBCF4\uD1B5 \uB0B4\uAC00 \uBA3C\uC800 \uC591\uBCF4\uD55C\uB2E4.", scale: "\uC735\uD569\xB7\uAD00\uACC4\uC758\uC874", rev: true },
-    { num: 19, content: "\uD0C0\uC778\uC758 \uAC10\uC815\uC5D0 \uB108\uBB34 \uC27D\uAC8C \uB3D9\uC870\uD558\uB294 \uD3B8\uC774\uB2E4.", scale: "\uC735\uD569\xB7\uAD00\uACC4\uC758\uC874", rev: false },
-    { num: 20, content: "\uC0AC\uB78C\uB4E4\uC744 \uAE30\uC058\uAC8C \uD558\uAE30 \uC704\uD574 \uAC00\uB054 \uB0B4 \uC0DD\uAC01\uC744 \uC811\uC5B4\uB454\uB2E4.", scale: "\uC735\uD569\xB7\uAD00\uACC4\uC758\uC874", rev: false }
+    { num: 11, content: "\uC0AC\uB78C\uB4E4\uC758 \uBD80\uD0C1\uC744 \uAC70\uC808\uD558\uAE30 \uC5B4\uB824\uC6B4 \uD3B8\uC774\uB2E4.", en: "I find it difficult to refuse others' requests.", scale: "\uC735\uD569\xB7\uAD00\uACC4\uC758\uC874", scaleEn: "Fusion/Dependence", rev: true },
+    { num: 13, content: "\uD0C0\uC778\uC774 \uBA3C\uC800 \uC591\uBCF4\uD574 \uC8FC\uC9C0 \uC54A\uC73C\uBA74 \uBCF4\uD1B5 \uB0B4\uAC00 \uBA3C\uC800 \uC591\uBCF4\uD55C\uB2E4.", en: "If others don't yield first, I usually yield first.", scale: "\uC735\uD569\xB7\uAD00\uACC4\uC758\uC874", scaleEn: "Fusion/Dependence", rev: true },
+    { num: 19, content: "\uD0C0\uC778\uC758 \uAC10\uC815\uC5D0 \uB108\uBB34 \uC27D\uAC8C \uB3D9\uC870\uD558\uB294 \uD3B8\uC774\uB2E4.", en: "I tend to go along with others' emotions too easily.", scale: "\uC735\uD569\xB7\uAD00\uACC4\uC758\uC874", scaleEn: "Fusion/Dependence", rev: false },
+    { num: 20, content: "\uC0AC\uB78C\uB4E4\uC744 \uAE30\uC058\uAC8C \uD558\uAE30 \uC704\uD574 \uAC00\uB054 \uB0B4 \uC0DD\uAC01\uC744 \uC811\uC5B4\uB454\uB2E4.", en: "I sometimes set aside my own views to please others.", scale: "\uC735\uD569\xB7\uAD00\uACC4\uC758\uC874", scaleEn: "Fusion/Dependence", rev: false }
   ];
   const burnoutQ = [
     // I. 정서적 소진 (12문항)
-    { num: 1, content: "\uC5C5\uBB34\uB85C \uC778\uD574 \uAC10\uC815\uC801\uC73C\uB85C \uC644\uC804\uD788 \uC18C\uC9C4\uB41C \uB290\uB08C\uC774 \uB4E0\uB2E4", domain: "EE", rev: false },
-    { num: 2, content: "\uD1F4\uADFC \uD6C4\uC5D0\uB3C4 \uC5C5\uBB34 \uC0DD\uAC01\uC73C\uB85C \uBA38\uB9AC\uAC00 \uAF49 \uCC28 \uC788\uB2E4", domain: "EE", rev: false },
-    { num: 3, content: "\uC544\uCE68\uC5D0 \uCD9C\uADFC\uD560 \uC0DD\uAC01\uB9CC \uD574\uB3C4 \uAE30\uB825\uC774 \uC5C6\uACE0 \uD53C\uACE4\uD558\uB2E4", domain: "EE", rev: false },
-    { num: 4, content: "\uD558\uB8E8 \uC885\uC77C \uC77C\uD558\uACE0 \uB098\uBA74 \uADF9\uB3C4\uB85C \uC9C0\uCCD0 \uC544\uBB34\uAC83\uB3C4 \uD558\uAE30 \uC2EB\uB2E4", domain: "EE", rev: false },
-    { num: 5, content: "\uC0AC\uB78C\uB4E4\uC744 \uC751\uB300\uD558\uAC70\uB098 \uB3D5\uB294 \uAC83\uC774 \uAC10\uC815\uC801\uC73C\uB85C \uB108\uBB34 \uD798\uB4E4\uB2E4", domain: "EE", rev: false },
-    { num: 6, content: "\uC9C1\uC7A5 \uC0DD\uD65C\uC774 \uB098\uB97C \uB0B4\uBD80\uC5D0\uC11C \uD0DC\uC6CC \uC5C6\uC560\uB294 \uB290\uB08C\uC774 \uB4E0\uB2E4", domain: "EE", rev: false },
-    { num: 7, content: "\uAC10\uC815\uC744 \uC3DF\uC544\uB0B4\uB2E4\uAC00 \uC774\uC81C \uB354 \uC774\uC0C1 \uC904 \uAC83\uC774 \uC5C6\uB2E4\uB294 \uB290\uB08C\uC774 \uB4E0\uB2E4", domain: "EE", rev: false },
-    { num: 8, content: "\uC5C5\uBB34\uB098 \uB3D9\uB8CC\uC5D0 \uB300\uD55C \uC815\uC11C\uC801 \uC5EC\uC720\uAC00 \uC804\uD600 \uC5C6\uB2E4", domain: "EE", rev: false },
-    { num: 9, content: "\uC77C\uACFC \uC911 \uC791\uC740 \uC77C\uC5D0\uB3C4 \uAC10\uC815\uC801\uC73C\uB85C \uD3ED\uBC1C\uD560 \uAC83 \uAC19\uB2E4", domain: "EE", rev: false },
-    { num: 10, content: "\uC9C1\uC7A5 \uC77C\uC774 \uB098\uC758 \uAC1C\uC778 \uC0B6 \uC804\uCCB4\uB97C \uC7A0\uC2DD\uD558\uB294 \uAC83 \uAC19\uB2E4", domain: "EE", rev: false },
-    { num: 11, content: "\uC774\uC9C1\uC774\uB098 \uD1F4\uC9C1\uC744 \uC9C4\uC9C0\uD558\uAC8C \uACE0\uBBFC\uD558\uACE0 \uC788\uB2E4", domain: "EE", rev: false },
-    { num: 12, content: "\uC5C5\uBB34\uB97C \uB9C8\uCE5C \uD6C4\uC5D0\uB3C4 \uD68C\uBCF5\uC774 \uB418\uC9C0 \uC54A\uACE0 \uC9C0\uC18D\uC801\uC73C\uB85C \uC9C0\uCCD0 \uC788\uB2E4", domain: "EE", rev: false },
+    { num: 1, content: "\uC5C5\uBB34\uB85C \uC778\uD574 \uAC10\uC815\uC801\uC73C\uB85C \uC644\uC804\uD788 \uC18C\uC9C4\uB41C \uB290\uB08C\uC774 \uB4E0\uB2E4", en: "I feel emotionally drained by my work.", domain: "EE", rev: false },
+    { num: 2, content: "\uD1F4\uADFC \uD6C4\uC5D0\uB3C4 \uC5C5\uBB34 \uC0DD\uAC01\uC73C\uB85C \uBA38\uB9AC\uAC00 \uAF49 \uCC28 \uC788\uB2E4", en: "Even after work, my mind is filled with work-related thoughts.", domain: "EE", rev: false },
+    { num: 3, content: "\uC544\uCE68\uC5D0 \uCD9C\uADFC\uD560 \uC0DD\uAC01\uB9CC \uD574\uB3C4 \uAE30\uB825\uC774 \uC5C6\uACE0 \uD53C\uACE4\uD558\uB2E4", en: "Just thinking about going to work in the morning makes me feel tired.", domain: "EE", rev: false },
+    { num: 4, content: "\uD558\uB8E8 \uC885\uC77C \uC77C\uD558\uACE0 \uB098\uBA74 \uADF9\uB3C4\uB85C \uC9C0\uCCD0 \uC544\uBB34\uAC83\uB3C4 \uD558\uAE30 \uC2EB\uB2E4", en: "After working all day, I feel so exhausted I don't want to do anything.", domain: "EE", rev: false },
+    { num: 5, content: "\uC0AC\uB78C\uB4E4\uC744 \uC751\uB300\uD558\uAC70\uB098 \uB3D5\uB294 \uAC83\uC774 \uAC10\uC815\uC801\uC73C\uB85C \uB108\uBB34 \uD798\uB4E4\uB2E4", en: "Dealing with or helping people is emotionally too draining.", domain: "EE", rev: false },
+    { num: 6, content: "\uC9C1\uC7A5 \uC0DD\uD65C\uC774 \uB098\uB97C \uB0B4\uBD80\uC5D0\uC11C \uD0DC\uC6CC \uC5C6\uC560\uB294 \uB290\uB08C\uC774 \uB4E0\uB2E4", en: "My work life feels like it is burning me out from the inside.", domain: "EE", rev: false },
+    { num: 7, content: "\uAC10\uC815\uC744 \uC3DF\uC544\uB0B4\uB2E4\uAC00 \uC774\uC81C \uB354 \uC774\uC0C1 \uC904 \uAC83\uC774 \uC5C6\uB2E4\uB294 \uB290\uB08C\uC774 \uB4E0\uB2E4", en: "I feel I have nothing left to give emotionally.", domain: "EE", rev: false },
+    { num: 8, content: "\uC5C5\uBB34\uB098 \uB3D9\uB8CC\uC5D0 \uB300\uD55C \uC815\uC11C\uC801 \uC5EC\uC720\uAC00 \uC804\uD600 \uC5C6\uB2E4", en: "I have no emotional capacity left for my work or colleagues.", domain: "EE", rev: false },
+    { num: 9, content: "\uC77C\uACFC \uC911 \uC791\uC740 \uC77C\uC5D0\uB3C4 \uAC10\uC815\uC801\uC73C\uB85C \uD3ED\uBC1C\uD560 \uAC83 \uAC19\uB2E4", en: "Even minor things at work feel like they could push me to an emotional breaking point.", domain: "EE", rev: false },
+    { num: 10, content: "\uC9C1\uC7A5 \uC77C\uC774 \uB098\uC758 \uAC1C\uC778 \uC0B6 \uC804\uCCB4\uB97C \uC7A0\uC2DD\uD558\uB294 \uAC83 \uAC19\uB2E4", en: "Work feels like it is consuming my entire personal life.", domain: "EE", rev: false },
+    { num: 11, content: "\uC774\uC9C1\uC774\uB098 \uD1F4\uC9C1\uC744 \uC9C4\uC9C0\uD558\uAC8C \uACE0\uBBFC\uD558\uACE0 \uC788\uB2E4", en: "I am seriously considering changing jobs or quitting.", domain: "EE", rev: false },
+    { num: 12, content: "\uC5C5\uBB34\uB97C \uB9C8\uCE5C \uD6C4\uC5D0\uB3C4 \uD68C\uBCF5\uC774 \uB418\uC9C0 \uC54A\uACE0 \uC9C0\uC18D\uC801\uC73C\uB85C \uC9C0\uCCD0 \uC788\uB2E4", en: "Even after finishing work, I cannot recover and remain persistently exhausted.", domain: "EE", rev: false },
     // II. 비인격화 (8문항)
-    { num: 13, content: "\uACE0\uAC1D\uC774\uB098 \uB3D9\uB8CC\uAC00 \uB9C8\uCE58 \uBB34\uAC10\uAC01\uD55C \uB300\uC0C1\uCC98\uB7FC \uB290\uAEF4\uC9C4\uB2E4", domain: "DP", rev: false },
-    { num: 14, content: "\uC694\uC998 \uB4E4\uC5B4 \uB098 \uC790\uC2E0\uC774 \uC810\uC810 \uB0C9\uB2F4\uD558\uACE0 \uBB34\uAC10\uAC01\uD574\uC84C\uB2E4", domain: "DP", rev: false },
-    { num: 15, content: "\uC5C5\uBB34 \uAD00\uB828 \uC0AC\uB78C\uB4E4\uC758 \uBB38\uC81C\uC5D0 \uBB34\uAD00\uC2EC\uD574\uC9C0\uAC70\uB098 \uADC0\uCC2E\uC544\uC9C4\uB2E4", domain: "DP", rev: false },
-    { num: 16, content: "\uC0AC\uB78C\uC744 \uB300\uD558\uB294 \uC77C\uC774 \uB0B4 \uC5D0\uB108\uC9C0\uB97C \uC2EC\uD558\uAC8C \uC18C\uBAA8\uC2DC\uD0A8\uB2E4", domain: "DP", rev: false },
-    { num: 17, content: "\uD68C\uC0AC\uB098 \uC870\uC9C1\uC758 \uBC29\uD5A5\uC131\xB7\uBAA9\uD45C\uAC00 \uBB34\uC758\uBBF8\uD558\uAC8C \uB290\uAEF4\uC9C4\uB2E4", domain: "DP", rev: false },
-    { num: 18, content: "\uC774 \uC9C1\uC7A5\uC774 \uB098\uC5D0\uAC8C \uC544\uBB34 \uC758\uBBF8\uB3C4 \uC5C6\uB2E4\uB294 \uC0DD\uAC01\uC774 \uB4E0\uB2E4", domain: "DP", rev: false },
-    { num: 19, content: "\uC0AC\uB78C\uB4E4\uC758 \uAC10\uC815\uC801 \uBB38\uC81C\uC5D0 \uC2E4\uC81C\uB85C \uAD00\uC2EC\uC774 \uC5C6\uC5B4\uC84C\uB2E4", domain: "DP", rev: false },
-    { num: 20, content: "\uC77C\uD558\uBA74\uC11C \uC810\uC810 \uACF5\uAC10 \uB2A5\uB825\uC744 \uC783\uC5B4\uAC00\uB294 \uAC83 \uAC19\uB2E4", domain: "DP", rev: false },
+    { num: 13, content: "\uACE0\uAC1D\uC774\uB098 \uB3D9\uB8CC\uAC00 \uB9C8\uCE58 \uBB34\uAC10\uAC01\uD55C \uB300\uC0C1\uCC98\uB7FC \uB290\uAEF4\uC9C4\uB2E4", en: "Clients or colleagues feel like impersonal objects to me.", domain: "DP", rev: false },
+    { num: 14, content: "\uC694\uC998 \uB4E4\uC5B4 \uB098 \uC790\uC2E0\uC774 \uC810\uC810 \uB0C9\uB2F4\uD558\uACE0 \uBB34\uAC10\uAC01\uD574\uC84C\uB2E4", en: "Lately I have become increasingly cold and emotionally numb.", domain: "DP", rev: false },
+    { num: 15, content: "\uC5C5\uBB34 \uAD00\uB828 \uC0AC\uB78C\uB4E4\uC758 \uBB38\uC81C\uC5D0 \uBB34\uAD00\uC2EC\uD574\uC9C0\uAC70\uB098 \uADC0\uCC2E\uC544\uC9C4\uB2E4", en: "I have become indifferent to or annoyed by the problems of people at work.", domain: "DP", rev: false },
+    { num: 16, content: "\uC0AC\uB78C\uC744 \uB300\uD558\uB294 \uC77C\uC774 \uB0B4 \uC5D0\uB108\uC9C0\uB97C \uC2EC\uD558\uAC8C \uC18C\uBAA8\uC2DC\uD0A8\uB2E4", en: "Dealing with people drains my energy severely.", domain: "DP", rev: false },
+    { num: 17, content: "\uD68C\uC0AC\uB098 \uC870\uC9C1\uC758 \uBC29\uD5A5\uC131\xB7\uBAA9\uD45C\uAC00 \uBB34\uC758\uBBF8\uD558\uAC8C \uB290\uAEF4\uC9C4\uB2E4", en: "The direction and goals of my company or organization feel meaningless.", domain: "DP", rev: false },
+    { num: 18, content: "\uC774 \uC9C1\uC7A5\uC774 \uB098\uC5D0\uAC8C \uC544\uBB34 \uC758\uBBF8\uB3C4 \uC5C6\uB2E4\uB294 \uC0DD\uAC01\uC774 \uB4E0\uB2E4", en: "I feel that this job means nothing to me.", domain: "DP", rev: false },
+    { num: 19, content: "\uC0AC\uB78C\uB4E4\uC758 \uAC10\uC815\uC801 \uBB38\uC81C\uC5D0 \uC2E4\uC81C\uB85C \uAD00\uC2EC\uC774 \uC5C6\uC5B4\uC84C\uB2E4", en: "I have genuinely lost interest in people's emotional problems.", domain: "DP", rev: false },
+    { num: 20, content: "\uC77C\uD558\uBA74\uC11C \uC810\uC810 \uACF5\uAC10 \uB2A5\uB825\uC744 \uC783\uC5B4\uAC00\uB294 \uAC83 \uAC19\uB2E4", en: "I feel like I am gradually losing my ability to empathize at work.", domain: "DP", rev: false },
     // III. 성취감 저하 (10문항, 역채점)
-    { num: 21, content: "\uC774 \uC77C\uC744 \uD1B5\uD574 \uB2E4\uB978 \uC0AC\uB78C\uC758 \uC0B6\uC5D0 \uAE0D\uC815\uC801\uC778 \uC601\uD5A5\uC744 \uC900\uB2E4\uACE0 \uB290\uB080\uB2E4", domain: "PA", rev: true },
-    { num: 22, content: "\uC5C5\uBB34\uC5D0\uC11C \uAC00\uCE58 \uC788\uB294 \uC77C\uC744 \uD574\uB0B4\uACE0 \uC788\uB2E4\uB294 \uBCF4\uB78C\uC744 \uB290\uB080\uB2E4", domain: "PA", rev: true },
-    { num: 23, content: "\uC5B4\uB824\uC6B4 \uBB38\uC81C\uB97C \uC2A4\uC2A4\uB85C \uD574\uACB0\uD588\uC744 \uB54C \uBFCC\uB4EF\uD568\uC744 \uB290\uB080\uB2E4", domain: "PA", rev: true },
-    { num: 24, content: "\uB0B4 \uC5C5\uBB34\uAC00 \uC870\uC9C1\uC5D0 \uC758\uBBF8 \uC788\uAC8C \uAE30\uC5EC\uD55C\uB2E4\uACE0 \uC0DD\uAC01\uD55C\uB2E4", domain: "PA", rev: true },
-    { num: 25, content: "\uC9C1\uC7A5\uC5D0\uC11C \uB098 \uC790\uC2E0\uC774 \uC131\uC7A5\uD558\uACE0 \uC788\uB2E4\uB294 \uB290\uB08C\uC774 \uB4E0\uB2E4", domain: "PA", rev: true },
-    { num: 26, content: "\uC5C5\uBB34 \uC911 \uC990\uAC70\uC6C0\uC774\uB098 \uBAB0\uC785\uC744 \uACBD\uD5D8\uD55C\uB2E4", domain: "PA", rev: true },
-    { num: 27, content: "\uB0B4 \uC9C1\uC5C5 \uC120\uD0DD\uC774 \uC633\uC558\uB2E4\uB294 \uD655\uC2E0\uC774 \uC788\uB2E4", domain: "PA", rev: true },
-    { num: 28, content: "\uC0AC\uB78C\uB4E4\uC744 \uD6A8\uACFC\uC801\uC73C\uB85C \uB3C4\uC654\uB2E4\uB294 \uB9CC\uC871\uAC10\uC744 \uB290\uB080\uB2E4", domain: "PA", rev: true },
-    { num: 29, content: "\uC774 \uC77C\uC744 \uD1B5\uD574 \uB0B4\uAC00 \uC0AC\uD68C\uC5D0 \uAE30\uC5EC\uD558\uACE0 \uC788\uB2E4\uB294 \uC790\uAE0D\uC2EC\uC774 \uC788\uB2E4", domain: "PA", rev: true },
-    { num: 30, content: "\uD604\uC7AC \uB0B4 \uC5ED\uB7C9\uC774 \uC798 \uBC1C\uD718\uB418\uACE0 \uC788\uB2E4\uACE0 \uB290\uB080\uB2E4", domain: "PA", rev: true },
+    { num: 21, content: "\uC774 \uC77C\uC744 \uD1B5\uD574 \uB2E4\uB978 \uC0AC\uB78C\uC758 \uC0B6\uC5D0 \uAE0D\uC815\uC801\uC778 \uC601\uD5A5\uC744 \uC900\uB2E4\uACE0 \uB290\uB080\uB2E4", en: "I feel I am positively influencing others' lives through my work.", domain: "PA", rev: true },
+    { num: 22, content: "\uC5C5\uBB34\uC5D0\uC11C \uAC00\uCE58 \uC788\uB294 \uC77C\uC744 \uD574\uB0B4\uACE0 \uC788\uB2E4\uB294 \uBCF4\uB78C\uC744 \uB290\uB080\uB2E4", en: "I feel a sense of fulfillment in doing worthwhile work.", domain: "PA", rev: true },
+    { num: 23, content: "\uC5B4\uB824\uC6B4 \uBB38\uC81C\uB97C \uC2A4\uC2A4\uB85C \uD574\uACB0\uD588\uC744 \uB54C \uBFCC\uB4EF\uD568\uC744 \uB290\uB080\uB2E4", en: "I feel proud when I solve a difficult problem on my own.", domain: "PA", rev: true },
+    { num: 24, content: "\uB0B4 \uC5C5\uBB34\uAC00 \uC870\uC9C1\uC5D0 \uC758\uBBF8 \uC788\uAC8C \uAE30\uC5EC\uD55C\uB2E4\uACE0 \uC0DD\uAC01\uD55C\uB2E4", en: "I believe my work contributes meaningfully to the organization.", domain: "PA", rev: true },
+    { num: 25, content: "\uC9C1\uC7A5\uC5D0\uC11C \uB098 \uC790\uC2E0\uC774 \uC131\uC7A5\uD558\uACE0 \uC788\uB2E4\uB294 \uB290\uB08C\uC774 \uB4E0\uB2E4", en: "I feel I am growing as a person at work.", domain: "PA", rev: true },
+    { num: 26, content: "\uC5C5\uBB34 \uC911 \uC990\uAC70\uC6C0\uC774\uB098 \uBAB0\uC785\uC744 \uACBD\uD5D8\uD55C\uB2E4", en: "I experience enjoyment or flow during my work.", domain: "PA", rev: true },
+    { num: 27, content: "\uB0B4 \uC9C1\uC5C5 \uC120\uD0DD\uC774 \uC633\uC558\uB2E4\uB294 \uD655\uC2E0\uC774 \uC788\uB2E4", en: "I am confident that I made the right career choice.", domain: "PA", rev: true },
+    { num: 28, content: "\uC0AC\uB78C\uB4E4\uC744 \uD6A8\uACFC\uC801\uC73C\uB85C \uB3C4\uC654\uB2E4\uB294 \uB9CC\uC871\uAC10\uC744 \uB290\uB080\uB2E4", en: "I feel satisfied that I have helped people effectively.", domain: "PA", rev: true },
+    { num: 29, content: "\uC774 \uC77C\uC744 \uD1B5\uD574 \uB0B4\uAC00 \uC0AC\uD68C\uC5D0 \uAE30\uC5EC\uD558\uACE0 \uC788\uB2E4\uB294 \uC790\uAE0D\uC2EC\uC774 \uC788\uB2E4", en: "I take pride in contributing to society through my work.", domain: "PA", rev: true },
+    { num: 30, content: "\uD604\uC7AC \uB0B4 \uC5ED\uB7C9\uC774 \uC798 \uBC1C\uD718\uB418\uACE0 \uC788\uB2E4\uACE0 \uB290\uB080\uB2E4", en: "I feel my abilities are being well utilized right now.", domain: "PA", rev: true },
     // IV. 업무 과부하 (10문항)
-    { num: 31, content: "\uC5C5\uBB34\uB7C9\uC774 \uB098 \uD63C\uC790 \uAC10\uB2F9\uD558\uAE30\uC5D0 \uB108\uBB34 \uB9CE\uB2E4", domain: "WO", rev: false },
-    { num: 32, content: "\uC5C5\uBB34 \uB9C8\uAC10\uC774\uB098 \uC694\uAD6C\uC0AC\uD56D\uC774 \uBD88\uD569\uB9AC\uD558\uAC8C \uB290\uAEF4\uC9C4\uB2E4", domain: "WO", rev: false },
-    { num: 33, content: "\uC5C5\uBB34 \uBC29\uC2DD\uC774\uB098 \uC6B0\uC120\uC21C\uC704\uC5D0 \uB300\uD55C \uACB0\uC815\uAD8C\uC774 \uC5C6\uB2E4\uACE0 \uB290\uB080\uB2E4", domain: "WO", rev: false },
-    { num: 34, content: "\uC57C\uADFC\uC774\uB098 \uCD08\uACFC \uADFC\uBB34\uAC00 \uC77C\uC0C1\uD654\uB418\uC5B4 \uC788\uB2E4", domain: "WO", rev: false },
-    { num: 35, content: "\uBAA8\uC21C\uB418\uAC70\uB098 \uCDA9\uB3CC\uD558\uB294 \uC5C5\uBB34 \uC9C0\uC2DC\uB97C \uB3D9\uC2DC\uC5D0 \uBC1B\uB294\uB2E4", domain: "WO", rev: false },
-    { num: 36, content: "\uC5C5\uBB34 \uC131\uACFC\uC5D0 \uBE44\uD574 \uC778\uC815\xB7\uBCF4\uC0C1\uC774 \uBD80\uC871\uD558\uB2E4\uACE0 \uB290\uB080\uB2E4", domain: "WO", rev: false },
-    { num: 37, content: "\uC9C1\uC7A5 \uB0B4 \uACF5\uC815\uC131\uC774 \uBD80\uC871\uD558\uB2E4\uACE0 \uB290\uB080\uB2E4", domain: "WO", rev: false },
-    { num: 38, content: "\uAC1C\uC778 \uC0B6\uACFC \uC5C5\uBB34 \uAC04\uC758 \uADE0\uD615\uC744 \uB9DE\uCD94\uAE30 \uC5B4\uB835\uB2E4", domain: "WO", rev: false },
-    { num: 39, content: "\uC5C5\uBB34 \uC911 \uC9C0\uC18D\uC801\uC778 \uBC29\uD574\uB098 \uC911\uB2E8\uC73C\uB85C \uC9D1\uC911\uC774 \uBD88\uAC00\uB2A5\uD558\uB2E4", domain: "WO", rev: false },
-    { num: 40, content: "\uC870\uC9C1\uC758 \uAC00\uCE58\uAD00\uC774 \uB0B4 \uAC1C\uC778 \uAC00\uCE58\uAD00\uACFC \uC2EC\uD558\uAC8C \uCDA9\uB3CC\uD55C\uB2E4", domain: "WO", rev: false },
+    { num: 31, content: "\uC5C5\uBB34\uB7C9\uC774 \uB098 \uD63C\uC790 \uAC10\uB2F9\uD558\uAE30\uC5D0 \uB108\uBB34 \uB9CE\uB2E4", en: "The workload is too much for me to handle on my own.", domain: "WO", rev: false },
+    { num: 32, content: "\uC5C5\uBB34 \uB9C8\uAC10\uC774\uB098 \uC694\uAD6C\uC0AC\uD56D\uC774 \uBD88\uD569\uB9AC\uD558\uAC8C \uB290\uAEF4\uC9C4\uB2E4", en: "Work deadlines or requirements feel unreasonable.", domain: "WO", rev: false },
+    { num: 33, content: "\uC5C5\uBB34 \uBC29\uC2DD\uC774\uB098 \uC6B0\uC120\uC21C\uC704\uC5D0 \uB300\uD55C \uACB0\uC815\uAD8C\uC774 \uC5C6\uB2E4\uACE0 \uB290\uB080\uB2E4", en: "I feel I have no say in how I work or what to prioritize.", domain: "WO", rev: false },
+    { num: 34, content: "\uC57C\uADFC\uC774\uB098 \uCD08\uACFC \uADFC\uBB34\uAC00 \uC77C\uC0C1\uD654\uB418\uC5B4 \uC788\uB2E4", en: "Overtime or overwork has become a daily norm.", domain: "WO", rev: false },
+    { num: 35, content: "\uBAA8\uC21C\uB418\uAC70\uB098 \uCDA9\uB3CC\uD558\uB294 \uC5C5\uBB34 \uC9C0\uC2DC\uB97C \uB3D9\uC2DC\uC5D0 \uBC1B\uB294\uB2E4", en: "I receive contradictory or conflicting work instructions simultaneously.", domain: "WO", rev: false },
+    { num: 36, content: "\uC5C5\uBB34 \uC131\uACFC\uC5D0 \uBE44\uD574 \uC778\uC815\xB7\uBCF4\uC0C1\uC774 \uBD80\uC871\uD558\uB2E4\uACE0 \uB290\uB080\uB2E4", en: "I feel underrecognized or underrewarded relative to my performance.", domain: "WO", rev: false },
+    { num: 37, content: "\uC9C1\uC7A5 \uB0B4 \uACF5\uC815\uC131\uC774 \uBD80\uC871\uD558\uB2E4\uACE0 \uB290\uB080\uB2E4", en: "I feel there is a lack of fairness in my workplace.", domain: "WO", rev: false },
+    { num: 38, content: "\uAC1C\uC778 \uC0B6\uACFC \uC5C5\uBB34 \uAC04\uC758 \uADE0\uD615\uC744 \uB9DE\uCD94\uAE30 \uC5B4\uB835\uB2E4", en: "I find it difficult to maintain a balance between personal life and work.", domain: "WO", rev: false },
+    { num: 39, content: "\uC5C5\uBB34 \uC911 \uC9C0\uC18D\uC801\uC778 \uBC29\uD574\uB098 \uC911\uB2E8\uC73C\uB85C \uC9D1\uC911\uC774 \uBD88\uAC00\uB2A5\uD558\uB2E4", en: "Constant interruptions at work make it impossible to concentrate.", domain: "WO", rev: false },
+    { num: 40, content: "\uC870\uC9C1\uC758 \uAC00\uCE58\uAD00\uC774 \uB0B4 \uAC1C\uC778 \uAC00\uCE58\uAD00\uACFC \uC2EC\uD558\uAC8C \uCDA9\uB3CC\uD55C\uB2E4", en: "The organization's values seriously conflict with my personal values.", domain: "WO", rev: false },
     // V. 신체·인지 (10문항)
-    { num: 41, content: "\uCDA9\uBD84\uD788 \uC7A4\uB294\uB370\uB3C4 \uAC1C\uC6B4\uD558\uC9C0 \uC54A\uACE0 \uC9C0\uC18D\uC801\uC73C\uB85C \uD53C\uB85C\uD558\uB2E4", domain: "PC", rev: false },
-    { num: 42, content: "\uB450\uD1B5, \uADFC\uC721 \uAE34\uC7A5, \uC5B4\uAE68\xB7\uBAA9 \uD1B5\uC99D\uC774 \uC790\uC8FC \uC0DD\uAE34\uB2E4", domain: "PC", rev: false },
-    { num: 43, content: "\uC5C5\uBB34 \uC911 \uAE30\uC5B5\uB825\uC774\uB098 \uC9D1\uC911\uB825\uC774 \uD604\uC800\uD788 \uC800\uD558\uB41C \uAC83 \uAC19\uB2E4", domain: "PC", rev: false },
-    { num: 44, content: "\uC18C\uD654\uBD88\uB7C9, \uC704\uACBD\uB828, \uC2DD\uC695 \uBCC0\uD654 \uB4F1 \uC18C\uD654 \uBB38\uC81C\uAC00 \uC788\uB2E4", domain: "PC", rev: false },
-    { num: 45, content: "\uC7A0\uB4E4\uAE30 \uC5B4\uB835\uAC70\uB098 \uC911\uAC04\uC5D0 \uC790\uAFB8 \uAE6C\uB2E4", domain: "PC", rev: false },
-    { num: 46, content: "\uBA74\uC5ED\uB825\uC774 \uB5A8\uC5B4\uC838 \uC790\uC8FC \uAC10\uAE30\uB098 \uC794\uBCD1\uC5D0 \uAC78\uB9B0\uB2E4", domain: "PC", rev: false },
-    { num: 47, content: "\uCE74\uD398\uC778\xB7\uC54C\uCF54\uC62C\xB7\uC57D\uBB3C\uC5D0 \uC810\uC810 \uB354 \uC758\uC874\uD558\uAC8C \uB41C\uB2E4", domain: "PC", rev: false },
-    { num: 48, content: "\uC5C5\uBB34 \uC678 \uCDE8\uBBF8\xB7\uC6B4\uB3D9 \uB4F1 \uC990\uAE30\uB358 \uD65C\uB3D9\uC744 \uC644\uC804\uD788 \uD3EC\uAE30\uD588\uB2E4", domain: "PC", rev: false },
-    { num: 49, content: "\uAC04\uB2E8\uD55C \uACB0\uC815\uB3C4 \uB0B4\uB9AC\uAE30 \uC5B4\uB835\uACE0 \uD310\uB2E8\uB825\uC774 \uD750\uB824\uC84C\uB2E4", domain: "PC", rev: false },
-    { num: 50, content: "\uC2EC\uC7A5 \uB450\uADFC\uAC70\uB9BC, \uC2DD\uC740\uB540, \uB9CC\uC131 \uAE34\uC7A5\uAC10 \uB4F1 \uC2E0\uCCB4 \uC99D\uC0C1\uC774 \uC788\uB2E4", domain: "PC", rev: false }
+    { num: 41, content: "\uCDA9\uBD84\uD788 \uC7A4\uB294\uB370\uB3C4 \uAC1C\uC6B4\uD558\uC9C0 \uC54A\uACE0 \uC9C0\uC18D\uC801\uC73C\uB85C \uD53C\uB85C\uD558\uB2E4", en: "Even after enough sleep, I still feel unrefreshed and persistently tired.", domain: "PC", rev: false },
+    { num: 42, content: "\uB450\uD1B5, \uADFC\uC721 \uAE34\uC7A5, \uC5B4\uAE68\xB7\uBAA9 \uD1B5\uC99D\uC774 \uC790\uC8FC \uC0DD\uAE34\uB2E4", en: "I frequently experience headaches, muscle tension, or shoulder and neck pain.", domain: "PC", rev: false },
+    { num: 43, content: "\uC5C5\uBB34 \uC911 \uAE30\uC5B5\uB825\uC774\uB098 \uC9D1\uC911\uB825\uC774 \uD604\uC800\uD788 \uC800\uD558\uB41C \uAC83 \uAC19\uB2E4", en: "My memory and concentration seem significantly impaired at work.", domain: "PC", rev: false },
+    { num: 44, content: "\uC18C\uD654\uBD88\uB7C9, \uC704\uACBD\uB828, \uC2DD\uC695 \uBCC0\uD654 \uB4F1 \uC18C\uD654 \uBB38\uC81C\uAC00 \uC788\uB2E4", en: "I have digestive issues such as indigestion, stomach cramps, or changes in appetite.", domain: "PC", rev: false },
+    { num: 45, content: "\uC7A0\uB4E4\uAE30 \uC5B4\uB835\uAC70\uB098 \uC911\uAC04\uC5D0 \uC790\uAFB8 \uAE6C\uB2E4", en: "I have trouble falling asleep or wake up frequently during the night.", domain: "PC", rev: false },
+    { num: 46, content: "\uBA74\uC5ED\uB825\uC774 \uB5A8\uC5B4\uC838 \uC790\uC8FC \uAC10\uAE30\uB098 \uC794\uBCD1\uC5D0 \uAC78\uB9B0\uB2E4", en: "My immunity seems weakened and I frequently catch colds or minor illnesses.", domain: "PC", rev: false },
+    { num: 47, content: "\uCE74\uD398\uC778\xB7\uC54C\uCF54\uC62C\xB7\uC57D\uBB3C\uC5D0 \uC810\uC810 \uB354 \uC758\uC874\uD558\uAC8C \uB41C\uB2E4", en: "I am becoming increasingly dependent on caffeine, alcohol, or other substances.", domain: "PC", rev: false },
+    { num: 48, content: "\uC5C5\uBB34 \uC678 \uCDE8\uBBF8\xB7\uC6B4\uB3D9 \uB4F1 \uC990\uAE30\uB358 \uD65C\uB3D9\uC744 \uC644\uC804\uD788 \uD3EC\uAE30\uD588\uB2E4", en: "I have completely given up hobbies or activities I used to enjoy outside of work.", domain: "PC", rev: false },
+    { num: 49, content: "\uAC04\uB2E8\uD55C \uACB0\uC815\uB3C4 \uB0B4\uB9AC\uAE30 \uC5B4\uB835\uACE0 \uD310\uB2E8\uB825\uC774 \uD750\uB824\uC84C\uB2E4", en: "Even simple decisions are hard to make and my judgment feels clouded.", domain: "PC", rev: false },
+    { num: 50, content: "\uC2EC\uC7A5 \uB450\uADFC\uAC70\uB9BC, \uC2DD\uC740\uB540, \uB9CC\uC131 \uAE34\uC7A5\uAC10 \uB4F1 \uC2E0\uCCB4 \uC99D\uC0C1\uC774 \uC788\uB2E4", en: "I experience physical symptoms such as heart palpitations, cold sweats, or chronic tension.", domain: "PC", rev: false }
   ];
   const lostQ = [
     // ── 축 1. 에너지 방향 (Energy Direction)
@@ -1685,18 +1669,16 @@ function PsychologicalTestSystem() {
     } else setView("memberDashboard");
     loadTestHistory();
   }
-  async function handleKakaoLogin(accessToken) {
-    setLoginMsg({ type: "loading", text: t("\uCE74\uCE74\uC624 \uB85C\uADF8\uC778 \uC911...", "Signing in with Kakao...") });
-    const result = await api.loginKakao(accessToken);
-    if (!result.success) {
-      setLoginMsg({ type: "error", text: result.error || t("\uCE74\uCE74\uC624 \uB85C\uADF8\uC778\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.", "Kakao sign-in failed.") });
+  async function handleKakaoLogin(data) {
+    if (!(data == null ? void 0 : data.accessToken)) {
+      setLoginMsg({ type: "error", text: t("\uCE74\uCE74\uC624 \uB85C\uADF8\uC778\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.", "Kakao sign-in failed.") });
       return;
     }
-    const { accessToken: at, refreshToken: rt, user } = result.data;
-    tokenStore.setTokens(at, rt);
+    const { accessToken, refreshToken, user } = data;
+    tokenStore.setTokens(accessToken, refreshToken);
     tokenStore.setUser(user);
     setCurrentUser(user);
-    setCredits(user.credits);
+    setCredits(user.credits || 0);
     setIsLoggedIn(true);
     setLoginMsg({ type: "", text: "" });
     const postLoginView = sessionStorage.getItem("post_login_view");
@@ -2389,7 +2371,8 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
     },
     "\u2726 ",
     credits,
-    " \uD06C\uB808\uB527"
+    " ",
+    t("\uD06C\uB808\uB527", "cr")
   );
   const CreditModal = () => !showCreditModal ? null : /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl shadow-2xl p-7 w-full max-w-sm" }, /* @__PURE__ */ React.createElement("div", { className: "text-center mb-5" }, /* @__PURE__ */ React.createElement("div", { className: "text-4xl mb-3" }, "\u2726"), /* @__PURE__ */ React.createElement("h2", { className: "text-xl font-bold text-gray-800 mb-1" }, "\uD06C\uB808\uB527\uC774 \uBD80\uC871\uD569\uB2C8\uB2E4"), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-gray-500" }, "\uC2EC\uB9AC\uAC80\uC0AC 1\uD68C = 10 \uD06C\uB808\uB527", /* @__PURE__ */ React.createElement("br", null), "AI \uCC44\uD305 1\uD68C = 5 \uD06C\uB808\uB527")), /* @__PURE__ */ React.createElement("div", { className: "bg-green-50 rounded-xl p-3 mb-5 text-center" }, /* @__PURE__ */ React.createElement("span", { className: "text-green-800 font-semibold" }, "\uD604\uC7AC \uC794\uC561: ", credits, " \uD06C\uB808\uB527")), /* @__PURE__ */ React.createElement(
     "button",
@@ -2413,11 +2396,26 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
     "button",
     {
       onClick: () => {
-        var _a2, _b2;
         sessionStorage.setItem("post_login_view", "aiCounsel");
         setShowAiLimitModal(false);
-        handleKakaoLogin && ((_b2 = (_a2 = window.Kakao) == null ? void 0 : _a2.Auth) == null ? void 0 : _b2.login({ success: (a) => handleKakaoLogin(a.access_token), fail: () => {
-        } }));
+        fetch("/api/auth/kakao/url").then((r) => r.json()).then(({ url }) => {
+          if (!url) return;
+          const p = window.open(url, "kakao_login", "width=500,height=640,top=100,left=200");
+          window.addEventListener("message", function h(e) {
+            var _a2, _b2;
+            if (e.origin !== location.origin) return;
+            if (((_a2 = e.data) == null ? void 0 : _a2.type) === "kakao_login") {
+              window.removeEventListener("message", h);
+              handleKakaoLogin(e.data);
+            } else if (((_b2 = e.data) == null ? void 0 : _b2.type) === "kakao_error") {
+              window.removeEventListener("message", h);
+            }
+            const t2 = setInterval(() => {
+              if (p == null ? void 0 : p.closed) clearInterval(t2), window.removeEventListener("message", h);
+            }, 500);
+          });
+        }).catch(() => {
+        });
       },
       style: {
         background: "#FEE500",
@@ -2703,7 +2701,8 @@ Visit Maumful and take the same test again to compare your progress.`));
   ), /* @__PURE__ */ React.createElement(
     CounselingPage,
     {
-      setView
+      setView,
+      lang
     }
   ));
   if (view === "counselingAdmin") return /* @__PURE__ */ React.createElement(CounselingAdminPage, { setView });
@@ -3643,7 +3642,7 @@ Visit Maumful and take the same test again to compare your progress.`));
     })), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-400 mt-1" }, t(`\uCD5C\uADFC ${moodTrend.length}\uD68C AI \uC0C1\uB2F4 \uAE30\uBC18`, `Based on last ${moodTrend.length} AI sessions`)));
   })(), /* @__PURE__ */ React.createElement("div", { className: "space-y-2" }, testHistory.map((h, i) => {
     const prevSame = testHistory.slice(i + 1).find((p) => p.test_type === h.test_type);
-    const testEmoji2 = { PHQ9: "\u{1F614}", GAD7: "\u{1F630}", DASS21: "\u{1F4CA}", BIG5: "\u{1F31F}", LOST: "\u{1F9ED}", SCT: "\u270D\uFE0F", DSI: "\u{1FA9E}", BURNOUT: "\u{1F525}" };
+    const testEmoji2 = { PHQ9: "\u{1F614}", GAD7: "\u{1F630}", DASS21: "\u{1F4CA}", BIG5: "\u{1F31F}", LOST: "\u{1F9ED}", SCT: "\u270D\uFE0F", DSI: "\u{1FA9E}", BURNOUT: "\u{1F525}", RIASEC: "\u{1F50D}", VALUES: "\u{1F48E}" };
     return /* @__PURE__ */ React.createElement("div", { key: i, className: "bg-white rounded-xl p-3 border border-gray-100" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("span", { className: "text-lg" }, testEmoji2[h.test_type] || "\u{1F4CB}"), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("span", { className: "font-semibold text-gray-700 text-sm" }, h.test_type), /* @__PURE__ */ React.createElement("span", { className: "text-xs text-gray-400 ml-2" }, new Date(h.performed_at).toLocaleDateString("ko-KR")))), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, h.score != null && /* @__PURE__ */ React.createElement("span", { className: "text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100" }, h.score, "\uC810"), h.level && /* @__PURE__ */ React.createElement("span", { className: "text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100" }, h.level), prevSame && /* @__PURE__ */ React.createElement("span", { className: "text-xs bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full border border-emerald-100" }, t("\uC7AC\uAC80\uC0AC", "Retest")))));
   }))), myPageTab === "referral" && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Msg, { msg: referralMsg }), referralLoading ? /* @__PURE__ */ React.createElement("div", { className: "text-center py-8 text-gray-400" }, t("\uB85C\uB529 \uC911...", "Loading...")) : referralData ? /* @__PURE__ */ React.createElement("div", { className: "space-y-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-gradient-to-r from-green-500 to-purple-600 rounded-2xl p-5 text-white" }, /* @__PURE__ */ React.createElement("p", { className: "text-xs opacity-75 mb-1" }, t("\uB0B4 \uCD08\uB300 \uCF54\uB4DC", "My Invite Code")), /* @__PURE__ */ React.createElement("div", { className: "text-3xl font-bold tracking-widest mb-3" }, referralData.code), /* @__PURE__ */ React.createElement(
     "button",
@@ -4803,7 +4802,7 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
         container.scrollTop = container.scrollHeight;
       }
     }, [chatMessages]);
-    return /* @__PURE__ */ React.createElement("div", { className: "mt-6 rounded-xl overflow-hidden border border-gray-200" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between px-4 py-2.5 bg-gray-50 border-b border-gray-200" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("span", { className: "text-base" }, "\u{1F4AC}"), /* @__PURE__ */ React.createElement("span", { className: "font-bold text-sm text-gray-800" }, "AI \uC0C1\uB2F4 \uB300\uD654"), hasMemory && /* @__PURE__ */ React.createElement("span", { className: "bg-indigo-50 text-indigo-600 text-xs px-2 py-0.5 rounded-full font-bold flex items-center gap-1" }, "\u{1F4DD} \uC774\uC804 \uB300\uD654 \uAE30\uC5B5 \uC911", /* @__PURE__ */ React.createElement("button", { onClick: clearMemory, className: "ml-1 text-indigo-300 hover:text-indigo-500", title: "\uAE30\uC5B5 \uCD08\uAE30\uD654" }, "\u2715")), chatMessages.length > 0 && /* @__PURE__ */ React.createElement("span", { className: "bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full font-bold" }, chatMessages.filter((m) => m.role === "user").length, "\uD68C \uB300\uD654")), /* @__PURE__ */ React.createElement("span", { className: "text-xs text-gray-400" }, "\uC624\uB298 ", aiChatUsed, "/", isLoggedIn && credits > 0 ? AI_LIMIT_PAID : AI_LIMIT_FREE, "\uD68C \uC0AC\uC6A9")), /* @__PURE__ */ React.createElement("div", { className: "bg-white" }, /* @__PURE__ */ React.createElement("p", { className: "px-4 pt-2 pb-1 text-xs text-gray-400" }, "\u26A0\uFE0F AI \uC0C1\uB2F4\uC740 \uCC38\uACE0\uC6A9\uC774\uBA70 \uC758\uD559\uC801 \uC9C4\uB2E8\uC744 \uB300\uCCB4\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4"), chatMessages.length === 0 && /* @__PURE__ */ React.createElement("div", { className: "p-4 border-b border-gray-100" }, /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-500 mb-2 font-semibold" }, "\u{1F4A1} \uC790\uC8FC \uBB3B\uB294 \uC9C8\uBB38"), /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap gap-2" }, (initialPrompts || []).map((prompt, i) => /* @__PURE__ */ React.createElement(
+    return /* @__PURE__ */ React.createElement("div", { className: "mt-6 rounded-xl overflow-hidden border border-gray-200" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between px-4 py-2.5 bg-gray-50 border-b border-gray-200" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("span", { className: "text-base" }, "\u{1F4AC}"), /* @__PURE__ */ React.createElement("span", { className: "font-bold text-sm text-gray-800" }, t("AI \uC0C1\uB2F4 \uB300\uD654", "AI Counseling")), hasMemory && /* @__PURE__ */ React.createElement("span", { className: "bg-indigo-50 text-indigo-600 text-xs px-2 py-0.5 rounded-full font-bold flex items-center gap-1" }, t("\u{1F4DD} \uC774\uC804 \uB300\uD654 \uAE30\uC5B5 \uC911", "\u{1F4DD} Memory active"), /* @__PURE__ */ React.createElement("button", { onClick: clearMemory, className: "ml-1 text-indigo-300 hover:text-indigo-500", title: t("\uAE30\uC5B5 \uCD08\uAE30\uD654", "Clear memory") }, "\u2715")), chatMessages.length > 0 && /* @__PURE__ */ React.createElement("span", { className: "bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full font-bold" }, t(`${chatMessages.filter((m) => m.role === "user").length}\uD68C \uB300\uD654`, `${chatMessages.filter((m) => m.role === "user").length} chats`))), /* @__PURE__ */ React.createElement("span", { className: "text-xs text-gray-400" }, t(`\uC624\uB298 ${aiChatUsed}/${isLoggedIn && credits > 0 ? AI_LIMIT_PAID : AI_LIMIT_FREE}\uD68C \uC0AC\uC6A9`, `Today: ${aiChatUsed}/${isLoggedIn && credits > 0 ? AI_LIMIT_PAID : AI_LIMIT_FREE} used`))), /* @__PURE__ */ React.createElement("div", { className: "bg-white" }, /* @__PURE__ */ React.createElement("p", { className: "px-4 pt-2 pb-1 text-xs text-gray-400" }, t("\u26A0\uFE0F AI \uC0C1\uB2F4\uC740 \uCC38\uACE0\uC6A9\uC774\uBA70 \uC758\uD559\uC801 \uC9C4\uB2E8\uC744 \uB300\uCCB4\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4", "\u26A0\uFE0F AI counseling is for reference only and does not replace medical diagnosis.")), chatMessages.length === 0 && /* @__PURE__ */ React.createElement("div", { className: "p-4 border-b border-gray-100" }, /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-500 mb-2 font-semibold" }, "\u{1F4A1} ", t("\uC790\uC8FC \uBB3B\uB294 \uC9C8\uBB38", "Common questions")), /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap gap-2" }, (initialPrompts || []).map((prompt, i) => /* @__PURE__ */ React.createElement(
       "button",
       {
         key: i,
@@ -4852,10 +4851,17 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
               reader.read().then(({ done, value }) => {
                 var _a2;
                 if (done) {
+                  const moodMatch = fullText.match(/\[MOOD:(\d+)\]/);
+                  const moodScore = moodMatch ? parseInt(moodMatch[1], 10) : null;
+                  const cleanText = fullText.replace(/\s*\[MOOD:\d+\]\s*$/, "").trimEnd();
                   setChatMessages((prev) => prev.map(
-                    (m) => m.id === assistantId ? { ...m, streaming: false } : m
+                    (m) => m.id === assistantId ? { ...m, content: cleanText, streaming: false } : m
                   ));
                   setChatStreaming(false);
+                  if (moodScore !== null && isLoggedIn) {
+                    api._fetch("/api/chat/mood-log", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ moodScore, testType: "chat" }) }).catch(() => {
+                    });
+                  }
                   return;
                 }
                 buffer += decoder.decode(value, { stream: true });
@@ -4881,7 +4887,7 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
             }
             processStream();
           }).catch((e) => {
-            setChatError(e.message || "AI \uCC44\uD305 \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
+            setChatError(e.message || t("AI \uCC44\uD305 \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.", "An error occurred during AI chat."));
             setChatMessages((prev) => prev.filter((m) => m.id !== assistantId));
             setChatStreaming(false);
           });
@@ -4889,15 +4895,15 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
         className: "text-xs bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1.5 rounded-full hover:bg-blue-100 transition"
       },
       prompt
-    )))), /* @__PURE__ */ React.createElement("div", { ref: chatContainerRef, className: "h-[50vh] overflow-y-auto p-4 space-y-3 bg-gray-50" }, chatMessages.length === 0 && /* @__PURE__ */ React.createElement("div", { className: "flex flex-col items-center justify-center h-full text-center" }, /* @__PURE__ */ React.createElement("p", { className: "text-4xl mb-3" }, "\u{1F91D}"), /* @__PURE__ */ React.createElement("p", { className: "text-sm font-semibold text-gray-600" }, "\uAC80\uC0AC \uACB0\uACFC\uC5D0 \uB300\uD574 AI\uC640 \uB300\uD654\uD574 \uBCF4\uC138\uC694"), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-400 mt-1" }, "\uC0C1\uB2F4 \uC804\uB7B5, \uD574\uC11D \uBC29\uBC95, \uD65C\uC6A9 \uBC29\uC548 \uB4F1\uC744 \uC9C8\uBB38\uD558\uC138\uC694"), !isLoggedIn && /* @__PURE__ */ React.createElement("p", { className: "text-xs text-blue-500 mt-2 font-semibold" }, "\u{1F4AC} \uBB34\uB8CC \uCCB4\uD5D8 ", AI_LIMIT_FREE, "\uD68C \xB7 \uAC00\uC785\uD558\uBA74 \uB354 \uB9CE\uC774 \uC774\uC6A9 \uAC00\uB2A5")), chatMessages.map((msg) => /* @__PURE__ */ React.createElement("div", { key: msg.id, className: `flex ${msg.role === "user" ? "justify-end" : "justify-start"}` }, msg.role === "assistant" && /* @__PURE__ */ React.createElement("div", { className: "w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-green-600 flex items-center justify-center text-white text-xs font-bold mr-2 mt-0.5 shrink-0" }, "AI"), /* @__PURE__ */ React.createElement("div", { className: `max-w-[75%] min-w-0 px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${msg.role === "user" ? "bg-blue-600 text-white rounded-tr-sm" : "bg-white border border-gray-200 text-gray-800 rounded-tl-sm shadow-sm"}` }, msg.content ? /* @__PURE__ */ React.createElement("div", { className: "text-sm space-y-0.5" }, renderMdText(msg.content), msg.streaming && /* @__PURE__ */ React.createElement("span", { className: "inline-block w-1.5 h-4 bg-blue-400 animate-pulse ml-0.5 align-middle rounded" }), !msg.streaming && msg.role === "assistant" && window.speechSynthesis && /* @__PURE__ */ React.createElement("div", { className: "flex justify-end mt-2 pt-1.5 border-t border-gray-100" }, /* @__PURE__ */ React.createElement(
+    )))), /* @__PURE__ */ React.createElement("div", { ref: chatContainerRef, className: "h-[50vh] overflow-y-auto p-4 space-y-3 bg-gray-50" }, chatMessages.length === 0 && /* @__PURE__ */ React.createElement("div", { className: "flex flex-col items-center justify-center h-full text-center" }, /* @__PURE__ */ React.createElement("p", { className: "text-4xl mb-3" }, "\u{1F91D}"), /* @__PURE__ */ React.createElement("p", { className: "text-sm font-semibold text-gray-600" }, t("\uAC80\uC0AC \uACB0\uACFC\uC5D0 \uB300\uD574 AI\uC640 \uB300\uD654\uD574 \uBCF4\uC138\uC694", "Chat with AI about your test results")), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-400 mt-1" }, t("\uC0C1\uB2F4 \uC804\uB7B5, \uD574\uC11D \uBC29\uBC95, \uD65C\uC6A9 \uBC29\uC548 \uB4F1\uC744 \uC9C8\uBB38\uD558\uC138\uC694", "Ask about counseling strategies, interpretation, and how to apply results")), !isLoggedIn && /* @__PURE__ */ React.createElement("p", { className: "text-xs text-blue-500 mt-2 font-semibold" }, t(`\u{1F4AC} \uBB34\uB8CC \uCCB4\uD5D8 ${AI_LIMIT_FREE}\uD68C \xB7 \uAC00\uC785\uD558\uBA74 \uB354 \uB9CE\uC774 \uC774\uC6A9 \uAC00\uB2A5`, `\u{1F4AC} ${AI_LIMIT_FREE} free sessions \xB7 Sign up for more`))), chatMessages.map((msg) => /* @__PURE__ */ React.createElement("div", { key: msg.id, className: `flex ${msg.role === "user" ? "justify-end" : "justify-start"}` }, msg.role === "assistant" && /* @__PURE__ */ React.createElement("div", { className: "w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-green-600 flex items-center justify-center text-white text-xs font-bold mr-2 mt-0.5 shrink-0" }, "AI"), /* @__PURE__ */ React.createElement("div", { className: `max-w-[75%] min-w-0 px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${msg.role === "user" ? "bg-blue-600 text-white rounded-tr-sm" : "bg-white border border-gray-200 text-gray-800 rounded-tl-sm shadow-sm"}` }, msg.content ? /* @__PURE__ */ React.createElement("div", { className: "text-sm space-y-0.5" }, renderMdText(msg.content), msg.streaming && /* @__PURE__ */ React.createElement("span", { className: "inline-block w-1.5 h-4 bg-blue-400 animate-pulse ml-0.5 align-middle rounded" }), !msg.streaming && msg.role === "assistant" && window.speechSynthesis && /* @__PURE__ */ React.createElement("div", { className: "flex justify-end mt-2 pt-1.5 border-t border-gray-100" }, /* @__PURE__ */ React.createElement(
       "button",
       {
         onClick: () => speakText(msg.content, msg.id),
         className: `text-xs flex items-center gap-1 transition ${speakingMsgId === msg.id ? "text-blue-500 font-semibold" : "text-gray-300 hover:text-gray-500"}`,
-        title: speakingMsgId === msg.id ? "\uC74C\uC131 \uC815\uC9C0" : "\uC74C\uC131\uC73C\uB85C \uB4E3\uAE30"
+        title: speakingMsgId === msg.id ? t("\uC74C\uC131 \uC815\uC9C0", "Stop audio") : t("\uC74C\uC131\uC73C\uB85C \uB4E3\uAE30", "Listen")
       },
-      speakingMsgId === msg.id ? "\u23F8 \uC815\uC9C0" : "\u{1F50A} \uB4E3\uAE30"
-    ))) : /* @__PURE__ */ React.createElement("div", { className: "flex gap-1 items-center py-1" }, /* @__PURE__ */ React.createElement("div", { className: "w-2 h-2 bg-gray-400 rounded-full animate-bounce", style: { animationDelay: "0ms" } }), /* @__PURE__ */ React.createElement("div", { className: "w-2 h-2 bg-gray-400 rounded-full animate-bounce", style: { animationDelay: "150ms" } }), /* @__PURE__ */ React.createElement("div", { className: "w-2 h-2 bg-gray-400 rounded-full animate-bounce", style: { animationDelay: "300ms" } }))), msg.role === "user" && /* @__PURE__ */ React.createElement("div", { className: "w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 text-xs font-bold ml-2 mt-0.5 shrink-0" }, "\uB098"))), chatError && /* @__PURE__ */ React.createElement("div", { className: "bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700" }, "\u26A0\uFE0F ", chatError, /* @__PURE__ */ React.createElement("button", { onClick: () => setChatError(""), className: "ml-2 underline" }, "\uB2EB\uAE30")), /* @__PURE__ */ React.createElement("div", { ref: messagesEndRef })), /* @__PURE__ */ React.createElement("div", { className: "p-3 border-t border-gray-200 bg-white" }, /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 items-end" }, /* @__PURE__ */ React.createElement(
+      speakingMsgId === msg.id ? t("\u23F8 \uC815\uC9C0", "\u23F8 Stop") : t("\u{1F50A} \uB4E3\uAE30", "\u{1F50A} Listen")
+    ))) : /* @__PURE__ */ React.createElement("div", { className: "flex gap-1 items-center py-1" }, /* @__PURE__ */ React.createElement("div", { className: "w-2 h-2 bg-gray-400 rounded-full animate-bounce", style: { animationDelay: "0ms" } }), /* @__PURE__ */ React.createElement("div", { className: "w-2 h-2 bg-gray-400 rounded-full animate-bounce", style: { animationDelay: "150ms" } }), /* @__PURE__ */ React.createElement("div", { className: "w-2 h-2 bg-gray-400 rounded-full animate-bounce", style: { animationDelay: "300ms" } }))), msg.role === "user" && /* @__PURE__ */ React.createElement("div", { className: "w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 text-xs font-bold ml-2 mt-0.5 shrink-0" }, "\uB098"))), chatError && /* @__PURE__ */ React.createElement("div", { className: "bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700" }, "\u26A0\uFE0F ", chatError, /* @__PURE__ */ React.createElement("button", { onClick: () => setChatError(""), className: "ml-2 underline" }, t("\uB2EB\uAE30", "Close"))), /* @__PURE__ */ React.createElement("div", { ref: messagesEndRef })), /* @__PURE__ */ React.createElement("div", { className: "p-3 border-t border-gray-200 bg-white" }, /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 items-end" }, /* @__PURE__ */ React.createElement(
       "textarea",
       {
         ref: inputRef,
@@ -4955,10 +4961,17 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
                   reader.read().then(({ done, value }) => {
                     var _a3;
                     if (done) {
+                      const moodMatch = fullText.match(/\[MOOD:(\d+)\]/);
+                      const moodScore = moodMatch ? parseInt(moodMatch[1], 10) : null;
+                      const cleanText = fullText.replace(/\s*\[MOOD:\d+\]\s*$/, "").trimEnd();
                       setChatMessages((prev) => prev.map(
-                        (m) => m.id === assistantId ? { ...m, streaming: false } : m
+                        (m) => m.id === assistantId ? { ...m, content: cleanText, streaming: false } : m
                       ));
                       setChatStreaming(false);
+                      if (moodScore !== null && isLoggedIn) {
+                        api._fetch("/api/chat/mood-log", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ moodScore, testType: "chat" }) }).catch(() => {
+                        });
+                      }
                       return;
                     }
                     buffer += decoder.decode(value, { stream: true });
@@ -4991,7 +5004,7 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
             }
           }
         },
-        placeholder: "\uAC80\uC0AC \uACB0\uACFC \uD65C\uC6A9 \uBC29\uBC95, \uC0C1\uB2F4 \uC804\uB7B5 \uB4F1\uC744 \uC9C8\uBB38\uD558\uC138\uC694... (Enter \uC804\uC1A1, Shift+Enter \uC904\uBC14\uAFC8)",
+        placeholder: t("\uAC80\uC0AC \uACB0\uACFC \uD65C\uC6A9 \uBC29\uBC95, \uC0C1\uB2F4 \uC804\uB7B5 \uB4F1\uC744 \uC9C8\uBB38\uD558\uC138\uC694... (Enter \uC804\uC1A1, Shift+Enter \uC904\uBC14\uAFC8)", "Ask about your results, counseling strategies... (Enter to send, Shift+Enter for newline)"),
         rows: 2,
         disabled: chatStreaming,
         className: "flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm resize-none focus:outline-none focus:border-blue-400 disabled:bg-gray-50"
@@ -5001,7 +5014,7 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
       {
         onClick: startVoiceInput,
         disabled: isListening || chatStreaming,
-        title: isListening ? "\uB4E3\uB294 \uC911..." : "\uC74C\uC131 \uC785\uB825",
+        title: isListening ? t("\uB4E3\uB294 \uC911...", "Listening...") : t("\uC74C\uC131 \uC785\uB825", "Voice input"),
         className: `shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-lg transition ${isListening ? "bg-red-500 text-white animate-pulse" : "bg-gray-100 hover:bg-gray-200 text-gray-600 disabled:opacity-40"}`
       },
       "\u{1F3A4}"
@@ -5061,10 +5074,17 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
                 reader.read().then(({ done, value }) => {
                   var _a3;
                   if (done) {
+                    const moodMatch = fullText.match(/\[MOOD:(\d+)\]/);
+                    const moodScore = moodMatch ? parseInt(moodMatch[1], 10) : null;
+                    const cleanText = fullText.replace(/\s*\[MOOD:\d+\]\s*$/, "").trimEnd();
                     setChatMessages((prev) => prev.map(
-                      (m) => m.id === assistantId ? { ...m, streaming: false } : m
+                      (m) => m.id === assistantId ? { ...m, content: cleanText, streaming: false } : m
                     ));
                     setChatStreaming(false);
+                    if (moodScore !== null && isLoggedIn) {
+                      api._fetch("/api/chat/mood-log", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ moodScore, testType: "chat" }) }).catch(() => {
+                      });
+                    }
                     return;
                   }
                   buffer += decoder.decode(value, { stream: true });
@@ -5099,14 +5119,14 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
         disabled: chatStreaming,
         className: `${isAiChatExhausted() ? "bg-orange-500 hover:bg-orange-600" : "bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"} text-white px-4 py-2 rounded-xl text-sm font-bold transition`
       },
-      chatStreaming ? "\u2022\u2022\u2022" : isAiChatExhausted() ? "\uAC00\uC785\uD558\uAE30" : "\uC804\uC1A1"
+      chatStreaming ? "\u2022\u2022\u2022" : isAiChatExhausted() ? t("\uAC00\uC785\uD558\uAE30", "Sign up") : t("\uC804\uC1A1", "Send")
     ), chatMessages.length > 0 && /* @__PURE__ */ React.createElement(
       "button",
       {
         onClick: resetChat,
         className: "text-xs text-gray-400 hover:text-gray-600 text-center"
       },
-      "\uCD08\uAE30\uD654"
+      t("\uCD08\uAE30\uD654", "Clear")
     )))), /* @__PURE__ */ React.createElement("div", { className: "px-4 py-3 border-t border-gray-100 bg-gray-50" }, /* @__PURE__ */ React.createElement(
       "button",
       {
@@ -5117,9 +5137,9 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
         className: "w-full py-2.5 bg-white border border-teal-200 text-teal-700 rounded-xl text-sm font-semibold hover:bg-teal-50 hover:border-teal-400 transition flex items-center justify-center gap-2 group"
       },
       /* @__PURE__ */ React.createElement("span", null, "\u{1F3E5}"),
-      /* @__PURE__ */ React.createElement("span", null, "\uC804\uBB38 \uC0C1\uB2F4 \uAE30\uAD00 \uCC3E\uAE30"),
+      /* @__PURE__ */ React.createElement("span", null, t("\uC804\uBB38 \uC0C1\uB2F4 \uAE30\uAD00 \uCC3E\uAE30", "Find a Counseling Center")),
       /* @__PURE__ */ React.createElement("span", { className: "text-teal-300 group-hover:text-teal-500 transition" }, "\u2192")
-    ), /* @__PURE__ */ React.createElement("p", { className: "text-center text-xs text-gray-400 mt-1" }, "AI \uC0C1\uB2F4\uC740 \uCC38\uACE0\uC6A9\uC785\uB2C8\uB2E4. \uC804\uBB38 \uC0C1\uB2F4\uC0AC\uC758 \uB3C4\uC6C0\uC774 \uD544\uC694\uD558\uC2DC\uBA74 \uD074\uB9AD\uD558\uC138\uC694."))));
+    ), /* @__PURE__ */ React.createElement("p", { className: "text-center text-xs text-gray-400 mt-1" }, t("AI \uC0C1\uB2F4\uC740 \uCC38\uACE0\uC6A9\uC785\uB2C8\uB2E4. \uC804\uBB38 \uC0C1\uB2F4\uC0AC\uC758 \uB3C4\uC6C0\uC774 \uD544\uC694\uD558\uC2DC\uBA74 \uD074\uB9AD\uD558\uC138\uC694.", "AI counseling is for reference only. Click if you need professional support.")))));
   }
   async function loadBiblicalRefs() {
     try {
@@ -6054,7 +6074,7 @@ AI \uBD84\uC11D \uAE30\uB2A5\uC774 \uC911\uB2E8\uB429\uB2C8\uB2E4.`)) return;
         onClick: () => setShowModal(true),
         className: "text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 font-semibold"
       },
-      "\u{1F4E5} \uC678\uBD80 \uAC80\uC0AC \uACB0\uACFC \uC785\uB825 \xB7 AI \uD574\uC11D"
+      t("\u{1F4E5} \uC678\uBD80 \uAC80\uC0AC \uACB0\uACFC \uC785\uB825 \xB7 AI \uD574\uC11D", "\u{1F4E5} Enter External Results \xB7 AI Analysis")
     )), showModal && /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-t-3xl sm:rounded-2xl w-full sm:max-w-md max-h-[92vh] overflow-y-auto" }, /* @__PURE__ */ React.createElement("div", { className: "sticky top-0 bg-white border-b border-gray-100 px-5 py-4 flex items-center justify-between rounded-t-3xl sm:rounded-t-2xl" }, /* @__PURE__ */ React.createElement("h3", { className: "font-bold text-gray-800 text-base" }, "\u{1F4E5} \uC678\uBD80 \uAC80\uC0AC \uACB0\uACFC"), /* @__PURE__ */ React.createElement("button", { onClick: closeModal, className: "text-gray-400 hover:text-gray-600 text-xl leading-none" }, "\u2715")), /* @__PURE__ */ React.createElement("div", { className: "flex border-b border-gray-100 px-5 pt-3" }, [["manual", "\u270F\uFE0F \uC810\uC218 \uC9C1\uC811 \uC785\uB825"], ["pdf", "\u{1F4C4} PDF \uC5C5\uB85C\uB4DC + AI \uD574\uC11D"]].map(([t2, l]) => /* @__PURE__ */ React.createElement(
       "button",
       {
@@ -6157,11 +6177,11 @@ AI \uBD84\uC11D \uAE30\uB2A5\uC774 \uC911\uB2E8\uB429\uB2C8\uB2E4.`)) return;
     }
     const completedCount = doneWeeks.filter((w) => w >= 1 && w <= 8).length;
     const progress = Math.round(completedCount / 8 * 100);
-    return /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-emerald-200 overflow-hidden mb-4 shadow-sm" }, /* @__PURE__ */ React.createElement("button", { onClick: loadPlan, className: "w-full flex items-center justify-between p-4 hover:bg-emerald-50 transition" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3" }, /* @__PURE__ */ React.createElement("span", { className: "text-2xl" }, "\u{1F4C5}"), /* @__PURE__ */ React.createElement("div", { className: "text-left" }, /* @__PURE__ */ React.createElement("div", { className: "font-bold text-emerald-800 text-sm" }, "\uB9DE\uCDA4 8\uC8FC \uC790\uAE30\uAD00\uB9AC \uD50C\uB79C"), plan ? /* @__PURE__ */ React.createElement("div", { className: "text-xs text-emerald-600 mt-0.5" }, completedCount, "/8\uC8FC \uC9C4\uD589 \uC911 \xB7 ", progress, "% \uC644\uB8CC") : /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 mt-0.5" }, "\uAC80\uC0AC \uACB0\uACFC \uAE30\uBC18 AI \uB9DE\uCDA4 8\uC8FC \uD50C\uB79C"))), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, plan && /* @__PURE__ */ React.createElement("div", { className: "w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden" }, /* @__PURE__ */ React.createElement("div", { className: "h-full bg-emerald-400 rounded-full transition-all", style: { width: `${progress}%` } })), /* @__PURE__ */ React.createElement("span", { className: "text-gray-400 text-sm" }, expanded ? "\u25B2" : "\u25BC"))), expanded && /* @__PURE__ */ React.createElement("div", { className: "border-t border-emerald-100" }, loading && /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-center py-8 gap-2 text-emerald-600" }, /* @__PURE__ */ React.createElement("div", { className: "w-4 h-4 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" }), /* @__PURE__ */ React.createElement("span", { className: "text-sm" }, "AI\uAC00 \uB9DE\uCDA4 \uD50C\uB79C\uC744 \uC0DD\uC131 \uC911\uC774\uC5D0\uC694...")), plan && !loading && /* @__PURE__ */ React.createElement(React.Fragment, null, plan.summary && /* @__PURE__ */ React.createElement("div", { className: "px-4 py-3 bg-emerald-50 border-b border-emerald-100" }, /* @__PURE__ */ React.createElement("div", { className: "text-xs text-emerald-700 leading-relaxed mb-2" }, plan.summary), plan.scores && Object.keys(plan.scores).length > 0 && /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap gap-1.5" }, Object.entries(plan.scores).map(([type, score]) => {
+    return /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-emerald-200 overflow-hidden mb-4 shadow-sm" }, /* @__PURE__ */ React.createElement("button", { onClick: loadPlan, className: "w-full flex items-center justify-between p-4 hover:bg-emerald-50 transition" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3" }, /* @__PURE__ */ React.createElement("span", { className: "text-2xl" }, "\u{1F4C5}"), /* @__PURE__ */ React.createElement("div", { className: "text-left" }, /* @__PURE__ */ React.createElement("div", { className: "font-bold text-emerald-800 text-sm" }, t("\uB9DE\uCDA4 8\uC8FC \uC790\uAE30\uAD00\uB9AC \uD50C\uB79C", "Personalized 8-Week Self-Care Plan")), plan ? /* @__PURE__ */ React.createElement("div", { className: "text-xs text-emerald-600 mt-0.5" }, completedCount, "/", t("8\uC8FC \uC9C4\uD589 \uC911", "wks done"), " \xB7 ", progress, "% ", t("\uC644\uB8CC", "complete")) : /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 mt-0.5" }, t("\uAC80\uC0AC \uACB0\uACFC \uAE30\uBC18 AI \uB9DE\uCDA4 8\uC8FC \uD50C\uB79C", "AI-personalized 8-week plan based on your results")))), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, plan && /* @__PURE__ */ React.createElement("div", { className: "w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden" }, /* @__PURE__ */ React.createElement("div", { className: "h-full bg-emerald-400 rounded-full transition-all", style: { width: `${progress}%` } })), /* @__PURE__ */ React.createElement("span", { className: "text-gray-400 text-sm" }, expanded ? "\u25B2" : "\u25BC"))), expanded && /* @__PURE__ */ React.createElement("div", { className: "border-t border-emerald-100" }, loading && /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-center py-8 gap-2 text-emerald-600" }, /* @__PURE__ */ React.createElement("div", { className: "w-4 h-4 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" }), /* @__PURE__ */ React.createElement("span", { className: "text-sm" }, t("AI\uAC00 \uB9DE\uCDA4 \uD50C\uB79C\uC744 \uC0DD\uC131 \uC911\uC774\uC5D0\uC694...", "AI is generating your personalized plan..."))), plan && !loading && /* @__PURE__ */ React.createElement(React.Fragment, null, plan.summary && /* @__PURE__ */ React.createElement("div", { className: "px-4 py-3 bg-emerald-50 border-b border-emerald-100" }, /* @__PURE__ */ React.createElement("div", { className: "text-xs text-emerald-700 leading-relaxed mb-2" }, plan.summary), plan.scores && Object.keys(plan.scores).length > 0 && /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap gap-1.5" }, Object.entries(plan.scores).map(([type, score]) => {
       const cMap = { PHQ9: "#0EA5E9", GAD7: "#8B5CF6", BURNOUT: "#F97316", DASS21: "#EC4899" };
-      const nMap = { PHQ9: "\uC6B0\uC6B8", GAD7: "\uBD88\uC548", BURNOUT: "\uBC88\uC544\uC6C3", DASS21: "\uC2A4\uD2B8\uB808\uC2A4" };
+      const nMap = lang === "en" ? { PHQ9: "Depression", GAD7: "Anxiety", BURNOUT: "Burnout", DASS21: "Stress" } : { PHQ9: "\uC6B0\uC6B8", GAD7: "\uBD88\uC548", BURNOUT: "\uBC88\uC544\uC6C3", DASS21: "\uC2A4\uD2B8\uB808\uC2A4" };
       const c = cMap[type] || "#6B7280";
-      return /* @__PURE__ */ React.createElement("span", { key: type, style: { background: `${c}18`, border: `1px solid ${c}35`, borderRadius: 6, padding: "2px 7px", fontSize: 10, color: c, fontWeight: 700 } }, nMap[type] || type, " ", score, "\uC810");
+      return /* @__PURE__ */ React.createElement("span", { key: type, style: { background: `${c}18`, border: `1px solid ${c}35`, borderRadius: 6, padding: "2px 7px", fontSize: 10, color: c, fontWeight: 700 } }, nMap[type] || type, " ", score, t("\uC810", "pts"));
     }))), /* @__PURE__ */ React.createElement("div", { className: "divide-y divide-gray-50" }, (plan.plan || []).map((wk) => {
       const done = doneWeeks.includes(wk.week);
       const isOpen = expandedWeek === wk.week;
@@ -6174,24 +6194,24 @@ AI \uBD84\uC11D \uAE30\uB2A5\uC774 \uC911\uB2E8\uB429\uB2C8\uB2E4.`)) return;
         /* @__PURE__ */ React.createElement("div", { className: `w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${done ? "bg-emerald-400 text-white" : "bg-gray-100 text-gray-500"}` }, done ? "\u2713" : wk.week),
         /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0" }, /* @__PURE__ */ React.createElement("div", { className: `font-semibold text-sm ${done ? "text-emerald-700 line-through opacity-70" : "text-gray-800"}` }, wk.title), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 truncate" }, wk.theme)),
         /* @__PURE__ */ React.createElement("span", { className: "text-gray-300 text-xs shrink-0" }, isOpen ? "\u25B2" : "\u25BC")
-      ), isOpen && /* @__PURE__ */ React.createElement("div", { className: "px-4 pb-4 space-y-2" }, /* @__PURE__ */ React.createElement("div", { className: "bg-blue-50 rounded-xl px-3 py-2" }, /* @__PURE__ */ React.createElement("div", { className: "text-xs font-bold text-blue-700 mb-0.5" }, "\uB9E4\uC77C \uC2E4\uCC9C"), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-blue-800" }, wk.practice)), wk.game && GAME_NAMES[wk.game] && /* @__PURE__ */ React.createElement(
+      ), isOpen && /* @__PURE__ */ React.createElement("div", { className: "px-4 pb-4 space-y-2" }, /* @__PURE__ */ React.createElement("div", { className: "bg-blue-50 rounded-xl px-3 py-2" }, /* @__PURE__ */ React.createElement("div", { className: "text-xs font-bold text-blue-700 mb-0.5" }, t("\uB9E4\uC77C \uC2E4\uCC9C", "Daily Practice")), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-blue-800" }, wk.practice)), wk.game && GAME_NAMES[wk.game] && /* @__PURE__ */ React.createElement(
         "button",
         {
           onClick: () => onPlay && onPlay(wk.game),
           className: "w-full bg-emerald-50 hover:bg-emerald-100 rounded-xl px-3 py-2 text-left transition"
         },
-        /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between" }, /* @__PURE__ */ React.createElement("div", { className: "text-xs font-bold text-emerald-700 mb-0.5" }, "\uCD94\uCC9C \uAC8C\uC784"), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-emerald-400" }, "\u25B6 \uC2DC\uC791")),
+        /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between" }, /* @__PURE__ */ React.createElement("div", { className: "text-xs font-bold text-emerald-700 mb-0.5" }, t("\uCD94\uCC9C \uAC8C\uC784", "Recommended Game")), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-emerald-400" }, "\u25B6 ", t("\uC2DC\uC791", "Start"))),
         /* @__PURE__ */ React.createElement("div", { className: "text-xs text-emerald-800" }, GAME_NAMES[wk.game]),
-        /* @__PURE__ */ React.createElement("div", { className: "text-xs text-emerald-500 mt-0.5 opacity-70" }, "\uAC80\uC0AC \uACB0\uACFC \uAE30\uBC18 \xB7 ", wk.week, "\uC8FC\uCC28 \uB9DE\uCDA4")
+        /* @__PURE__ */ React.createElement("div", { className: "text-xs text-emerald-500 mt-0.5 opacity-70" }, t(`\uAC80\uC0AC \uACB0\uACFC \uAE30\uBC18 \xB7 ${wk.week}\uC8FC\uCC28 \uB9DE\uCDA4`, `Based on results \xB7 Week ${wk.week}`))
       ), wk.tip && /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 italic px-1" }, "\u{1F49A} ", wk.tip), /* @__PURE__ */ React.createElement(
         "button",
         {
           onClick: () => toggleWeekDone(wk.week),
           className: `w-full mt-1 py-2 rounded-xl text-xs font-bold transition ${done ? "bg-gray-100 text-gray-500 hover:bg-gray-200" : "bg-emerald-500 text-white hover:bg-emerald-600"}`
         },
-        done ? "\u21A9 \uC644\uB8CC \uCDE8\uC18C" : "\u2705 \uC774\uBC88 \uC8FC \uC644\uB8CC"
+        done ? t("\u21A9 \uC644\uB8CC \uCDE8\uC18C", "\u21A9 Undo") : t("\u2705 \uC774\uBC88 \uC8FC \uC644\uB8CC", "\u2705 Complete Week")
       )));
-    })), progress === 100 && /* @__PURE__ */ React.createElement("div", { className: "px-4 py-4 bg-emerald-500 text-white text-center text-sm font-bold" }, "\u{1F389} 8\uC8FC \uD50C\uB79C \uC644\uC8FC! \uAFB8\uC900\uD55C \uC2E4\uCC9C\uC774 \uBE5B\uB0AC\uC5B4\uC694!"))));
+    })), progress === 100 && /* @__PURE__ */ React.createElement("div", { className: "px-4 py-4 bg-emerald-500 text-white text-center text-sm font-bold" }, t("\u{1F389} 8\uC8FC \uD50C\uB79C \uC644\uC8FC! \uAFB8\uC900\uD55C \uC2E4\uCC9C\uC774 \uBE5B\uB0AC\uC5B4\uC694!", "\u{1F389} 8-Week Plan Complete! Your consistency paid off!")))));
   }
   function TrendSparkline({ data, predicted, testType }) {
     if (!data || data.length < 2) return null;
@@ -6904,7 +6924,7 @@ ${recommendations.join("\n\n")}
   }
   if (view === "dsiTest") {
     const likertFilled = Object.keys(sdriResponses).length;
-    return /* @__PURE__ */ React.createElement("div", { className: "min-h-screen bg-gradient-to-br from-teal-50 to-cyan-50 p-4" }, ProtectionLayers, /* @__PURE__ */ React.createElement("div", { className: "max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-6" }, pendingTests.length > 1 && /* @__PURE__ */ React.createElement("div", { className: "mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3" }, /* @__PURE__ */ React.createElement("p", { className: "text-xs font-bold text-purple-700 mb-2" }, t("\u{1F4CB} \uAC80\uC0AC \uC9C4\uD589 \uD604\uD669", "\u{1F4CB} Test Progress"), " (", currentTestIndex + 1, "/", pendingTests.length, ")"), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 flex-wrap" }, pendingTests.map((t2, i) => /* @__PURE__ */ React.createElement("span", { key: t2, className: `px-3 py-1 rounded-full text-xs font-bold border ${i < currentTestIndex ? "bg-green-100 border-green-300 text-green-700" : i === currentTestIndex ? "bg-teal-600 text-white border-teal-600" : "bg-gray-100 border-gray-300 text-gray-400"}` }, i < currentTestIndex ? "\u2705 " : i === currentTestIndex ? "\u25B6 " : "", t2)))), /* @__PURE__ */ React.createElement("div", { className: "text-center mb-6" }, /* @__PURE__ */ React.createElement("div", { className: "inline-flex items-center gap-2 bg-teal-50 border border-teal-200 rounded-full px-4 py-1.5 mb-3" }, /* @__PURE__ */ React.createElement("span", { className: "text-teal-600 font-bold text-sm" }, "\u{1FA9E} SDRI"), /* @__PURE__ */ React.createElement("span", { className: "text-teal-400 text-xs" }, t("\uC790\uAE30\uBD84\uD654 \uBC18\uC751\uC131 \uAC80\uC0AC", "Self-Differentiation Response Index"))), /* @__PURE__ */ React.createElement("h1", { className: "text-2xl font-bold text-teal-900 mb-1" }, t("\uC790\uAE30\uBD84\uD654 \uBC18\uC751\uC131 \uAC80\uC0AC", "Self-Differentiation Response Index")), /* @__PURE__ */ React.createElement("p", { className: "text-gray-400 text-sm" }, t("\uAC01 \uBB38\uD56D\uC774 \uB098\uC640 \uC5BC\uB9C8\uB098 \uC77C\uCE58\uD558\uB294\uC9C0 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694 (25\uBB38\uD56D)", "Indicate how much each statement describes you (25 items)"))), /* @__PURE__ */ React.createElement("div", { className: "bg-teal-50 border border-teal-200 rounded-lg p-3 mb-5 text-xs text-teal-800" }, /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap gap-3 justify-center mb-2" }, t(["1: \uC804\uD600 \uC544\uB2C8\uB2E4", "2: \uAC70\uC758 \uC544\uB2C8\uB2E4", "3: \uAC00\uB054 \uADF8\uB807\uB2E4", "4: \uC790\uC8FC \uADF8\uB807\uB2E4", "5: \uD56D\uC0C1 \uADF8\uB807\uB2E4"], ["1: Never", "2: Rarely", "3: Sometimes", "4: Often", "5: Always"]).map((s) => /* @__PURE__ */ React.createElement("span", { key: s, className: "font-semibold" }, s))), /* @__PURE__ */ React.createElement("div", { className: "bg-teal-200 rounded-full h-1.5" }, /* @__PURE__ */ React.createElement("div", { className: "bg-teal-500 h-1.5 rounded-full transition-all", style: { width: `${likertFilled / sdriLikertQ.length * 100}%` } })), /* @__PURE__ */ React.createElement("div", { className: "text-center mt-1" }, t("\uC9C4\uD589:", "Progress:"), " ", /* @__PURE__ */ React.createElement("strong", null, likertFilled), " / ", sdriLikertQ.length)), saveStatus && /* @__PURE__ */ React.createElement("div", { className: "mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded text-sm text-yellow-800 text-center" }, saveStatus), /* @__PURE__ */ React.createElement("div", { className: "space-y-3" }, sdriLikertQ.map((q) => /* @__PURE__ */ React.createElement("div", { key: q.num, className: `border-2 rounded-xl p-4 transition ${sdriResponses[q.num] ? "border-teal-300 bg-teal-50" : "border-gray-100"}` }, /* @__PURE__ */ React.createElement("div", { className: "flex items-start gap-2 mb-3" }, /* @__PURE__ */ React.createElement("span", { className: `text-xs px-2 py-0.5 rounded-full font-semibold shrink-0 mt-0.5 ${q.scale === "\uC790\uAE30\uC785\uC7A5 \uC720\uC9C0" ? "bg-indigo-100 text-indigo-700" : q.scale === "\uC815\uC11C\uBC18\uC751\uC131" ? "bg-rose-100 text-rose-700" : q.scale === "\uC815\uC11C\uC801 \uB2E8\uC808" ? "bg-amber-100 text-amber-700" : "bg-purple-100 text-purple-700"}` }, q.scale), /* @__PURE__ */ React.createElement("p", { className: "text-sm font-semibold text-gray-700 leading-relaxed" }, q.num, ". ", q.content, q.rev && /* @__PURE__ */ React.createElement("span", { className: "ml-1 text-gray-400 font-normal text-xs" }, t("(\uC5ED\uBB38\uD56D)", "(R)")))), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" }, [1, 2, 3, 4, 5].map((s) => /* @__PURE__ */ React.createElement(
+    return /* @__PURE__ */ React.createElement("div", { className: "min-h-screen bg-gradient-to-br from-teal-50 to-cyan-50 p-4" }, ProtectionLayers, /* @__PURE__ */ React.createElement("div", { className: "max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-6" }, pendingTests.length > 1 && /* @__PURE__ */ React.createElement("div", { className: "mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3" }, /* @__PURE__ */ React.createElement("p", { className: "text-xs font-bold text-purple-700 mb-2" }, t("\u{1F4CB} \uAC80\uC0AC \uC9C4\uD589 \uD604\uD669", "\u{1F4CB} Test Progress"), " (", currentTestIndex + 1, "/", pendingTests.length, ")"), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 flex-wrap" }, pendingTests.map((t2, i) => /* @__PURE__ */ React.createElement("span", { key: t2, className: `px-3 py-1 rounded-full text-xs font-bold border ${i < currentTestIndex ? "bg-green-100 border-green-300 text-green-700" : i === currentTestIndex ? "bg-teal-600 text-white border-teal-600" : "bg-gray-100 border-gray-300 text-gray-400"}` }, i < currentTestIndex ? "\u2705 " : i === currentTestIndex ? "\u25B6 " : "", t2)))), /* @__PURE__ */ React.createElement("div", { className: "text-center mb-6" }, /* @__PURE__ */ React.createElement("div", { className: "inline-flex items-center gap-2 bg-teal-50 border border-teal-200 rounded-full px-4 py-1.5 mb-3" }, /* @__PURE__ */ React.createElement("span", { className: "text-teal-600 font-bold text-sm" }, "\u{1FA9E} SDRI"), /* @__PURE__ */ React.createElement("span", { className: "text-teal-400 text-xs" }, t("\uC790\uAE30\uBD84\uD654 \uBC18\uC751\uC131 \uAC80\uC0AC", "Self-Differentiation Response Index"))), /* @__PURE__ */ React.createElement("h1", { className: "text-2xl font-bold text-teal-900 mb-1" }, t("\uC790\uAE30\uBD84\uD654 \uBC18\uC751\uC131 \uAC80\uC0AC", "Self-Differentiation Response Index")), /* @__PURE__ */ React.createElement("p", { className: "text-gray-400 text-sm" }, t("\uAC01 \uBB38\uD56D\uC774 \uB098\uC640 \uC5BC\uB9C8\uB098 \uC77C\uCE58\uD558\uB294\uC9C0 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694 (25\uBB38\uD56D)", "Indicate how much each statement describes you (25 items)"))), /* @__PURE__ */ React.createElement("div", { className: "bg-teal-50 border border-teal-200 rounded-lg p-3 mb-5 text-xs text-teal-800" }, /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap gap-3 justify-center mb-2" }, t(["1: \uC804\uD600 \uC544\uB2C8\uB2E4", "2: \uAC70\uC758 \uC544\uB2C8\uB2E4", "3: \uAC00\uB054 \uADF8\uB807\uB2E4", "4: \uC790\uC8FC \uADF8\uB807\uB2E4", "5: \uD56D\uC0C1 \uADF8\uB807\uB2E4"], ["1: Never", "2: Rarely", "3: Sometimes", "4: Often", "5: Always"]).map((s) => /* @__PURE__ */ React.createElement("span", { key: s, className: "font-semibold" }, s))), /* @__PURE__ */ React.createElement("div", { className: "bg-teal-200 rounded-full h-1.5" }, /* @__PURE__ */ React.createElement("div", { className: "bg-teal-500 h-1.5 rounded-full transition-all", style: { width: `${likertFilled / sdriLikertQ.length * 100}%` } })), /* @__PURE__ */ React.createElement("div", { className: "text-center mt-1" }, t("\uC9C4\uD589:", "Progress:"), " ", /* @__PURE__ */ React.createElement("strong", null, likertFilled), " / ", sdriLikertQ.length)), saveStatus && /* @__PURE__ */ React.createElement("div", { className: "mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded text-sm text-yellow-800 text-center" }, saveStatus), /* @__PURE__ */ React.createElement("div", { className: "space-y-3" }, sdriLikertQ.map((q) => /* @__PURE__ */ React.createElement("div", { key: q.num, className: `border-2 rounded-xl p-4 transition ${sdriResponses[q.num] ? "border-teal-300 bg-teal-50" : "border-gray-100"}` }, /* @__PURE__ */ React.createElement("div", { className: "flex items-start gap-2 mb-3" }, /* @__PURE__ */ React.createElement("span", { className: `text-xs px-2 py-0.5 rounded-full font-semibold shrink-0 mt-0.5 ${q.scale === "\uC790\uAE30\uC785\uC7A5 \uC720\uC9C0" ? "bg-indigo-100 text-indigo-700" : q.scale === "\uC815\uC11C\uBC18\uC751\uC131" ? "bg-rose-100 text-rose-700" : q.scale === "\uC815\uC11C\uC801 \uB2E8\uC808" ? "bg-amber-100 text-amber-700" : "bg-purple-100 text-purple-700"}` }, t(q.scale, q.scaleEn)), /* @__PURE__ */ React.createElement("p", { className: "text-sm font-semibold text-gray-700 leading-relaxed" }, q.num, ". ", t(q.content, q.en), q.rev && /* @__PURE__ */ React.createElement("span", { className: "ml-1 text-gray-400 font-normal text-xs" }, t("(\uC5ED\uBB38\uD56D)", "(R)")))), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" }, [1, 2, 3, 4, 5].map((s) => /* @__PURE__ */ React.createElement(
       "button",
       {
         key: s,
@@ -6957,7 +6977,7 @@ ${recommendations.join("\n\n")}
       className: "bg-red-600 h-3 rounded-full transition-all duration-300",
       style: { width: `${Object.keys(burnoutResponses).length / 50 * 100}%` }
     }
-  ))), /* @__PURE__ */ React.createElement("div", { className: "space-y-6" }, getBurnoutDomains().map((domain, dIdx) => /* @__PURE__ */ React.createElement("div", { key: dIdx, className: "border-2 border-gray-200 rounded-lg p-4 bg-gray-50" }, /* @__PURE__ */ React.createElement("h2", { className: "text-lg font-bold text-gray-800 mb-3 flex items-center gap-2" }, /* @__PURE__ */ React.createElement("span", { className: "text-red-600" }, domain.icon), domain.name, " (", domain.questions.length, " ", t("\uBB38\uD56D", "items"), ")"), /* @__PURE__ */ React.createElement("div", { className: "space-y-3" }, domain.questions.map((q, qIdx) => /* @__PURE__ */ React.createElement("div", { key: q.num, className: "bg-white border border-gray-200 rounded-lg p-3" }, /* @__PURE__ */ React.createElement("label", { className: "block mb-2 font-semibold text-gray-700 text-sm" }, q.num, ". ", q.content), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-7 gap-1" }, [0, 1, 2, 3, 4, 5, 6].map((v) => /* @__PURE__ */ React.createElement(
+  ))), /* @__PURE__ */ React.createElement("div", { className: "space-y-6" }, getBurnoutDomains().map((domain, dIdx) => /* @__PURE__ */ React.createElement("div", { key: dIdx, className: "border-2 border-gray-200 rounded-lg p-4 bg-gray-50" }, /* @__PURE__ */ React.createElement("h2", { className: "text-lg font-bold text-gray-800 mb-3 flex items-center gap-2" }, /* @__PURE__ */ React.createElement("span", { className: "text-red-600" }, domain.icon), t(domain.name, domain.nameEn), " (", domain.questions.length, " ", t("\uBB38\uD56D", "items"), ")"), /* @__PURE__ */ React.createElement("div", { className: "space-y-3" }, domain.questions.map((q, qIdx) => /* @__PURE__ */ React.createElement("div", { key: q.num, className: "bg-white border border-gray-200 rounded-lg p-3" }, /* @__PURE__ */ React.createElement("label", { className: "block mb-2 font-semibold text-gray-700 text-sm" }, q.num, ". ", t(q.content, q.en)), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-7 gap-1" }, [0, 1, 2, 3, 4, 5, 6].map((v) => /* @__PURE__ */ React.createElement(
     "button",
     {
       key: v,

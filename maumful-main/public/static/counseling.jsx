@@ -1012,11 +1012,12 @@ function _CounselingPageBooking({setView,isLoggedIn,currentUser}){
 // CounselingPage — 인근 상담센터·병원 지도 표시
 // Kakao Maps SDK + /api/nearby-counseling (카카오 로컬 API)
 // ============================================================
-function CounselingPage({setView}){
+function CounselingPage({setView, lang}){
   const {useState:useS, useEffect:useE, useRef} = React;
   const mapContainerRef = useRef(null);
   const mapInstanceRef  = useRef(null);
   const s = {fontFamily:"'Noto Sans KR',sans-serif"};
+  const tl = (ko, en) => lang === 'en' ? en : ko;
 
   // phase: init | loading | done | nogeo | error | nokey
   const [phase, setPhase]         = useS('init');
@@ -1025,9 +1026,9 @@ function CounselingPage({setView}){
   const [activeFilter, setFilter] = useS('all');
 
   const CATS = {
-    psych:  { label:'정신건강의학과',   color:'#0284C7', bg:'#EFF6FF', border:'#BAE6FD', emoji:'🧠' },
-    center: { label:'정신건강복지센터', color:'#D97706', bg:'#FFFBEB', border:'#FCD34D', emoji:'🏢' },
-    counsel:{ label:'심리상담센터',     color:'#2D6A4F', bg:'#F0FDF4', border:'#86EFAC', emoji:'🏥' },
+    psych:  { label:'정신건강의학과',   labelEn:'Psychiatry',          color:'#0284C7', bg:'#EFF6FF', border:'#BAE6FD', emoji:'🧠' },
+    center: { label:'정신건강복지센터', labelEn:'Mental Health Center', color:'#D97706', bg:'#FFFBEB', border:'#FCD34D', emoji:'🏢' },
+    counsel:{ label:'심리상담센터',     labelEn:'Counseling Center',    color:'#2D6A4F', bg:'#F0FDF4', border:'#86EFAC', emoji:'🏥' },
   };
 
   const getCat = (p) => {
@@ -1038,9 +1039,9 @@ function CounselingPage({setView}){
   };
 
   const HOTLINES = [
-    { name:'자살예방상담전화',      tel:'109',       desc:'24시간 무료 · 보건복지부', color:'#EF4444', bg:'#FEF2F2', border:'#FCA5A5' },
-    { name:'정신건강위기상담전화',   tel:'1577-0199', desc:'24시간 무료 · 전국 연결',  color:'#3B82F6', bg:'#EFF6FF', border:'#BFDBFE' },
-    { name:'청소년상담전화',        tel:'1388',      desc:'24시간 무료 · 여성가족부', color:'#8B5CF6', bg:'#F5F3FF', border:'#C4B5FD' },
+    { name: tl('자살예방상담전화','Suicide Prevention'),    tel:'109',       desc: tl('24시간 무료 · 보건복지부','24h Free · Ministry of Health'), color:'#EF4444', bg:'#FEF2F2', border:'#FCA5A5' },
+    { name: tl('정신건강위기상담전화','Mental Health Crisis'), tel:'1577-0199', desc: tl('24시간 무료 · 전국 연결','24h Free · Nationwide'),          color:'#3B82F6', bg:'#EFF6FF', border:'#BFDBFE' },
+    { name: tl('청소년상담전화','Youth Counseling'),         tel:'1388',      desc: tl('24시간 무료 · 여성가족부','24h Free · Ministry of Gender'),   color:'#8B5CF6', bg:'#F5F3FF', border:'#C4B5FD' },
   ];
 
   // 1. Kakao Maps SDK 로드
@@ -1114,8 +1115,8 @@ function CounselingPage({setView}){
     <div style={{padding:'28px 16px 0'}}>
       <div style={{background:'#FEF3C7', border:'1px solid #FCD34D', borderRadius:12, padding:'12px 14px', marginBottom:20, fontSize:13, color:'#92400E', ...s}}>
         {phase === 'nogeo'
-          ? '📍 위치 권한을 허용하면 지도에서 바로 확인할 수 있습니다. 아래 버튼으로 카카오맵에서 검색하세요.'
-          : '🔍 카카오맵에서 주변 상담 기관을 검색해 보세요.'}
+          ? tl('📍 위치 권한을 허용하면 지도에서 바로 확인할 수 있습니다. 아래 버튼으로 카카오맵에서 검색하세요.','📍 Allow location access to view the map. Use the buttons below to search on Kakao Map.')
+          : tl('🔍 카카오맵에서 주변 상담 기관을 검색해 보세요.','🔍 Search for nearby counseling centers on Kakao Map.')}
       </div>
       <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8}}>
         {[{q:'심리상담센터',e:'🏥'},{q:'정신건강의학과',e:'🧠'},{q:'정신건강복지센터',e:'🏢'},{q:'청소년상담복지센터',e:'👨‍👩‍👧'}].map(({q,e})=>(
@@ -1141,10 +1142,10 @@ function CounselingPage({setView}){
         <div style={{padding:'16px 16px 12px'}}>
           <button onClick={()=>setView('landing')}
             style={{...s, background:'none', border:'none', color:'#9A9A9A', fontSize:14, cursor:'pointer', marginBottom:10, display:'flex', alignItems:'center', gap:4}}>
-            ← 홈으로
+            {tl('← 홈으로','← Home')}
           </button>
-          <h1 style={{...s, fontSize:20, fontWeight:700, color:'#1A1A1A', marginBottom:3}}>🏥 인근 상담 기관 찾기</h1>
-          <p style={{...s, fontSize:13, color:'#6B7280'}}>내 위치 기준 3km 이내 심리상담센터·정신건강의학과·복지센터</p>
+          <h1 style={{...s, fontSize:20, fontWeight:700, color:'#1A1A1A', marginBottom:3}}>🏥 {tl('인근 상담 기관 찾기','Nearby Counseling Centers')}</h1>
+          <p style={{...s, fontSize:13, color:'#6B7280'}}>{tl('내 위치 기준 3km 이내 심리상담센터·정신건강의학과·복지센터','Counseling centers · Psychiatry · Welfare centers within 3km of your location')}</p>
         </div>
 
         {/* 지도 */}
@@ -1152,7 +1153,7 @@ function CounselingPage({setView}){
           <div style={{height:320, background:'#E5E7EB', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:10}}>
             <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
             <div style={{width:32, height:32, border:'3px solid #2D6A4F', borderTopColor:'transparent', borderRadius:'50%', animation:'spin .8s linear infinite'}}/>
-            <p style={{...s, fontSize:13, color:'#6B7280'}}>위치 확인 중...</p>
+            <p style={{...s, fontSize:13, color:'#6B7280'}}>{tl('위치 확인 중...','Locating you...')}</p>
           </div>
         )}
         {phase === 'done' && (
@@ -1166,10 +1167,10 @@ function CounselingPage({setView}){
         {phase === 'done' && places.length > 0 && (
           <div style={{padding:'10px 16px', display:'flex', gap:7, overflowX:'auto'}}>
             {[
-              {key:'all', label:`전체 (${places.length})`, color:'#374151', bg:'#F3F4F6', border:'#D1D5DB'},
+              {key:'all', label:`${tl('전체','All')} (${places.length})`, color:'#374151', bg:'#F3F4F6', border:'#D1D5DB'},
               ...Object.values(CATS).map(c=>({
                 key: c.label,
-                label: `${c.emoji} ${c.label} (${places.filter(p=>getCat(p).label===c.label).length})`,
+                label: `${c.emoji} ${tl(c.label, c.labelEn)} (${places.filter(p=>getCat(p).label===c.label).length})`,
                 color: c.color, bg: c.bg, border: c.border,
               }))
             ].map(f=>(
@@ -1189,7 +1190,7 @@ function CounselingPage({setView}){
         {phase === 'done' && (
           <div style={{padding:'4px 16px 0'}}>
             {filtered.length === 0
-              ? <div style={{...s, textAlign:'center', padding:'24px 0', color:'#9A9A9A', fontSize:13}}>해당 카테고리 기관이 없습니다</div>
+              ? <div style={{...s, textAlign:'center', padding:'24px 0', color:'#9A9A9A', fontSize:13}}>{tl('해당 카테고리 기관이 없습니다','No centers in this category')}</div>
               : filtered.map(p => {
                 const cat = getCat(p);
                 const dist = p.distance >= 1000 ? `${(p.distance/1000).toFixed(1)}km` : `${p.distance}m`;
@@ -1201,7 +1202,7 @@ function CounselingPage({setView}){
                     <div style={{flex:1, minWidth:0}}>
                       <div style={{display:'flex', alignItems:'center', gap:6, marginBottom:4, flexWrap:'wrap'}}>
                         <span style={{...s, fontSize:14, fontWeight:700, color:'#1A1A1A'}}>{p.place_name}</span>
-                        <span style={{fontSize:10, fontWeight:700, padding:'2px 7px', borderRadius:100, background:cat.bg, color:cat.color, flexShrink:0}}>{cat.label}</span>
+                        <span style={{fontSize:10, fontWeight:700, padding:'2px 7px', borderRadius:100, background:cat.bg, color:cat.color, flexShrink:0}}>{tl(cat.label, cat.labelEn)}</span>
                       </div>
                       <div style={{...s, fontSize:12, color:'#6B7280', marginBottom:8}}>
                         📍 {p.road_address_name || p.address_name}&nbsp;·&nbsp;
@@ -1220,7 +1221,7 @@ function CounselingPage({setView}){
                             style={{...s, fontSize:12, fontWeight:600, color:cat.color,
                               background:cat.bg, padding:'5px 13px', borderRadius:8,
                               textDecoration:'none', border:`1px solid ${cat.border}`}}>
-                            지도 보기
+                            {tl('지도 보기','View Map')}
                           </a>
                         )}
                       </div>
@@ -1236,13 +1237,13 @@ function CounselingPage({setView}){
         {phase === 'done' && (
           <div style={{...s, margin:'8px 16px 16px', background:'#ECFDF5', border:'1px solid #6EE7B7',
             borderRadius:11, padding:'10px 14px', fontSize:12, color:'#065F46', lineHeight:1.7}}>
-            ℹ️ 상담 예약과 비용 결제는 각 기관에 직접 문의해 주세요. 마음풀은 정보 안내만 제공합니다.
+            {tl('ℹ️ 상담 예약과 비용 결제는 각 기관에 직접 문의해 주세요. 마음풀은 정보 안내만 제공합니다.','ℹ️ Please contact each center directly for appointments and fees. Maumful only provides directory information.')}
           </div>
         )}
 
         {/* 무료 상담전화 */}
         <div style={{padding:'8px 16px 0'}}>
-          <h2 style={{...s, fontSize:14, fontWeight:700, color:'#374151', marginBottom:10}}>📞 24시간 무료 상담전화</h2>
+          <h2 style={{...s, fontSize:14, fontWeight:700, color:'#374151', marginBottom:10}}>📞 {tl('24시간 무료 상담전화','24h Free Hotlines')}</h2>
           <div style={{display:'flex', flexDirection:'column', gap:8}}>
             {HOTLINES.map(h => (
               <div key={h.name} style={{background:h.bg, border:`1px solid ${h.border}`, borderRadius:12,
