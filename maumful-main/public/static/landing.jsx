@@ -364,6 +364,82 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
 }
 
 // ============================================================
+// ============================================================
+// SNS 공유 컴포넌트 (마음풀)
+// ============================================================
+function MfSnsHeroBtn({ tl }) {
+  const share = () => {
+    const k = window.Kakao; if (!k) return;
+    if (!k.isInitialized()) k.init(window.KAKAO_APP_KEY);
+    k.Share.sendDefault({
+      objectType: 'feed',
+      content: { title: '마음풀 — 심리검사 · AI상담 · 치유게임', description: '마음의 무게를 가볍게.', imageUrl: window.location.origin + '/static/icon-512.png', link: { mobileWebUrl: window.location.origin, webUrl: window.location.origin } },
+      buttons: [{ title: tl('무료로 시작하기', 'Get Started'), link: { mobileWebUrl: window.location.origin, webUrl: window.location.origin } }],
+    });
+  };
+  if (!window.KAKAO_APP_KEY) return null;
+  return (
+    <button onClick={share} style={{ marginTop: 14, display: 'inline-flex', alignItems: 'center', gap: 8, background: '#FEE500', color: '#3C1E1E', border: 'none', borderRadius: 24, padding: '9px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'Noto Sans KR',sans-serif", boxShadow: '0 2px 10px rgba(254,229,0,0.4)' }}>
+      <svg viewBox="0 0 24 24" style={{ width: 17, height: 17, flexShrink: 0 }} fill="#3C1E1E"><ellipse cx="12" cy="11" rx="10" ry="9"/><path d="M9 17C7.5 20 6 20.5 6 20.5 8 19 9 17.5 9.5 16.8" fill="#FEE500"/></svg>
+      {tl('카카오톡으로 공유하기', 'Share on KakaoTalk')}
+    </button>
+  );
+}
+
+function MfSnsFooter({ tl }) {
+  const { useState: useS } = React;
+  const [cp, setCp] = useS(false);
+  const url = window.location.origin;
+  const ttl = '마음풀 — 심리검사 · AI상담 · 치유게임';
+  const enc = encodeURIComponent;
+  const pop = u => window.open(u, '_blank', 'width=600,height=500,noopener,noreferrer');
+  const cpy = () => navigator.clipboard.writeText(url).then(() => { setCp(true); setTimeout(() => setCp(false), 2500); });
+  const kakao = () => {
+    const k = window.Kakao; if (!k) return;
+    if (!k.isInitialized()) k.init(window.KAKAO_APP_KEY);
+    k.Share.sendDefault({ objectType: 'feed', content: { title: ttl, description: '마음의 무게를 가볍게.', imageUrl: url + '/static/icon-512.png', link: { mobileWebUrl: url, webUrl: url } }, buttons: [{ title: tl('무료로 시작하기', 'Get Started'), link: { mobileWebUrl: url, webUrl: url } }] });
+  };
+  const S = { width: 20, height: 20, flexShrink: 0 };
+  const IG = 'linear-gradient(45deg,#f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%)';
+  const btns = [
+    { id: 'kakao',     lbl: tl('카카오톡', 'KakaoTalk'), bg: '#FEE500', fn: kakao,
+      ico: <svg viewBox="0 0 24 24" style={S} fill="#3C1E1E"><ellipse cx="12" cy="11" rx="10" ry="9"/><path d="M9 17C7.5 20 6 20.5 6 20.5 8 19 9 17.5 9.5 16.8" fill="#FEE500"/></svg> },
+    { id: 'facebook',  lbl: 'Facebook',  bg: '#1877F2', fn: () => pop('https://www.facebook.com/sharer/sharer.php?u=' + enc(url)),
+      ico: <svg viewBox="0 0 24 24" style={S} fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg> },
+    { id: 'x',         lbl: 'X',         bg: '#101010', fn: () => pop('https://twitter.com/intent/tweet?url=' + enc(url) + '&text=' + enc(ttl)),
+      ico: <svg viewBox="0 0 24 24" style={S} fill="white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.257 5.636 5.907-5.636zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg> },
+    { id: 'instagram', lbl: 'Instagram', bg: IG,        fn: () => navigator.share ? navigator.share({ title: ttl, url }) : cpy(),
+      ico: <svg viewBox="0 0 24 24" style={S} fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5" strokeWidth="3"/></svg> },
+    { id: 'naver',     lbl: tl('네이버', 'Naver'),      bg: '#03C75A', fn: () => pop('https://share.naver.com/web/shareView?url=' + enc(url) + '&title=' + enc(ttl)),
+      ico: <svg viewBox="0 0 24 24" style={S} fill="white"><path d="M16 3v7.5L9.5 3H3v18h5V13.5L14.5 21H21V3z"/></svg> },
+    { id: 'line',      lbl: 'LINE',      bg: '#06C755', fn: () => pop('https://social-plugins.line.me/lineit/share?url=' + enc(url)),
+      ico: <svg viewBox="0 0 24 24" style={S} fill="white"><path d="M19.5 10.5C19.5 6.36 15.64 3 11 3S2.5 6.36 2.5 10.5c0 3.6 2.93 6.6 7.07 7.38.28.06.65.18.75.42.09.22.06.56 0 .78l-.12.93c-.04.22-.17.85.74.46s5-2.91 6.82-5.03C19.32 13.75 19.5 12.15 19.5 10.5z"/></svg> },
+    { id: 'whatsapp',  lbl: 'WhatsApp',  bg: '#25D366', fn: () => pop('https://wa.me/?text=' + enc(ttl + '\n' + url)),
+      ico: <svg viewBox="0 0 24 24" style={S} fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg> },
+    { id: 'telegram',  lbl: 'Telegram',  bg: '#2AABEE', fn: () => pop('https://t.me/share/url?url=' + enc(url) + '&text=' + enc(ttl)),
+      ico: <svg viewBox="0 0 24 24" style={S} fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> },
+    { id: 'threads',   lbl: 'Threads',   bg: '#101010', fn: () => pop('https://www.threads.net/intent/post?text=' + enc(ttl + ' ' + url)),
+      ico: <span style={{ fontSize: 15, fontWeight: 900, color: 'white', fontFamily: 'serif', lineHeight: 1 }}>@</span> },
+    { id: 'copy',      lbl: cp ? tl('복사됨 ✓', 'Copied ✓') : tl('링크복사', 'Copy Link'), bg: '#5B6678', fn: cpy,
+      ico: <svg viewBox="0 0 24 24" style={S} fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> },
+  ];
+  return (
+    <div style={{ padding: '24px 0 8px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+      <p style={{ fontSize: 10, fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.28)', marginBottom: 14, textAlign: 'center', fontFamily: "'Noto Sans KR',sans-serif" }}>
+        {tl('이 서비스를 공유해 보세요', 'Share This Service')}
+      </p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
+        {btns.map(b => (
+          <button key={b.id} onClick={b.fn} title={b.lbl} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+            <span style={{ width: 42, height: 42, borderRadius: 11, background: b.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.2)' }}>{b.ico}</span>
+            <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', fontFamily: "'Noto Sans KR',sans-serif", whiteSpace: 'nowrap' }}>{b.lbl}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // LandingPage — 홈 메인 페이지
 // ============================================================
 function LandingPage({ setView, isLoggedIn, lang }) {
@@ -472,6 +548,8 @@ function LandingPage({ setView, isLoggedIn, lang }) {
                 {tl("검사 소개 보기", "View Assessments")}
               </button>
             </div>
+
+            <MfSnsHeroBtn tl={tl} />
 
             {/* 히어로 통계 */}
             <div style={{
@@ -1458,7 +1536,7 @@ function LandingPage({ setView, isLoggedIn, lang }) {
               },
               {
                 title: 'Support',
-                links: ['이용약관', '개인정보처리방침', 'FAQ', '문의하기'],
+                links: ['Terms of Service', 'Privacy Policy', 'FAQ', 'Contact Us'],
               },
             ]).map(col => (
               <div key={col.title}>
@@ -1469,8 +1547,8 @@ function LandingPage({ setView, isLoggedIn, lang }) {
                       onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.8)'}
                       onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.45)'}
                       onClick={() => {
-                        if (l === '이용약관') setView('terms');
-                        if (l === '개인정보처리방침') setView('privacy');
+                        if (l === '이용약관' || l === 'Terms of Service') setView('terms');
+                        if (l === '개인정보처리방침' || l === 'Privacy Policy') setView('privacy');
                         if (l === '어드민') setView('counselingAdmin');
                         if (l === '마음커플') {
                           if (!isLoggedIn) { setView('memberLogin'); return; }
@@ -1490,6 +1568,7 @@ function LandingPage({ setView, isLoggedIn, lang }) {
               </div>
             ))}
           </div>
+          <MfSnsFooter tl={tl} />
           <div style={{
             borderTop: '1px solid rgba(255,255,255,0.08)',
             paddingTop: 24, fontSize: 11,
@@ -1599,7 +1678,7 @@ function TestsIntroPage({ setView, isLoggedIn, lang }) {
 
         {/* 검사 상세 패널 */}
         <div style={{ position: 'sticky', top: 80, alignSelf: 'start' }}>
-          {!t ? (
+          {!tm ? (
             <div style={{
               background: 'white', borderRadius: 20, padding: '60px 40px',
               border: '1px solid rgba(0,0,0,0.08)', textAlign: 'center',

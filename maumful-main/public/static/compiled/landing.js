@@ -495,6 +495,113 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
     tl("\uBB34\uB8CC \uC2DC\uC791", "Get Started")
   ))));
 }
+function MfSnsHeroBtn({ tl }) {
+  const share = () => {
+    const k = window.Kakao;
+    if (!k) return;
+    if (!k.isInitialized()) k.init(window.KAKAO_APP_KEY);
+    k.Share.sendDefault({
+      objectType: "feed",
+      content: { title: "\uB9C8\uC74C\uD480 \u2014 \uC2EC\uB9AC\uAC80\uC0AC \xB7 AI\uC0C1\uB2F4 \xB7 \uCE58\uC720\uAC8C\uC784", description: "\uB9C8\uC74C\uC758 \uBB34\uAC8C\uB97C \uAC00\uBCCD\uAC8C.", imageUrl: window.location.origin + "/static/icon-512.png", link: { mobileWebUrl: window.location.origin, webUrl: window.location.origin } },
+      buttons: [{ title: tl("\uBB34\uB8CC\uB85C \uC2DC\uC791\uD558\uAE30", "Get Started"), link: { mobileWebUrl: window.location.origin, webUrl: window.location.origin } }]
+    });
+  };
+  if (!window.KAKAO_APP_KEY) return null;
+  return /* @__PURE__ */ React.createElement("button", { onClick: share, style: { marginTop: 14, display: "inline-flex", alignItems: "center", gap: 8, background: "#FEE500", color: "#3C1E1E", border: "none", borderRadius: 24, padding: "9px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Noto Sans KR',sans-serif", boxShadow: "0 2px 10px rgba(254,229,0,0.4)" } }, /* @__PURE__ */ React.createElement("svg", { viewBox: "0 0 24 24", style: { width: 17, height: 17, flexShrink: 0 }, fill: "#3C1E1E" }, /* @__PURE__ */ React.createElement("ellipse", { cx: "12", cy: "11", rx: "10", ry: "9" }), /* @__PURE__ */ React.createElement("path", { d: "M9 17C7.5 20 6 20.5 6 20.5 8 19 9 17.5 9.5 16.8", fill: "#FEE500" })), tl("\uCE74\uCE74\uC624\uD1A1\uC73C\uB85C \uACF5\uC720\uD558\uAE30", "Share on KakaoTalk"));
+}
+function MfSnsFooter({ tl }) {
+  const { useState: useS } = React;
+  const [cp, setCp] = useS(false);
+  const url = window.location.origin;
+  const ttl = "\uB9C8\uC74C\uD480 \u2014 \uC2EC\uB9AC\uAC80\uC0AC \xB7 AI\uC0C1\uB2F4 \xB7 \uCE58\uC720\uAC8C\uC784";
+  const enc = encodeURIComponent;
+  const pop = (u) => window.open(u, "_blank", "width=600,height=500,noopener,noreferrer");
+  const cpy = () => navigator.clipboard.writeText(url).then(() => {
+    setCp(true);
+    setTimeout(() => setCp(false), 2500);
+  });
+  const kakao = () => {
+    const k = window.Kakao;
+    if (!k) return;
+    if (!k.isInitialized()) k.init(window.KAKAO_APP_KEY);
+    k.Share.sendDefault({ objectType: "feed", content: { title: ttl, description: "\uB9C8\uC74C\uC758 \uBB34\uAC8C\uB97C \uAC00\uBCCD\uAC8C.", imageUrl: url + "/static/icon-512.png", link: { mobileWebUrl: url, webUrl: url } }, buttons: [{ title: tl("\uBB34\uB8CC\uB85C \uC2DC\uC791\uD558\uAE30", "Get Started"), link: { mobileWebUrl: url, webUrl: url } }] });
+  };
+  const S = { width: 20, height: 20, flexShrink: 0 };
+  const IG = "linear-gradient(45deg,#f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%)";
+  const btns = [
+    {
+      id: "kakao",
+      lbl: tl("\uCE74\uCE74\uC624\uD1A1", "KakaoTalk"),
+      bg: "#FEE500",
+      fn: kakao,
+      ico: /* @__PURE__ */ React.createElement("svg", { viewBox: "0 0 24 24", style: S, fill: "#3C1E1E" }, /* @__PURE__ */ React.createElement("ellipse", { cx: "12", cy: "11", rx: "10", ry: "9" }), /* @__PURE__ */ React.createElement("path", { d: "M9 17C7.5 20 6 20.5 6 20.5 8 19 9 17.5 9.5 16.8", fill: "#FEE500" }))
+    },
+    {
+      id: "facebook",
+      lbl: "Facebook",
+      bg: "#1877F2",
+      fn: () => pop("https://www.facebook.com/sharer/sharer.php?u=" + enc(url)),
+      ico: /* @__PURE__ */ React.createElement("svg", { viewBox: "0 0 24 24", style: S, fill: "none", stroke: "white", strokeWidth: "2.5", strokeLinecap: "round", strokeLinejoin: "round" }, /* @__PURE__ */ React.createElement("path", { d: "M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" }))
+    },
+    {
+      id: "x",
+      lbl: "X",
+      bg: "#101010",
+      fn: () => pop("https://twitter.com/intent/tweet?url=" + enc(url) + "&text=" + enc(ttl)),
+      ico: /* @__PURE__ */ React.createElement("svg", { viewBox: "0 0 24 24", style: S, fill: "white" }, /* @__PURE__ */ React.createElement("path", { d: "M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.257 5.636 5.907-5.636zm-1.161 17.52h1.833L7.084 4.126H5.117z" }))
+    },
+    {
+      id: "instagram",
+      lbl: "Instagram",
+      bg: IG,
+      fn: () => navigator.share ? navigator.share({ title: ttl, url }) : cpy(),
+      ico: /* @__PURE__ */ React.createElement("svg", { viewBox: "0 0 24 24", style: S, fill: "none", stroke: "white", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" }, /* @__PURE__ */ React.createElement("rect", { x: "2", y: "2", width: "20", height: "20", rx: "5" }), /* @__PURE__ */ React.createElement("circle", { cx: "12", cy: "12", r: "4" }), /* @__PURE__ */ React.createElement("line", { x1: "17.5", y1: "6.5", x2: "17.51", y2: "6.5", strokeWidth: "3" }))
+    },
+    {
+      id: "naver",
+      lbl: tl("\uB124\uC774\uBC84", "Naver"),
+      bg: "#03C75A",
+      fn: () => pop("https://share.naver.com/web/shareView?url=" + enc(url) + "&title=" + enc(ttl)),
+      ico: /* @__PURE__ */ React.createElement("svg", { viewBox: "0 0 24 24", style: S, fill: "white" }, /* @__PURE__ */ React.createElement("path", { d: "M16 3v7.5L9.5 3H3v18h5V13.5L14.5 21H21V3z" }))
+    },
+    {
+      id: "line",
+      lbl: "LINE",
+      bg: "#06C755",
+      fn: () => pop("https://social-plugins.line.me/lineit/share?url=" + enc(url)),
+      ico: /* @__PURE__ */ React.createElement("svg", { viewBox: "0 0 24 24", style: S, fill: "white" }, /* @__PURE__ */ React.createElement("path", { d: "M19.5 10.5C19.5 6.36 15.64 3 11 3S2.5 6.36 2.5 10.5c0 3.6 2.93 6.6 7.07 7.38.28.06.65.18.75.42.09.22.06.56 0 .78l-.12.93c-.04.22-.17.85.74.46s5-2.91 6.82-5.03C19.32 13.75 19.5 12.15 19.5 10.5z" }))
+    },
+    {
+      id: "whatsapp",
+      lbl: "WhatsApp",
+      bg: "#25D366",
+      fn: () => pop("https://wa.me/?text=" + enc(ttl + "\n" + url)),
+      ico: /* @__PURE__ */ React.createElement("svg", { viewBox: "0 0 24 24", style: S, fill: "none", stroke: "white", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" }, /* @__PURE__ */ React.createElement("path", { d: "M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" }))
+    },
+    {
+      id: "telegram",
+      lbl: "Telegram",
+      bg: "#2AABEE",
+      fn: () => pop("https://t.me/share/url?url=" + enc(url) + "&text=" + enc(ttl)),
+      ico: /* @__PURE__ */ React.createElement("svg", { viewBox: "0 0 24 24", style: S, fill: "none", stroke: "white", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" }, /* @__PURE__ */ React.createElement("line", { x1: "22", y1: "2", x2: "11", y2: "13" }), /* @__PURE__ */ React.createElement("polygon", { points: "22 2 15 22 11 13 2 9 22 2" }))
+    },
+    {
+      id: "threads",
+      lbl: "Threads",
+      bg: "#101010",
+      fn: () => pop("https://www.threads.net/intent/post?text=" + enc(ttl + " " + url)),
+      ico: /* @__PURE__ */ React.createElement("span", { style: { fontSize: 15, fontWeight: 900, color: "white", fontFamily: "serif", lineHeight: 1 } }, "@")
+    },
+    {
+      id: "copy",
+      lbl: cp ? tl("\uBCF5\uC0AC\uB428 \u2713", "Copied \u2713") : tl("\uB9C1\uD06C\uBCF5\uC0AC", "Copy Link"),
+      bg: "#5B6678",
+      fn: cpy,
+      ico: /* @__PURE__ */ React.createElement("svg", { viewBox: "0 0 24 24", style: S, fill: "none", stroke: "white", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" }, /* @__PURE__ */ React.createElement("path", { d: "M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" }), /* @__PURE__ */ React.createElement("path", { d: "M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" }))
+    }
+  ];
+  return /* @__PURE__ */ React.createElement("div", { style: { padding: "24px 0 8px", borderTop: "1px solid rgba(255,255,255,0.06)" } }, /* @__PURE__ */ React.createElement("p", { style: { fontSize: 10, fontWeight: 600, letterSpacing: "1.5px", textTransform: "uppercase", color: "rgba(255,255,255,0.28)", marginBottom: 14, textAlign: "center", fontFamily: "'Noto Sans KR',sans-serif" } }, tl("\uC774 \uC11C\uBE44\uC2A4\uB97C \uACF5\uC720\uD574 \uBCF4\uC138\uC694", "Share This Service")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center" } }, btns.map((b) => /* @__PURE__ */ React.createElement("button", { key: b.id, onClick: b.fn, title: b.lbl, style: { background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 5 } }, /* @__PURE__ */ React.createElement("span", { style: { width: 42, height: 42, borderRadius: 11, background: b.bg, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.2)" } }, b.ico), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 9, color: "rgba(255,255,255,0.35)", fontFamily: "'Noto Sans KR',sans-serif", whiteSpace: "nowrap" } }, b.lbl)))));
+}
 function LandingPage({ setView, isLoggedIn, lang }) {
   const tl = (ko, en) => lang === "en" ? en : ko;
   const { useState: useS, useEffect: useE, useRef } = React;
@@ -618,7 +725,7 @@ function LandingPage({ setView, isLoggedIn, lang }) {
         }
       },
       tl("\uAC80\uC0AC \uC18C\uAC1C \uBCF4\uAE30", "View Assessments")
-    )), /* @__PURE__ */ React.createElement("div", { style: {
+    )), /* @__PURE__ */ React.createElement(MfSnsHeroBtn, { tl }), /* @__PURE__ */ React.createElement("div", { style: {
       display: "flex",
       gap: 36,
       marginTop: 48,
@@ -647,12 +754,12 @@ function LandingPage({ setView, isLoggedIn, lang }) {
       boxShadow: "0 12px 48px rgba(0,0,0,0.10)",
       padding: "28px 28px 24px",
       overflow: "hidden"
-    } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 600, color: "#9A9A9A", marginBottom: 16, letterSpacing: "0.5px" } }, "\u{1F50D} ", tl("\uC2EC\uB9AC\uAC80\uC0AC \uC120\uD0DD", "Select Assessment")), TEST_META.slice(0, 4).map((t2, i) => {
-      const c = COLOR_MAP[t2.color];
+    } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 600, color: "#9A9A9A", marginBottom: 16, letterSpacing: "0.5px" } }, "\u{1F50D} ", tl("\uC2EC\uB9AC\uAC80\uC0AC \uC120\uD0DD", "Select Assessment")), TEST_META.slice(0, 4).map((t, i) => {
+      const c = COLOR_MAP[t.color];
       return /* @__PURE__ */ React.createElement(
         "div",
         {
-          key: t2.id,
+          key: t.id,
           onClick: () => setView(isLoggedIn ? "memberDashboard" : "testsIntro"),
           style: {
             display: "flex",
@@ -678,17 +785,17 @@ function LandingPage({ setView, isLoggedIn, lang }) {
           justifyContent: "center",
           fontSize: 18,
           flexShrink: 0
-        } }, t2.icon),
-        /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 600, color: "#1A1A1A" } }, tl(t2.name, t2.nameEn)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "#9A9A9A" } }, tl(t2.time, t2.timeEn), " \xB7 ", tl(t2.count, t2.countEn))),
+        } }, t.icon),
+        /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 600, color: "#1A1A1A" } }, tl(t.name, t.nameEn)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "#9A9A9A" } }, tl(t.time, t.timeEn), " \xB7 ", tl(t.count, t.countEn))),
         /* @__PURE__ */ React.createElement("div", { style: {
           fontSize: 11,
           fontWeight: 600,
           padding: "3px 9px",
           borderRadius: 100,
-          background: t2.free ? "#D8F3DC" : "#FFF0E6",
-          color: t2.free ? "#1A6B3C" : "#C05621",
+          background: t.free ? "#D8F3DC" : "#FFF0E6",
+          color: t.free ? "#1A6B3C" : "#C05621",
           whiteSpace: "nowrap"
-        } }, t2.free ? tl("\uBB34\uB8CC", "Free") : tl("10 \uD06C\uB808\uB527", "10 Credits"))
+        } }, t.free ? tl("\uBB34\uB8CC", "Free") : tl("10 \uD06C\uB808\uB527", "10 Credits"))
       );
     }), /* @__PURE__ */ React.createElement(
       "button",
@@ -737,12 +844,12 @@ function LandingPage({ setView, isLoggedIn, lang }) {
     display: "grid",
     gridTemplateColumns: "repeat(4, 1fr)",
     gap: 18
-  }, className: "tests-grid" }, TEST_META.map((t2, i) => {
-    const c = COLOR_MAP[t2.color];
+  }, className: "tests-grid" }, TEST_META.map((t, i) => {
+    const c = COLOR_MAP[t.color];
     return /* @__PURE__ */ React.createElement(
       "div",
       {
-        key: t2.id,
+        key: t.id,
         onClick: () => setView(isLoggedIn ? "memberDashboard" : "testsIntro"),
         style: {
           background: "white",
@@ -767,16 +874,16 @@ function LandingPage({ setView, isLoggedIn, lang }) {
           e.currentTarget.style.transform = "none";
         }
       },
-      /* @__PURE__ */ React.createElement("div", { style: { fontSize: 30 } }, t2.icon),
-      /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: "#9A9A9A", letterSpacing: "0.8px", textTransform: "uppercase", marginBottom: 4 } }, t2.label), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 16, fontWeight: 700, color: "#1A1A1A", marginBottom: 6 } }, tl(t2.name, t2.nameEn)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "#6A6A6A", lineHeight: 1.6 } }, tl(t2.desc, t2.descEn).substring(0, 55), "...")),
-      /* @__PURE__ */ React.createElement("div", { style: { marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "space-between" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: "#9A9A9A" } }, "\u23F1 ", tl(t2.time, t2.timeEn), " \xB7 ", tl(t2.count, t2.countEn)), /* @__PURE__ */ React.createElement("span", { style: {
+      /* @__PURE__ */ React.createElement("div", { style: { fontSize: 30 } }, t.icon),
+      /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: "#9A9A9A", letterSpacing: "0.8px", textTransform: "uppercase", marginBottom: 4 } }, t.label), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 16, fontWeight: 700, color: "#1A1A1A", marginBottom: 6 } }, tl(t.name, t.nameEn)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "#6A6A6A", lineHeight: 1.6 } }, tl(t.desc, t.descEn).substring(0, 55), "...")),
+      /* @__PURE__ */ React.createElement("div", { style: { marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "space-between" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: "#9A9A9A" } }, "\u23F1 ", tl(t.time, t.timeEn), " \xB7 ", tl(t.count, t.countEn)), /* @__PURE__ */ React.createElement("span", { style: {
         fontSize: 11,
         fontWeight: 700,
         padding: "3px 10px",
         borderRadius: 100,
-        background: t2.free ? "#D8F3DC" : "#FFF0E6",
-        color: t2.free ? "#1A6B3C" : "#C05621"
-      } }, t2.free ? tl("\uBB34\uB8CC", "Free") : tl("10 \uD06C\uB808\uB527", "10 Credits")))
+        background: t.free ? "#D8F3DC" : "#FFF0E6",
+        color: t.free ? "#1A6B3C" : "#C05621"
+      } }, t.free ? tl("\uBB34\uB8CC", "Free") : tl("10 \uD06C\uB808\uB527", "10 Credits")))
     );
   })), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", marginTop: 40 } }, /* @__PURE__ */ React.createElement(
     "button",
@@ -987,7 +1094,7 @@ function LandingPage({ setView, isLoggedIn, lang }) {
     "Generic advice with no assessment basis",
     "No tracking of changes over time",
     "Same response pattern for everyone"
-  ]).map((t2) => /* @__PURE__ */ React.createElement("div", { key: t2, style: { display: "flex", alignItems: "center", gap: 10 } }, /* @__PURE__ */ React.createElement("span", { style: { color: "#D1D5DB", fontSize: 16, flexShrink: 0 } }, "\u2717"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, color: "#888" } }, t2))))), /* @__PURE__ */ React.createElement("div", { style: {
+  ]).map((t) => /* @__PURE__ */ React.createElement("div", { key: t, style: { display: "flex", alignItems: "center", gap: 10 } }, /* @__PURE__ */ React.createElement("span", { style: { color: "#D1D5DB", fontSize: 16, flexShrink: 0 } }, "\u2717"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, color: "#888" } }, t))))), /* @__PURE__ */ React.createElement("div", { style: {
     background: "linear-gradient(135deg, #F0FAF4, #FAFAF8)",
     borderRadius: 16,
     padding: "32px 28px",
@@ -1025,7 +1132,7 @@ function LandingPage({ setView, isLoggedIn, lang }) {
     "Personalized counseling based on your scores and symptom patterns",
     "Tracks your psychological changes and trends over time",
     "Precise insights powered by your personal data profile"
-  ]).map((t2) => /* @__PURE__ */ React.createElement("div", { key: t2, style: { display: "flex", alignItems: "center", gap: 10 } }, /* @__PURE__ */ React.createElement("span", { style: { color: "#52B788", fontSize: 16, flexShrink: 0 } }, "\u2713"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, color: "#3A3A3A" } }, t2)))))), /* @__PURE__ */ React.createElement("div", { style: {
+  ]).map((t) => /* @__PURE__ */ React.createElement("div", { key: t, style: { display: "flex", alignItems: "center", gap: 10 } }, /* @__PURE__ */ React.createElement("span", { style: { color: "#52B788", fontSize: 16, flexShrink: 0 } }, "\u2713"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, color: "#3A3A3A" } }, t)))))), /* @__PURE__ */ React.createElement("div", { style: {
     background: "linear-gradient(135deg, #1A3D2B, #2D6A4F)",
     borderRadius: 20,
     padding: "40px 48px",
@@ -1413,8 +1520,8 @@ function LandingPage({ setView, isLoggedIn, lang }) {
           const h = window.location.hostname;
           const coupleBase = h.includes("workers.dev") || h.includes("-dev.") ? "https://maumcouple-dev.limyj007.workers.dev" : "https://couple.maumful.com";
           fetch("/api/couple-token", { headers: { Authorization: "Bearer " + (localStorage.getItem("access_token") || "") } }).then((r) => r.json()).then((data) => {
-            const t2 = data.success ? data.coupleToken : localStorage.getItem("access_token") || "";
-            window.open(`${coupleBase}?t=${encodeURIComponent(t2)}`, "_blank", "noopener noreferrer");
+            const t = data.success ? data.coupleToken : localStorage.getItem("access_token") || "";
+            window.open(`${coupleBase}?t=${encodeURIComponent(t)}`, "_blank", "noopener noreferrer");
           }).catch(() => window.open(coupleBase, "_blank", "noopener noreferrer"));
         },
         style: {
@@ -1478,8 +1585,8 @@ function LandingPage({ setView, isLoggedIn, lang }) {
           const h = window.location.hostname;
           const coupleBase = h.includes("workers.dev") || h.includes("-dev.") ? "https://maumcouple-dev.limyj007.workers.dev" : "https://couple.maumful.com";
           fetch("/api/couple-token", { headers: { Authorization: "Bearer " + (localStorage.getItem("access_token") || "") } }).then((r) => r.json()).then((data) => {
-            const t2 = data.success ? data.coupleToken : localStorage.getItem("access_token") || "";
-            window.open(`${coupleBase}?t=${encodeURIComponent(t2)}`, "_blank", "noopener noreferrer");
+            const t = data.success ? data.coupleToken : localStorage.getItem("access_token") || "";
+            window.open(`${coupleBase}?t=${encodeURIComponent(t)}`, "_blank", "noopener noreferrer");
           }).catch(() => window.open(coupleBase, "_blank", "noopener noreferrer"));
         },
         style: {
@@ -1570,7 +1677,7 @@ function LandingPage({ setView, isLoggedIn, lang }) {
       },
       {
         title: "Support",
-        links: ["\uC774\uC6A9\uC57D\uAD00", "\uAC1C\uC778\uC815\uBCF4\uCC98\uB9AC\uBC29\uCE68", "FAQ", "\uBB38\uC758\uD558\uAE30"]
+        links: ["Terms of Service", "Privacy Policy", "FAQ", "Contact Us"]
       }
     ]).map((col) => /* @__PURE__ */ React.createElement("div", { key: col.title }, /* @__PURE__ */ React.createElement("h4", { style: { color: "white", fontSize: 14, fontWeight: 600, marginBottom: 14 } }, col.title), col.links.map((l) => /* @__PURE__ */ React.createElement("div", { key: l, style: { marginBottom: 9 } }, /* @__PURE__ */ React.createElement(
       "span",
@@ -1579,8 +1686,8 @@ function LandingPage({ setView, isLoggedIn, lang }) {
         onMouseEnter: (e) => e.currentTarget.style.color = "rgba(255,255,255,0.8)",
         onMouseLeave: (e) => e.currentTarget.style.color = "rgba(255,255,255,0.45)",
         onClick: () => {
-          if (l === "\uC774\uC6A9\uC57D\uAD00") setView("terms");
-          if (l === "\uAC1C\uC778\uC815\uBCF4\uCC98\uB9AC\uBC29\uCE68") setView("privacy");
+          if (l === "\uC774\uC6A9\uC57D\uAD00" || l === "Terms of Service") setView("terms");
+          if (l === "\uAC1C\uC778\uC815\uBCF4\uCC98\uB9AC\uBC29\uCE68" || l === "Privacy Policy") setView("privacy");
           if (l === "\uC5B4\uB4DC\uBBFC") setView("counselingAdmin");
           if (l === "\uB9C8\uC74C\uCEE4\uD50C") {
             if (!isLoggedIn) {
@@ -1597,7 +1704,7 @@ function LandingPage({ setView, isLoggedIn, lang }) {
       },
       l
     )))))
-  ), /* @__PURE__ */ React.createElement("div", { style: {
+  ), /* @__PURE__ */ React.createElement(MfSnsFooter, { tl }), /* @__PURE__ */ React.createElement("div", { style: {
     borderTop: "1px solid rgba(255,255,255,0.08)",
     paddingTop: 24,
     fontSize: 11,
@@ -1682,7 +1789,7 @@ function TestsIntroPage({ setView, isLoggedIn, lang }) {
         /* @__PURE__ */ React.createElement("div", { style: { fontSize: 18, color: isActive ? cc.bar : "#CACACA" } }, "\u203A")
       );
     }))),
-    /* @__PURE__ */ React.createElement("div", { style: { position: "sticky", top: 80, alignSelf: "start" } }, !t ? /* @__PURE__ */ React.createElement("div", { style: {
+    /* @__PURE__ */ React.createElement("div", { style: { position: "sticky", top: 80, alignSelf: "start" } }, !tm ? /* @__PURE__ */ React.createElement("div", { style: {
       background: "white",
       borderRadius: 20,
       padding: "60px 40px",
