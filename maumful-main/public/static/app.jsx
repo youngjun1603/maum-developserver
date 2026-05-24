@@ -3374,6 +3374,10 @@ function PsychologicalTestSystem() {
       <ul>
         <li>이메일 주소, 닉네임, 접속 국가 코드</li>
       </ul>
+      <p><strong>일반 개인정보 (선택 — 미제공 시에도 서비스 이용 가능)</strong></p>
+      <ul>
+        <li>성별, 연령대, 핸드폰번호</li>
+      </ul>
       <p><strong>민감정보 (별도 동의 후 수집)</strong></p>
       <ul>
         <li>심리검사 응답 데이터 및 결과 (PHQ-9, GAD-7, DASS-21, BIG5 등)</li>
@@ -3438,7 +3442,7 @@ function PsychologicalTestSystem() {
           <tr>
             <td style={{border:'1px solid #E5E7EB', padding:'6px 8px'}}>Cloudflare, Inc. (미국·EU)</td>
             <td style={{border:'1px solid #E5E7EB', padding:'6px 8px'}}>서버 인프라·DB 운영</td>
-            <td style={{border:'1px solid #E5E7EB', padding:'6px 8px'}}>이메일, 닉네임 등 가입 정보</td>
+            <td style={{border:'1px solid #E5E7EB', padding:'6px 8px'}}>이메일, 닉네임, 성별, 연령대, 핸드폰번호 등 가입 정보</td>
             <td style={{border:'1px solid #E5E7EB', padding:'6px 8px'}}>회원 탈퇴 시까지</td>
           </tr>
           <tr>
@@ -3474,7 +3478,7 @@ function PsychologicalTestSystem() {
         <li><strong>이메일:</strong> support@maumful.com</li>
         <li>개인정보 침해 신고: 개인정보보호위원회 (privacy.go.kr / 182)</li>
       </ul>
-      <p style={{color:'#9ca3af', fontSize:'12px'}}>최종 업데이트: 2026년 5월</p>
+      <p style={{color:'#9ca3af', fontSize:'12px'}}>최종 업데이트: 2026년 5월 24일</p>
     </LegalPage>
   );
 
