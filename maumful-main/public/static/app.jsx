@@ -64,9 +64,9 @@ const api = {
   },
 
   // ── 인증 ──────────────────────────────────────────────────
-  async register(email, password, nickname, partnerCode, marketingAgreed = false, locale = 'ko') {
+  async register(email, password, nickname, partnerCode, marketingAgreed = false, locale = 'ko', gender = null, age_range = null, phone = null) {
     const r = await fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json', ...api._authHeader() },
-      body: JSON.stringify({ email, password, nickname, locale, partnerCode: partnerCode || undefined, marketingAgreed }) });
+      body: JSON.stringify({ email, password, nickname, locale, partnerCode: partnerCode || undefined, marketingAgreed, gender: gender || undefined, age_range: age_range || undefined, phone: phone || undefined }) });
     return r.json();
   },
   async login(email, password) {
@@ -353,7 +353,7 @@ function PsychologicalTestSystem() {
   const [showApiKeyInput, setShowApiKeyInput]     = useState(false);
 
   // ── B2C 전용 상태 ────────────────────────────────────────
-  const [signupForm, setSignupForm] = useState({ email: '', password: '', pwConfirm: '', nickname: '' });
+  const [signupForm, setSignupForm] = useState({ email: '', password: '', pwConfirm: '', nickname: '', gender: '', age_range: '', phone: '' });
   const [signupConsents, setSignupConsents] = useState({ terms: false, privacy: false, sensitive: false, overseas: false, age: false, marketing: false });
   const [pendingVerifyEmail, setPendingVerifyEmail] = useState(''); // 이메일 인증 대기 중인 계정
 
@@ -1713,10 +1713,13 @@ function PsychologicalTestSystem() {
 
   async function handleSignup(e) {
     if (e) e.preventDefault();
-    const { email, password, pwConfirm, nickname } = signupForm;
+    const { email, password, pwConfirm, nickname, gender, age_range, phone } = signupForm;
     if (!email || !password) { setFormMsg({ type: 'error', text: t('이메일과 비밀번호는 필수입니다.','Email and password are required.') }); return; }
     if (password !== pwConfirm) { setFormMsg({ type: 'error', text: t('비밀번호가 일치하지 않습니다.','Passwords do not match.') }); return; }
     if (password.length < 8) { setFormMsg({ type: 'error', text: t('비밀번호는 8자 이상이어야 합니다.','Password must be at least 8 characters.') }); return; }
+    if (phone && !/^01[0-9]-\d{3,4}-\d{4}$/.test(phone)) {
+      setFormMsg({ type: 'error', text: t('핸드폰번호 형식을 확인해 주세요. (예: 010-1234-5678)','Check phone format: 010-1234-5678') }); return;
+    }
 
     // 필수 동의 확인 (개인정보보호법 제22조)
     const { terms, privacy, sensitive, overseas, age } = signupConsents;
@@ -1725,10 +1728,9 @@ function PsychologicalTestSystem() {
     }
 
     setFormMsg({ type: 'loading', text: t('가입 처리 중...','Creating your account...') });
-    // 제휴 채널 파트너 코드 전달 (localStorage에서 읽기)
     let savedPartnerCode = null;
     try { savedPartnerCode = localStorage.getItem('maumful_partner_code'); } catch {}
-    const result = await api.register(email, password, nickname || email.split('@')[0], savedPartnerCode, signupConsents.marketing);
+    const result = await api.register(email, password, nickname || email.split('@')[0], savedPartnerCode, signupConsents.marketing, 'ko', gender || null, age_range || null, phone || null);
     if (!result.success) { setFormMsg({ type: 'error', text: result.error || t('가입에 실패했습니다.','Sign-up failed. Please try again.') }); return; }
 
     // 가입 성공 → 자동 로그인
@@ -1746,7 +1748,7 @@ function PsychologicalTestSystem() {
     setCredits(user.credits);
     setIsLoggedIn(true);
     setFormMsg({ type: '', text: '' });
-    setSignupForm({ email: '', password: '', pwConfirm: '', nickname: '' });
+    setSignupForm({ email: '', password: '', pwConfirm: '', nickname: '', gender: '', age_range: '', phone: '' });
     setSignupConsents({ terms: false, privacy: false, sensitive: false, overseas: false, age: false, marketing: false });
 
     // 초대 코드 자동 적용
@@ -2998,6 +3000,30 @@ function PsychologicalTestSystem() {
           <input type="text" placeholder={t("닉네임 (AI 상담에서 이름으로 불려요)","Nickname (used in AI sessions)")} value={signupForm.nickname}
             onChange={e => setSignupForm(p => ({ ...p, nickname: e.target.value }))}
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm" />
+          {/* 성별 */}
+          <div className="flex gap-2">
+            {[['남성',t('남성','Male')],['여성',t('여성','Female')],['선택안함',t('선택안함','Prefer not to say')]].map(([val,lbl]) => (
+              <button key={val} type="button"
+                onClick={() => setSignupForm(p => ({ ...p, gender: p.gender === val ? '' : val }))}
+                className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 transition ${signupForm.gender === val ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 bg-white text-gray-500'}`}>
+                {lbl}
+              </button>
+            ))}
+          </div>
+          {/* 연령대 */}
+          <select value={signupForm.age_range} onChange={e => setSignupForm(p => ({ ...p, age_range: e.target.value }))}
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm text-gray-600 bg-white">
+            <option value="">{t('연령대 선택 (선택)','Age range (optional)')}</option>
+            {['10대','20대','30대','40대','50대','60대이상'].map(a => <option key={a} value={a}>{a}</option>)}
+          </select>
+          {/* 핸드폰번호 */}
+          <input type="tel" placeholder={t("핸드폰번호 (선택) — 010-1234-5678","Phone (optional) — 010-1234-5678")}
+            value={signupForm.phone}
+            onChange={e => {
+              const v = e.target.value.replace(/[^\d-]/g,'');
+              setSignupForm(p => ({ ...p, phone: v }));
+            }}
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm" />
           <input type="password" placeholder={t("비밀번호 (8자 이상)","Password (min. 8 chars)")} value={signupForm.password}
             onChange={e => setSignupForm(p => ({ ...p, password: e.target.value }))}
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm" />
@@ -3041,7 +3067,7 @@ function PsychologicalTestSystem() {
               onChange={e => setSignupConsents(p => ({ ...p, privacy: e.target.checked }))} />
             <span>
               <button type="button" onClick={() => setView('privacy')} className="text-green-600 underline font-semibold">{t("개인정보 수집·이용","Privacy Collection & Use")}</button> {t("동의","agree")}
-              <span className="text-gray-400 ml-1">{t("(이메일·닉네임·이용기록 / 서비스 제공 / 탈퇴 시까지)","(email·nickname·usage / service / until withdrawal)")}</span>
+              <span className="text-gray-400 ml-1">{t("(이메일·닉네임·성별·연령대·연락처·이용기록 / 서비스 제공 / 탈퇴 시까지)","(email·nickname·gender·age·phone·usage / service / until withdrawal)")}</span>
               <span className="text-red-500 ml-1">{t("(필수)","(required)")}</span>
             </span>
           </label>

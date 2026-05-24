@@ -68,11 +68,11 @@ const api = {
     }
   },
   // ── 인증 ──────────────────────────────────────────────────
-  async register(email, password, nickname, partnerCode, marketingAgreed = false, locale = "ko") {
+  async register(email, password, nickname, partnerCode, marketingAgreed = false, locale = "ko", gender = null, age_range = null, phone = null) {
     const r = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json", ...api._authHeader() },
-      body: JSON.stringify({ email, password, nickname, locale, partnerCode: partnerCode || void 0, marketingAgreed })
+      body: JSON.stringify({ email, password, nickname, locale, partnerCode: partnerCode || void 0, marketingAgreed, gender: gender || void 0, age_range: age_range || void 0, phone: phone || void 0 })
     });
     return r.json();
   },
@@ -436,7 +436,7 @@ function PsychologicalTestSystem() {
   const [apiSettingMsg, setApiSettingMsg] = useState({ type: "", text: "" });
   const [apiSettingLoading, setApiSettingLoading] = useState(false);
   const [showApiKeyInput, setShowApiKeyInput] = useState(false);
-  const [signupForm, setSignupForm] = useState({ email: "", password: "", pwConfirm: "", nickname: "" });
+  const [signupForm, setSignupForm] = useState({ email: "", password: "", pwConfirm: "", nickname: "", gender: "", age_range: "", phone: "" });
   const [signupConsents, setSignupConsents] = useState({ terms: false, privacy: false, sensitive: false, overseas: false, age: false, marketing: false });
   const [pendingVerifyEmail, setPendingVerifyEmail] = useState("");
   const [aiChatUsed, setAiChatUsed] = useState(() => {
@@ -1709,7 +1709,7 @@ function PsychologicalTestSystem() {
   }
   async function handleSignup(e) {
     if (e) e.preventDefault();
-    const { email, password, pwConfirm, nickname } = signupForm;
+    const { email, password, pwConfirm, nickname, gender, age_range, phone } = signupForm;
     if (!email || !password) {
       setFormMsg({ type: "error", text: t("\uC774\uBA54\uC77C\uACFC \uBE44\uBC00\uBC88\uD638\uB294 \uD544\uC218\uC785\uB2C8\uB2E4.", "Email and password are required.") });
       return;
@@ -1720,6 +1720,10 @@ function PsychologicalTestSystem() {
     }
     if (password.length < 8) {
       setFormMsg({ type: "error", text: t("\uBE44\uBC00\uBC88\uD638\uB294 8\uC790 \uC774\uC0C1\uC774\uC5B4\uC57C \uD569\uB2C8\uB2E4.", "Password must be at least 8 characters.") });
+      return;
+    }
+    if (phone && !/^01[0-9]-\d{3,4}-\d{4}$/.test(phone)) {
+      setFormMsg({ type: "error", text: t("\uD578\uB4DC\uD3F0\uBC88\uD638 \uD615\uC2DD\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694. (\uC608: 010-1234-5678)", "Check phone format: 010-1234-5678") });
       return;
     }
     const { terms, privacy, sensitive, overseas, age } = signupConsents;
@@ -1733,7 +1737,7 @@ function PsychologicalTestSystem() {
       savedPartnerCode = localStorage.getItem("maumful_partner_code");
     } catch {
     }
-    const result = await api.register(email, password, nickname || email.split("@")[0], savedPartnerCode, signupConsents.marketing);
+    const result = await api.register(email, password, nickname || email.split("@")[0], savedPartnerCode, signupConsents.marketing, "ko", gender || null, age_range || null, phone || null);
     if (!result.success) {
       setFormMsg({ type: "error", text: result.error || t("\uAC00\uC785\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.", "Sign-up failed. Please try again.") });
       return;
@@ -1755,7 +1759,7 @@ function PsychologicalTestSystem() {
     setCredits(user.credits);
     setIsLoggedIn(true);
     setFormMsg({ type: "", text: "" });
-    setSignupForm({ email: "", password: "", pwConfirm: "", nickname: "" });
+    setSignupForm({ email: "", password: "", pwConfirm: "", nickname: "", gender: "", age_range: "", phone: "" });
     setSignupConsents({ terms: false, privacy: false, sensitive: false, overseas: false, age: false, marketing: false });
     const pendingRef = sessionStorage.getItem("pending_ref_code");
     if (pendingRef) {
@@ -2841,6 +2845,36 @@ Visit Maumful and take the same test again to compare your progress.`));
       onChange: (e) => setSignupForm((p) => ({ ...p, nickname: e.target.value })),
       className: "w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm"
     }
+  ), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" }, [["\uB0A8\uC131", t("\uB0A8\uC131", "Male")], ["\uC5EC\uC131", t("\uC5EC\uC131", "Female")], ["\uC120\uD0DD\uC548\uD568", t("\uC120\uD0DD\uC548\uD568", "Prefer not to say")]].map(([val, lbl]) => /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      key: val,
+      type: "button",
+      onClick: () => setSignupForm((p) => ({ ...p, gender: p.gender === val ? "" : val })),
+      className: `flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 transition ${signupForm.gender === val ? "border-green-500 bg-green-50 text-green-700" : "border-gray-200 bg-white text-gray-500"}`
+    },
+    lbl
+  ))), /* @__PURE__ */ React.createElement(
+    "select",
+    {
+      value: signupForm.age_range,
+      onChange: (e) => setSignupForm((p) => ({ ...p, age_range: e.target.value })),
+      className: "w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm text-gray-600 bg-white"
+    },
+    /* @__PURE__ */ React.createElement("option", { value: "" }, t("\uC5F0\uB839\uB300 \uC120\uD0DD (\uC120\uD0DD)", "Age range (optional)")),
+    ["10\uB300", "20\uB300", "30\uB300", "40\uB300", "50\uB300", "60\uB300\uC774\uC0C1"].map((a) => /* @__PURE__ */ React.createElement("option", { key: a, value: a }, a))
+  ), /* @__PURE__ */ React.createElement(
+    "input",
+    {
+      type: "tel",
+      placeholder: t("\uD578\uB4DC\uD3F0\uBC88\uD638 (\uC120\uD0DD) \u2014 010-1234-5678", "Phone (optional) \u2014 010-1234-5678"),
+      value: signupForm.phone,
+      onChange: (e) => {
+        const v = e.target.value.replace(/[^\d-]/g, "");
+        setSignupForm((p) => ({ ...p, phone: v }));
+      },
+      className: "w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm"
+    }
   ), /* @__PURE__ */ React.createElement(
     "input",
     {
@@ -2891,7 +2925,7 @@ Visit Maumful and take the same test again to compare your progress.`));
       checked: signupConsents.privacy,
       onChange: (e) => setSignupConsents((p) => ({ ...p, privacy: e.target.checked }))
     }
-  ), /* @__PURE__ */ React.createElement("span", null, /* @__PURE__ */ React.createElement("button", { type: "button", onClick: () => setView("privacy"), className: "text-green-600 underline font-semibold" }, t("\uAC1C\uC778\uC815\uBCF4 \uC218\uC9D1\xB7\uC774\uC6A9", "Privacy Collection & Use")), " ", t("\uB3D9\uC758", "agree"), /* @__PURE__ */ React.createElement("span", { className: "text-gray-400 ml-1" }, t("(\uC774\uBA54\uC77C\xB7\uB2C9\uB124\uC784\xB7\uC774\uC6A9\uAE30\uB85D / \uC11C\uBE44\uC2A4 \uC81C\uACF5 / \uD0C8\uD1F4 \uC2DC\uAE4C\uC9C0)", "(email\xB7nickname\xB7usage / service / until withdrawal)")), /* @__PURE__ */ React.createElement("span", { className: "text-red-500 ml-1" }, t("(\uD544\uC218)", "(required)")))), /* @__PURE__ */ React.createElement("label", { className: "flex items-start gap-2 cursor-pointer" }, /* @__PURE__ */ React.createElement(
+  ), /* @__PURE__ */ React.createElement("span", null, /* @__PURE__ */ React.createElement("button", { type: "button", onClick: () => setView("privacy"), className: "text-green-600 underline font-semibold" }, t("\uAC1C\uC778\uC815\uBCF4 \uC218\uC9D1\xB7\uC774\uC6A9", "Privacy Collection & Use")), " ", t("\uB3D9\uC758", "agree"), /* @__PURE__ */ React.createElement("span", { className: "text-gray-400 ml-1" }, t("(\uC774\uBA54\uC77C\xB7\uB2C9\uB124\uC784\xB7\uC131\uBCC4\xB7\uC5F0\uB839\uB300\xB7\uC5F0\uB77D\uCC98\xB7\uC774\uC6A9\uAE30\uB85D / \uC11C\uBE44\uC2A4 \uC81C\uACF5 / \uD0C8\uD1F4 \uC2DC\uAE4C\uC9C0)", "(email\xB7nickname\xB7gender\xB7age\xB7phone\xB7usage / service / until withdrawal)")), /* @__PURE__ */ React.createElement("span", { className: "text-red-500 ml-1" }, t("(\uD544\uC218)", "(required)")))), /* @__PURE__ */ React.createElement("label", { className: "flex items-start gap-2 cursor-pointer" }, /* @__PURE__ */ React.createElement(
     "input",
     {
       type: "checkbox",

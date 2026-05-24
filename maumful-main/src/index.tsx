@@ -44,6 +44,9 @@ type User = {
   credits: number
   is_email_verified: number
   partner_code: string | null
+  gender: string | null
+  age_range: string | null
+  phone: string | null
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -323,7 +326,8 @@ app.post('/api/auth/register', async (c) => {
   if (!rl.allowed) return c.json({ success: false, error: '잠시 후 다시 시도해주세요.' }, 429)
 
   const body = await c.req.json()
-  const { email, password, nickname, locale = 'ko', partnerCode, marketingAgreed = false } = body
+  const { email, password, nickname, locale = 'ko', partnerCode, marketingAgreed = false,
+          gender = null, age_range = null, phone = null } = body
 
   if (!email || !password)
     return c.json({ success: false, error: '이메일과 비밀번호는 필수입니다.' }, 400)
@@ -350,15 +354,19 @@ app.post('/api/auth/register', async (c) => {
   // 가입 보너스: 20 크레딧 + 동의 기록 저장
   const result = await DB.prepare(`
     INSERT INTO users (email, password_hash, nickname, locale, country_code, credits, is_email_verified, partner_code,
-                       terms_agreed_at, privacy_agreed_at, marketing_agreed, marketing_agreed_at, consent_ip)
-    VALUES (?, ?, ?, ?, ?, 20, 0, ?, ?, ?, ?, ?, ?)
+                       terms_agreed_at, privacy_agreed_at, marketing_agreed, marketing_agreed_at, consent_ip,
+                       gender, age_range, phone)
+    VALUES (?, ?, ?, ?, ?, 20, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).bind(
     email.toLowerCase(), passwordHash, nickname ?? email.split('@')[0], locale, country, resolvedPartnerCode,
-    now,                         // terms_agreed_at
-    now,                         // privacy_agreed_at
-    marketingAgreed ? 1 : 0,     // marketing_agreed
-    marketingAgreed ? now : null, // marketing_agreed_at
-    consentIp                    // consent_ip
+    now,                          // terms_agreed_at
+    now,                          // privacy_agreed_at
+    marketingAgreed ? 1 : 0,      // marketing_agreed
+    marketingAgreed ? now : null,  // marketing_agreed_at
+    consentIp,                    // consent_ip
+    gender || null,               // gender
+    age_range || null,            // age_range
+    phone || null,                // phone
   ).run()
 
   const userId = result.meta.last_row_id as number
@@ -684,12 +692,20 @@ app.post('/api/auth/kakao', async (c) => {
   if (!userRes.ok) return c.json({ success: false, error: '카카오 토큰 검증 실패' }, 401)
   const info = await userRes.json() as {
     id: number
-    kakao_account?: { email?: string; profile?: { nickname?: string } }
+    kakao_account?: {
+      email?: string
+      profile?: { nickname?: string }
+      age_range?: string
+      gender?: string
+    }
   }
 
-  const kakaoId  = String(info.id)
-  const email    = info.kakao_account?.email
-  const nickname = info.kakao_account?.profile?.nickname
+  const kakaoId       = String(info.id)
+  const email         = info.kakao_account?.email
+  const nickname      = info.kakao_account?.profile?.nickname
+  const kakaoAgeRange = info.kakao_account?.age_range ?? null        // e.g. "20~29"
+  const kakaoGender   = info.kakao_account?.gender === 'male' ? '남성'
+                      : info.kakao_account?.gender === 'female' ? '여성' : null
 
   let user = await DB.prepare('SELECT * FROM users WHERE social_provider = ? AND social_id = ?')
     .bind('kakao', kakaoId).first<User>()
@@ -708,14 +724,18 @@ app.post('/api/auth/kakao', async (c) => {
       const country  = (c.req.header('cf-ipcountry') ?? 'KR').toUpperCase()
       const emailVal = email?.toLowerCase() ?? `kakao_${kakaoId}@kakao.local`
       const r = await DB.prepare(
-        'INSERT INTO users (email,social_provider,social_id,nickname,locale,country_code,is_email_verified,credits) VALUES (?,?,?,?,?,?,?,20)'
-      ).bind(emailVal, 'kakao', kakaoId, nickname ?? '카카오사용자', 'ko', country, email ? 1 : 0).run()
+        'INSERT INTO users (email,social_provider,social_id,nickname,locale,country_code,is_email_verified,credits,gender,age_range) VALUES (?,?,?,?,?,?,?,20,?,?)'
+      ).bind(emailVal, 'kakao', kakaoId, nickname ?? '카카오사용자', 'ko', country, email ? 1 : 0, kakaoGender, kakaoAgeRange).run()
       const newId = r.meta.last_row_id as number
       await DB.batch([
         DB.prepare('INSERT INTO credit_transactions (user_id,type,amount,reason,balance_after) VALUES (?,?,?,?,?)').bind(newId, 'gain', 20, 'signup_bonus', 20),
       ])
       user = await DB.prepare('SELECT * FROM users WHERE id = ?').bind(newId).first<User>() as User
     }
+  } else if (kakaoGender || kakaoAgeRange) {
+    // 기존 회원: 카카오에서 새로 받은 프로필 정보가 있으면 업데이트
+    if (!user.gender && kakaoGender)     await DB.prepare('UPDATE users SET gender=? WHERE id=?').bind(kakaoGender, user.id).run()
+    if (!user.age_range && kakaoAgeRange) await DB.prepare('UPDATE users SET age_range=? WHERE id=?').bind(kakaoAgeRange, user.id).run()
   }
 
   const secret       = await getJwtSecret(KV)
