@@ -205,10 +205,14 @@ function EFMTGame({ onExit }) {
   const [personalBest, setPersonalBest]  = useState(null); // 이전 최고점
   const [computedScore, setComputedScore] = useState(0);   // done 화면 점수
 
-  const timerRef     = useRef(null);
-  const sessionRef   = useRef(Date.now());
-  const comboRef     = useRef(0); // 현재 연속 정답 수
-  const maxComboRef  = useRef(0); // 이번 라운드 최대 콤보
+  const timerRef          = useRef(null);
+  const sessionRef        = useRef(Date.now());
+  const comboRef          = useRef(0);
+  const maxComboRef       = useRef(0);
+  const correctRef        = useRef(0);
+  const incorrectRef      = useRef(0);
+  const totalTargetsRef   = useRef(0);
+  const reactionTimesRef  = useRef([]);
 
   const cfg = DIFFICULTY_CONFIG[difficulty];
 
@@ -229,8 +233,10 @@ function EFMTGame({ onExit }) {
     const targets = grid.filter(g => EMOTIONS[g.emotion].isTarget).length;
     setCells(grid);
     setTotalTargets(targets);
+    totalTargetsRef.current = targets;
     setTimeLeft(c.roundSec);
     setCorrect(0); setIncorrect(0); setReactionTimes([]);
+    correctRef.current = 0; incorrectRef.current = 0; reactionTimesRef.current = [];
     setRoundStartTime(Date.now());
     comboRef.current = 0; maxComboRef.current = 0;
     setComboDisplay(0);
@@ -257,14 +263,18 @@ function EFMTGame({ onExit }) {
   // ── 라운드 종료 ───────────────────────────────────────────
   const endRound = useCallback(() => {
     clearInterval(timerRef.current);
+    const _correct       = correctRef.current;
+    const _incorrect     = incorrectRef.current;
+    const _totalTargets  = totalTargetsRef.current;
+    const _reactionTimes = reactionTimesRef.current;
     setRoundStats(prev => {
       const stat = {
         round,
-        correct, incorrect, totalTargets,
-        avgReaction: reactionTimes.length > 0
-          ? Math.round(reactionTimes.reduce((a,b)=>a+b,0) / reactionTimes.length)
+        correct: _correct, incorrect: _incorrect, totalTargets: _totalTargets,
+        avgReaction: _reactionTimes.length > 0
+          ? Math.round(_reactionTimes.reduce((a,b)=>a+b,0) / _reactionTimes.length)
           : 0,
-        missedTargets: Math.max(0, totalTargets - correct),
+        missedTargets: Math.max(0, _totalTargets - _correct),
         maxCombo: maxComboRef.current,
       };
       const next = [...prev, stat];
@@ -288,7 +298,7 @@ function EFMTGame({ onExit }) {
       }
       return next;
     });
-  }, [round, correct, incorrect, totalTargets, reactionTimes, cfg.rounds]);
+  }, [round, cfg.rounds]);
 
   // ── 꽃 클릭 ───────────────────────────────────────────────
   const handleFlowerClick = useCallback((cellId) => {
@@ -303,8 +313,8 @@ function EFMTGame({ onExit }) {
     ));
 
     if (isTarget) {
-      setCorrect(n => n + 1);
-      setReactionTimes(prev => [...prev, rt]);
+      setCorrect(n => { correctRef.current = n + 1; return n + 1; });
+      setReactionTimes(prev => { const next = [...prev, rt]; reactionTimesRef.current = next; return next; });
       // 콤보 배율 티어 감지 (3→×1.5, 5→×2.0, 10→×3.0)
       const prevTier = comboRef.current >= 10 ? 3 : comboRef.current >= 5 ? 2 : comboRef.current >= 3 ? 1 : 0;
       comboRef.current += 1;
@@ -323,7 +333,7 @@ function EFMTGame({ onExit }) {
         ));
       }, 400);
     } else {
-      setIncorrect(n => n + 1);
+      setIncorrect(n => { incorrectRef.current = n + 1; return n + 1; });
       // 콤보 초기화
       comboRef.current = 0;
       setComboDisplay(0);
