@@ -3,14 +3,16 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev":   "wrangler dev",
-    "deploy": "wrangler deploy"
+    "dev": "wrangler dev",
+    "build:jsx": "npx esbuild public/static/game_engine.jsx public/static/game_registry.jsx public/static/games/garden.jsx public/static/games/efmt.jsx public/static/games/gratitude.jsx public/static/games/tree.jsx public/static/games/burnout.jsx public/static/games/mood.jsx public/static/games/focus.jsx public/static/games/worry.jsx public/static/games/qt.jsx public/static/game_hub.jsx --bundle=false --loader:.jsx=jsx --outdir=public/static/compiled",
+    "deploy": "npm run build:jsx && wrangler deploy"
   },
   "dependencies": {
     "hono": "^4.4.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240821.1",
+    "esbuild": "^0.28.0",
     "typescript": "^5.5.2",
     "wrangler": "^3.68.0"
   }

@@ -124,33 +124,18 @@ const HTML = (v: string) => `<!DOCTYPE html>
     .hub-top-bar{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,#6B21A8,#9333EA);z-index:9999;animation:topBarLoad .8s ease forwards;border-radius:0 3px 3px 0}
     .touch-active{transform:scale(0.96)!important;transition:transform .1s!important}
   </style>
-  <meta http-equiv="Cache-Control" content="no-cache">
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body>
   <div id="root"></div>
-  <script type="text/babel" src="/static/game_engine.jsx?v=${v}"></script>
-  <script type="text/babel" src="/static/game_registry.jsx?v=${v}"></script>
-  <script type="text/babel" src="/static/games/garden.jsx?v=${v}"></script>
-  <script type="text/babel" src="/static/games/efmt.jsx?v=${v}"></script>
-  <script type="text/babel" src="/static/games/gratitude.jsx?v=${v}"></script>
-  <script type="text/babel" src="/static/games/tree.jsx?v=${v}"></script>
-  <script type="text/babel" src="/static/games/burnout.jsx?v=${v}"></script>
-  <script type="text/babel" src="/static/games/mood.jsx?v=${v}"></script>
-  <script type="text/babel" src="/static/games/focus.jsx?v=${v}"></script>
-  <script type="text/babel" src="/static/games/worry.jsx?v=${v}"></script>
-  <script type="text/babel" src="/static/games/qt.jsx?v=${v}"></script>
-  <script type="text/babel" src="/static/game_hub.jsx?v=${v}"></script>
   <script>
-    // URL ?t= 파라미터로 The Light of Life JWT 토큰 수신 (SSO — 별도 로그인 불필요)
+    // SSO 토큰 처리 — React 마운트 전 실행 필수
     const urlParams = new URLSearchParams(window.location.search);
     const t = urlParams.get('t');
     const gameParam = urlParams.get('game');
     if (t) {
       localStorage.setItem('game_token', t);
-      // ?game= 파라미터는 보존하여 game_hub.jsx가 자동 실행할 수 있도록
       const nextUrl = gameParam ? '/?game=' + encodeURIComponent(gameParam) : '/';
       window.history.replaceState({}, '', nextUrl);
     }
@@ -158,6 +143,18 @@ const HTML = (v: string) => `<!DOCTYPE html>
       navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
     }
   </script>
+  <script src="/static/compiled/game_engine.js?v=${v}"></script>
+  <script src="/static/compiled/game_registry.js?v=${v}"></script>
+  <script src="/static/compiled/games/garden.js?v=${v}"></script>
+  <script src="/static/compiled/games/efmt.js?v=${v}"></script>
+  <script src="/static/compiled/games/gratitude.js?v=${v}"></script>
+  <script src="/static/compiled/games/tree.js?v=${v}"></script>
+  <script src="/static/compiled/games/burnout.js?v=${v}"></script>
+  <script src="/static/compiled/games/mood.js?v=${v}"></script>
+  <script src="/static/compiled/games/focus.js?v=${v}"></script>
+  <script src="/static/compiled/games/worry.js?v=${v}"></script>
+  <script src="/static/compiled/games/qt.js?v=${v}"></script>
+  <script src="/static/compiled/game_hub.js?v=${v}"></script>
 </body>
 </html>`
 
