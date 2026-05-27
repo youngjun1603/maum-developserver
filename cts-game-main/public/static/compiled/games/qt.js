@@ -1,5 +1,3 @@
-"use strict";
-import { jsx, jsxs } from "react/jsx-runtime";
 ;
 (function injectQTStyles() {
   if (document.getElementById("qt-styles")) return;
@@ -74,7 +72,7 @@ const QTGame = ({ onExit }) => {
   }
   if (screen === "intro") {
     window._qtStart = Date.now();
-    return /* @__PURE__ */ jsxs("div", { className: "qt-card", style: {
+    return /* @__PURE__ */ React.createElement("div", { className: "qt-card", style: {
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
@@ -84,255 +82,194 @@ const QTGame = ({ onExit }) => {
       padding: 32,
       textAlign: "center",
       fontFamily: "'Noto Sans KR',sans-serif"
-    }, children: [
-      /* @__PURE__ */ jsx("div", { className: "qt-book-open", style: {
-        width: 80,
-        height: 80,
-        borderRadius: "50%",
-        background: "linear-gradient(135deg,#6B21A8,#9333EA)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: 40,
-        marginBottom: 24
-      }, children: "\u{1F4D6}" }),
-      /* @__PURE__ */ jsx("h1", { style: { fontSize: 26, fontWeight: 700, color: "#4C1D95", marginBottom: 8 }, children: "QT \uCCB4\uD06C\uC778" }),
-      /* @__PURE__ */ jsx("p", { style: { fontSize: 16, color: "#6B21A8", fontWeight: 500, marginBottom: 4 }, children: "\uC624\uB298\uC758 \uB9D0\uC500 \uBB35\uC0C1\uC744 \uAE30\uB85D\uD558\uC138\uC694" }),
-      /* @__PURE__ */ jsxs("p", { style: { fontSize: 13, color: "#7C3AED", marginBottom: 28, lineHeight: 1.6 }, children: [
-        '"\uC624\uC9C1 \uC5EC\uD638\uC640\uC758 \uC728\uBC95\uC744 \uC990\uAC70\uC6CC\uD558\uC5EC',
-        /* @__PURE__ */ jsx("br", {}),
-        '\uADF8\uC758 \uC728\uBC95\uC744 \uC8FC\uC57C\uB85C \uBB35\uC0C1\uD558\uB294\uB3C4\uB2E4"',
-        /* @__PURE__ */ jsx("br", {}),
-        /* @__PURE__ */ jsx("span", { style: { fontSize: 11, color: "#9333EA" }, children: "\uC2DC\uD3B8 1:2" })
-      ] }),
-      todayDone && /* @__PURE__ */ jsx("div", { style: {
-        background: "linear-gradient(135deg,#D4AF37,#F59E0B)",
-        color: "white",
-        borderRadius: 12,
-        padding: "10px 20px",
-        marginBottom: 20,
-        fontSize: 14,
-        fontWeight: 600
-      }, children: "\u2705 \uC624\uB298 QT\uB97C \uC644\uB8CC\uD588\uC5B4\uC694!" }),
-      /* @__PURE__ */ jsxs("div", { style: { display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" }, children: [
-        /* @__PURE__ */ jsx(
-          "button",
-          {
-            onClick: () => setScreen("write"),
-            style: {
-              background: "linear-gradient(135deg,#6B21A8,#9333EA)",
-              color: "white",
-              border: "none",
-              borderRadius: 14,
-              padding: "14px 28px",
-              fontSize: 16,
-              fontWeight: 700,
-              cursor: "pointer"
-            },
-            children: todayDone ? "\uB2E4\uC2DC \uAE30\uB85D\uD558\uAE30" : "\u{1F4D6} \uC624\uB298 QT \uC2DC\uC791"
-          }
-        ),
-        /* @__PURE__ */ jsx(
-          "button",
-          {
-            onClick: () => setScreen("calendar"),
-            style: {
-              background: "#F3E8FF",
-              color: "#6B21A8",
-              border: "2px solid #C4B5FD",
-              borderRadius: 14,
-              padding: "14px 28px",
-              fontSize: 15,
-              fontWeight: 600,
-              cursor: "pointer"
-            },
-            children: "\u{1F4C5} QT \uB2EC\uB825 \uBCF4\uAE30"
-          }
-        )
-      ] }),
-      /* @__PURE__ */ jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginTop: 20, color: "#9333EA", fontSize: 13 }, children: [
-        /* @__PURE__ */ jsxs("span", { children: [
-          "\uC5F0\uC18D ",
-          history.length > 0 ? calcStreak(history) : 0,
-          "\uC77C QT \uC911"
-        ] }),
-        /* @__PURE__ */ jsx("span", { children: "\u{1F525}" })
-      ] }),
-      /* @__PURE__ */ jsx(
-        "button",
-        {
-          onClick: () => onExit(null),
-          style: { marginTop: 24, background: "none", border: "none", color: "#9CA3AF", fontSize: 13, cursor: "pointer" },
-          children: "\u2190 \uAC8C\uC784 \uBAA9\uB85D\uC73C\uB85C"
+    } }, /* @__PURE__ */ React.createElement("div", { className: "qt-book-open", style: {
+      width: 80,
+      height: 80,
+      borderRadius: "50%",
+      background: "linear-gradient(135deg,#6B21A8,#9333EA)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: 40,
+      marginBottom: 24
+    } }, "\u{1F4D6}"), /* @__PURE__ */ React.createElement("h1", { style: { fontSize: 26, fontWeight: 700, color: "#4C1D95", marginBottom: 8 } }, "QT \uCCB4\uD06C\uC778"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 16, color: "#6B21A8", fontWeight: 500, marginBottom: 4 } }, "\uC624\uB298\uC758 \uB9D0\uC500 \uBB35\uC0C1\uC744 \uAE30\uB85D\uD558\uC138\uC694"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: "#7C3AED", marginBottom: 28, lineHeight: 1.6 } }, '"\uC624\uC9C1 \uC5EC\uD638\uC640\uC758 \uC728\uBC95\uC744 \uC990\uAC70\uC6CC\uD558\uC5EC', /* @__PURE__ */ React.createElement("br", null), '\uADF8\uC758 \uC728\uBC95\uC744 \uC8FC\uC57C\uB85C \uBB35\uC0C1\uD558\uB294\uB3C4\uB2E4"', /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: "#9333EA" } }, "\uC2DC\uD3B8 1:2")), todayDone && /* @__PURE__ */ React.createElement("div", { style: {
+      background: "linear-gradient(135deg,#D4AF37,#F59E0B)",
+      color: "white",
+      borderRadius: 12,
+      padding: "10px 20px",
+      marginBottom: 20,
+      fontSize: 14,
+      fontWeight: 600
+    } }, "\u2705 \uC624\uB298 QT\uB97C \uC644\uB8CC\uD588\uC5B4\uC694!"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" } }, /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        onClick: () => setScreen("write"),
+        style: {
+          background: "linear-gradient(135deg,#6B21A8,#9333EA)",
+          color: "white",
+          border: "none",
+          borderRadius: 14,
+          padding: "14px 28px",
+          fontSize: 16,
+          fontWeight: 700,
+          cursor: "pointer"
         }
-      )
-    ] });
+      },
+      todayDone ? "\uB2E4\uC2DC \uAE30\uB85D\uD558\uAE30" : "\u{1F4D6} \uC624\uB298 QT \uC2DC\uC791"
+    ), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        onClick: () => setScreen("calendar"),
+        style: {
+          background: "#F3E8FF",
+          color: "#6B21A8",
+          border: "2px solid #C4B5FD",
+          borderRadius: 14,
+          padding: "14px 28px",
+          fontSize: 15,
+          fontWeight: 600,
+          cursor: "pointer"
+        }
+      },
+      "\u{1F4C5} QT \uB2EC\uB825 \uBCF4\uAE30"
+    )), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, marginTop: 20, color: "#9333EA", fontSize: 13 } }, /* @__PURE__ */ React.createElement("span", null, "\uC5F0\uC18D ", history.length > 0 ? calcStreak(history) : 0, "\uC77C QT \uC911"), /* @__PURE__ */ React.createElement("span", null, "\u{1F525}")), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        onClick: () => onExit(null),
+        style: { marginTop: 24, background: "none", border: "none", color: "#9CA3AF", fontSize: 13, cursor: "pointer" }
+      },
+      "\u2190 \uAC8C\uC784 \uBAA9\uB85D\uC73C\uB85C"
+    ));
   }
   if (screen === "write") {
-    return /* @__PURE__ */ jsxs("div", { className: "qt-card", style: {
+    return /* @__PURE__ */ React.createElement("div", { className: "qt-card", style: {
       minHeight: "100vh",
       background: "#FDFBFF",
       fontFamily: "'Noto Sans KR',sans-serif"
-    }, children: [
-      /* @__PURE__ */ jsxs("div", { style: {
-        background: "linear-gradient(135deg,#6B21A8,#9333EA)",
-        padding: "16px 20px",
-        display: "flex",
-        alignItems: "center",
-        gap: 12
-      }, children: [
-        /* @__PURE__ */ jsx(
-          "button",
-          {
-            onClick: () => setScreen("intro"),
-            style: { background: "none", border: "none", color: "rgba(255,255,255,0.8)", fontSize: 20, cursor: "pointer" },
-            children: "\u2190"
-          }
-        ),
-        /* @__PURE__ */ jsxs("div", { children: [
-          /* @__PURE__ */ jsx("div", { style: { color: "white", fontWeight: 700, fontSize: 17 }, children: "\u{1F4D6} \uC624\uB298\uC758 QT" }),
-          /* @__PURE__ */ jsx("div", { style: { color: "rgba(255,255,255,0.8)", fontSize: 12 }, children: todayKey })
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxs("div", { style: { maxWidth: 480, margin: "0 auto", padding: "24px 20px" }, children: [
-        /* @__PURE__ */ jsxs("div", { style: { background: "white", borderRadius: 16, padding: 20, marginBottom: 16, boxShadow: "0 2px 12px rgba(107,33,168,0.08)" }, children: [
-          /* @__PURE__ */ jsx("div", { style: { fontSize: 13, fontWeight: 700, color: "#6B21A8", marginBottom: 12 }, children: "\u{1F4DA} \uC624\uB298 \uC77D\uC740 \uC131\uACBD" }),
-          /* @__PURE__ */ jsxs("div", { style: { display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 10 }, children: [
-            /* @__PURE__ */ jsxs("div", { children: [
-              /* @__PURE__ */ jsx("label", { style: { fontSize: 11, color: "#7C3AED", fontWeight: 600 }, children: "\uCC45 \uC774\uB984 *" }),
-              /* @__PURE__ */ jsx(
-                "input",
-                {
-                  value: book,
-                  onChange: (e) => setBook(e.target.value),
-                  placeholder: "\uC608: \uC2DC\uD3B8",
-                  style: {
-                    width: "100%",
-                    border: "1.5px solid #DDD6FE",
-                    borderRadius: 10,
-                    padding: "9px 12px",
-                    fontSize: 14,
-                    outline: "none",
-                    marginTop: 4,
-                    fontFamily: "'Noto Sans KR',sans-serif"
-                  }
-                }
-              )
-            ] }),
-            /* @__PURE__ */ jsxs("div", { children: [
-              /* @__PURE__ */ jsx("label", { style: { fontSize: 11, color: "#7C3AED", fontWeight: 600 }, children: "\uC7A5" }),
-              /* @__PURE__ */ jsx(
-                "input",
-                {
-                  value: chapter,
-                  onChange: (e) => setChapter(e.target.value),
-                  placeholder: "1",
-                  style: {
-                    width: "100%",
-                    border: "1.5px solid #DDD6FE",
-                    borderRadius: 10,
-                    padding: "9px 12px",
-                    fontSize: 14,
-                    outline: "none",
-                    marginTop: 4,
-                    fontFamily: "'Noto Sans KR',sans-serif"
-                  }
-                }
-              )
-            ] }),
-            /* @__PURE__ */ jsxs("div", { children: [
-              /* @__PURE__ */ jsx("label", { style: { fontSize: 11, color: "#7C3AED", fontWeight: 600 }, children: "\uC808" }),
-              /* @__PURE__ */ jsx(
-                "input",
-                {
-                  value: verse,
-                  onChange: (e) => setVerse(e.target.value),
-                  placeholder: "1-10",
-                  style: {
-                    width: "100%",
-                    border: "1.5px solid #DDD6FE",
-                    borderRadius: 10,
-                    padding: "9px 12px",
-                    fontSize: 14,
-                    outline: "none",
-                    marginTop: 4,
-                    fontFamily: "'Noto Sans KR',sans-serif"
-                  }
-                }
-              )
-            ] })
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxs("div", { style: { background: "white", borderRadius: 16, padding: 20, marginBottom: 16, boxShadow: "0 2px 12px rgba(107,33,168,0.08)" }, children: [
-          /* @__PURE__ */ jsx("div", { style: { fontSize: 13, fontWeight: 700, color: "#6B21A8", marginBottom: 8 }, children: "\u{1F331} \uC624\uB298 \uB9D0\uC500\uC5D0\uC11C \uBC1B\uC740 \uC740\uD61C *" }),
-          /* @__PURE__ */ jsx(
-            "textarea",
-            {
-              value: meditation,
-              onChange: (e) => setMeditation(e.target.value),
-              placeholder: "\uC624\uB298 \uC77D\uC740 \uB9D0\uC500\uC774 \uB0B4 \uB9C8\uC74C\uC5D0 \uC5B4\uB5BB\uAC8C \uB2E4\uAC00\uC654\uB098\uC694? \uAE68\uB2EC\uC740 \uAC83, \uC704\uB85C \uBC1B\uC740 \uAC83, \uB3C4\uC804 \uBC1B\uC740 \uAC83\uC744 \uC790\uC720\uB86D\uAC8C \uC801\uC5B4\uBCF4\uC138\uC694.",
-              rows: 5,
-              style: {
-                width: "100%",
-                border: "1.5px solid #DDD6FE",
-                borderRadius: 12,
-                padding: "12px 14px",
-                fontSize: 14,
-                outline: "none",
-                resize: "vertical",
-                fontFamily: "'Noto Sans KR',sans-serif",
-                lineHeight: 1.6,
-                color: "#1A1A1A"
-              }
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxs("div", { style: { background: "white", borderRadius: 16, padding: 20, marginBottom: 24, boxShadow: "0 2px 12px rgba(107,33,168,0.08)" }, children: [
-          /* @__PURE__ */ jsx("div", { style: { fontSize: 13, fontWeight: 700, color: "#6B21A8", marginBottom: 8 }, children: "\u{1F64F} \uC624\uB298\uC758 \uAE30\uB3C4 \uC81C\uBAA9 (\uC120\uD0DD)" }),
-          /* @__PURE__ */ jsx(
-            "textarea",
-            {
-              value: prayer,
-              onChange: (e) => setPrayer(e.target.value),
-              placeholder: "\uC624\uB298 \uB9D0\uC500\uC744 \uD1B5\uD574 \uB4DC\uB9AC\uACE0 \uC2F6\uC740 \uAE30\uB3C4\uB97C \uC801\uC5B4\uBCF4\uC138\uC694.",
-              rows: 3,
-              style: {
-                width: "100%",
-                border: "1.5px solid #DDD6FE",
-                borderRadius: 12,
-                padding: "12px 14px",
-                fontSize: 14,
-                outline: "none",
-                resize: "vertical",
-                fontFamily: "'Noto Sans KR',sans-serif",
-                lineHeight: 1.6,
-                color: "#1A1A1A"
-              }
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsx(
-          "button",
-          {
-            onClick: handleSubmit,
-            disabled: !book.trim() || !meditation.trim() || saving,
-            style: {
-              width: "100%",
-              background: book.trim() && meditation.trim() && !saving ? "linear-gradient(135deg,#6B21A8,#9333EA)" : "#E5E7EB",
-              color: book.trim() && meditation.trim() ? "white" : "#9CA3AF",
-              border: "none",
-              borderRadius: 14,
-              padding: "15px",
-              fontSize: 16,
-              fontWeight: 700,
-              cursor: book.trim() && meditation.trim() && !saving ? "pointer" : "not-allowed",
-              fontFamily: "'Noto Sans KR',sans-serif"
-            },
-            children: saving ? "\uC800\uC7A5 \uC911..." : "\u2705 QT \uC644\uB8CC\uD558\uAE30"
-          }
-        )
-      ] })
-    ] });
+    } }, /* @__PURE__ */ React.createElement("div", { style: {
+      background: "linear-gradient(135deg,#6B21A8,#9333EA)",
+      padding: "16px 20px",
+      display: "flex",
+      alignItems: "center",
+      gap: 12
+    } }, /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        onClick: () => setScreen("intro"),
+        style: { background: "none", border: "none", color: "rgba(255,255,255,0.8)", fontSize: 20, cursor: "pointer" }
+      },
+      "\u2190"
+    ), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { color: "white", fontWeight: 700, fontSize: 17 } }, "\u{1F4D6} \uC624\uB298\uC758 QT"), /* @__PURE__ */ React.createElement("div", { style: { color: "rgba(255,255,255,0.8)", fontSize: 12 } }, todayKey))), /* @__PURE__ */ React.createElement("div", { style: { maxWidth: 480, margin: "0 auto", padding: "24px 20px" } }, /* @__PURE__ */ React.createElement("div", { style: { background: "white", borderRadius: 16, padding: 20, marginBottom: 16, boxShadow: "0 2px 12px rgba(107,33,168,0.08)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: "#6B21A8", marginBottom: 12 } }, "\u{1F4DA} \uC624\uB298 \uC77D\uC740 \uC131\uACBD"), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 10 } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 11, color: "#7C3AED", fontWeight: 600 } }, "\uCC45 \uC774\uB984 *"), /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        value: book,
+        onChange: (e) => setBook(e.target.value),
+        placeholder: "\uC608: \uC2DC\uD3B8",
+        style: {
+          width: "100%",
+          border: "1.5px solid #DDD6FE",
+          borderRadius: 10,
+          padding: "9px 12px",
+          fontSize: 14,
+          outline: "none",
+          marginTop: 4,
+          fontFamily: "'Noto Sans KR',sans-serif"
+        }
+      }
+    )), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 11, color: "#7C3AED", fontWeight: 600 } }, "\uC7A5"), /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        value: chapter,
+        onChange: (e) => setChapter(e.target.value),
+        placeholder: "1",
+        style: {
+          width: "100%",
+          border: "1.5px solid #DDD6FE",
+          borderRadius: 10,
+          padding: "9px 12px",
+          fontSize: 14,
+          outline: "none",
+          marginTop: 4,
+          fontFamily: "'Noto Sans KR',sans-serif"
+        }
+      }
+    )), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 11, color: "#7C3AED", fontWeight: 600 } }, "\uC808"), /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        value: verse,
+        onChange: (e) => setVerse(e.target.value),
+        placeholder: "1-10",
+        style: {
+          width: "100%",
+          border: "1.5px solid #DDD6FE",
+          borderRadius: 10,
+          padding: "9px 12px",
+          fontSize: 14,
+          outline: "none",
+          marginTop: 4,
+          fontFamily: "'Noto Sans KR',sans-serif"
+        }
+      }
+    )))), /* @__PURE__ */ React.createElement("div", { style: { background: "white", borderRadius: 16, padding: 20, marginBottom: 16, boxShadow: "0 2px 12px rgba(107,33,168,0.08)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: "#6B21A8", marginBottom: 8 } }, "\u{1F331} \uC624\uB298 \uB9D0\uC500\uC5D0\uC11C \uBC1B\uC740 \uC740\uD61C *"), /* @__PURE__ */ React.createElement(
+      "textarea",
+      {
+        value: meditation,
+        onChange: (e) => setMeditation(e.target.value),
+        placeholder: "\uC624\uB298 \uC77D\uC740 \uB9D0\uC500\uC774 \uB0B4 \uB9C8\uC74C\uC5D0 \uC5B4\uB5BB\uAC8C \uB2E4\uAC00\uC654\uB098\uC694? \uAE68\uB2EC\uC740 \uAC83, \uC704\uB85C \uBC1B\uC740 \uAC83, \uB3C4\uC804 \uBC1B\uC740 \uAC83\uC744 \uC790\uC720\uB86D\uAC8C \uC801\uC5B4\uBCF4\uC138\uC694.",
+        rows: 5,
+        style: {
+          width: "100%",
+          border: "1.5px solid #DDD6FE",
+          borderRadius: 12,
+          padding: "12px 14px",
+          fontSize: 14,
+          outline: "none",
+          resize: "vertical",
+          fontFamily: "'Noto Sans KR',sans-serif",
+          lineHeight: 1.6,
+          color: "#1A1A1A"
+        }
+      }
+    )), /* @__PURE__ */ React.createElement("div", { style: { background: "white", borderRadius: 16, padding: 20, marginBottom: 24, boxShadow: "0 2px 12px rgba(107,33,168,0.08)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: "#6B21A8", marginBottom: 8 } }, "\u{1F64F} \uC624\uB298\uC758 \uAE30\uB3C4 \uC81C\uBAA9 (\uC120\uD0DD)"), /* @__PURE__ */ React.createElement(
+      "textarea",
+      {
+        value: prayer,
+        onChange: (e) => setPrayer(e.target.value),
+        placeholder: "\uC624\uB298 \uB9D0\uC500\uC744 \uD1B5\uD574 \uB4DC\uB9AC\uACE0 \uC2F6\uC740 \uAE30\uB3C4\uB97C \uC801\uC5B4\uBCF4\uC138\uC694.",
+        rows: 3,
+        style: {
+          width: "100%",
+          border: "1.5px solid #DDD6FE",
+          borderRadius: 12,
+          padding: "12px 14px",
+          fontSize: 14,
+          outline: "none",
+          resize: "vertical",
+          fontFamily: "'Noto Sans KR',sans-serif",
+          lineHeight: 1.6,
+          color: "#1A1A1A"
+        }
+      }
+    )), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        onClick: handleSubmit,
+        disabled: !book.trim() || !meditation.trim() || saving,
+        style: {
+          width: "100%",
+          background: book.trim() && meditation.trim() && !saving ? "linear-gradient(135deg,#6B21A8,#9333EA)" : "#E5E7EB",
+          color: book.trim() && meditation.trim() ? "white" : "#9CA3AF",
+          border: "none",
+          borderRadius: 14,
+          padding: "15px",
+          fontSize: 16,
+          fontWeight: 700,
+          cursor: book.trim() && meditation.trim() && !saving ? "pointer" : "not-allowed",
+          fontFamily: "'Noto Sans KR',sans-serif"
+        }
+      },
+      saving ? "\uC800\uC7A5 \uC911..." : "\u2705 QT \uC644\uB8CC\uD558\uAE30"
+    )));
   }
   if (screen === "calendar") {
     const year = TODAY.getFullYear();
@@ -342,124 +279,80 @@ const QTGame = ({ onExit }) => {
     const monthDates = [];
     for (let i = 0; i < firstDay; i++) monthDates.push(null);
     for (let d = 1; d <= daysInMonth; d++) monthDates.push(d);
-    return /* @__PURE__ */ jsxs("div", { className: "qt-card", style: {
+    return /* @__PURE__ */ React.createElement("div", { className: "qt-card", style: {
       minHeight: "100vh",
       background: "#FDFBFF",
       fontFamily: "'Noto Sans KR',sans-serif"
-    }, children: [
-      /* @__PURE__ */ jsxs("div", { style: {
-        background: "linear-gradient(135deg,#6B21A8,#9333EA)",
-        padding: "16px 20px",
+    } }, /* @__PURE__ */ React.createElement("div", { style: {
+      background: "linear-gradient(135deg,#6B21A8,#9333EA)",
+      padding: "16px 20px",
+      display: "flex",
+      alignItems: "center",
+      gap: 12
+    } }, /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        onClick: () => setScreen("intro"),
+        style: { background: "none", border: "none", color: "rgba(255,255,255,0.8)", fontSize: 20, cursor: "pointer" }
+      },
+      "\u2190"
+    ), /* @__PURE__ */ React.createElement("div", { style: { color: "white", fontWeight: 700, fontSize: 17 } }, "\u{1F4C5} QT \uB2EC\uB825")), /* @__PURE__ */ React.createElement("div", { style: { maxWidth: 480, margin: "0 auto", padding: "24px 20px" } }, /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", marginBottom: 20 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 18, fontWeight: 700, color: "#4C1D95" } }, year, "\uB144 ", month + 1, "\uC6D4"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "#7C3AED", marginTop: 4 } }, "\uC774\uBC88 \uB2EC ", history.filter((h) => h.date.startsWith(`${year}-${String(month + 1).padStart(2, "0")}`)).length, "\uD68C QT \uC644\uB8CC")), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4, marginBottom: 8 } }, ["\uC77C", "\uC6D4", "\uD654", "\uC218", "\uBAA9", "\uAE08", "\uD1A0"].map((d) => /* @__PURE__ */ React.createElement("div", { key: d, style: { textAlign: "center", fontSize: 11, fontWeight: 700, color: "#7C3AED", padding: "4px 0" } }, d))), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4 } }, monthDates.map((d, i) => {
+      if (!d) return /* @__PURE__ */ React.createElement("div", { key: i });
+      const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      const done = history.some((h) => h.date === dateKey);
+      const isToday = dateKey === todayKey;
+      return /* @__PURE__ */ React.createElement("div", { key: i, style: {
+        aspectRatio: "1",
+        borderRadius: "50%",
         display: "flex",
         alignItems: "center",
-        gap: 12
-      }, children: [
-        /* @__PURE__ */ jsx(
-          "button",
-          {
-            onClick: () => setScreen("intro"),
-            style: { background: "none", border: "none", color: "rgba(255,255,255,0.8)", fontSize: 20, cursor: "pointer" },
-            children: "\u2190"
-          }
-        ),
-        /* @__PURE__ */ jsx("div", { style: { color: "white", fontWeight: 700, fontSize: 17 }, children: "\u{1F4C5} QT \uB2EC\uB825" })
-      ] }),
-      /* @__PURE__ */ jsxs("div", { style: { maxWidth: 480, margin: "0 auto", padding: "24px 20px" }, children: [
-        /* @__PURE__ */ jsxs("div", { style: { textAlign: "center", marginBottom: 20 }, children: [
-          /* @__PURE__ */ jsxs("div", { style: { fontSize: 18, fontWeight: 700, color: "#4C1D95" }, children: [
-            year,
-            "\uB144 ",
-            month + 1,
-            "\uC6D4"
-          ] }),
-          /* @__PURE__ */ jsxs("div", { style: { fontSize: 13, color: "#7C3AED", marginTop: 4 }, children: [
-            "\uC774\uBC88 \uB2EC ",
-            history.filter((h) => h.date.startsWith(`${year}-${String(month + 1).padStart(2, "0")}`)).length,
-            "\uD68C QT \uC644\uB8CC"
-          ] })
-        ] }),
-        /* @__PURE__ */ jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4, marginBottom: 8 }, children: ["\uC77C", "\uC6D4", "\uD654", "\uC218", "\uBAA9", "\uAE08", "\uD1A0"].map((d) => /* @__PURE__ */ jsx("div", { style: { textAlign: "center", fontSize: 11, fontWeight: 700, color: "#7C3AED", padding: "4px 0" }, children: d }, d)) }),
-        /* @__PURE__ */ jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4 }, children: monthDates.map((d, i) => {
-          if (!d) return /* @__PURE__ */ jsx("div", {}, i);
-          const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-          const done = history.some((h) => h.date === dateKey);
-          const isToday = dateKey === todayKey;
-          return /* @__PURE__ */ jsx("div", { style: {
-            aspectRatio: "1",
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 12,
-            fontWeight: isToday ? 700 : 400,
-            background: done ? "linear-gradient(135deg,#6B21A8,#9333EA)" : "#F3E8FF",
-            color: done ? "white" : isToday ? "#6B21A8" : "#9CA3AF",
-            border: isToday ? "2px solid #D4AF37" : "none",
-            cursor: done ? "pointer" : "default"
-          }, children: done ? "\u271D\uFE0F" : d }, i);
-        }) }),
-        /* @__PURE__ */ jsxs("div", { style: { marginTop: 24 }, children: [
-          /* @__PURE__ */ jsx("div", { style: { fontSize: 14, fontWeight: 700, color: "#4C1D95", marginBottom: 12 }, children: "\uCD5C\uADFC QT \uAE30\uB85D" }),
-          history.slice(0, 5).map((h, i) => /* @__PURE__ */ jsxs("div", { style: {
-            background: "white",
-            borderRadius: 14,
-            padding: "14px 16px",
-            marginBottom: 10,
-            boxShadow: "0 2px 8px rgba(107,33,168,0.07)"
-          }, children: [
-            /* @__PURE__ */ jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }, children: [
-              /* @__PURE__ */ jsxs("span", { style: { fontSize: 13, fontWeight: 700, color: "#6B21A8" }, children: [
-                "\u{1F4D6} ",
-                h.book,
-                " ",
-                h.chapter && `${h.chapter}\uC7A5`,
-                h.verse && ` ${h.verse}\uC808`
-              ] }),
-              /* @__PURE__ */ jsx("span", { style: { fontSize: 11, color: "#9CA3AF" }, children: h.date })
-            ] }),
-            /* @__PURE__ */ jsx("p", { style: {
-              fontSize: 13,
-              color: "#374151",
-              lineHeight: 1.5,
-              margin: 0,
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden"
-            }, children: h.meditation }),
-            h.prayer && /* @__PURE__ */ jsxs("p", { style: { fontSize: 12, color: "#7C3AED", marginTop: 6, marginBottom: 0 }, children: [
-              "\u{1F64F} ",
-              h.prayer.slice(0, 50),
-              h.prayer.length > 50 ? "..." : ""
-            ] })
-          ] }, i))
-        ] }),
-        /* @__PURE__ */ jsx(
-          "button",
-          {
-            onClick: () => setScreen("write"),
-            style: {
-              width: "100%",
-              marginTop: 8,
-              background: "linear-gradient(135deg,#6B21A8,#9333EA)",
-              color: "white",
-              border: "none",
-              borderRadius: 14,
-              padding: "14px",
-              fontSize: 15,
-              fontWeight: 700,
-              cursor: "pointer",
-              fontFamily: "'Noto Sans KR',sans-serif"
-            },
-            children: "\u{1F4D6} \uC624\uB298 QT \uD558\uAE30"
-          }
-        )
-      ] })
-    ] });
+        justifyContent: "center",
+        fontSize: 12,
+        fontWeight: isToday ? 700 : 400,
+        background: done ? "linear-gradient(135deg,#6B21A8,#9333EA)" : "#F3E8FF",
+        color: done ? "white" : isToday ? "#6B21A8" : "#9CA3AF",
+        border: isToday ? "2px solid #D4AF37" : "none",
+        cursor: done ? "pointer" : "default"
+      } }, done ? "\u271D\uFE0F" : d);
+    })), /* @__PURE__ */ React.createElement("div", { style: { marginTop: 24 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: "#4C1D95", marginBottom: 12 } }, "\uCD5C\uADFC QT \uAE30\uB85D"), history.slice(0, 5).map((h, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: {
+      background: "white",
+      borderRadius: 14,
+      padding: "14px 16px",
+      marginBottom: 10,
+      boxShadow: "0 2px 8px rgba(107,33,168,0.07)"
+    } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, fontWeight: 700, color: "#6B21A8" } }, "\u{1F4D6} ", h.book, " ", h.chapter && `${h.chapter}\uC7A5`, h.verse && ` ${h.verse}\uC808`), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: "#9CA3AF" } }, h.date)), /* @__PURE__ */ React.createElement("p", { style: {
+      fontSize: 13,
+      color: "#374151",
+      lineHeight: 1.5,
+      margin: 0,
+      display: "-webkit-box",
+      WebkitLineClamp: 2,
+      WebkitBoxOrient: "vertical",
+      overflow: "hidden"
+    } }, h.meditation), h.prayer && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: "#7C3AED", marginTop: 6, marginBottom: 0 } }, "\u{1F64F} ", h.prayer.slice(0, 50), h.prayer.length > 50 ? "..." : "")))), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        onClick: () => setScreen("write"),
+        style: {
+          width: "100%",
+          marginTop: 8,
+          background: "linear-gradient(135deg,#6B21A8,#9333EA)",
+          color: "white",
+          border: "none",
+          borderRadius: 14,
+          padding: "14px",
+          fontSize: 15,
+          fontWeight: 700,
+          cursor: "pointer",
+          fontFamily: "'Noto Sans KR',sans-serif"
+        }
+      },
+      "\u{1F4D6} \uC624\uB298 QT \uD558\uAE30"
+    )));
   }
   if (screen === "done") {
     const streak = calcStreak(history);
-    return /* @__PURE__ */ jsxs("div", { className: "qt-card", style: {
+    return /* @__PURE__ */ React.createElement("div", { className: "qt-card", style: {
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
@@ -469,92 +362,67 @@ const QTGame = ({ onExit }) => {
       padding: 32,
       textAlign: "center",
       fontFamily: "'Noto Sans KR',sans-serif"
-    }, children: [
-      /* @__PURE__ */ jsx("div", { style: {
-        width: 90,
-        height: 90,
-        borderRadius: "50%",
-        background: "linear-gradient(135deg,#D4AF37,#F59E0B)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: 44,
-        marginBottom: 20
-      }, children: "\u271D\uFE0F" }),
-      /* @__PURE__ */ jsx("h2", { style: { fontSize: 24, fontWeight: 700, color: "#4C1D95", marginBottom: 8 }, children: "\uB9D0\uC500\uC774 \uC784\uD588\uC2B5\uB2C8\uB2E4!" }),
-      /* @__PURE__ */ jsx("p", { style: { fontSize: 15, color: "#6B21A8", marginBottom: 4 }, children: "\uC624\uB298\uC758 QT\uB97C \uC644\uB8CC\uD588\uC5B4\uC694" }),
-      streak >= 3 && /* @__PURE__ */ jsxs("div", { style: {
-        background: "linear-gradient(135deg,#6B21A8,#9333EA)",
-        color: "white",
-        borderRadius: 20,
-        padding: "6px 18px",
-        marginBottom: 16,
-        fontSize: 13,
-        fontWeight: 600
-      }, children: [
-        "\u{1F525} ",
-        streak,
-        "\uC77C \uC5F0\uC18D QT \uC911!"
-      ] }),
-      doneData?.expGained > 0 && /* @__PURE__ */ jsxs("div", { style: { color: "#D4AF37", fontSize: 16, fontWeight: 700, marginBottom: 16 }, children: [
-        "+",
-        doneData.expGained,
-        " EXP \uD68D\uB4DD"
-      ] }),
-      /* @__PURE__ */ jsxs("p", { style: {
-        fontSize: 13,
-        color: "#7C3AED",
-        marginBottom: 28,
-        lineHeight: 1.8,
-        background: "#F3E8FF",
-        borderRadius: 12,
-        padding: "12px 20px"
-      }, children: [
-        '"\uC5EC\uD638\uC640\uC758 \uB9D0\uC500\uC740 \uC21C\uACB0\uD568\uC774\uC5EC',
-        /* @__PURE__ */ jsx("br", {}),
-        '\uD759 \uB3C4\uAC00\uB2C8\uC5D0 \uC77C\uACF1 \uBC88 \uB2E8\uB828\uD55C \uC740 \uAC19\uB3C4\uB2E4"',
-        /* @__PURE__ */ jsx("br", {}),
-        /* @__PURE__ */ jsx("span", { style: { fontSize: 11 }, children: "\uC2DC\uD3B8 12:6" })
-      ] }),
-      /* @__PURE__ */ jsxs("div", { style: { display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" }, children: [
-        /* @__PURE__ */ jsx(
-          "button",
-          {
-            onClick: () => setScreen("calendar"),
-            style: {
-              background: "#F3E8FF",
-              color: "#6B21A8",
-              border: "2px solid #C4B5FD",
-              borderRadius: 12,
-              padding: "12px 24px",
-              fontSize: 14,
-              fontWeight: 600,
-              cursor: "pointer",
-              fontFamily: "'Noto Sans KR',sans-serif"
-            },
-            children: "\u{1F4C5} \uB2EC\uB825 \uBCF4\uAE30"
-          }
-        ),
-        /* @__PURE__ */ jsx(
-          "button",
-          {
-            onClick: () => onExit({ score: 50, expGained: doneData?.expGained || 0 }),
-            style: {
-              background: "linear-gradient(135deg,#6B21A8,#9333EA)",
-              color: "white",
-              border: "none",
-              borderRadius: 12,
-              padding: "12px 24px",
-              fontSize: 14,
-              fontWeight: 600,
-              cursor: "pointer",
-              fontFamily: "'Noto Sans KR',sans-serif"
-            },
-            children: "\uAC8C\uC784 \uBAA9\uB85D\uC73C\uB85C \u2192"
-          }
-        )
-      ] })
-    ] });
+    } }, /* @__PURE__ */ React.createElement("div", { style: {
+      width: 90,
+      height: 90,
+      borderRadius: "50%",
+      background: "linear-gradient(135deg,#D4AF37,#F59E0B)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: 44,
+      marginBottom: 20
+    } }, "\u271D\uFE0F"), /* @__PURE__ */ React.createElement("h2", { style: { fontSize: 24, fontWeight: 700, color: "#4C1D95", marginBottom: 8 } }, "\uB9D0\uC500\uC774 \uC784\uD588\uC2B5\uB2C8\uB2E4!"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 15, color: "#6B21A8", marginBottom: 4 } }, "\uC624\uB298\uC758 QT\uB97C \uC644\uB8CC\uD588\uC5B4\uC694"), streak >= 3 && /* @__PURE__ */ React.createElement("div", { style: {
+      background: "linear-gradient(135deg,#6B21A8,#9333EA)",
+      color: "white",
+      borderRadius: 20,
+      padding: "6px 18px",
+      marginBottom: 16,
+      fontSize: 13,
+      fontWeight: 600
+    } }, "\u{1F525} ", streak, "\uC77C \uC5F0\uC18D QT \uC911!"), doneData?.expGained > 0 && /* @__PURE__ */ React.createElement("div", { style: { color: "#D4AF37", fontSize: 16, fontWeight: 700, marginBottom: 16 } }, "+", doneData.expGained, " EXP \uD68D\uB4DD"), /* @__PURE__ */ React.createElement("p", { style: {
+      fontSize: 13,
+      color: "#7C3AED",
+      marginBottom: 28,
+      lineHeight: 1.8,
+      background: "#F3E8FF",
+      borderRadius: 12,
+      padding: "12px 20px"
+    } }, '"\uC5EC\uD638\uC640\uC758 \uB9D0\uC500\uC740 \uC21C\uACB0\uD568\uC774\uC5EC', /* @__PURE__ */ React.createElement("br", null), '\uD759 \uB3C4\uAC00\uB2C8\uC5D0 \uC77C\uACF1 \uBC88 \uB2E8\uB828\uD55C \uC740 \uAC19\uB3C4\uB2E4"', /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11 } }, "\uC2DC\uD3B8 12:6")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" } }, /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        onClick: () => setScreen("calendar"),
+        style: {
+          background: "#F3E8FF",
+          color: "#6B21A8",
+          border: "2px solid #C4B5FD",
+          borderRadius: 12,
+          padding: "12px 24px",
+          fontSize: 14,
+          fontWeight: 600,
+          cursor: "pointer",
+          fontFamily: "'Noto Sans KR',sans-serif"
+        }
+      },
+      "\u{1F4C5} \uB2EC\uB825 \uBCF4\uAE30"
+    ), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        onClick: () => onExit({ score: 50, expGained: doneData?.expGained || 0 }),
+        style: {
+          background: "linear-gradient(135deg,#6B21A8,#9333EA)",
+          color: "white",
+          border: "none",
+          borderRadius: 12,
+          padding: "12px 24px",
+          fontSize: 14,
+          fontWeight: 600,
+          cursor: "pointer",
+          fontFamily: "'Noto Sans KR',sans-serif"
+        }
+      },
+      "\uAC8C\uC784 \uBAA9\uB85D\uC73C\uB85C \u2192"
+    )));
   }
   return null;
 };

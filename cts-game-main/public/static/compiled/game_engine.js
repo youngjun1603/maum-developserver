@@ -1,4 +1,3 @@
-"use strict";
 const GameEngine = /* @__PURE__ */ (() => {
   const TOKEN_KEY = "game_token";
   function authHeader() {

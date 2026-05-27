@@ -1,5 +1,3 @@
-"use strict";
-import { jsx, jsxs } from "react/jsx-runtime";
 const GV = {
   night: "#0D1B2A",
   nightM: "#1A2E42",
@@ -35,7 +33,7 @@ const QUESTION_POOL = [
   ]
 ];
 function Star({ x, y, r, opacity = 1, twinkle = false, color = GV.star }) {
-  return /* @__PURE__ */ jsx(
+  return /* @__PURE__ */ React.createElement(
     "circle",
     {
       cx: x,
@@ -63,25 +61,22 @@ function StarShape({ x, y, size = 12, glow = false }) {
     ];
   }).flat();
   const d = `M ${pts[0]},${pts[1]} ` + pts.slice(2).reduce((acc, v, i) => acc + (i % 2 === 0 ? `L ${v},` : `${v} `), "") + "Z";
-  return /* @__PURE__ */ jsxs("g", { children: [
-    glow && /* @__PURE__ */ jsx(
-      "path",
-      {
-        d,
-        fill: GV.star,
-        opacity: "0.2",
-        transform: `scale(1.6) translate(${x * (1 - 1 / 1.6)},${y * (1 - 1 / 1.6)})`
-      }
-    ),
-    /* @__PURE__ */ jsx(
-      "path",
-      {
-        d,
-        fill: GV.star,
-        style: { animation: glow ? "shimmer 2s ease-in-out infinite" : "none" }
-      }
-    )
-  ] });
+  return /* @__PURE__ */ React.createElement("g", null, glow && /* @__PURE__ */ React.createElement(
+    "path",
+    {
+      d,
+      fill: GV.star,
+      opacity: "0.2",
+      transform: `scale(1.6) translate(${x * (1 - 1 / 1.6)},${y * (1 - 1 / 1.6)})`
+    }
+  ), /* @__PURE__ */ React.createElement(
+    "path",
+    {
+      d,
+      fill: GV.star,
+      style: { animation: glow ? "shimmer 2s ease-in-out infinite" : "none" }
+    }
+  ));
 }
 function NightSky({ litStars = 0, width = 320, height = 200 }) {
   const bgStars = [
@@ -103,71 +98,47 @@ function NightSky({ litStars = 0, width = 320, height = 200 }) {
     { x: 175, y: 62, size: 18 },
     { x: 240, y: 88, size: 14 }
   ];
-  return /* @__PURE__ */ jsxs("svg", { viewBox: `0 0 ${width} ${height}`, style: { width: "100%", height: "100%" }, children: [
-    /* @__PURE__ */ jsxs("defs", { children: [
-      /* @__PURE__ */ jsxs("radialGradient", { id: "skyGrad", cx: "50%", cy: "0%", r: "100%", children: [
-        /* @__PURE__ */ jsx("stop", { offset: "0%", stopColor: GV.nightL }),
-        /* @__PURE__ */ jsx("stop", { offset: "100%", stopColor: GV.night })
-      ] }),
-      /* @__PURE__ */ jsxs("filter", { id: "starGlow", children: [
-        /* @__PURE__ */ jsx("feGaussianBlur", { stdDeviation: "3", result: "blur" }),
-        /* @__PURE__ */ jsxs("feMerge", { children: [
-          /* @__PURE__ */ jsx("feMergeNode", { in: "blur" }),
-          /* @__PURE__ */ jsx("feMergeNode", { in: "SourceGraphic" })
-        ] })
-      ] })
-    ] }),
-    /* @__PURE__ */ jsx("rect", { width, height, fill: "url(#skyGrad)" }),
-    /* @__PURE__ */ jsx("ellipse", { cx: width * 0.3, cy: height, rx: width * 0.55, ry: height * 0.22, fill: GV.nightM }),
-    /* @__PURE__ */ jsx("ellipse", { cx: width * 0.75, cy: height, rx: width * 0.45, ry: height * 0.16, fill: GV.nightM, opacity: "0.8" }),
-    bgStars.map((s, i) => /* @__PURE__ */ jsx(
-      Star,
+  return /* @__PURE__ */ React.createElement("svg", { viewBox: `0 0 ${width} ${height}`, style: { width: "100%", height: "100%" } }, /* @__PURE__ */ React.createElement("defs", null, /* @__PURE__ */ React.createElement("radialGradient", { id: "skyGrad", cx: "50%", cy: "0%", r: "100%" }, /* @__PURE__ */ React.createElement("stop", { offset: "0%", stopColor: GV.nightL }), /* @__PURE__ */ React.createElement("stop", { offset: "100%", stopColor: GV.night })), /* @__PURE__ */ React.createElement("filter", { id: "starGlow" }, /* @__PURE__ */ React.createElement("feGaussianBlur", { stdDeviation: "3", result: "blur" }), /* @__PURE__ */ React.createElement("feMerge", null, /* @__PURE__ */ React.createElement("feMergeNode", { in: "blur" }), /* @__PURE__ */ React.createElement("feMergeNode", { in: "SourceGraphic" })))), /* @__PURE__ */ React.createElement("rect", { width, height, fill: "url(#skyGrad)" }), /* @__PURE__ */ React.createElement("ellipse", { cx: width * 0.3, cy: height, rx: width * 0.55, ry: height * 0.22, fill: GV.nightM }), /* @__PURE__ */ React.createElement("ellipse", { cx: width * 0.75, cy: height, rx: width * 0.45, ry: height * 0.16, fill: GV.nightM, opacity: "0.8" }), bgStars.map((s, i) => /* @__PURE__ */ React.createElement(
+    Star,
+    {
+      key: i,
+      x: s.x,
+      y: s.y,
+      r: s.r,
+      opacity: 0.4 + i % 3 * 0.1,
+      color: "white",
+      twinkle: true
+    }
+  )), /* @__PURE__ */ React.createElement("circle", { cx: width * 0.82, cy: height * 0.18, r: 18, fill: "#F5E8B0", opacity: 0.9 }), /* @__PURE__ */ React.createElement("circle", { cx: width * 0.82 + 6, cy: height * 0.18 - 4, r: 15, fill: GV.nightM, opacity: 0.2 }), answerStars.map((s, i) => /* @__PURE__ */ React.createElement(
+    "g",
+    {
+      key: i,
+      opacity: i < litStars ? 1 : 0.15,
+      style: { transition: "opacity 0.8s ease" },
+      filter: i < litStars ? "url(#starGlow)" : "none"
+    },
+    /* @__PURE__ */ React.createElement(StarShape, { x: s.x, y: s.y, size: s.size, glow: i < litStars }),
+    i < litStars && /* @__PURE__ */ React.createElement(
+      "text",
       {
         x: s.x,
-        y: s.y,
-        r: s.r,
-        opacity: 0.4 + i % 3 * 0.1,
-        color: "white",
-        twinkle: true
+        y: s.y + s.size + 12,
+        textAnchor: "middle",
+        fill: GV.starL,
+        style: { fontSize: 9, fontFamily: "'Noto Sans KR',sans-serif", fontWeight: 600 }
       },
-      i
-    )),
-    /* @__PURE__ */ jsx("circle", { cx: width * 0.82, cy: height * 0.18, r: 18, fill: "#F5E8B0", opacity: 0.9 }),
-    /* @__PURE__ */ jsx("circle", { cx: width * 0.82 + 6, cy: height * 0.18 - 4, r: 15, fill: GV.nightM, opacity: 0.2 }),
-    answerStars.map((s, i) => /* @__PURE__ */ jsxs(
-      "g",
-      {
-        opacity: i < litStars ? 1 : 0.15,
-        style: { transition: "opacity 0.8s ease" },
-        filter: i < litStars ? "url(#starGlow)" : "none",
-        children: [
-          /* @__PURE__ */ jsx(StarShape, { x: s.x, y: s.y, size: s.size, glow: i < litStars }),
-          i < litStars && /* @__PURE__ */ jsx(
-            "text",
-            {
-              x: s.x,
-              y: s.y + s.size + 12,
-              textAnchor: "middle",
-              fill: GV.starL,
-              style: { fontSize: 9, fontFamily: "'Noto Sans KR',sans-serif", fontWeight: 600 },
-              children: i === 0 ? "\uAE30\uC068" : i === 1 ? "\uB098" : "\uB0B4\uC77C"
-            }
-          )
-        ]
-      },
-      i
-    )),
-    litStars >= 3 && /* @__PURE__ */ jsx("g", { opacity: "0.15", children: Array.from({ length: 20 }, (_, i) => /* @__PURE__ */ jsx(
-      "circle",
-      {
-        cx: 50 + i * 12,
-        cy: 120 + Math.sin(i * 0.8) * 18,
-        r: 0.8 + Math.random() * 0.5,
-        fill: "white"
-      },
-      i
-    )) })
-  ] });
+      i === 0 ? "\uAE30\uC068" : i === 1 ? "\uB098" : "\uB0B4\uC77C"
+    )
+  )), litStars >= 3 && /* @__PURE__ */ React.createElement("g", { opacity: "0.15" }, Array.from({ length: 20 }, (_, i) => /* @__PURE__ */ React.createElement(
+    "circle",
+    {
+      key: i,
+      cx: 50 + i * 12,
+      cy: 120 + Math.sin(i * 0.8) * 18,
+      r: 0.8 + Math.random() * 0.5,
+      fill: "white"
+    }
+  ))));
 }
 function GratitudeGame({ onExit }) {
   const { useState, useEffect, useRef } = React;
@@ -244,265 +215,200 @@ https://game.maumful.com`;
     }) : navigator.clipboard?.writeText(text).catch(() => {
     });
   }
-  if (screen === "intro") return /* @__PURE__ */ jsxs("div", { style: {
+  if (screen === "intro") return /* @__PURE__ */ React.createElement("div", { style: {
     flex: 1,
     display: "flex",
     flexDirection: "column",
     background: `linear-gradient(160deg, ${GV.night}, ${GV.nightM})`
-  }, children: [
-    /* @__PURE__ */ jsxs("div", { style: {
+  } }, /* @__PURE__ */ React.createElement("div", { style: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "12px 16px",
+    background: "rgba(0,0,0,0.2)",
+    backdropFilter: "blur(8px)",
+    borderBottom: "1px solid rgba(255,255,255,0.08)"
+  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 20 } }, "\u2B50"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 15, fontWeight: 700, color: "white", fontFamily: "'Noto Serif KR',serif" } }, "\uBCC4\uBE5B \uAC10\uC0AC \uC77C\uAE30")), /* @__PURE__ */ React.createElement("button", { onClick: () => onExit(null), style: {
+    fontFamily: "'Noto Sans KR',sans-serif",
+    background: "rgba(255,255,255,0.1)",
+    color: "rgba(255,255,255,0.7)",
+    border: "none",
+    borderRadius: 9,
+    padding: "6px 13px",
+    fontSize: 12,
+    cursor: "pointer"
+  } }, "\uD5C8\uBE0C\uB85C \u2192")), /* @__PURE__ */ React.createElement("div", { style: { height: 200 } }, /* @__PURE__ */ React.createElement(NightSky, { litStars: 0 })), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, padding: "24px 20px", overflowY: "auto" } }, /* @__PURE__ */ React.createElement("h2", { style: { fontSize: 20, fontWeight: 700, color: "white", marginBottom: 10, fontFamily: "'Noto Serif KR',serif" } }, "\uC624\uB298\uC758 \uBCC4\uC744 \uBC1D\uD600\uC694"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 14, color: "rgba(255,255,255,0.7)", lineHeight: 1.8, marginBottom: 24 } }, "3\uAC00\uC9C0 \uC9C8\uBB38\uC5D0 \uC194\uC9C1\uD558\uAC8C \uB2F5\uD558\uBA74", /* @__PURE__ */ React.createElement("br", null), "\uBC24\uD558\uB298\uC5D0 \uAC10\uC0AC\uC758 \uBCC4 3\uAC1C\uAC00 \uBE5B\uB098\uC694.", /* @__PURE__ */ React.createElement("br", null), "\uC544\uC8FC \uC791\uC740 \uAC83\uB3C4 \uCDA9\uBD84\uD574\uC694."), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 } }, questions.map((q, i) => /* @__PURE__ */ React.createElement("div", { key: q.id, style: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    padding: "12px 14px",
+    background: "rgba(255,255,255,0.07)",
+    borderRadius: 12,
+    border: "1px solid rgba(255,255,255,0.1)"
+  } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 20 } }, q.emoji), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: "rgba(255,255,255,0.8)", lineHeight: 1.5 } }, q.prompt)))), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: () => {
+        startRef.current = Date.now();
+        setScreen("writing");
+      },
+      style: {
+        fontFamily: "'Noto Sans KR',sans-serif",
+        width: "100%",
+        padding: "14px",
+        background: `linear-gradient(135deg, #4A5A8A, ${GV.dusty})`,
+        color: "white",
+        border: "none",
+        borderRadius: 14,
+        fontSize: 15,
+        fontWeight: 700,
+        cursor: "pointer",
+        boxShadow: `0 4px 16px rgba(107,143,168,0.4)`
+      }
+    },
+    "\uBCC4 \uBC1D\uD788\uAE30 \uC2DC\uC791 \u2B50"
+  )));
+  if (screen === "writing") return /* @__PURE__ */ React.createElement("div", { style: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    background: `linear-gradient(160deg, ${GV.night}, ${GV.nightM})`
+  } }, /* @__PURE__ */ React.createElement("div", { style: { height: 190, position: "relative" } }, /* @__PURE__ */ React.createElement(NightSky, { litStars }), animatingStar && /* @__PURE__ */ React.createElement("div", { style: {
+    position: "absolute",
+    inset: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    pointerEvents: "none"
+  } }, /* @__PURE__ */ React.createElement("div", { style: {
+    fontSize: 48,
+    animation: "ripple 0.5s ease-out forwards"
+  } }, "\u2728")), /* @__PURE__ */ React.createElement("div", { style: {
+    position: "absolute",
+    bottom: 10,
+    left: "50%",
+    transform: "translateX(-50%)",
+    display: "flex",
+    gap: 8
+  } }, questions.map((_, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: {
+    width: 8,
+    height: 8,
+    borderRadius: "50%",
+    background: i < litStars ? GV.star : "rgba(255,255,255,0.25)",
+    transition: "background 0.5s ease"
+  } })))), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "16px 18px 24px" } }, questions.map((q, i) => {
+    const isActive = i === activeQ;
+    const isDone = i < litStars;
+    const isPending = i > activeQ;
+    return /* @__PURE__ */ React.createElement("div", { key: q.id, style: {
+      marginBottom: 14,
+      borderRadius: 18,
+      overflow: "hidden",
+      border: `1px solid ${isDone ? "rgba(255,224,138,0.3)" : isActive ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.06)"}`,
+      background: isDone ? "rgba(255,224,138,0.08)" : isActive ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.04)",
+      transition: "all 0.4s ease",
+      opacity: isPending ? 0.5 : 1
+    } }, /* @__PURE__ */ React.createElement("div", { style: {
+      padding: "14px 16px",
       display: "flex",
       alignItems: "center",
-      justifyContent: "space-between",
-      padding: "12px 16px",
-      background: "rgba(0,0,0,0.2)",
-      backdropFilter: "blur(8px)",
-      borderBottom: "1px solid rgba(255,255,255,0.08)"
-    }, children: [
-      /* @__PURE__ */ jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8 }, children: [
-        /* @__PURE__ */ jsx("span", { style: { fontSize: 20 }, children: "\u2B50" }),
-        /* @__PURE__ */ jsx("span", { style: { fontSize: 15, fontWeight: 700, color: "white", fontFamily: "'Noto Serif KR',serif" }, children: "\uBCC4\uBE5B \uAC10\uC0AC \uC77C\uAE30" })
-      ] }),
-      /* @__PURE__ */ jsx("button", { onClick: () => onExit(null), style: {
-        fontFamily: "'Noto Sans KR',sans-serif",
-        background: "rgba(255,255,255,0.1)",
-        color: "rgba(255,255,255,0.7)",
-        border: "none",
-        borderRadius: 9,
-        padding: "6px 13px",
-        fontSize: 12,
-        cursor: "pointer"
-      }, children: "\uD5C8\uBE0C\uB85C \u2192" })
-    ] }),
-    /* @__PURE__ */ jsx("div", { style: { height: 200 }, children: /* @__PURE__ */ jsx(NightSky, { litStars: 0 }) }),
-    /* @__PURE__ */ jsxs("div", { style: { flex: 1, padding: "24px 20px", overflowY: "auto" }, children: [
-      /* @__PURE__ */ jsx("h2", { style: { fontSize: 20, fontWeight: 700, color: "white", marginBottom: 10, fontFamily: "'Noto Serif KR',serif" }, children: "\uC624\uB298\uC758 \uBCC4\uC744 \uBC1D\uD600\uC694" }),
-      /* @__PURE__ */ jsxs("p", { style: { fontSize: 14, color: "rgba(255,255,255,0.7)", lineHeight: 1.8, marginBottom: 24 }, children: [
-        "3\uAC00\uC9C0 \uC9C8\uBB38\uC5D0 \uC194\uC9C1\uD558\uAC8C \uB2F5\uD558\uBA74",
-        /* @__PURE__ */ jsx("br", {}),
-        "\uBC24\uD558\uB298\uC5D0 \uAC10\uC0AC\uC758 \uBCC4 3\uAC1C\uAC00 \uBE5B\uB098\uC694.",
-        /* @__PURE__ */ jsx("br", {}),
-        "\uC544\uC8FC \uC791\uC740 \uAC83\uB3C4 \uCDA9\uBD84\uD574\uC694."
-      ] }),
-      /* @__PURE__ */ jsx("div", { style: { display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 }, children: questions.map((q, i) => /* @__PURE__ */ jsxs("div", { style: {
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-        padding: "12px 14px",
-        background: "rgba(255,255,255,0.07)",
-        borderRadius: 12,
-        border: "1px solid rgba(255,255,255,0.1)"
-      }, children: [
-        /* @__PURE__ */ jsx("span", { style: { fontSize: 20 }, children: q.emoji }),
-        /* @__PURE__ */ jsx("span", { style: { fontSize: 13, color: "rgba(255,255,255,0.8)", lineHeight: 1.5 }, children: q.prompt })
-      ] }, q.id)) }),
-      /* @__PURE__ */ jsx(
-        "button",
-        {
-          onClick: () => {
-            startRef.current = Date.now();
-            setScreen("writing");
-          },
-          style: {
-            fontFamily: "'Noto Sans KR',sans-serif",
-            width: "100%",
-            padding: "14px",
-            background: `linear-gradient(135deg, #4A5A8A, ${GV.dusty})`,
-            color: "white",
-            border: "none",
-            borderRadius: 14,
-            fontSize: 15,
-            fontWeight: 700,
-            cursor: "pointer",
-            boxShadow: `0 4px 16px rgba(107,143,168,0.4)`
-          },
-          children: "\uBCC4 \uBC1D\uD788\uAE30 \uC2DC\uC791 \u2B50"
+      gap: 10,
+      borderBottom: isActive ? "1px solid rgba(255,255,255,0.08)" : "none"
+    } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 20, opacity: isDone ? 1 : 0.8 } }, q.emoji), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: isDone ? GV.starL : "rgba(255,255,255,0.85)", fontWeight: 600, flex: 1, lineHeight: 1.5 } }, q.prompt), isDone && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16 } }, "\u2B50")), isActive && /* @__PURE__ */ React.createElement("div", { style: { padding: "12px 14px" } }, /* @__PURE__ */ React.createElement(
+      "textarea",
+      {
+        value: answers[q.id] || "",
+        onChange: (e) => handleAnswer(i, e.target.value),
+        placeholder: q.placeholder,
+        rows: 3,
+        autoFocus: true,
+        style: {
+          width: "100%",
+          padding: "11px 12px",
+          background: "rgba(255,255,255,0.07)",
+          border: "1px solid rgba(255,255,255,0.15)",
+          borderRadius: 10,
+          color: "white",
+          fontSize: 14,
+          fontFamily: "'Noto Sans KR',sans-serif",
+          outline: "none",
+          resize: "none",
+          lineHeight: 1.65
+        },
+        onFocus: (e) => e.target.style.borderColor = "rgba(255,224,138,0.5)",
+        onBlur: (e) => e.target.style.borderColor = "rgba(255,255,255,0.15)"
+      }
+    ), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        onClick: () => handleConfirm(i),
+        disabled: !(answers[q.id]?.trim().length >= 2),
+        style: {
+          fontFamily: "'Noto Sans KR',sans-serif",
+          marginTop: 10,
+          width: "100%",
+          padding: "11px",
+          background: answers[q.id]?.trim().length >= 2 ? `linear-gradient(135deg, #7A6A30, ${GV.amber})` : "rgba(255,255,255,0.08)",
+          color: answers[q.id]?.trim().length >= 2 ? "white" : "rgba(255,255,255,0.3)",
+          border: "none",
+          borderRadius: 10,
+          fontSize: 13,
+          fontWeight: 700,
+          cursor: "pointer",
+          transition: "all 0.2s"
         }
-      )
-    ] })
-  ] });
-  if (screen === "writing") return /* @__PURE__ */ jsxs("div", { style: {
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
-    background: `linear-gradient(160deg, ${GV.night}, ${GV.nightM})`
-  }, children: [
-    /* @__PURE__ */ jsxs("div", { style: { height: 190, position: "relative" }, children: [
-      /* @__PURE__ */ jsx(NightSky, { litStars }),
-      animatingStar && /* @__PURE__ */ jsx("div", { style: {
-        position: "absolute",
-        inset: 0,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        pointerEvents: "none"
-      }, children: /* @__PURE__ */ jsx("div", { style: {
-        fontSize: 48,
-        animation: "ripple 0.5s ease-out forwards"
-      }, children: "\u2728" }) }),
-      /* @__PURE__ */ jsx("div", { style: {
-        position: "absolute",
-        bottom: 10,
-        left: "50%",
-        transform: "translateX(-50%)",
-        display: "flex",
-        gap: 8
-      }, children: questions.map((_, i) => /* @__PURE__ */ jsx("div", { style: {
-        width: 8,
-        height: 8,
-        borderRadius: "50%",
-        background: i < litStars ? GV.star : "rgba(255,255,255,0.25)",
-        transition: "background 0.5s ease"
-      } }, i)) })
-    ] }),
-    /* @__PURE__ */ jsx("div", { style: { flex: 1, overflowY: "auto", padding: "16px 18px 24px" }, children: questions.map((q, i) => {
-      const isActive = i === activeQ;
-      const isDone = i < litStars;
-      const isPending = i > activeQ;
-      return /* @__PURE__ */ jsxs("div", { style: {
-        marginBottom: 14,
-        borderRadius: 18,
-        overflow: "hidden",
-        border: `1px solid ${isDone ? "rgba(255,224,138,0.3)" : isActive ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.06)"}`,
-        background: isDone ? "rgba(255,224,138,0.08)" : isActive ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.04)",
-        transition: "all 0.4s ease",
-        opacity: isPending ? 0.5 : 1
-      }, children: [
-        /* @__PURE__ */ jsxs("div", { style: {
-          padding: "14px 16px",
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          borderBottom: isActive ? "1px solid rgba(255,255,255,0.08)" : "none"
-        }, children: [
-          /* @__PURE__ */ jsx("span", { style: { fontSize: 20, opacity: isDone ? 1 : 0.8 }, children: q.emoji }),
-          /* @__PURE__ */ jsx("span", { style: { fontSize: 13, color: isDone ? GV.starL : "rgba(255,255,255,0.85)", fontWeight: 600, flex: 1, lineHeight: 1.5 }, children: q.prompt }),
-          isDone && /* @__PURE__ */ jsx("span", { style: { fontSize: 16 }, children: "\u2B50" })
-        ] }),
-        isActive && /* @__PURE__ */ jsxs("div", { style: { padding: "12px 14px" }, children: [
-          /* @__PURE__ */ jsx(
-            "textarea",
-            {
-              value: answers[q.id] || "",
-              onChange: (e) => handleAnswer(i, e.target.value),
-              placeholder: q.placeholder,
-              rows: 3,
-              autoFocus: true,
-              style: {
-                width: "100%",
-                padding: "11px 12px",
-                background: "rgba(255,255,255,0.07)",
-                border: "1px solid rgba(255,255,255,0.15)",
-                borderRadius: 10,
-                color: "white",
-                fontSize: 14,
-                fontFamily: "'Noto Sans KR',sans-serif",
-                outline: "none",
-                resize: "none",
-                lineHeight: 1.65
-              },
-              onFocus: (e) => e.target.style.borderColor = "rgba(255,224,138,0.5)",
-              onBlur: (e) => e.target.style.borderColor = "rgba(255,255,255,0.15)"
-            }
-          ),
-          /* @__PURE__ */ jsx(
-            "button",
-            {
-              onClick: () => handleConfirm(i),
-              disabled: !(answers[q.id]?.trim().length >= 2),
-              style: {
-                fontFamily: "'Noto Sans KR',sans-serif",
-                marginTop: 10,
-                width: "100%",
-                padding: "11px",
-                background: answers[q.id]?.trim().length >= 2 ? `linear-gradient(135deg, #7A6A30, ${GV.amber})` : "rgba(255,255,255,0.08)",
-                color: answers[q.id]?.trim().length >= 2 ? "white" : "rgba(255,255,255,0.3)",
-                border: "none",
-                borderRadius: 10,
-                fontSize: 13,
-                fontWeight: 700,
-                cursor: "pointer",
-                transition: "all 0.2s"
-              },
-              children: i === questions.length - 1 ? "\uB9C8\uC9C0\uB9C9 \uBCC4 \uBC1D\uD788\uAE30 \u2B50" : "\uBCC4 \uBC1D\uD788\uAE30 \u2B50"
-            }
-          )
-        ] }),
-        isDone && /* @__PURE__ */ jsxs("div", { style: { padding: "10px 16px 12px", fontSize: 13, color: "rgba(255,224,138,0.8)", lineHeight: 1.6, fontStyle: "italic" }, children: [
-          '"',
-          answers[q.id],
-          '"'
-        ] })
-      ] }, q.id);
-    }) })
-  ] });
-  if (screen === "done") return /* @__PURE__ */ jsxs("div", { style: {
+      },
+      i === questions.length - 1 ? "\uB9C8\uC9C0\uB9C9 \uBCC4 \uBC1D\uD788\uAE30 \u2B50" : "\uBCC4 \uBC1D\uD788\uAE30 \u2B50"
+    )), isDone && /* @__PURE__ */ React.createElement("div", { style: { padding: "10px 16px 12px", fontSize: 13, color: "rgba(255,224,138,0.8)", lineHeight: 1.6, fontStyle: "italic" } }, '"', answers[q.id], '"'));
+  })));
+  if (screen === "done") return /* @__PURE__ */ React.createElement("div", { style: {
     flex: 1,
     display: "flex",
     flexDirection: "column",
     background: `linear-gradient(160deg, ${GV.night}, ${GV.nightM})`,
     animation: "fadeUp 0.5s ease"
-  }, children: [
-    /* @__PURE__ */ jsx("div", { style: { height: 200 }, children: /* @__PURE__ */ jsx(NightSky, { litStars: 3 }) }),
-    /* @__PURE__ */ jsxs("div", { style: { flex: 1, padding: "24px 20px", overflowY: "auto" }, children: [
-      /* @__PURE__ */ jsx("h2", { style: { fontSize: 22, fontWeight: 700, color: "white", marginBottom: 8, fontFamily: "'Noto Serif KR',serif", textAlign: "center" }, children: "\uBC24\uD558\uB298\uC5D0 \uBCC4 3\uAC1C\uAC00 \uB5B4\uC5B4\uC694 \u2B50" }),
-      /* @__PURE__ */ jsxs("p", { style: { fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.8, marginBottom: 22, textAlign: "center" }, children: [
-        "\uAC10\uC0AC\uD55C \uB9C8\uC74C\uC774 \uBC24\uD558\uB298\uC744 \uC218\uB193\uC558\uC5B4\uC694.",
-        /* @__PURE__ */ jsx("br", {}),
-        "\uC624\uB298\uB3C4 \uC218\uACE0 \uB9CE\uC73C\uC168\uC5B4\uC694."
-      ] }),
-      /* @__PURE__ */ jsx("div", { style: { display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }, children: questions.map((q, i) => /* @__PURE__ */ jsxs("div", { style: {
-        background: "rgba(255,224,138,0.08)",
+  } }, /* @__PURE__ */ React.createElement("div", { style: { height: 200 } }, /* @__PURE__ */ React.createElement(NightSky, { litStars: 3 })), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, padding: "24px 20px", overflowY: "auto" } }, /* @__PURE__ */ React.createElement("h2", { style: { fontSize: 22, fontWeight: 700, color: "white", marginBottom: 8, fontFamily: "'Noto Serif KR',serif", textAlign: "center" } }, "\uBC24\uD558\uB298\uC5D0 \uBCC4 3\uAC1C\uAC00 \uB5B4\uC5B4\uC694 \u2B50"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.8, marginBottom: 22, textAlign: "center" } }, "\uAC10\uC0AC\uD55C \uB9C8\uC74C\uC774 \uBC24\uD558\uB298\uC744 \uC218\uB193\uC558\uC5B4\uC694.", /* @__PURE__ */ React.createElement("br", null), "\uC624\uB298\uB3C4 \uC218\uACE0 \uB9CE\uC73C\uC168\uC5B4\uC694."), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 } }, questions.map((q, i) => /* @__PURE__ */ React.createElement("div", { key: q.id, style: {
+    background: "rgba(255,224,138,0.08)",
+    borderRadius: 14,
+    border: "1px solid rgba(255,224,138,0.2)",
+    padding: "13px 14px"
+  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 7, marginBottom: 6 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14 } }, q.emoji), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: "rgba(255,224,138,0.7)", fontWeight: 600 } }, q.prompt)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "rgba(255,255,255,0.85)", lineHeight: 1.6 } }, answers[q.id])))), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: shareGratitude,
+      style: {
+        fontFamily: "'Noto Sans KR',sans-serif",
+        width: "100%",
+        padding: "12px",
+        background: "rgba(255,255,255,0.1)",
+        color: "rgba(255,255,255,0.85)",
+        border: "1px solid rgba(255,255,255,0.2)",
         borderRadius: 14,
-        border: "1px solid rgba(255,224,138,0.2)",
-        padding: "13px 14px"
-      }, children: [
-        /* @__PURE__ */ jsxs("div", { style: { display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }, children: [
-          /* @__PURE__ */ jsx("span", { style: { fontSize: 14 }, children: q.emoji }),
-          /* @__PURE__ */ jsx("span", { style: { fontSize: 11, color: "rgba(255,224,138,0.7)", fontWeight: 600 }, children: q.prompt })
-        ] }),
-        /* @__PURE__ */ jsx("div", { style: { fontSize: 13, color: "rgba(255,255,255,0.85)", lineHeight: 1.6 }, children: answers[q.id] })
-      ] }, q.id)) }),
-      /* @__PURE__ */ jsx(
-        "button",
-        {
-          onClick: shareGratitude,
-          style: {
-            fontFamily: "'Noto Sans KR',sans-serif",
-            width: "100%",
-            padding: "12px",
-            background: "rgba(255,255,255,0.1)",
-            color: "rgba(255,255,255,0.85)",
-            border: "1px solid rgba(255,255,255,0.2)",
-            borderRadius: 14,
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: "pointer",
-            marginBottom: 10
-          },
-          children: "\u{1F495} \uD30C\uD2B8\uB108\uC640 \uACF5\uC720\uD558\uAE30"
-        }
-      ),
-      /* @__PURE__ */ jsx(
-        "button",
-        {
-          onClick: handleFinish,
-          style: {
-            fontFamily: "'Noto Sans KR',sans-serif",
-            width: "100%",
-            padding: "14px",
-            background: `linear-gradient(135deg, #4A5A8A, ${GV.dusty})`,
-            color: "white",
-            border: "none",
-            borderRadius: 14,
-            fontSize: 15,
-            fontWeight: 700,
-            cursor: "pointer"
-          },
-          children: "\uACBD\uD5D8\uCE58 \uBC1B\uAE30 \u2192"
-        }
-      )
-    ] })
-  ] });
+        fontSize: 13,
+        fontWeight: 600,
+        cursor: "pointer",
+        marginBottom: 10
+      }
+    },
+    "\u{1F495} \uD30C\uD2B8\uB108\uC640 \uACF5\uC720\uD558\uAE30"
+  ), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: handleFinish,
+      style: {
+        fontFamily: "'Noto Sans KR',sans-serif",
+        width: "100%",
+        padding: "14px",
+        background: `linear-gradient(135deg, #4A5A8A, ${GV.dusty})`,
+        color: "white",
+        border: "none",
+        borderRadius: 14,
+        fontSize: 15,
+        fontWeight: 700,
+        cursor: "pointer"
+      }
+    },
+    "\uACBD\uD5D8\uCE58 \uBC1B\uAE30 \u2192"
+  )));
   return null;
 }
