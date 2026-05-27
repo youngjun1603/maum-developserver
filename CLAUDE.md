@@ -27,13 +27,14 @@
 - DB: `lightoflife-db` (D1: 662b3fb9)
 - 마음풀과 다른 점: bible_verses, ai_config, organizations 테이블 추가
 - 배포: `wrangler.toml`(프로덕션) / `wrangler.dev.toml`(스테이징)
+- **프로덕션 도메인: `jesusmaum.com`** — `lightoflife.limyj007.workers.dev` 비활성화됨 (workers.dev 서브도메인 꺼짐)
 
 ---
 
 ## 기술 스택 (공통)
 
 - **백엔드:** Hono.js (TypeScript) + Cloudflare Workers
-- **프론트엔드:** React 18 (Babel JSX, 빌드 없음)
+- **프론트엔드:** React 18 (esbuild 사전 컴파일 — `@babel/standalone` 제거 완료)
 - **DB:** Cloudflare D1 (SQLite) + KV
 - **AI:** Anthropic Claude API
 
@@ -71,16 +72,40 @@ npx wrangler secret put ANTHROPIC_API_KEY
 
 ## 프론트엔드 빌드
 
+**모든 서비스 공통:** `@babel/standalone` 제거, esbuild 사전 컴파일 방식. `npm run deploy`에 build:jsx 포함됨.
+
+### maumful-main (메인 플랫폼)
+
 ```bash
-# JSX → JS 사전 컴파일 (배포 전 필수)
 npm run build:jsx
 # → public/static/compiled/{app,landing,counseling,counseling_admin}.js
 ```
 
-- **빌드 없이 직접 서빙 불가** — esbuild 사전 컴파일 후 배포
 - 4개 파일 모두 **일반 `<script>`로 동일 전역 스코프** 공유
   - 전역 `const` 이름 충돌 시 `SyntaxError` 발생
   - 예: `counseling.jsx`와 `counseling_admin.jsx`의 동일명 변수 → 한쪽 rename 필요
+
+### maumgame-main / cts-game-main (치유 게임)
+
+```bash
+npm run build:jsx   # → public/static/compiled/game_engine.js, game_registry.js, game_hub.js, games/*.js
+npm run deploy      # build:jsx + wrangler deploy 통합 실행
+```
+
+- **`--tsconfig-raw={"compilerOptions":{"jsx":"react"}}` 필수** — `tsconfig.json`의 `"jsx":"react-jsx"` 설정이 esbuild 플래그를 override해서 `import { jsx } from "react/jsx-runtime"` 생성 → 일반 `<script>` 환경에서 실패
+- **SSO 인라인 스크립트 순서 주의:** 컴파일 스크립트 로드 전에 실행 필수 (React 마운트 전 토큰 처리)
+- `game_engine.js`가 `GAME_LANG`, `t()`, `GameEngine` 전역 정의 → 다른 게임 파일이 참조
+- `GameHubApp`에 10초 폴백 타임아웃 추가: `getMe()` fetch hang 시 무한 스켈레톤 방지
+
+### package/maumcouple (커플 분석)
+
+```bash
+npm run build:jsx        # couple_hub.jsx → compiled/couple_hub.js
+npm run deploy           # maumcouple (couple.maumful.com) 배포
+npm run deploy:cts       # lightoflife-couple (wrangler.lightoflife.toml) 배포
+```
+
+- **빌드 없이 직접 서빙 불가** — esbuild 사전 컴파일 후 배포
 
 ---
 
@@ -120,26 +145,18 @@ npm run build:jsx
 
 ---
 
-## 마음게임 번역 (추후 예정)
+## 마음게임 번역 ✅ 완료
 
-**현황:** `maumgame-main/` 전체 한국어 하드코딩 — 번역 시스템 없음
+**현황:** `maumgame-main/` 및 `cts-game-main/` 영어 번역 완료
 
-**번역 필요 파일 (10개, ~1,400줄):**
+**구현 내용:**
+- 패턴: `t(ko, en)` 헬퍼 — `GAME_LANG === 'en' ? en : ko`
+- `GAME_LANG` 전역 변수: `game_engine.jsx`에서 `new URLSearchParams(location.search).get('lang') || 'ko'` 로 초기화
+- lang 전달: 마음풀/CTS → 게임 링크 열 때 `?lang=en` URL 파라미터로 전달
+- `maumcouple`도 `COUPLE_LANG` / `tl(ko, en)` 헬퍼로 동일 패턴 적용
 
-| 우선순위 | 파일 | 주요 내용 |
-|----------|------|-----------|
-| HIGH | `public/static/game_registry.jsx` | 게임 이름·설명·태그 8종 |
-| HIGH | `public/static/game_engine.jsx` | 레벨명(씨앗/새싹...), 업적명, 테마 |
-| HIGH | `public/static/game_hub.jsx` | 메인 허브 UI 전체 |
-| HIGH | `public/static/games/mood.jsx` | 감정 레이블(행복/평온/슬픔...) |
-| HIGH | `public/static/games/garden.jsx` | 호흡법 안내 텍스트 |
-| MEDIUM | `public/static/games/burnout.jsx` ~ `worry.jsx` | 게임 5종 안내 텍스트 |
-
-**구현 방향 (결정 사항):**
-- 패턴: 마음풀과 동일한 `t(ko, en)` 헬퍼 사용
-- lang 전달: 마음풀 → 게임 링크 열 때 `?lang=en` URL 파라미터로 전달
-- 게임 앱 초기화 시 `new URLSearchParams(location.search).get('lang')` 으로 읽기
-- DB `users.locale`은 이미 저장 중이나 게임 앱에서 미사용 상태
+**번역 완료 파일 (maumgame 11개, cts-game 추가 +qt.jsx):**
+`game_engine.jsx`, `game_registry.jsx`, `game_hub.jsx`, `games/mood.jsx`, `games/garden.jsx`, `games/burnout.jsx`, `games/efmt.jsx`, `games/gratitude.jsx`, `games/tree.jsx`, `games/focus.jsx`, `games/worry.jsx`
 
 ---
 
