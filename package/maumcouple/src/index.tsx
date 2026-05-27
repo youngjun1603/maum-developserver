@@ -288,15 +288,33 @@ const HTML = (v: string) => `<!DOCTYPE html>
 
 app.get('/favicon.ico', (c) => {
   const base = new URL(c.req.url).hostname.includes('lightoflife')
-    ? 'https://lightoflife.limyj007.workers.dev'
-    : 'https://maumful.limyj007.workers.dev'
+    ? 'https://jesusmaum.com'
+    : 'https://maumful.com'
   return fetch(`${base}/favicon.ico`)
 })
 app.get('/favicon.png', (c) => {
   const base = new URL(c.req.url).hostname.includes('lightoflife')
-    ? 'https://lightoflife.limyj007.workers.dev'
-    : 'https://maumful.limyj007.workers.dev'
+    ? 'https://jesusmaum.com'
+    : 'https://maumful.com'
   return fetch(`${base}/favicon.png`)
+})
+app.get('/static/icon-192.png', (c) => {
+  const base = new URL(c.req.url).hostname.includes('lightoflife')
+    ? 'https://jesusmaum.com'
+    : 'https://maumful.com'
+  return fetch(`${base}/static/icon-192.png`)
+})
+app.get('/manifest.json', (c) => {
+  const isLightoflife = new URL(c.req.url).hostname.includes('lightoflife')
+  return c.json({
+    name: isLightoflife ? 'CTS 커플 케어' : '마음커플',
+    short_name: isLightoflife ? '커플 케어' : '마음커플',
+    start_url: '/',
+    display: 'standalone',
+    background_color: '#FFF0F6',
+    theme_color: '#E05A8A',
+    icons: [{ src: '/static/icon-192.png', sizes: '192x192', type: 'image/png' }],
+  })
 })
 app.get('/', c => c.html(HTML(Date.now().toString(36))))
 
