@@ -30,7 +30,7 @@ const TOKEN_KEY   = 'couple_token';
 const MAUMFUL_URL = (() => {
   const h = window.location.hostname;
   if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000';
-  if (h.includes('lightoflife')) return 'https://lightoflife.limyj007.workers.dev';
+  if (h.includes('lightoflife')) return 'https://jesusmaum.com';
   if (h.includes('maumcouple-dev') || h.includes('-dev.')) return 'https://maumful-dev.limyj007.workers.dev';
   return 'https://maumful.com';
 })();
