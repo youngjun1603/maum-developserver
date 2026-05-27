@@ -2171,6 +2171,7 @@ function GameHubApp() {
 
   useEffect(() => {
     if (!isLoggedIn) { setLoading(false); return; }
+    const fallback = setTimeout(() => setLoading(false), 10000);
     GameEngine.getMe()
       .then(res => {
         if (res.success) {
@@ -2181,7 +2182,8 @@ function GameHubApp() {
         } else setError(res.error || '데이터 조회 실패');
       })
       .catch(() => setError('서버 연결 실패'))
-      .finally(() => setLoading(false));
+      .finally(() => { clearTimeout(fallback); setLoading(false); });
+    return () => clearTimeout(fallback);
   }, []);
 
   // ── URL 파라미터 ?game=xxx 자동 실행 ──────────────────────
