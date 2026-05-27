@@ -21,6 +21,10 @@ const C = {
   heartRed: '#E05C7A',
 };
 
+// ── 언어 설정 및 번역 헬퍼 ───────────────────────────────
+const COUPLE_LANG = new URLSearchParams(location.search).get('lang') || 'ko';
+const tl = (ko, en) => COUPLE_LANG === 'en' ? en : ko;
+
 // ── 상수 ──────────────────────────────────────────────────
 const TOKEN_KEY   = 'couple_token';
 const MAUMFUL_URL = (() => {
@@ -32,11 +36,11 @@ const MAUMFUL_URL = (() => {
 })();
 
 const IS_CTS = window.location.hostname.includes('lightoflife');
-const SERVICE_NAME      = IS_CTS ? '커플 케어'                    : '마음커플';
-const SERVICE_ICON      = IS_CTS ? '💑'                           : '💕';
-const BACK_LABEL        = IS_CTS ? '← The Light of Life'         : '← 마음풀';
-const LOADING_TEXT      = IS_CTS ? '커플 케어를 불러오는 중...'   : '마음커플을 불러오는 중...';
-const MAIN_SERVICE_NAME = IS_CTS ? 'The Light of Life'            : '마음풀';
+const SERVICE_NAME      = IS_CTS ? tl('커플 케어', 'Couple Care')                            : tl('마음커플', 'Maum Couple');
+const SERVICE_ICON      = IS_CTS ? '💑'                                                       : '💕';
+const BACK_LABEL        = IS_CTS ? '← The Light of Life'                                     : tl('← 마음풀', '← Maumful');
+const LOADING_TEXT      = IS_CTS ? tl('커플 케어를 불러오는 중...', 'Loading Couple Care...') : tl('마음커플을 불러오는 중...', 'Loading Maum Couple...');
+const MAIN_SERVICE_NAME = IS_CTS ? 'The Light of Life'                                        : tl('마음풀', 'Maumful');
 const COUPLE_URL        = IS_CTS ? 'https://lightoflife-couple.limyj007.workers.dev' : 'https://couple.maumful.com';
 
 const COST_FULL  = 45;  // BIG5+LOST+DSI
@@ -66,7 +70,7 @@ const api = {
 
 // ── 유틸 ─────────────────────────────────────────────────
 function displayName(user) {
-  return user?.nickname || user?.email?.split('@')[0] || '나';
+  return user?.nickname || user?.email?.split('@')[0] || tl('나', 'Me');
 }
 function fmtDate(dt) {
   if (!dt) return '';
@@ -78,14 +82,75 @@ function scoreColor(score) {
   return C.amber;
 }
 function scoreLabel(score) {
-  if (score >= 85) return '천생연분 💕';
-  if (score >= 70) return '잘 맞는 커플 💑';
-  if (score >= 55) return '노력하면 완벽 🌸';
-  return '다름 속의 매력 🌈';
+  if (score >= 85) return tl('천생연분 💕', 'Perfect Match 💕');
+  if (score >= 70) return tl('잘 맞는 커플 💑', 'Great Couple 💑');
+  if (score >= 55) return tl('노력하면 완벽 🌸', 'Perfect with Effort 🌸');
+  return tl('다름 속의 매력 🌈', 'Beauty in Differences 🌈');
 }
 
 // ── 오늘의 커플 대화 질문 (60개, 날짜 기반 순환) ──────────
-const DAILY_QUESTIONS = [
+const DAILY_QUESTIONS = COUPLE_LANG === 'en' ? [
+  "What first attracted you to your partner when you met?",
+  "What is the most precious moment you've shared together?",
+  "Where and how do you picture us living 10 years from now?",
+  "Is there something you still don't know about each other?",
+  "What are you most grateful for about your partner?",
+  "What is the proudest aspect of our relationship?",
+  "Is there a bucket list item you really want to do together?",
+  "What would you want your partner to do when you're struggling?",
+  "What small habit of your partner do you find endearing?",
+  "If you could redo your first date, where would you go?",
+  "Is there something your partner said that gave you the most strength?",
+  "When did you laugh the most together?",
+  "Is there something you haven't been able to say to your partner?",
+  "What aspect of your partner do you find most admirable?",
+  "Is there something you'd like to learn together?",
+  "What is your favorite routine that's unique to us?",
+  "How can you best support your partner when they're stressed?",
+  "What is your dream travel destination to visit together?",
+  "When did you feel most understood by your partner?",
+  "What quality of your partner do you most want to emulate?",
+  "Is there something you wish your partner would be more honest about?",
+  "If you had to describe our relationship in one word, what would it be?",
+  "What is the biggest dream you want to achieve together?",
+  "What small act of consideration from your partner is most memorable?",
+  "Have you tried enjoying each other's hobbies together? How was it?",
+  "What is the most touching thing your partner has done for you?",
+  "What is something you want to work harder on in our relationship?",
+  "What makes you feel like you can do anything when you're with your partner?",
+  "What do you hope we look like as an elderly couple?",
+  "What quality of your partner makes you a better person?",
+  "Is there a new experience you'd like to try together?",
+  "Is there something your partner has changed for you?",
+  "What is the most important thing to protect in our relationship?",
+  "Is there an emotion you'd like to express better to each other?",
+  "Is there a small habit you'd like to do together every day?",
+  "When do you feel your partner understands you best?",
+  "If you lived together, what kind of home would you want?",
+  "How do you personally support your partner's dreams?",
+  "What are the love signals your partner sends to you?",
+  "Do you have a special word or code that's just between the two of you?",
+  "What is the happiest moment you spend together?",
+  "What does your partner do to make you laugh?",
+  "Is there something you feel sorry about to each other?",
+  "What goals do you want to achieve together this year?",
+  "What kind of person would you be without your partner?",
+  "Do you remember the first time you held hands?",
+  "Can you each name three of the other's greatest strengths?",
+  "Is there a movie or drama you want to watch together?",
+  "Is there one thing your partner wishes from you?",
+  "How did you feel when you first said 'let's date'?",
+  "Can you find three ways you are alike?",
+  "What action of your partner makes your heart flutter the most?",
+  "When do you feel like you've grown together?",
+  "What do you most want to say to your partner right now?",
+  "What is the best way you communicate in our relationship?",
+  "When do you feel like you've become the most needed person for each other?",
+  "Is there a restaurant or café you really want to visit together?",
+  "Is there a small favor you'd want your partner to do for you?",
+  "Why do you think we get along so well?",
+  "What feeling do you get when you're with your partner?",
+] : [
   "처음 만났을 때 상대방의 어떤 점이 마음에 들었나요?",
   "우리가 함께한 가장 소중한 순간은 무엇인가요?",
   "10년 후 우리는 어디서 어떻게 살고 있을까요?",
@@ -150,53 +215,57 @@ const DAILY_QUESTIONS = [
 
 // ── 미니 연애 유형 테스트 ─────────────────────────────────
 const MINI_QUESTIONS = [
-  { q: "연애에서 가장 중요하게 여기는 것은?",
-    opts: [{ text: "신뢰와 안정감", type: 'S' }, { text: "설레는 감정과 특별한 순간", type: 'R' },
-           { text: "함께 성장하는 것", type: 'P' }, { text: "서로의 자유와 독립", type: 'F' }] },
-  { q: "파트너가 연락을 늦게 할 때 나는?",
-    opts: [{ text: "크게 신경 쓰지 않는다", type: 'S' }, { text: "걱정되어 먼저 연락한다", type: 'P' },
-           { text: "나도 바쁘니 괜찮다", type: 'F' }, { text: "서운하지만 예쁜 메시지를 남긴다", type: 'R' }] },
-  { q: "이상적인 데이트 스타일은?",
-    opts: [{ text: "분위기 있는 레스토랑과 야경", type: 'R' }, { text: "새로운 액티비티 도전", type: 'P' },
-           { text: "집에서 편하게 영화 보기", type: 'S' }, { text: "각자 하고 싶은 것 즐기기", type: 'F' }] },
-  { q: "서운할 때 나는?",
-    opts: [{ text: "바로 솔직하게 이야기한다", type: 'S' }, { text: "넌지시 표현하고 알아줬으면 한다", type: 'R' },
-           { text: "감정을 충분히 표현한다", type: 'P' }, { text: "혼자 정리하고 넘어간다", type: 'F' }] },
-  { q: "애정 표현 스타일은?",
-    opts: [{ text: "말과 행동으로 적극적으로", type: 'P' }, { text: "특별한 이벤트와 선물", type: 'R' },
-           { text: "꾸준한 작은 관심과 배려", type: 'S' }, { text: "함께하는 소소한 일상", type: 'F' }] },
-  { q: "미래를 생각할 때 나는?",
-    opts: [{ text: "함께 구체적 계획을 세우고 싶다", type: 'S' }, { text: "아름다운 미래 모습을 상상한다", type: 'R' },
-           { text: "함께 더 나은 사람이 되고 싶다", type: 'P' }, { text: "자연스럽게 흘러가면 좋겠다", type: 'F' }] },
-  { q: "연애에서 가장 힘든 것은?",
-    opts: [{ text: "신뢰가 흔들릴 때", type: 'S' }, { text: "설렘이 줄어들 것 같을 때", type: 'R' },
-           { text: "함께 성장하지 못하는 것 같을 때", type: 'P' }, { text: "나만의 공간이 없을 때", type: 'F' }] },
+  { q: tl("연애에서 가장 중요하게 여기는 것은?", "What do you value most in a relationship?"),
+    opts: [{ text: tl("신뢰와 안정감", "Trust and stability"), type: 'S' }, { text: tl("설레는 감정과 특별한 순간", "Exciting feelings and special moments"), type: 'R' },
+           { text: tl("함께 성장하는 것", "Growing together"), type: 'P' }, { text: tl("서로의 자유와 독립", "Mutual freedom and independence"), type: 'F' }] },
+  { q: tl("파트너가 연락을 늦게 할 때 나는?", "When your partner is slow to respond, you:"),
+    opts: [{ text: tl("크게 신경 쓰지 않는다", "Don't worry much about it"), type: 'S' }, { text: tl("걱정되어 먼저 연락한다", "Get worried and reach out first"), type: 'P' },
+           { text: tl("나도 바쁘니 괜찮다", "I'm busy too, so it's fine"), type: 'F' }, { text: tl("서운하지만 예쁜 메시지를 남긴다", "Feel hurt but leave a sweet message"), type: 'R' }] },
+  { q: tl("이상적인 데이트 스타일은?", "What is your ideal date style?"),
+    opts: [{ text: tl("분위기 있는 레스토랑과 야경", "Romantic restaurant and night view"), type: 'R' }, { text: tl("새로운 액티비티 도전", "Trying new activities"), type: 'P' },
+           { text: tl("집에서 편하게 영화 보기", "Relaxing at home watching movies"), type: 'S' }, { text: tl("각자 하고 싶은 것 즐기기", "Each enjoying what they like"), type: 'F' }] },
+  { q: tl("서운할 때 나는?", "When you feel hurt, you:"),
+    opts: [{ text: tl("바로 솔직하게 이야기한다", "Talk about it honestly right away"), type: 'S' }, { text: tl("넌지시 표현하고 알아줬으면 한다", "Drop hints and hope they notice"), type: 'R' },
+           { text: tl("감정을 충분히 표현한다", "Express my feelings fully"), type: 'P' }, { text: tl("혼자 정리하고 넘어간다", "Process it alone and move on"), type: 'F' }] },
+  { q: tl("애정 표현 스타일은?", "How do you express affection?"),
+    opts: [{ text: tl("말과 행동으로 적극적으로", "Actively through words and actions"), type: 'P' }, { text: tl("특별한 이벤트와 선물", "Special events and gifts"), type: 'R' },
+           { text: tl("꾸준한 작은 관심과 배려", "Consistent small attention and care"), type: 'S' }, { text: tl("함께하는 소소한 일상", "Everyday moments together"), type: 'F' }] },
+  { q: tl("미래를 생각할 때 나는?", "When thinking about the future, you:"),
+    opts: [{ text: tl("함께 구체적 계획을 세우고 싶다", "Want to make concrete plans together"), type: 'S' }, { text: tl("아름다운 미래 모습을 상상한다", "Imagine a beautiful future together"), type: 'R' },
+           { text: tl("함께 더 나은 사람이 되고 싶다", "Want to become better people together"), type: 'P' }, { text: tl("자연스럽게 흘러가면 좋겠다", "Hope things flow naturally"), type: 'F' }] },
+  { q: tl("연애에서 가장 힘든 것은?", "What is hardest for you in a relationship?"),
+    opts: [{ text: tl("신뢰가 흔들릴 때", "When trust wavers"), type: 'S' }, { text: tl("설렘이 줄어들 것 같을 때", "When the excitement seems to fade"), type: 'R' },
+           { text: tl("함께 성장하지 못하는 것 같을 때", "When it feels like we're not growing together"), type: 'P' }, { text: tl("나만의 공간이 없을 때", "When I have no space of my own"), type: 'F' }] },
 ];
 
 const LOVE_TYPES = {
-  S: { emoji: '💚', name: '안정 신뢰형', short: '든든한 버팀목',
-    desc: '신뢰와 안정감을 가장 중요하게 여깁니다. 꾸준하고 믿음직한 파트너로, 상대방이 편안하게 의지할 수 있는 관계를 만들어요.',
-    strength: '높은 신뢰도 · 꾸준한 헌신 · 솔직한 소통',
-    match: '감정 표현이 솔직하고 안정감을 원하는 분과 잘 맞아요.',
-    tip: '때로는 작은 이벤트로 설렘도 선물해보세요! 💫',
+  S: { emoji: '💚', name: tl('안정 신뢰형', 'Stable & Trusting'), short: tl('든든한 버팀목', 'Steady Pillar'),
+    desc: tl('신뢰와 안정감을 가장 중요하게 여깁니다. 꾸준하고 믿음직한 파트너로, 상대방이 편안하게 의지할 수 있는 관계를 만들어요.',
+             'You value trust and stability above all. As a steady and reliable partner, you create relationships where your partner can comfortably lean on you.'),
+    strength: tl('높은 신뢰도 · 꾸준한 헌신 · 솔직한 소통', 'High trust · Consistent commitment · Honest communication'),
+    match: tl('감정 표현이 솔직하고 안정감을 원하는 분과 잘 맞아요.', 'You match well with someone who is emotionally open and seeks stability.'),
+    tip: tl('때로는 작은 이벤트로 설렘도 선물해보세요! 💫', 'Try gifting some excitement with small surprises! 💫'),
     color: '#4A9A5A', pale: '#EAF5EC' },
-  R: { emoji: '🌹', name: '낭만 감성형', short: '설렘 제조기',
-    desc: '감성적이고 특별한 순간을 사랑합니다. 작은 이벤트와 감동적인 표현으로 연애를 풍성하게 만드는 로맨티스트예요.',
-    strength: '풍부한 감수성 · 창의적 표현 · 세심한 배려',
-    match: '감동과 설렘을 함께 나눌 수 있는 분과 잘 맞아요.',
-    tip: '일상적인 안정감도 연애의 소중한 부분이에요. 🌱',
+  R: { emoji: '🌹', name: tl('낭만 감성형', 'Romantic & Sentimental'), short: tl('설렘 제조기', 'Excitement Creator'),
+    desc: tl('감성적이고 특별한 순간을 사랑합니다. 작은 이벤트와 감동적인 표현으로 연애를 풍성하게 만드는 로맨티스트예요.',
+             'You love being emotional and creating special moments. A true romantic who enriches love with small events and heartfelt expressions.'),
+    strength: tl('풍부한 감수성 · 창의적 표현 · 세심한 배려', 'Rich sensitivity · Creative expression · Thoughtful care'),
+    match: tl('감동과 설렘을 함께 나눌 수 있는 분과 잘 맞아요.', 'You match well with someone who can share emotion and excitement.'),
+    tip: tl('일상적인 안정감도 연애의 소중한 부분이에요. 🌱', 'Everyday stability is also a precious part of love. 🌱'),
     color: C.rose, pale: C.rosePale },
-  P: { emoji: '🔥', name: '열정 성장형', short: '함께 타오르는 불꽃',
-    desc: '강렬하고 진취적인 연애를 원합니다. 파트너와 함께 성장하고 더 나은 사람이 되는 것에 큰 가치를 두는 열정적인 타입이에요.',
-    strength: '강한 헌신 · 함께 성장하는 마인드 · 적극적 표현',
-    match: '비슷한 열정과 목표를 공유할 수 있는 분과 잘 맞아요.',
-    tip: '파트너의 충전 시간도 배려해주세요. 💆',
+  P: { emoji: '🔥', name: tl('열정 성장형', 'Passionate & Growth-Oriented'), short: tl('함께 타오르는 불꽃', 'Flame that Burns Together'),
+    desc: tl('강렬하고 진취적인 연애를 원합니다. 파트너와 함께 성장하고 더 나은 사람이 되는 것에 큰 가치를 두는 열정적인 타입이에요.',
+             'You want an intense and progressive relationship. A passionate type who places great value on growing and becoming a better person with your partner.'),
+    strength: tl('강한 헌신 · 함께 성장하는 마인드 · 적극적 표현', 'Strong commitment · Growth mindset · Active expression'),
+    match: tl('비슷한 열정과 목표를 공유할 수 있는 분과 잘 맞아요.', 'You match well with someone who shares similar passion and goals.'),
+    tip: tl('파트너의 충전 시간도 배려해주세요. 💆', 'Please respect your partner\'s recharge time too. 💆'),
     color: '#D4634A', pale: '#FEF0EC' },
-  F: { emoji: '🌊', name: '자유 여유형', short: '바람 같은 자유로움',
-    desc: '서로의 독립성을 존중하며 여유롭고 자연스러운 관계를 선호합니다. 집착 없이 서로를 믿고 개인 공간을 지켜주는 성숙한 연애를 해요.',
-    strength: '서로 존중 · 집착 없는 신뢰 · 개인 공간 배려',
-    match: '독립성을 이해하고 여유 있는 연애를 원하는 분과 잘 맞아요.',
-    tip: '때로는 더 적극적인 관심 표현도 필요할 수 있어요. 💌',
+  F: { emoji: '🌊', name: tl('자유 여유형', 'Free & Easy-Going'), short: tl('바람 같은 자유로움', 'Freedom like the Wind'),
+    desc: tl('서로의 독립성을 존중하며 여유롭고 자연스러운 관계를 선호합니다. 집착 없이 서로를 믿고 개인 공간을 지켜주는 성숙한 연애를 해요.',
+             'You prefer a relaxed and natural relationship that respects each other\'s independence. A mature love where you trust each other without obsession and maintain personal space.'),
+    strength: tl('서로 존중 · 집착 없는 신뢰 · 개인 공간 배려', 'Mutual respect · Trust without obsession · Respecting personal space'),
+    match: tl('독립성을 이해하고 여유 있는 연애를 원하는 분과 잘 맞아요.', 'You match well with someone who understands independence and wants a relaxed relationship.'),
+    tip: tl('때로는 더 적극적인 관심 표현도 필요할 수 있어요. 💌', 'Sometimes more active expressions of interest may be needed. 💌'),
     color: C.lavender, pale: C.lavPale },
 };
 
@@ -211,11 +280,11 @@ function getPersonalityLabel(big5Data) {
   if (!big5Data) return null;
   const { O=50, C=50, E=50, A=50, N=50 } = big5Data;
   return [
-    { emoji: '⚡', name: '활력형', v: E },
-    { emoji: '🤝', name: '친화형', v: A },
-    { emoji: '🎨', name: '탐구형', v: O },
-    { emoji: '📋', name: '계획형', v: C },
-    { emoji: '🌊', name: '감수형', v: N },
+    { emoji: '⚡', name: tl('활력형', 'Energetic'), v: E },
+    { emoji: '🤝', name: tl('친화형', 'Agreeable'), v: A },
+    { emoji: '🎨', name: tl('탐구형', 'Curious'), v: O },
+    { emoji: '📋', name: tl('계획형', 'Organized'), v: C },
+    { emoji: '🌊', name: tl('감수형', 'Sensitive'), v: N },
   ].sort((a, b) => b.v - a.v)[0];
 }
 
@@ -225,21 +294,21 @@ function getCoupleChemType(myBig5, partnerBig5) {
   const avgE  = ((myBig5.E||50) + (partnerBig5.E||50)) / 2;
   const avgA  = ((myBig5.A||50) + (partnerBig5.A||50)) / 2;
   const avgO  = ((myBig5.O||50) + (partnerBig5.O||50)) / 2;
-  if (eDiff < 15 && avgE > 60) return { emoji: '🔥', name: '열정 폭발형', desc: '둘 다 에너지가 넘쳐 함께하면 시너지 폭발!', color: '#D4634A' };
-  if (eDiff > 30) return { emoji: '🌊', name: '균형 보완형', desc: '서로 다른 에너지가 완벽한 균형을 이뤄요.', color: C.lavender };
-  if (avgA > 65) return { emoji: '💚', name: '따뜻한 배려형', desc: '서로를 깊이 배려하는 따뜻하고 안정적인 케미예요.', color: '#4A9A5A' };
-  if (avgO > 65) return { emoji: '🎨', name: '창의적 탐험형', desc: '새로운 것을 함께 탐험하는 모험심 넘치는 케미예요.', color: C.amber };
-  return { emoji: '💕', name: '특별한 우리형', desc: '둘만의 독특하고 소중한 케미를 가지고 있어요.', color: C.rose };
+  if (eDiff < 15 && avgE > 60) return { emoji: '🔥', name: tl('열정 폭발형', 'Explosive Energy'), desc: tl('둘 다 에너지가 넘쳐 함께하면 시너지 폭발!', 'Both full of energy — explosive synergy together!'), color: '#D4634A' };
+  if (eDiff > 30) return { emoji: '🌊', name: tl('균형 보완형', 'Balanced Complement'), desc: tl('서로 다른 에너지가 완벽한 균형을 이뤄요.', 'Different energies form a perfect balance.'), color: C.lavender };
+  if (avgA > 65) return { emoji: '💚', name: tl('따뜻한 배려형', 'Warm & Caring'), desc: tl('서로를 깊이 배려하는 따뜻하고 안정적인 케미예요.', 'A warm and stable chemistry of deep mutual care.'), color: '#4A9A5A' };
+  if (avgO > 65) return { emoji: '🎨', name: tl('창의적 탐험형', 'Creative Explorers'), desc: tl('새로운 것을 함께 탐험하는 모험심 넘치는 케미예요.', 'An adventurous chemistry of exploring new things together.'), color: C.amber };
+  return { emoji: '💕', name: tl('특별한 우리형', 'Uniquely Us'), desc: tl('둘만의 독특하고 소중한 케미를 가지고 있어요.', 'You have a unique and precious chemistry all your own.'), color: C.rose };
 }
 
 // ── BIG5 비교 뷰 ─────────────────────────────────────────
 function Big5CompareView({ myBig5, partnerBig5, myName, partnerName, onBack }) {
   const traits = [
-    { key: 'O', label: '개방성', emoji: '🎨', desc: '창의성·호기심' },
-    { key: 'C', label: '성실성', emoji: '📋', desc: '책임감·계획성' },
-    { key: 'E', label: '외향성', emoji: '⚡', desc: '사교성·활동성' },
-    { key: 'A', label: '친화성', emoji: '🤝', desc: '배려·협력' },
-    { key: 'N', label: '신경성', emoji: '🌊', desc: '감정 민감도' },
+    { key: 'O', label: tl('개방성', 'Openness'), emoji: '🎨', desc: tl('창의성·호기심', 'Creativity·Curiosity') },
+    { key: 'C', label: tl('성실성', 'Conscientiousness'), emoji: '📋', desc: tl('책임감·계획성', 'Responsibility·Planning') },
+    { key: 'E', label: tl('외향성', 'Extraversion'), emoji: '⚡', desc: tl('사교성·활동성', 'Sociability·Activity') },
+    { key: 'A', label: tl('친화성', 'Agreeableness'), emoji: '🤝', desc: tl('배려·협력', 'Care·Cooperation') },
+    { key: 'N', label: tl('신경성', 'Neuroticism'), emoji: '🌊', desc: tl('감정 민감도', 'Emotional sensitivity') },
   ];
   const chem = getCoupleChemType(myBig5, partnerBig5);
 
@@ -266,9 +335,9 @@ function Big5CompareView({ myBig5, partnerBig5, myName, partnerName, onBack }) {
 
   function shareResult() {
     const lines = traits.map(t => `${t.emoji}${t.label}: ${myBig5?.[t.key] ?? 50} vs ${partnerBig5?.[t.key] ?? 50}`);
-    const text = `${SERVICE_ICON} BIG5 커플 비교\n${myName} vs ${partnerName}\n${lines.join('\n')}\n${chem ? `케미: ${chem.emoji} ${chem.name}` : ''}\n${COUPLE_URL} #${SERVICE_NAME}`;
-    if (navigator.share) navigator.share({ title: 'BIG5 커플 비교', text }).catch(() => {});
-    else navigator.clipboard?.writeText(text).then(() => alert('클립보드에 복사됐어요!')).catch(() => {});
+    const text = `${SERVICE_ICON} ${tl('BIG5 커플 비교', 'BIG5 Couple Comparison')}\n${myName} vs ${partnerName}\n${lines.join('\n')}\n${chem ? `${tl('케미', 'Chemistry')}: ${chem.emoji} ${chem.name}` : ''}\n${COUPLE_URL} #${SERVICE_NAME}`;
+    if (navigator.share) navigator.share({ title: tl('BIG5 커플 비교', 'BIG5 Couple Comparison'), text }).catch(() => {});
+    else navigator.clipboard?.writeText(text).then(() => alert(tl('클립보드에 복사됐어요!', 'Copied to clipboard!'))).catch(() => {});
   }
 
   return (
@@ -285,7 +354,7 @@ function Big5CompareView({ myBig5, partnerBig5, myName, partnerName, onBack }) {
           fontSize: 20, color: C.rose, padding: '4px 8px',
         }}>←</button>
         <span style={{ fontSize: 16, fontWeight: 700, color: C.dark, fontFamily: "'Noto Serif KR', serif" }}>
-          🧬 BIG5 성격 비교
+          🧬 {tl('BIG5 성격 비교', 'BIG5 Personality Comparison')}
         </span>
       </nav>
 
@@ -298,7 +367,7 @@ function Big5CompareView({ myBig5, partnerBig5, myName, partnerName, onBack }) {
           display: 'flex', justifyContent: 'center', gap: 28,
         }}>
           {[
-            { name: myName + ' (나)', color: C.rose },
+            { name: myName + tl(' (나)', ' (Me)'), color: C.rose },
             { name: partnerName, color: C.lavender },
           ].map(({ name, color }) => (
             <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -367,7 +436,7 @@ function Big5CompareView({ myBig5, partnerBig5, myName, partnerName, onBack }) {
           borderRadius: 20, padding: '20px', marginBottom: 20,
           background: 'white', boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
         }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: C.dark, marginBottom: 16 }}>📊 항목별 비교</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: C.dark, marginBottom: 16 }}>📊 {tl('항목별 비교', 'Comparison by Category')}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {traits.map(({ key, label, emoji, desc }) => {
               const myVal      = myBig5?.[key] ?? 50;
@@ -377,14 +446,14 @@ function Big5CompareView({ myBig5, partnerBig5, myName, partnerName, onBack }) {
                 <div key={key}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
                     <span style={{ fontSize: 13, fontWeight: 700, color: C.dark }}>{emoji} {label}</span>
-                    <span style={{ fontSize: 11, color: C.muted }}>{desc} · 차이 {diff}점</span>
+                    <span style={{ fontSize: 11, color: C.muted }}>{desc} · {tl('차이', 'Diff')} {diff}{tl('점', '')}</span>
                   </div>
                   {[
-                    { name: myName + ' (나)', val: myVal, color: C.rose },
+                    { name: myName + tl(' (나)', ' (Me)'), val: myVal, color: C.rose },
                     { name: partnerName, val: partnerVal, color: C.lavender },
-                  ].map(({ name, val, color }) => (
-                    <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                      <span style={{ fontSize: 11, color: C.muted, width: 64, flexShrink: 0, textAlign: 'right' }}>{name}</span>
+                  ].map(({ name: nname, val, color }) => (
+                    <div key={nname} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <span style={{ fontSize: 11, color: C.muted, width: 64, flexShrink: 0, textAlign: 'right' }}>{nname}</span>
                       <div style={{ flex: 1, background: '#f3f0f5', borderRadius: 6, height: 10, overflow: 'hidden' }}>
                         <div style={{
                           width: val + '%', height: '100%', borderRadius: 6,
@@ -421,7 +490,7 @@ function Big5CompareView({ myBig5, partnerBig5, myName, partnerName, onBack }) {
           border: 'none', cursor: 'pointer',
           fontFamily: "'Noto Sans KR', sans-serif",
         }}>
-          🔗 결과 공유하기
+          🔗 {tl('결과 공유하기', 'Share Result')}
         </button>
       </div>
     </div>
@@ -506,7 +575,7 @@ function WaitingIllust({ style = {} }) {
       <text x="225" y="107" textAnchor="middle" fontSize="22" fill={C.lavL} opacity="0.7">?</text>
       {/* 텍스트 */}
       <text x="160" y="168" textAnchor="middle" fontSize="12" fill={C.muted}
-        fontFamily="'Noto Sans KR', sans-serif">파트너를 기다리는 중...</text>
+        fontFamily="'Noto Sans KR', sans-serif">{tl('파트너를 기다리는 중...', 'Waiting for partner...')}</text>
     </svg>
   );
 }
@@ -526,10 +595,12 @@ function LoginGate() {
         fontFamily: "'Noto Serif KR', serif",
       }}>{SERVICE_NAME}</h1>
       <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.9, marginBottom: 32, maxWidth: 300 }}>
-        {IS_CTS ? 'The Light of Life에서 로그인하면' : '마음풀에서 로그인하면'}<br/>
-        별도 로그인 없이 바로 이용할 수 있어요.<br/>
-        심리검사 결과로 파트너와의<br/>
-        궁합과 관계 패턴을 분석해보세요 💑
+        {IS_CTS
+          ? tl('The Light of Life에서 로그인하면', 'Log in to The Light of Life')
+          : tl('마음풀에서 로그인하면', 'Log in to Maumful')}<br/>
+        {tl('별도 로그인 없이 바로 이용할 수 있어요.', 'and start using without a separate login.')}<br/>
+        {tl('심리검사 결과로 파트너와의', 'Analyze your compatibility and')}<br/>
+        {tl('궁합과 관계 패턴을 분석해보세요 💑', 'relationship patterns with your partner 💑')}
       </p>
       <a href={MAUMFUL_URL} style={{
         display: 'inline-block', padding: '14px 36px',
@@ -539,7 +610,9 @@ function LoginGate() {
         boxShadow: `0 8px 24px ${C.rose}44`,
         fontFamily: "'Noto Sans KR', sans-serif",
       }}>
-        {IS_CTS ? 'The Light of Life 로그인하고 시작하기 →' : '마음풀 로그인하고 시작하기 →'}
+        {IS_CTS
+          ? tl('The Light of Life 로그인하고 시작하기 →', 'Log in to The Light of Life →')
+          : tl('마음풀 로그인하고 시작하기 →', 'Log in to Maumful and Start →')}
       </a>
     </div>
   );
@@ -549,9 +622,9 @@ function LoginGate() {
 function TestResultBadge({ type, result, date }) {
   const hasResult = !!result;
   const meta = {
-    BIG5: { emoji: '🧬', label: 'BIG5 성격검사',   color: C.rose,     pale: C.rosePale,  accentL: C.roseL },
-    LOST: { emoji: '⚙️', label: 'LOST 행동유형',   color: C.lavender, pale: C.lavPale,   accentL: C.lavL  },
-    DSI:  { emoji: '🪞', label: 'SDRI 자아분화검사', color: '#5A8A7A',  pale: '#EAF3F0',   accentL: '#7ABAA8' },
+    BIG5: { emoji: '🧬', label: tl('BIG5 성격검사', 'BIG5 Personality Test'),   color: C.rose,     pale: C.rosePale,  accentL: C.roseL },
+    LOST: { emoji: '⚙️', label: tl('LOST 행동유형', 'LOST Behavior Type'),      color: C.lavender, pale: C.lavPale,   accentL: C.lavL  },
+    DSI:  { emoji: '🪞', label: tl('SDRI 자아분화검사', 'SDRI Differentiation Test'), color: '#5A8A7A',  pale: '#EAF3F0',   accentL: '#7ABAA8' },
   }[type] || { emoji: '📋', label: type, color: C.muted, pale: '#F5F5F5', accentL: C.muted };
 
   return (
@@ -567,14 +640,14 @@ function TestResultBadge({ type, result, date }) {
           {meta.label}
         </div>
         <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>
-          {hasResult ? `✓ 완료 · ${fmtDate(date)}` : '아직 검사 결과 없음'}
+          {hasResult ? `✓ ${tl('완료', 'Done')} · ${fmtDate(date)}` : tl('아직 검사 결과 없음', 'No test result yet')}
         </div>
       </div>
       {hasResult && (
         <span style={{
           fontSize: 10, fontWeight: 700, padding: '3px 8px',
           borderRadius: 100, background: meta.color, color: 'white',
-        }}>완료</span>
+        }}>{tl('완료', 'Done')}</span>
       )}
     </div>
   );
@@ -588,9 +661,9 @@ function DailyQuestionCard() {
   const q = DAILY_QUESTIONS[dayIdx];
 
   function copyQuestion() {
-    const text = `${SERVICE_ICON} 오늘의 커플 대화 질문\n\n"${q}"\n\n${COUPLE_URL}`;
+    const text = `${SERVICE_ICON} ${tl('오늘의 커플 대화 질문', 'Today\'s Couple Question')}\n\n"${q}"\n\n${COUPLE_URL}`;
     if (navigator.share) {
-      navigator.share({ title: '오늘의 커플 질문', text }).catch(() => {});
+      navigator.share({ title: tl('오늘의 커플 질문', 'Today\'s Couple Question'), text }).catch(() => {});
     } else {
       navigator.clipboard?.writeText(text).catch(() => {});
       setCopied(true);
@@ -608,7 +681,7 @@ function DailyQuestionCard() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ fontSize: 18 }}>💬</span>
-          <span style={{ fontSize: 13, fontWeight: 700, color: C.rose }}>오늘의 커플 대화 질문</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: C.rose }}>{tl('오늘의 커플 대화 질문', 'Today\'s Couple Question')}</span>
         </div>
         <span style={{ fontSize: 11, color: C.muted, background: 'rgba(255,255,255,0.6)', padding: '2px 8px', borderRadius: 20 }}>
           Day {((dayIdx + 1))}
@@ -627,12 +700,12 @@ function DailyQuestionCard() {
           flex: 1, padding: '9px', borderRadius: 10, border: 'none', cursor: 'pointer',
           background: 'rgba(255,255,255,0.7)', color: C.muted,
           fontSize: 12, fontWeight: 600, fontFamily: "'Noto Sans KR', sans-serif",
-        }}>다음 질문 →</button>
+        }}>{tl('다음 질문 →', 'Next Question →')}</button>
         <button onClick={copyQuestion} style={{
           flex: 1, padding: '9px', borderRadius: 10, border: 'none', cursor: 'pointer',
           background: C.rose, color: 'white',
           fontSize: 12, fontWeight: 700, fontFamily: "'Noto Sans KR', sans-serif",
-        }}>{copied ? '✓ 복사됨' : '📤 파트너와 공유'}</button>
+        }}>{copied ? tl('✓ 복사됨', '✓ Copied') : tl('📤 파트너와 공유', '📤 Share with Partner')}</button>
       </div>
     </div>
   );
@@ -657,8 +730,8 @@ function MiniLoveTestView({ onBack }) {
   function reset() { setStep(-1); setAnswers([]); setResult(null); }
 
   function shareResult(t) {
-    const text = `${SERVICE_ICON} 나의 연애 유형은 "${t.emoji} ${t.name}"\n\n${t.short} — ${t.desc.slice(0, 50)}...\n\n나도 테스트해봐요!\n${COUPLE_URL}`;
-    navigator.share ? navigator.share({ title: '나의 연애 유형', text }).catch(() => {})
+    const text = `${SERVICE_ICON} ${tl('나의 연애 유형은', 'My Love Type is')} "${t.emoji} ${t.name}"\n\n${t.short} — ${t.desc.slice(0, 50)}...\n\n${tl('나도 테스트해봐요!', 'Try it too!')}\n${COUPLE_URL}`;
+    navigator.share ? navigator.share({ title: tl('나의 연애 유형', 'My Love Type'), text }).catch(() => {})
                     : navigator.clipboard?.writeText(text).catch(() => {});
   }
 
@@ -678,7 +751,7 @@ function MiniLoveTestView({ onBack }) {
         <button onClick={result ? reset : (step === -1 ? onBack : () => setStep(s => s - 1))} style={{
           background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: C.dark,
           display: 'flex', alignItems: 'center', gap: 6,
-        }}>← <span style={{ fontSize: 14, fontWeight: 600 }}>나의 연애 유형</span></button>
+        }}>← <span style={{ fontSize: 14, fontWeight: 600 }}>{tl('나의 연애 유형', 'My Love Type')}</span></button>
         {step >= 0 && !result && (
           <span style={{ fontSize: 12, color: C.muted }}>{step + 1} / {MINI_QUESTIONS.length}</span>
         )}
@@ -691,11 +764,11 @@ function MiniLoveTestView({ onBack }) {
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 72, marginBottom: 16 }}>💝</div>
             <h2 style={{ fontSize: 22, fontWeight: 700, color: C.dark, marginBottom: 10, fontFamily: "'Noto Serif KR', serif" }}>
-              나의 연애 유형은?
+              {tl('나의 연애 유형은?', 'What\'s My Love Type?')}
             </h2>
             <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.8, marginBottom: 32 }}>
-              7가지 질문으로 알아보는 나의 연애 스타일.<br/>
-              크레딧 없이 무료로 바로 시작할 수 있어요!
+              {tl('7가지 질문으로 알아보는 나의 연애 스타일.', '7 questions to discover your love style.')}<br/>
+              {tl('크레딧 없이 무료로 바로 시작할 수 있어요!', 'Start for free without any credits!')}
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28, textAlign: 'left' }}>
               {Object.values(LOVE_TYPES).map(t => (
@@ -718,7 +791,7 @@ function MiniLoveTestView({ onBack }) {
               color: 'white', fontWeight: 700, fontSize: 15,
               fontFamily: "'Noto Sans KR', sans-serif",
               boxShadow: `0 8px 24px ${C.rose}44`,
-            }}>시작하기 →</button>
+            }}>{tl('시작하기 →', 'Start →')}</button>
           </div>
         )}
 
@@ -768,7 +841,7 @@ function MiniLoveTestView({ onBack }) {
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 72, marginBottom: 12, animation: 'heartbeat 1s ease-in-out 3' }}>{t.emoji}</div>
             <div style={{ fontSize: 12, color: t.color, fontWeight: 700, marginBottom: 4, letterSpacing: 2 }}>
-              나의 연애 유형
+              {tl('나의 연애 유형', 'My Love Type')}
             </div>
             <h2 style={{
               fontSize: 24, fontWeight: 700, color: C.dark, marginBottom: 6,
@@ -785,15 +858,15 @@ function MiniLoveTestView({ onBack }) {
                 padding: '16px', borderRadius: 16, background: t.pale,
                 border: `1px solid ${t.color}22`,
               }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: t.color, marginBottom: 6 }}>💡 연애 성향</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: t.color, marginBottom: 6 }}>💡 {tl('연애 성향', 'Love Tendency')}</div>
                 <div style={{ fontSize: 13, color: C.dark, lineHeight: 1.7 }}>{t.desc}</div>
               </div>
               <div style={{ padding: '14px 16px', borderRadius: 14, background: 'white', border: '1px solid #F0E0E8' }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, marginBottom: 4 }}>✨ 강점</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, marginBottom: 4 }}>✨ {tl('강점', 'Strengths')}</div>
                 <div style={{ fontSize: 12, color: C.dark }}>{t.strength}</div>
               </div>
               <div style={{ padding: '14px 16px', borderRadius: 14, background: 'white', border: '1px solid #F0E0E8' }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, marginBottom: 4 }}>💑 잘 맞는 유형</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, marginBottom: 4 }}>💑 {tl('잘 맞는 유형', 'Best Match Type')}</div>
                 <div style={{ fontSize: 12, color: C.dark }}>{t.match}</div>
               </div>
               <div style={{
@@ -801,7 +874,7 @@ function MiniLoveTestView({ onBack }) {
                 background: `linear-gradient(135deg, ${C.rosePale}, ${C.lavPale})`,
                 border: `1px solid ${C.roseL}33`,
               }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: C.rose, marginBottom: 4 }}>💌 성장 팁</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: C.rose, marginBottom: 4 }}>💌 {tl('성장 팁', 'Growth Tip')}</div>
                 <div style={{ fontSize: 12, color: C.dark }}>{t.tip}</div>
               </div>
             </div>
@@ -812,13 +885,13 @@ function MiniLoveTestView({ onBack }) {
                 background: `linear-gradient(135deg, ${C.rose}, ${C.roseL})`,
                 color: 'white', fontWeight: 700, fontSize: 13,
                 fontFamily: "'Noto Sans KR', sans-serif",
-              }}>📤 결과 공유하기</button>
+              }}>📤 {tl('결과 공유하기', 'Share Result')}</button>
               <button onClick={reset} style={{
                 flex: 1, padding: '12px', borderRadius: 12,
                 border: `1px solid ${C.roseL}44`, cursor: 'pointer',
                 background: 'white', color: C.rose, fontWeight: 700, fontSize: 13,
                 fontFamily: "'Noto Sans KR', sans-serif",
-              }}>🔄 다시 해보기</button>
+              }}>🔄 {tl('다시 해보기', 'Try Again')}</button>
             </div>
 
             <button onClick={onBack} style={{
@@ -826,7 +899,7 @@ function MiniLoveTestView({ onBack }) {
               border: '1px solid #E0D0D8', cursor: 'pointer',
               background: 'white', color: C.muted, fontSize: 12,
               fontFamily: "'Noto Sans KR', sans-serif",
-            }}>← 홈으로 돌아가기</button>
+            }}>← {tl('홈으로 돌아가기', 'Back to Home')}</button>
           </div>
         )}
       </div>
@@ -847,7 +920,13 @@ function RelationshipCoachView({ userName, credits, isMaster, onBack }) {
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-  const SUGGESTIONS = [
+  const SUGGESTIONS = COUPLE_LANG === 'en' ? [
+    "We keep fighting about the same things",
+    "I think I'm not good at expressing my emotions in relationships",
+    "I feel frustrated that my partner doesn't seem to understand me",
+    "I'm worried that the excitement is fading",
+    "How should I tell my partner when I feel hurt?",
+  ] : [
     "파트너와 자꾸 같은 주제로 싸워요",
     "연애할 때 감정 표현이 너무 서툰 것 같아요",
     "파트너가 나를 이해 못하는 것 같아 답답해요",
@@ -871,22 +950,22 @@ function RelationshipCoachView({ userName, credits, isMaster, onBack }) {
         setMessages(prev => [...prev, { role: 'assistant', content: res.data.reply }]);
         setUsedToday(res.data.usedToday);
         if (res.data.creditsSpent > 0) {
-          setError(`💳 ${res.data.creditsSpent}cr 차감됐습니다.`);
+          setError(tl(`💳 ${res.data.creditsSpent}cr 차감됐습니다.`, `💳 ${res.data.creditsSpent}cr deducted.`));
           setTimeout(() => setError(''), 3000);
         }
       } else if (res.needsCharge) {
         setMessages(prev => prev.slice(0, -1));
         setInput(text);
-        setError(`크레딧이 부족합니다. (필요: ${PAID_COST}cr)`);
+        setError(tl(`크레딧이 부족합니다. (필요: ${PAID_COST}cr)`, `Insufficient credits. (Required: ${PAID_COST}cr)`));
       } else {
         setMessages(prev => prev.slice(0, -1));
         setInput(text);
-        setError(res.error || '전송 실패');
+        setError(res.error || tl('전송 실패', 'Send failed'));
       }
     } catch {
       setMessages(prev => prev.slice(0, -1));
       setInput(text);
-      setError('서버 오류가 발생했습니다.');
+      setError(tl('서버 오류가 발생했습니다.', 'A server error occurred.'));
     }
     finally { setLoading(false); }
   }
@@ -904,10 +983,10 @@ function RelationshipCoachView({ userName, credits, isMaster, onBack }) {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <button onClick={onBack} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: C.dark, display: 'flex', alignItems: 'center', gap: 6 }}>
-          ← <span style={{ fontSize: 14, fontWeight: 600 }}>AI 관계 코치</span>
+          ← <span style={{ fontSize: 14, fontWeight: 600 }}>{tl('AI 관계 코치', 'AI Relationship Coach')}</span>
         </button>
         <div style={{ fontSize: 11, color: C.muted, background: 'rgba(255,255,255,0.7)', padding: '4px 10px', borderRadius: 100 }}>
-          {isMaster ? '무제한' : freeLeft > 0 ? `무료 ${freeLeft}회 남음` : `${PAID_COST}cr/회`}
+          {isMaster ? tl('무제한', 'Unlimited') : freeLeft > 0 ? tl(`무료 ${freeLeft}회 남음`, `${freeLeft} free left`) : `${PAID_COST}cr/${tl('회', 'msg')}`}
         </div>
       </nav>
 
@@ -917,11 +996,11 @@ function RelationshipCoachView({ userName, credits, isMaster, onBack }) {
           <div style={{ textAlign: 'center', paddingTop: 20 }}>
             <div style={{ fontSize: 56, marginBottom: 12 }}>💬</div>
             <h2 style={{ fontSize: 18, fontWeight: 700, color: C.dark, marginBottom: 8, fontFamily: "'Noto Serif KR', serif" }}>
-              AI 관계 코치
+              {tl('AI 관계 코치', 'AI Relationship Coach')}
             </h2>
             <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.8, marginBottom: 24 }}>
-              연애·커플 관계에 대한 고민을 편하게 나눠보세요.<br/>
-              BIG5 성격 데이터를 바탕으로 맞춤 조언을 드려요.
+              {tl('연애·커플 관계에 대한 고민을 편하게 나눠보세요.', 'Share your relationship concerns comfortably.')}<br/>
+              {tl('BIG5 성격 데이터를 바탕으로 맞춤 조언을 드려요.', 'Get personalized advice based on your BIG5 personality data.')}
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {SUGGESTIONS.map((s, i) => (
@@ -986,7 +1065,7 @@ function RelationshipCoachView({ userName, credits, isMaster, onBack }) {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-              placeholder="고민을 편하게 이야기해보세요..."
+              placeholder={tl("고민을 편하게 이야기해보세요...", "Feel free to share your concerns...")}
               rows={1}
               disabled={!canAfford}
               style={{
@@ -1014,7 +1093,28 @@ function RelationshipCoachView({ userName, credits, isMaster, onBack }) {
 }
 
 // ── CoupleQuizView ────────────────────────────────────────
-const QUIZ_QUESTIONS = [
+const QUIZ_QUESTIONS = COUPLE_LANG === 'en' ? [
+  { q: "What is your ideal way to spend the weekend?",
+    opts: ['Netflix/games at home', 'Food spots & café tour', 'Outdoor activities', 'Travel & day trips'] },
+  { q: "How do you prefer to resolve conflicts?",
+    opts: ['Talk it out right away', 'Process alone then talk', 'Let time fix it', 'Express first via message'] },
+  { q: "How do you want your partner to show love?",
+    opts: ['Physical affection (hugs, holding hands)', 'Warm words and compliments', 'Surprise gifts & events', 'Spending time together'] },
+  { q: "What do you want from your partner when stressed?",
+    opts: ['Just be by my side', 'Actively empathize', 'Help find a solution', 'Make me laugh'] },
+  { q: "What is your ideal lifestyle as a couple?",
+    opts: ['Do almost everything together', 'Only important things together', 'Respect individual lives, meet sometimes', 'Depends on the situation'] },
+  { q: "What do you picture for us 10 years from now?",
+    opts: ['A family with children', 'A free couple traveling the world', 'A partnership each pursuing their dreams', 'Happy like now is OK'] },
+  { q: "Which date style suits you better?",
+    opts: ['Carefully planned', 'Spontaneous day by day', 'Partner leads', 'Plan together equally'] },
+  { q: "How do you give gifts?",
+    opts: ['Figure out what they want ahead of time', 'Complete surprise', 'Choose together', 'Give experiences & memories'] },
+  { q: "What matters most in a relationship?",
+    opts: ['Trust and stability', 'Excitement and passion', 'Growing together', 'Comfort and freedom'] },
+  { q: "In a conflict, you tend to:",
+    opts: ['Speak honestly right away', 'Decide based on the situation', 'Calm the other person first', 'Want to avoid it'] },
+] : [
   { q: "이상적인 주말 보내기는?",
     opts: ['집에서 넷플릭스/게임', '맛집·카페 투어', '야외 액티비티', '여행·당일치기'] },
   { q: "싸웠을 때 선호하는 해결 방식은?",
@@ -1038,10 +1138,10 @@ const QUIZ_QUESTIONS = [
 ];
 
 const QUIZ_TYPES = {
-  A: { emoji: '🏡', name: '안정 공존형', desc: '함께하는 일상과 안정감을 가장 소중히 여겨요. 편안하고 신뢰 깊은 관계를 만드는 탁월한 파트너예요.', tip: '가끔 작은 서프라이즈로 설렘도 만들어보세요!' },
-  B: { emoji: '💬', name: '깊은 유대형', desc: '진심 어린 소통과 정서적 연결을 중시해요. 파트너의 마음을 깊이 이해하고 공감하는 능력이 뛰어나요.', tip: '말보다 행동으로 보여주는 표현도 시도해보세요!' },
-  C: { emoji: '🌱', name: '성장 동반형', desc: '함께 발전하고 새로운 것을 경험하는 관계를 원해요. 파트너와 함께 더 나은 사람이 되는 것에 큰 보람을 느껴요.', tip: '지금 이 순간을 즐기는 여유도 가져보세요!' },
-  D: { emoji: '🌊', name: '자유 균형형', desc: '서로의 공간과 자유를 존중하는 성숙한 관계를 선호해요. 집착 없이 믿고 맡기는 여유로운 연애를 해요.', tip: '가끔은 더 적극적으로 원하는 것을 표현해보세요!' },
+  A: { emoji: '🏡', name: tl('안정 공존형', 'Stable Coexistence'), desc: tl('함께하는 일상과 안정감을 가장 소중히 여겨요. 편안하고 신뢰 깊은 관계를 만드는 탁월한 파트너예요.', 'You value shared daily life and stability most. An excellent partner who creates comfortable, trust-deep relationships.'), tip: tl('가끔 작은 서프라이즈로 설렘도 만들어보세요!', 'Try creating some excitement with small surprises!') },
+  B: { emoji: '💬', name: tl('깊은 유대형', 'Deep Connection'), desc: tl('진심 어린 소통과 정서적 연결을 중시해요. 파트너의 마음을 깊이 이해하고 공감하는 능력이 뛰어나요.', 'You value sincere communication and emotional connection. Excellent at deeply understanding and empathizing with your partner.'), tip: tl('말보다 행동으로 보여주는 표현도 시도해보세요!', 'Try showing love through actions, not just words!') },
+  C: { emoji: '🌱', name: tl('성장 동반형', 'Growth Partners'), desc: tl('함께 발전하고 새로운 것을 경험하는 관계를 원해요. 파트너와 함께 더 나은 사람이 되는 것에 큰 보람을 느껴요.', 'You want a relationship where you grow and experience new things together. You find great fulfillment in becoming a better person with your partner.'), tip: tl('지금 이 순간을 즐기는 여유도 가져보세요!', 'Take time to enjoy the present moment too!') },
+  D: { emoji: '🌊', name: tl('자유 균형형', 'Free & Balanced'), desc: tl('서로의 공간과 자유를 존중하는 성숙한 관계를 선호해요. 집착 없이 믿고 맡기는 여유로운 연애를 해요.', 'You prefer a mature relationship that respects each other\'s space and freedom. A relaxed love of trusting without obsession.'), tip: tl('가끔은 더 적극적으로 원하는 것을 표현해보세요!', 'Sometimes express what you want more actively!') },
 };
 
 function CoupleQuizView({ onBack }) {
@@ -1065,8 +1165,8 @@ function CoupleQuizView({ onBack }) {
   function reset() { setStep(-1); setAnswers([]); setResult(null); }
 
   function shareResult(t) {
-    const text = `${SERVICE_ICON} 나의 커플 스타일은 "${t.emoji} ${t.name}"\n\n${t.desc}\n\n나도 테스트해봐요! → ${COUPLE_URL}`;
-    navigator.share ? navigator.share({ title: '나의 커플 스타일', text }).catch(() => {})
+    const text = `${SERVICE_ICON} ${tl('나의 커플 스타일은', 'My Couple Style is')} "${t.emoji} ${t.name}"\n\n${t.desc}\n\n${tl('나도 테스트해봐요! →', 'Try it too! →')} ${COUPLE_URL}`;
+    navigator.share ? navigator.share({ title: tl('나의 커플 스타일', 'My Couple Style'), text }).catch(() => {})
                     : navigator.clipboard?.writeText(text).catch(() => {});
   }
 
@@ -1078,7 +1178,7 @@ function CoupleQuizView({ onBack }) {
     <div style={{ minHeight: '100vh', background: `linear-gradient(160deg, ${C.rosePale}, ${C.cream})` }}>
       <nav style={{ position:'sticky', top:0, zIndex:100, background:'rgba(253,252,247,0.88)', backdropFilter:'blur(16px)', borderBottom:`1px solid rgba(181,85,106,0.12)`, padding:'0 20px', height:56, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
         <button onClick={result ? reset : step === -1 ? onBack : () => setStep(s => s-1)} style={{ background:'none', border:'none', fontSize:20, cursor:'pointer', color:C.dark, display:'flex', alignItems:'center', gap:6 }}>
-          ← <span style={{ fontSize:14, fontWeight:600 }}>커플 스타일 퀴즈</span>
+          ← <span style={{ fontSize:14, fontWeight:600 }}>{tl('커플 스타일 퀴즈', 'Couple Style Quiz')}</span>
         </button>
         {step >= 0 && !result && <span style={{ fontSize:12, color:C.muted }}>{step+1}/{QUIZ_QUESTIONS.length}</span>}
       </nav>
@@ -1088,8 +1188,8 @@ function CoupleQuizView({ onBack }) {
         {step === -1 && !result && (
           <div style={{ textAlign:'center' }}>
             <div style={{ fontSize:72, marginBottom:16 }}>🎯</div>
-            <h2 style={{ fontSize:22, fontWeight:700, color:C.dark, marginBottom:10, fontFamily:"'Noto Serif KR', serif" }}>우리 커플 스타일은?</h2>
-            <p style={{ fontSize:14, color:C.muted, lineHeight:1.8, marginBottom:28 }}>10문항으로 알아보는 나의 커플 스타일.<br/>파트너와 함께 해보고 비교해보세요! 무료예요.</p>
+            <h2 style={{ fontSize:22, fontWeight:700, color:C.dark, marginBottom:10, fontFamily:"'Noto Serif KR', serif" }}>{tl('우리 커플 스타일은?', 'What\'s Our Couple Style?')}</h2>
+            <p style={{ fontSize:14, color:C.muted, lineHeight:1.8, marginBottom:28 }}>{tl('10문항으로 알아보는 나의 커플 스타일.', '10 questions to discover your couple style.')}<br/>{tl('파트너와 함께 해보고 비교해보세요! 무료예요.', 'Try it with your partner and compare! It\'s free.')}</p>
             <div style={{ display:'flex', flexWrap:'wrap', gap:8, justifyContent:'center', marginBottom:32 }}>
               {Object.values(QUIZ_TYPES).map(qt => (
                 <div key={qt.name} style={{ padding:'8px 14px', borderRadius:100, background:'white', border:`1px solid ${C.roseL}33`, fontSize:12, color:C.dark }}>
@@ -1098,7 +1198,7 @@ function CoupleQuizView({ onBack }) {
               ))}
             </div>
             <button onClick={() => setStep(0)} style={{ width:'100%', padding:'14px', borderRadius:14, border:'none', cursor:'pointer', background:`linear-gradient(135deg, ${C.amber}, ${C.amberL})`, color:'white', fontWeight:700, fontSize:15, fontFamily:"'Noto Sans KR', sans-serif", boxShadow:`0 8px 24px ${C.amber}44` }}>
-              시작하기 →
+              {tl('시작하기 →', 'Start →')}
             </button>
           </div>
         )}
@@ -1129,23 +1229,23 @@ function CoupleQuizView({ onBack }) {
         {result && t && (
           <div style={{ textAlign:'center' }}>
             <div style={{ fontSize:72, marginBottom:12 }}>{t.emoji}</div>
-            <div style={{ fontSize:12, color:C.amber, fontWeight:700, marginBottom:4 }}>나의 커플 스타일</div>
+            <div style={{ fontSize:12, color:C.amber, fontWeight:700, marginBottom:4 }}>{tl('나의 커플 스타일', 'My Couple Style')}</div>
             <h2 style={{ fontSize:24, fontWeight:700, color:C.dark, marginBottom:20, fontFamily:"'Noto Serif KR', serif" }}>{t.name}</h2>
             <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:24, textAlign:'left' }}>
               <div style={{ padding:'16px', borderRadius:16, background:'#FFFBF0', border:`1px solid ${C.amberL}44` }}>
-                <div style={{ fontSize:12, fontWeight:700, color:C.amber, marginBottom:6 }}>💡 나의 연애 스타일</div>
+                <div style={{ fontSize:12, fontWeight:700, color:C.amber, marginBottom:6 }}>💡 {tl('나의 연애 스타일', 'My Love Style')}</div>
                 <div style={{ fontSize:13, color:C.dark, lineHeight:1.7 }}>{t.desc}</div>
               </div>
               <div style={{ padding:'14px 16px', borderRadius:14, background:`linear-gradient(135deg, ${C.rosePale}, ${C.lavPale})`, border:`1px solid ${C.roseL}33` }}>
-                <div style={{ fontSize:12, fontWeight:700, color:C.rose, marginBottom:4 }}>💌 파트너와의 성장 팁</div>
+                <div style={{ fontSize:12, fontWeight:700, color:C.rose, marginBottom:4 }}>💌 {tl('파트너와의 성장 팁', 'Growth Tip with Partner')}</div>
                 <div style={{ fontSize:12, color:C.dark }}>{t.tip}</div>
               </div>
             </div>
             <div style={{ display:'flex', gap:8 }}>
-              <button onClick={() => shareResult(t)} style={{ flex:1, padding:'12px', borderRadius:12, border:'none', cursor:'pointer', background:`linear-gradient(135deg, ${C.amber}, ${C.amberL})`, color:'white', fontWeight:700, fontSize:13, fontFamily:"'Noto Sans KR', sans-serif" }}>📤 결과 공유하기</button>
-              <button onClick={reset} style={{ flex:1, padding:'12px', borderRadius:12, border:`1px solid ${C.amberL}44`, cursor:'pointer', background:'white', color:C.amber, fontWeight:700, fontSize:13, fontFamily:"'Noto Sans KR', sans-serif" }}>🔄 다시 해보기</button>
+              <button onClick={() => shareResult(t)} style={{ flex:1, padding:'12px', borderRadius:12, border:'none', cursor:'pointer', background:`linear-gradient(135deg, ${C.amber}, ${C.amberL})`, color:'white', fontWeight:700, fontSize:13, fontFamily:"'Noto Sans KR', sans-serif" }}>📤 {tl('결과 공유하기', 'Share Result')}</button>
+              <button onClick={reset} style={{ flex:1, padding:'12px', borderRadius:12, border:`1px solid ${C.amberL}44`, cursor:'pointer', background:'white', color:C.amber, fontWeight:700, fontSize:13, fontFamily:"'Noto Sans KR', sans-serif" }}>🔄 {tl('다시 해보기', 'Try Again')}</button>
             </div>
-            <button onClick={onBack} style={{ width:'100%', marginTop:8, padding:'10px', borderRadius:12, border:'1px solid #E0D0D8', cursor:'pointer', background:'white', color:C.muted, fontSize:12, fontFamily:"'Noto Sans KR', sans-serif" }}>← 홈으로</button>
+            <button onClick={onBack} style={{ width:'100%', marginTop:8, padding:'10px', borderRadius:12, border:'1px solid #E0D0D8', cursor:'pointer', background:'white', color:C.muted, fontSize:12, fontFamily:"'Noto Sans KR', sans-serif" }}>← {tl('홈으로', 'Home')}</button>
           </div>
         )}
       </div>
@@ -1155,12 +1255,12 @@ function CoupleQuizView({ onBack }) {
 
 // ── 감정 레이블 매핑 (마음게임 mood.jsx와 동일) ───────────
 const MOOD_LABELS = {
-  happy:   { emoji: '😊', label: '행복',  color: '#F5C842' },
-  calm:    { emoji: '😌', label: '평온',  color: '#7BC4A0' },
-  tired:   { emoji: '😴', label: '피곤',  color: '#9BB0C0' },
-  anxious: { emoji: '😰', label: '불안',  color: '#F5A050' },
-  sad:     { emoji: '😢', label: '슬픔',  color: '#6B9ACB' },
-  angry:   { emoji: '😤', label: '화남',  color: '#E86C6C' },
+  happy:   { emoji: '😊', label: tl('행복', 'Happy'),   color: '#F5C842' },
+  calm:    { emoji: '😌', label: tl('평온', 'Calm'),    color: '#7BC4A0' },
+  tired:   { emoji: '😴', label: tl('피곤', 'Tired'),   color: '#9BB0C0' },
+  anxious: { emoji: '😰', label: tl('불안', 'Anxious'), color: '#F5A050' },
+  sad:     { emoji: '😢', label: tl('슬픔', 'Sad'),     color: '#6B9ACB' },
+  angry:   { emoji: '😤', label: tl('화남', 'Angry'),   color: '#E86C6C' },
 };
 
 // ── PartnerMomentsSection ─────────────────────────────────
@@ -1184,9 +1284,9 @@ function PartnerMomentsSection() {
     const d = new Date(iso);
     const now = new Date();
     const diff = Math.floor((now - d) / 60000);
-    if (diff < 60) return `${diff}분 전`;
-    if (diff < 1440) return `${Math.floor(diff / 60)}시간 전`;
-    return `${Math.floor(diff / 1440)}일 전`;
+    if (diff < 60) return tl(`${diff}분 전`, `${diff}m ago`);
+    if (diff < 1440) return tl(`${Math.floor(diff / 60)}시간 전`, `${Math.floor(diff / 60)}h ago`);
+    return tl(`${Math.floor(diff / 1440)}일 전`, `${Math.floor(diff / 1440)}d ago`);
   }
 
   return (
@@ -1206,7 +1306,7 @@ function PartnerMomentsSection() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 18 }}>💕</span>
           <span style={{ fontSize: 14, fontWeight: 700, color: C.dark }}>
-            {partnerName}님의 마음 일기
+            {partnerName}{tl('님의 마음 일기', '\'s Heart Diary')}
           </span>
         </div>
         <span style={{ fontSize: 18, color: C.muted }}>{open ? '▲' : '▼'}</span>
@@ -1219,7 +1319,7 @@ function PartnerMomentsSection() {
           {moodEntries.length > 0 && (
             <div style={{ marginBottom: gratEntries.length > 0 ? 16 : 0 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, marginBottom: 10 }}>
-                🎨 최근 7일 감정
+                🎨 {tl('최근 7일 감정', 'Emotions: Last 7 Days')}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {moodEntries.map((entry, i) => {
@@ -1257,7 +1357,7 @@ function PartnerMomentsSection() {
           {gratEntries.length > 0 && (
             <div>
               <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, marginBottom: 10 }}>
-                ⭐ 최근 감사 일기
+                ⭐ {tl('최근 감사 일기', 'Recent Gratitude Diary')}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {gratEntries.map((entry, i) => {
@@ -1277,7 +1377,7 @@ function PartnerMomentsSection() {
                           </div>
                         ))}
                         {answerTexts.length > 2 && (
-                          <div style={{ fontSize: 11, color: C.muted }}>+{answerTexts.length - 2}개 더</div>
+                          <div style={{ fontSize: 11, color: C.muted }}>+{answerTexts.length - 2}{tl('개 더', ' more')}</div>
                         )}
                       </div>
                     </div>
@@ -1314,7 +1414,7 @@ function AnniversaryView({ onBack }) {
     for (const m of marks) {
       const d = new Date(start.getTime() + m * 86400000);
       const diff = Math.floor((d - today) / 86400000);
-      result.push({ label: m === 365 ? '1주년' : m === 730 ? '2주년' : m === 1461 ? '4주년' : m === 1825 ? '5주년' : m === 3650 ? '10주년' : `${m}일`, date: d, diff, isPast: diff < 0 });
+      result.push({ label: m === 365 ? tl('1주년', '1 Year') : m === 730 ? tl('2주년', '2 Years') : m === 1461 ? tl('4주년', '4 Years') : m === 1825 ? tl('5주년', '5 Years') : m === 3650 ? tl('10주년', '10 Years') : tl(`${m}일`, `Day ${m}`), date: d, diff, isPast: diff < 0 });
     }
     return { daysTotal, milestones: result };
   })() : null;
@@ -1325,18 +1425,18 @@ function AnniversaryView({ onBack }) {
     <div style={{ minHeight:'100vh', background:`linear-gradient(160deg, ${C.rosePale}, ${C.cream})` }}>
       <nav style={{ position:'sticky', top:0, zIndex:100, background:'rgba(253,252,247,0.88)', backdropFilter:'blur(16px)', borderBottom:`1px solid rgba(181,85,106,0.12)`, padding:'0 20px', height:56, display:'flex', alignItems:'center' }}>
         <button onClick={onBack} style={{ background:'none', border:'none', fontSize:20, cursor:'pointer', color:C.dark, display:'flex', alignItems:'center', gap:6 }}>
-          ← <span style={{ fontSize:14, fontWeight:600 }}>기념일 계산기</span>
+          ← <span style={{ fontSize:14, fontWeight:600 }}>{tl('기념일 계산기', 'Anniversary Calculator')}</span>
         </button>
       </nav>
 
       <div style={{ maxWidth:480, margin:'0 auto', padding:'28px 20px 60px' }}>
         <div style={{ textAlign:'center', marginBottom:28 }}>
           <div style={{ fontSize:56, marginBottom:10 }}>📅</div>
-          <p style={{ fontSize:13, color:C.muted }}>처음 만난 날을 입력하면 D+N일과<br/>다가오는 기념일을 알려드려요.</p>
+          <p style={{ fontSize:13, color:C.muted }}>{tl('처음 만난 날을 입력하면 D+N일과', 'Enter the day you first met to see the D+N count')}<br/>{tl('다가오는 기념일을 알려드려요.', 'and upcoming anniversaries.')}</p>
         </div>
 
         <div style={{ background:'white', borderRadius:20, padding:'20px', marginBottom:20, boxShadow:'0 4px 16px rgba(0,0,0,0.06)' }}>
-          <div style={{ fontSize:13, fontWeight:700, color:C.dark, marginBottom:10 }}>💑 처음 만난 날</div>
+          <div style={{ fontSize:13, fontWeight:700, color:C.dark, marginBottom:10 }}>💑 {tl('처음 만난 날', 'Day We First Met')}</div>
           <div style={{ display:'flex', gap:8 }}>
             <input
               type="date"
@@ -1346,7 +1446,7 @@ function AnniversaryView({ onBack }) {
               style={{ flex:1, padding:'11px 14px', borderRadius:12, border:`1.5px solid ${C.roseL}44`, fontSize:14, outline:'none', fontFamily:"'Noto Sans KR', sans-serif", color:C.dark }}
             />
             <button onClick={saveDate} disabled={!inputDate} style={{ padding:'11px 20px', borderRadius:12, border:'none', cursor:inputDate?'pointer':'not-allowed', background:inputDate?C.rose:'#E0D0D8', color:'white', fontWeight:700, fontSize:13, fontFamily:"'Noto Sans KR', sans-serif" }}>
-              저장
+              {tl('저장', 'Save')}
             </button>
           </div>
         </div>
@@ -1355,21 +1455,23 @@ function AnniversaryView({ onBack }) {
           <>
             {/* D+N 히어로 */}
             <div style={{ background:`linear-gradient(135deg, ${C.rose}, ${C.lavender})`, borderRadius:20, padding:'28px 20px', marginBottom:20, textAlign:'center', boxShadow:`0 8px 32px ${C.rose}33` }}>
-              <div style={{ fontSize:11, color:'rgba(255,255,255,0.8)', marginBottom:6, letterSpacing:2 }}>우리가 함께한 날</div>
+              <div style={{ fontSize:11, color:'rgba(255,255,255,0.8)', marginBottom:6, letterSpacing:2 }}>{tl('우리가 함께한 날', 'Days Together')}</div>
               <div style={{ fontSize:56, fontWeight:800, color:'white', lineHeight:1 }}>D+{milestones.daysTotal}</div>
               <div style={{ fontSize:13, color:'rgba(255,255,255,0.9)', marginTop:8 }}>
-                {new Date(firstDate).toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric' })} 부터
+                {COUPLE_LANG === 'en'
+                ? `Since ${new Date(firstDate).toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' })}`
+                : `${new Date(firstDate).toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric' })} 부터`}
               </div>
               {nextMilestone && (
                 <div style={{ marginTop:16, padding:'10px 16px', borderRadius:12, background:'rgba(255,255,255,0.2)', fontSize:13, color:'white', fontWeight:600 }}>
-                  다음 기념일: {nextMilestone.label} (D+{nextMilestone.diff}일 후)
+                  {tl('다음 기념일', 'Next Anniversary')}: {nextMilestone.label} ({tl(`D+${nextMilestone.diff}일 후`, `In ${nextMilestone.diff} days`)})
                 </div>
               )}
             </div>
 
             {/* 기념일 리스트 */}
             <div style={{ background:'white', borderRadius:20, padding:'20px', boxShadow:'0 4px 16px rgba(0,0,0,0.06)' }}>
-              <div style={{ fontSize:13, fontWeight:700, color:C.dark, marginBottom:14 }}>🎉 기념일 목록</div>
+              <div style={{ fontSize:13, fontWeight:700, color:C.dark, marginBottom:14 }}>🎉 {tl('기념일 목록', 'Anniversary List')}</div>
               <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                 {milestones.milestones.map((m, i) => (
                   <div key={i} style={{
@@ -1383,11 +1485,11 @@ function AnniversaryView({ onBack }) {
                       <span style={{ fontSize:18 }}>{m.isPast ? '✅' : m.diff <= 7 ? '🎊' : m.diff <= 30 ? '🔔' : '📅'}</span>
                       <div>
                         <div style={{ fontSize:13, fontWeight:700, color:C.dark }}>{m.label}</div>
-                        <div style={{ fontSize:11, color:C.muted }}>{m.date.toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric' })}</div>
+                        <div style={{ fontSize:11, color:C.muted }}>{m.date.toLocaleDateString(COUPLE_LANG === 'en' ? 'en-US' : 'ko-KR', { year:'numeric', month:'long', day:'numeric' })}</div>
                       </div>
                     </div>
                     <div style={{ fontSize:12, fontWeight:700, color: m.isPast ? C.muted : m.diff <= 7 ? C.rose : C.muted }}>
-                      {m.isPast ? '지남' : m.diff === 0 ? '오늘! 🎉' : `${m.diff}일 후`}
+                      {m.isPast ? tl('지남', 'Passed') : m.diff === 0 ? tl('오늘! 🎉', 'Today! 🎉') : tl(`${m.diff}일 후`, `In ${m.diff} days`)}
                     </div>
                   </div>
                 ))}
@@ -1413,34 +1515,34 @@ function RelationshipTimelineView({ onBack }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const fmtDate = d => new Date(d).toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric' });
+  const fmtDate = d => new Date(d).toLocaleDateString(COUPLE_LANG === 'en' ? 'en-US' : 'ko-KR', { year:'numeric', month:'long', day:'numeric' });
   const typeStyle = {
-    report:  { bg:'#fdf2f8', border:'#f9a8d4', accent:C.rose,    label:'AI 리포트' },
-    session: { bg:'#f0f9ff', border:'#bae6fd', accent:'#0ea5e9', label:'커플 검사' },
-    checkin: { bg:'#f0fdf4', border:'#bbf7d0', accent:'#16a34a', label:'관계 체크인' },
+    report:  { bg:'#fdf2f8', border:'#f9a8d4', accent:C.rose,    label:tl('AI 리포트', 'AI Report') },
+    session: { bg:'#f0f9ff', border:'#bae6fd', accent:'#0ea5e9', label:tl('커플 검사', 'Couple Test') },
+    checkin: { bg:'#f0fdf4', border:'#bbf7d0', accent:'#16a34a', label:tl('관계 체크인', 'Relationship Check-in') },
   };
 
   return (
     <div style={{ minHeight:'100vh', background:`linear-gradient(160deg, ${C.rosePale}, ${C.cream})` }}>
       <nav style={{ position:'sticky', top:0, zIndex:100, background:'rgba(253,252,247,0.88)', backdropFilter:'blur(16px)', borderBottom:`1px solid rgba(181,85,106,0.12)`, padding:'0 20px', height:56, display:'flex', alignItems:'center' }}>
         <button onClick={onBack} style={{ background:'none', border:'none', fontSize:20, cursor:'pointer', color:C.dark, display:'flex', alignItems:'center', gap:6 }}>
-          ← <span style={{ fontSize:14, fontWeight:600 }}>관계 타임라인</span>
+          ← <span style={{ fontSize:14, fontWeight:600 }}>{tl('관계 타임라인', 'Relationship Timeline')}</span>
         </button>
       </nav>
 
       <div style={{ maxWidth:480, margin:'0 auto', padding:'28px 20px 60px' }}>
         <div style={{ textAlign:'center', marginBottom:24 }}>
           <div style={{ fontSize:48, marginBottom:8 }}>🗂️</div>
-          <h2 style={{ fontSize:20, fontWeight:800, color:C.dark, margin:'0 0 6px' }}>관계 타임라인</h2>
-          <p style={{ fontSize:13, color:C.muted, margin:0 }}>우리의 관계 기록을 한눈에 볼 수 있어요</p>
+          <h2 style={{ fontSize:20, fontWeight:800, color:C.dark, margin:'0 0 6px' }}>{tl('관계 타임라인', 'Relationship Timeline')}</h2>
+          <p style={{ fontSize:13, color:C.muted, margin:0 }}>{tl('우리의 관계 기록을 한눈에 볼 수 있어요', 'See all your relationship records at a glance')}</p>
         </div>
 
-        {loading && <div style={{ textAlign:'center', padding:'40px 0', color:C.muted }}>불러오는 중...</div>}
+        {loading && <div style={{ textAlign:'center', padding:'40px 0', color:C.muted }}>{tl('불러오는 중...', 'Loading...')}</div>}
 
         {!loading && (!items || items.length === 0) && (
           <div style={{ background:'white', borderRadius:20, padding:28, textAlign:'center', boxShadow:'0 4px 16px rgba(0,0,0,0.06)' }}>
             <div style={{ fontSize:40, marginBottom:12 }}>🌱</div>
-            <p style={{ fontSize:14, color:C.muted }}>아직 기록이 없어요.<br/>커플 검사나 관계 체크인을 시작해 보세요!</p>
+            <p style={{ fontSize:14, color:C.muted }}>{tl('아직 기록이 없어요.', 'No records yet.')}<br/>{tl('커플 검사나 관계 체크인을 시작해 보세요!', 'Start with a couple test or relationship check-in!')}</p>
           </div>
         )}
 
@@ -1467,7 +1569,7 @@ function RelationshipTimelineView({ onBack }) {
                           <div style={{ height:6, flex:1, background:'#f0f0f0', borderRadius:3, overflow:'hidden' }}>
                             <div style={{ width:`${item.score}%`, height:'100%', background:`linear-gradient(90deg,${C.rose},#f472b6)`, borderRadius:3 }} />
                           </div>
-                          <span style={{ fontSize:12, fontWeight:700, color:C.rose }}>{item.score}점</span>
+                          <span style={{ fontSize:12, fontWeight:700, color:C.rose }}>{item.score}{tl('점', '')}</span>
                         </div>
                       )}
                       {item.score != null && item.type === 'checkin' && (
@@ -1491,7 +1593,18 @@ function RelationshipTimelineView({ onBack }) {
 }
 
 // ── RelationshipCheckinView ───────────────────────────────
-const CHECKIN_QUESTIONS = [
+const CHECKIN_QUESTIONS = COUPLE_LANG === 'en' ? [
+  "I have been having enough conversations with my partner recently",
+  "I feel that my partner understands me well",
+  "We can resolve conflicts in a healthy way",
+  "I have enough time together with my partner",
+  "We can picture our future together",
+  "I can honestly express my feelings to my partner",
+  "I feel that we support and encourage each other enough",
+  "My relationship with my partner has a positive impact on my life",
+  "I can feel my partner's effort and consideration",
+  "Overall, I am satisfied with our relationship",
+] : [
   "최근 파트너와 충분한 대화를 나누고 있다",
   "파트너가 나를 잘 이해해준다고 느낀다",
   "갈등이 생겼을 때 건강하게 해결할 수 있다",
@@ -1504,14 +1617,16 @@ const CHECKIN_QUESTIONS = [
   "전반적으로 우리 관계에 만족한다",
 ];
 
-const SCORE_LABELS = ['매우 아니다', '아니다', '보통', '그렇다', '매우 그렇다'];
+const SCORE_LABELS = COUPLE_LANG === 'en'
+  ? ['Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree']
+  : ['매우 아니다', '아니다', '보통', '그렇다', '매우 그렇다'];
 
 function checkinScoreInfo(score, maxScore) {
   const pct = Math.round(score / maxScore * 100);
-  if (pct >= 80) return { emoji: '💚', label: '매우 건강한 관계', color: '#4A9A5A', pale: '#EAF5EC' };
-  if (pct >= 60) return { emoji: '💛', label: '좋은 관계 (성장 중)', color: '#C4954A', pale: '#FEF8EC' };
-  if (pct >= 40) return { emoji: '🧡', label: '함께 노력이 필요해요', color: '#D4634A', pale: '#FEF0EC' };
-  return { emoji: '❤️‍🩹', label: '더 많은 관심이 필요한 시기', color: C.rose, pale: C.rosePale };
+  if (pct >= 80) return { emoji: '💚', label: tl('매우 건강한 관계', 'Very Healthy Relationship'), color: '#4A9A5A', pale: '#EAF5EC' };
+  if (pct >= 60) return { emoji: '💛', label: tl('좋은 관계 (성장 중)', 'Good Relationship (Growing)'), color: '#C4954A', pale: '#FEF8EC' };
+  if (pct >= 40) return { emoji: '🧡', label: tl('함께 노력이 필요해요', 'Needs Effort Together'), color: '#D4634A', pale: '#FEF0EC' };
+  return { emoji: '❤️‍🩹', label: tl('더 많은 관심이 필요한 시기', 'Time for More Attention'), color: C.rose, pale: C.rosePale };
 }
 
 function RelationshipCheckinView({ onBack, onDone }) {
@@ -1541,9 +1656,9 @@ function RelationshipCheckinView({ onBack, onDone }) {
         setStep(10);
         if (onDone) onDone();
       } else {
-        setError(res.error || '저장 실패');
+        setError(res.error || tl('저장 실패', 'Save failed'));
       }
-    } catch { setError('서버 오류'); }
+    } catch { setError(tl('서버 오류', 'Server error')); }
     finally { setSubmitting(false); }
   }
 
@@ -1572,7 +1687,7 @@ function RelationshipCheckinView({ onBack, onDone }) {
 
     return (
       <div style={{ marginTop: 20 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 12 }}>📈 관계 건강도 트렌드</div>
+        <div style={{ fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 12 }}>📈 {tl('관계 건강도 트렌드', 'Relationship Health Trend')}</div>
 
         {/* 라인 차트 */}
         {sorted.length >= 2 && (
@@ -1610,7 +1725,7 @@ function RelationshipCheckinView({ onBack, onDone }) {
               {/* 최신 점수 강조 */}
               <text x={points[points.length-1].x} y={points[points.length-1].y - 7}
                 textAnchor="middle" fontSize="9" fontWeight="bold" fill={C.rose}>
-                {Math.round(points[points.length-1].score / MAX * 100)}점
+                {Math.round(points[points.length-1].score / MAX * 100)}{tl('점', '')}
               </text>
             </svg>
           </div>
@@ -1637,7 +1752,7 @@ function RelationshipCheckinView({ onBack, onDone }) {
                   <div style={{ flex: 1, height: 6, borderRadius: 100, background: '#E8E0E4', overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${pct}%`, borderRadius: 100, background: info.color, transition: 'width 1s ease' }}/>
                   </div>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: info.color, minWidth: 36 }}>{pct}점</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: info.color, minWidth: 36 }}>{pct}{tl('점', '')}</span>
                 </div>
               </div>
             );
@@ -1653,7 +1768,7 @@ function RelationshipCheckinView({ onBack, onDone }) {
               background: diff >= 0 ? '#EAF5EC' : '#FEF0EC',
               fontSize: 12, color: diff >= 0 ? '#4A9A5A' : '#D4634A', fontWeight: 600,
             }}>
-              {diff >= 0 ? `📈 지난 달 대비 +${diff}점 향상됐어요! 🎉` : `📉 지난 달보다 ${Math.abs(diff)}점 낮아요. 함께 노력해봐요 💪`}
+              {diff >= 0 ? tl(`📈 지난 달 대비 +${diff}점 향상됐어요! 🎉`, `📈 Improved by +${diff} points from last month! 🎉`) : tl(`📉 지난 달보다 ${Math.abs(diff)}점 낮아요. 함께 노력해봐요 💪`, `📉 ${Math.abs(diff)} points lower than last month. Let's work on it together 💪`)}
             </div>
           );
         })()}
@@ -1673,7 +1788,7 @@ function RelationshipCheckinView({ onBack, onDone }) {
         <button onClick={step === -1 || step === 10 ? onBack : () => setStep(s => s - 1)} style={{
           background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: C.dark,
           display: 'flex', alignItems: 'center', gap: 6,
-        }}>← <span style={{ fontSize: 14, fontWeight: 600 }}>관계 성장 체크인</span></button>
+        }}>← <span style={{ fontSize: 14, fontWeight: 600 }}>{tl('관계 성장 체크인', 'Relationship Growth Check-in')}</span></button>
         {step >= 0 && step < 10 && (
           <span style={{ fontSize: 12, color: C.muted }}>{step + 1} / {CHECKIN_QUESTIONS.length}</span>
         )}
@@ -1687,11 +1802,11 @@ function RelationshipCheckinView({ onBack, onDone }) {
             <div style={{ textAlign: 'center', marginBottom: 24 }}>
               <div style={{ fontSize: 64, marginBottom: 12 }}>🌱</div>
               <h2 style={{ fontSize: 20, fontWeight: 700, color: C.dark, marginBottom: 8, fontFamily: "'Noto Serif KR', serif" }}>
-                이번 달 관계 성장 체크인
+                {tl('이번 달 관계 성장 체크인', 'This Month\'s Relationship Check-in')}
               </h2>
               <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.8 }}>
-                10가지 질문으로 지금 우리 관계의 건강도를 점검해보세요.<br/>
-                매달 기록하면 성장 과정을 볼 수 있어요.
+                {tl('10가지 질문으로 지금 우리 관계의 건강도를 점검해보세요.', 'Check your relationship health with 10 questions.')}<br/>
+                {tl('매달 기록하면 성장 과정을 볼 수 있어요.', 'Recording monthly lets you see your growth over time.')}
               </p>
             </div>
 
@@ -1701,8 +1816,8 @@ function RelationshipCheckinView({ onBack, onDone }) {
                 border: '1px solid #4A9A5A33', textAlign: 'center', marginBottom: 20,
               }}>
                 <div style={{ fontSize: 20, marginBottom: 6 }}>✅</div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#4A9A5A' }}>이번 달 체크인 완료!</div>
-                <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>다음 체크인은 다음 달에 할 수 있어요.</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#4A9A5A' }}>{tl('이번 달 체크인 완료!', 'This Month\'s Check-in Done!')}</div>
+                <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>{tl('다음 체크인은 다음 달에 할 수 있어요.', 'Next check-in available next month.')}</div>
               </div>
             ) : (
               <button onClick={() => setStep(0)} style={{
@@ -1711,7 +1826,7 @@ function RelationshipCheckinView({ onBack, onDone }) {
                 color: 'white', fontWeight: 700, fontSize: 15, marginBottom: 16,
                 fontFamily: "'Noto Sans KR', sans-serif",
                 boxShadow: '0 8px 24px #4A9A5A44',
-              }}>🌱 이번 달 체크인 시작하기</button>
+              }}>🌱 {tl('이번 달 체크인 시작하기', 'Start This Month\'s Check-in')}</button>
             )}
             <HistorySection />
           </div>
@@ -1775,7 +1890,7 @@ function RelationshipCheckinView({ onBack, onDone }) {
                 color: 'white', fontWeight: 700, fontSize: 15, marginTop: 16,
                 fontFamily: "'Noto Sans KR', sans-serif",
                 opacity: submitting ? 0.7 : 1,
-              }}>{submitting ? '저장 중...' : '✅ 체크인 완료하기'}</button>
+              }}>{submitting ? tl('저장 중...', 'Saving...') : tl('✅ 체크인 완료하기', '✅ Complete Check-in')}</button>
             )}
             {error && <div style={{ fontSize: 12, color: '#D05555', textAlign: 'center', marginTop: 10 }}>{error}</div>}
           </div>
@@ -1789,8 +1904,8 @@ function RelationshipCheckinView({ onBack, onDone }) {
           return (
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 64, marginBottom: 12, animation: 'heartbeat 1s ease-in-out 3' }}>{info.emoji}</div>
-              <div style={{ fontSize: 12, color: info.color, fontWeight: 700, marginBottom: 4 }}>이번 달 관계 건강도</div>
-              <div style={{ fontSize: 48, fontWeight: 800, color: info.color, marginBottom: 4 }}>{pct}<span style={{ fontSize: 20 }}>점</span></div>
+              <div style={{ fontSize: 12, color: info.color, fontWeight: 700, marginBottom: 4 }}>{tl('이번 달 관계 건강도', 'This Month\'s Relationship Health')}</div>
+              <div style={{ fontSize: 48, fontWeight: 800, color: info.color, marginBottom: 4 }}>{pct}<span style={{ fontSize: 20 }}>{tl('점', '')}</span></div>
               <div style={{
                 display: 'inline-block', marginBottom: 24,
                 padding: '5px 16px', borderRadius: 100,
@@ -1804,17 +1919,17 @@ function RelationshipCheckinView({ onBack, onDone }) {
                 background: info.pale, border: `1px solid ${info.color}33`,
                 fontSize: 13, color: C.dark, lineHeight: 1.7,
               }}>
-                {pct >= 80 && '두 사람의 관계가 매우 건강하게 유지되고 있어요! 지금의 모습을 계속 이어가 보세요. 💕'}
-                {pct >= 60 && pct < 80 && '전반적으로 좋은 관계를 유지하고 있어요. 조금 더 신경 쓰고 싶은 부분을 함께 이야기해보세요. 🌱'}
-                {pct >= 40 && pct < 60 && '개선이 필요한 부분이 보여요. 파트너와 솔직하게 대화해보는 시간을 가져보세요. 💬'}
-                {pct < 40 && '지금은 관계에 더 많은 관심이 필요한 시기예요. 전문 상담사와 함께 점검해보는 것도 좋아요. 💆'}
+                {pct >= 80 && tl('두 사람의 관계가 매우 건강하게 유지되고 있어요! 지금의 모습을 계속 이어가 보세요. 💕', 'Your relationship is very healthy! Keep it up just as you are. 💕')}
+                {pct >= 60 && pct < 80 && tl('전반적으로 좋은 관계를 유지하고 있어요. 조금 더 신경 쓰고 싶은 부분을 함께 이야기해보세요. 🌱', 'Overall a good relationship. Talk together about areas you\'d like to improve a bit. 🌱')}
+                {pct >= 40 && pct < 60 && tl('개선이 필요한 부분이 보여요. 파트너와 솔직하게 대화해보는 시간을 가져보세요. 💬', 'There are areas that need improvement. Take time to have an honest conversation with your partner. 💬')}
+                {pct < 40 && tl('지금은 관계에 더 많은 관심이 필요한 시기예요. 전문 상담사와 함께 점검해보는 것도 좋아요. 💆', 'This is a time when your relationship needs more attention. It may help to check in with a professional counselor. 💆')}
               </div>
               <button onClick={onBack} style={{
                 width: '100%', padding: '12px', borderRadius: 12,
                 border: '1px solid #E0D0D8', cursor: 'pointer',
                 background: 'white', color: C.muted, fontSize: 12,
                 fontFamily: "'Noto Sans KR', sans-serif",
-              }}>← 홈으로 돌아가기</button>
+              }}>← {tl('홈으로 돌아가기', 'Back to Home')}</button>
             </div>
           );
         })()}
@@ -1824,15 +1939,26 @@ function RelationshipCheckinView({ onBack, onDone }) {
 }
 
 // ── DateCourseView ────────────────────────────────────────
-const DATE_REGIONS   = ['서울', '부산', '대구', '인천', '광주', '제주', '경기', '강원'];
-const DATE_MOODS     = [
+const DATE_REGIONS   = COUPLE_LANG === 'en'
+  ? ['Seoul', 'Busan', 'Daegu', 'Incheon', 'Gwangju', 'Jeju', 'Gyeonggi', 'Gangwon']
+  : ['서울', '부산', '대구', '인천', '광주', '제주', '경기', '강원'];
+const DATE_MOODS     = COUPLE_LANG === 'en' ? [
+  { key: '🌹 Romantic', desc: 'Atmospheric restaurant, night view, wine' },
+  { key: '⚡ Active', desc: 'Sports, activities, games' },
+  { key: '🌿 Healing', desc: 'Nature, café, walk, hot spring' },
+  { key: '🎨 Cultural', desc: 'Exhibition, performance, movie, museum' },
+] : [
   { key: '🌹 로맨틱', desc: '분위기 있는 레스토랑, 야경, 와인' },
   { key: '⚡ 활동적', desc: '스포츠, 액티비티, 게임' },
   { key: '🌿 힐링', desc: '자연, 카페, 산책, 온천' },
   { key: '🎨 문화예술', desc: '전시, 공연, 영화, 미술관' },
 ];
-const DATE_DURATIONS = ['반나절 (3~4시간)', '하루 (6~8시간)', '1박 2일'];
-const DATE_BUDGETS   = ['알뜰 (5만원 이하)', '보통 (5~15만원)', '특별 (15만원 이상)'];
+const DATE_DURATIONS = COUPLE_LANG === 'en'
+  ? ['Half Day (3~4 hrs)', 'Full Day (6~8 hrs)', 'Overnight (2 Days)']
+  : ['반나절 (3~4시간)', '하루 (6~8시간)', '1박 2일'];
+const DATE_BUDGETS   = COUPLE_LANG === 'en'
+  ? ['Budget (Under ₩50K)', 'Regular (₩50K~150K)', 'Special (₩150K+)']
+  : ['알뜰 (5만원 이하)', '보통 (5~15만원)', '특별 (15만원 이상)'];
 
 function DateCourseView({ credits, isMaster, onBack }) {
   const [region, setRegion]     = useState('');
@@ -1853,17 +1979,17 @@ function DateCourseView({ credits, isMaster, onBack }) {
       if (res.success) {
         setCourse(res.data.course);
       } else if (res.needsCharge) {
-        setError(`크레딧이 부족합니다. (필요: ${COST}cr)`);
+        setError(tl(`크레딧이 부족합니다. (필요: ${COST}cr)`, `Insufficient credits. (Required: ${COST}cr)`));
       } else {
-        setError(res.error || '생성 실패');
+        setError(res.error || tl('생성 실패', 'Generation failed'));
       }
-    } catch { setError('서버 오류가 발생했습니다.'); }
+    } catch { setError(tl('서버 오류가 발생했습니다.', 'A server error occurred.')); }
     finally { setLoading(false); }
   }
 
   function shareCourse() {
-    const text = `${SERVICE_ICON} 오늘의 데이트 코스 추천 (${region}, ${mood})\n\n${course}\n\n${COUPLE_URL}`;
-    navigator.share ? navigator.share({ title: '데이트 코스 추천', text }).catch(() => {})
+    const text = `${SERVICE_ICON} ${tl('오늘의 데이트 코스 추천', 'Today\'s Date Course Recommendation')} (${region}, ${mood})\n\n${course}\n\n${COUPLE_URL}`;
+    navigator.share ? navigator.share({ title: tl('데이트 코스 추천', 'Date Course Recommendation'), text }).catch(() => {})
                     : navigator.clipboard?.writeText(text).catch(() => {});
   }
 
@@ -1879,7 +2005,7 @@ function DateCourseView({ credits, isMaster, onBack }) {
         <button onClick={course ? () => setCourse('') : onBack} style={{
           background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: C.dark,
           display: 'flex', alignItems: 'center', gap: 6,
-        }}>← <span style={{ fontSize: 14, fontWeight: 600 }}>AI 데이트 코스 추천</span></button>
+        }}>← <span style={{ fontSize: 14, fontWeight: 600 }}>{tl('AI 데이트 코스 추천', 'AI Date Course Recommendation')}</span></button>
         {!isMaster && <span style={{ fontSize: 12, color: C.rose, fontWeight: 700 }}>{COST}cr</span>}
       </nav>
 
@@ -1889,13 +2015,13 @@ function DateCourseView({ credits, isMaster, onBack }) {
             <div style={{ textAlign: 'center', marginBottom: 24 }}>
               <div style={{ fontSize: 56, marginBottom: 10 }}>🗺️</div>
               <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.8 }}>
-                조건을 선택하면 AI가 딱 맞는<br/>데이트 코스를 추천해드려요!
+                {tl('조건을 선택하면 AI가 딱 맞는', 'Select your preferences and AI will recommend')}<br/>{tl('데이트 코스를 추천해드려요!', 'the perfect date course for you!')}
               </p>
             </div>
 
             {/* 지역 */}
             <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 10 }}>📍 어디서?</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 10 }}>📍 {tl('어디서?', 'Where?')}</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {DATE_REGIONS.map(r => (
                   <button key={r} onClick={() => setRegion(r)} style={{
@@ -1911,7 +2037,7 @@ function DateCourseView({ credits, isMaster, onBack }) {
 
             {/* 분위기 */}
             <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 10 }}>✨ 어떤 분위기?</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 10 }}>✨ {tl('어떤 분위기?', 'What Mood?')}</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {DATE_MOODS.map(m => (
                   <button key={m.key} onClick={() => setMood(m.key)} style={{
@@ -1933,7 +2059,7 @@ function DateCourseView({ credits, isMaster, onBack }) {
 
             {/* 시간 */}
             <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 10 }}>⏰ 얼마나?</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 10 }}>⏰ {tl('얼마나?', 'How Long?')}</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {DATE_DURATIONS.map(d => (
                   <button key={d} onClick={() => setDuration(d)} style={{
@@ -1950,7 +2076,7 @@ function DateCourseView({ credits, isMaster, onBack }) {
 
             {/* 예산 */}
             <div style={{ marginBottom: 24 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 10 }}>💰 예산은?</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 10 }}>💰 {tl('예산은?', 'Budget?')}</div>
               <div style={{ display: 'flex', gap: 8 }}>
                 {DATE_BUDGETS.map(b => (
                   <button key={b} onClick={() => setBudget(b)} style={{
@@ -1967,7 +2093,7 @@ function DateCourseView({ credits, isMaster, onBack }) {
 
             {!canAfford && (
               <div style={{ padding: '12px', borderRadius: 12, background: '#FFF0F0', border: '1px solid #FFD0D0', fontSize: 12, color: '#D05555', marginBottom: 12 }}>
-                💸 크레딧이 부족합니다. (필요: {COST}cr / 보유: {credits}cr)
+                💸 {tl(`크레딧이 부족합니다. (필요: ${COST}cr / 보유: ${credits}cr)`, `Insufficient credits. (Required: ${COST}cr / Balance: ${credits}cr)`)}
               </div>
             )}
 
@@ -1986,7 +2112,7 @@ function DateCourseView({ credits, isMaster, onBack }) {
                 opacity: loading ? 0.7 : 1,
               }}
             >
-              {loading ? '🗺️ AI가 코스 만드는 중...' : `🗺️ 데이트 코스 추천받기 ${isMaster ? '(무료)' : `(${COST}cr)`}`}
+              {loading ? tl('🗺️ AI가 코스 만드는 중...', '🗺️ AI is creating your course...') : `🗺️ ${tl('데이트 코스 추천받기', 'Get Date Course Recommendation')} ${isMaster ? tl('(무료)', '(Free)') : `(${COST}cr)`}`}
             </button>
             {error && <div style={{ fontSize: 12, color: '#D05555', textAlign: 'center', marginTop: 10 }}>{error}</div>}
           </div>
@@ -2012,20 +2138,20 @@ function DateCourseView({ credits, isMaster, onBack }) {
                 background: `linear-gradient(135deg, ${C.rose}, ${C.roseL})`,
                 color: 'white', fontWeight: 700, fontSize: 13,
                 fontFamily: "'Noto Sans KR', sans-serif",
-              }}>📤 파트너와 공유</button>
+              }}>📤 {tl('파트너와 공유', 'Share with Partner')}</button>
               <button onClick={() => setCourse('')} style={{
                 flex: 1, padding: '12px', borderRadius: 12,
                 border: `1px solid ${C.roseL}44`, cursor: 'pointer',
                 background: 'white', color: C.rose, fontWeight: 700, fontSize: 13,
                 fontFamily: "'Noto Sans KR', sans-serif",
-              }}>🔄 다시 추천받기</button>
+              }}>🔄 {tl('다시 추천받기', 'Get New Recommendation')}</button>
             </div>
             <button onClick={onBack} style={{
               width: '100%', marginTop: 8, padding: '10px', borderRadius: 12,
               border: '1px solid #E0D0D8', cursor: 'pointer',
               background: 'white', color: C.muted, fontSize: 12,
               fontFamily: "'Noto Sans KR', sans-serif",
-            }}>← 홈으로</button>
+            }}>← {tl('홈으로', 'Home')}</button>
           </div>
         )}
       </div>
@@ -2049,15 +2175,15 @@ function SoloAnalysisView({ testResults, userName, credits, isMaster, onBack }) 
       if (res.success) {
         setReport(res.data.report);
       } else {
-        setError(res.error || '분석 생성 실패');
+        setError(res.error || tl('분석 생성 실패', 'Analysis generation failed'));
       }
-    } catch { setError('서버 오류가 발생했습니다.'); }
+    } catch { setError(tl('서버 오류가 발생했습니다.', 'A server error occurred.')); }
     finally { setLoading(false); }
   }
 
   function shareReport() {
-    const text = `${SERVICE_ICON} ${SERVICE_NAME} — 나의 연애 성향 분석\n\n${report.slice(0, 200)}...\n\n${COUPLE_URL}`;
-    navigator.share ? navigator.share({ title: '나의 연애 성향 분석', text }).catch(() => {})
+    const text = `${SERVICE_ICON} ${SERVICE_NAME} — ${tl('나의 연애 성향 분석', 'My Love Tendency Analysis')}\n\n${report.slice(0, 200)}...\n\n${COUPLE_URL}`;
+    navigator.share ? navigator.share({ title: tl('나의 연애 성향 분석', 'My Love Tendency Analysis'), text }).catch(() => {})
                     : navigator.clipboard?.writeText(text).catch(() => {});
   }
 
@@ -2073,7 +2199,7 @@ function SoloAnalysisView({ testResults, userName, credits, isMaster, onBack }) 
         <button onClick={onBack} style={{
           background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: C.dark,
           display: 'flex', alignItems: 'center', gap: 6,
-        }}>← <span style={{ fontSize: 14, fontWeight: 600 }}>이상형 성향 분석</span></button>
+        }}>← <span style={{ fontSize: 14, fontWeight: 600 }}>{tl('이상형 성향 분석', 'Ideal Type Analysis')}</span></button>
         {!isMaster && (
           <span style={{ fontSize: 12, color: C.rose, fontWeight: 700 }}>
             {COST}cr
@@ -2086,11 +2212,11 @@ function SoloAnalysisView({ testResults, userName, credits, isMaster, onBack }) 
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 64, marginBottom: 16 }}>🔮</div>
             <h2 style={{ fontSize: 20, fontWeight: 700, color: C.dark, marginBottom: 10, fontFamily: "'Noto Serif KR', serif" }}>
-              나의 이상형 성향 분석
+              {tl('나의 이상형 성향 분석', 'My Ideal Type Analysis')}
             </h2>
             <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.8, marginBottom: 28 }}>
-              내 심리검사 결과를 바탕으로 AI가 분석하는<br/>
-              나의 연애 강점, 잘 맞는 파트너 유형, 성장 포인트
+              {tl('내 심리검사 결과를 바탕으로 AI가 분석하는', 'AI analysis based on your psychological test results:')}<br/>
+              {tl('나의 연애 강점, 잘 맞는 파트너 유형, 성장 포인트', 'your love strengths, best partner type, and growth points')}
             </p>
 
             {!hasData && (
@@ -2098,7 +2224,7 @@ function SoloAnalysisView({ testResults, userName, credits, isMaster, onBack }) 
                 padding: '16px', borderRadius: 14, background: '#FFF8F0',
                 border: '1px solid #FFD8A0', fontSize: 13, color: '#A07040', marginBottom: 24, textAlign: 'left',
               }}>
-                💡 {MAIN_SERVICE_NAME}에서 BIG5, LOST, SDRI 검사를 하나 이상 완료해야 이용할 수 있어요.
+                💡 {tl(`${MAIN_SERVICE_NAME}에서 BIG5, LOST, SDRI 검사를 하나 이상 완료해야 이용할 수 있어요.`, `You need to complete at least one of BIG5, LOST, or SDRI tests on ${MAIN_SERVICE_NAME} to use this feature.`)}
               </div>
             )}
 
@@ -2107,15 +2233,15 @@ function SoloAnalysisView({ testResults, userName, credits, isMaster, onBack }) 
                 padding: '14px', borderRadius: 14, background: '#FFF0F0',
                 border: '1px solid #FFD0D0', fontSize: 13, color: '#D05555', marginBottom: 24, textAlign: 'left',
               }}>
-                💸 크레딧이 부족합니다. (필요: {COST}cr / 보유: {credits}cr)
+                💸 {tl(`크레딧이 부족합니다. (필요: ${COST}cr / 보유: ${credits}cr)`, `Insufficient credits. (Required: ${COST}cr / Balance: ${credits}cr)`)}
               </div>
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, textAlign: 'left', marginBottom: 28 }}>
               {[
-                { emoji: '💪', title: '나의 연애 강점', desc: '내가 관계에서 잘하는 것과 매력 포인트' },
-                { emoji: '💑', title: '잘 맞는 파트너 유형', desc: '나와 궁합이 좋은 성격·행동 유형' },
-                { emoji: '🌱', title: '함께 성장할 포인트', desc: '더 좋은 관계를 위한 개인 성장 방향' },
+                { emoji: '💪', title: tl('나의 연애 강점', 'My Love Strengths'), desc: tl('내가 관계에서 잘하는 것과 매력 포인트', 'What I do well in relationships and my attractive points') },
+                { emoji: '💑', title: tl('잘 맞는 파트너 유형', 'Best Partner Type'), desc: tl('나와 궁합이 좋은 성격·행동 유형', 'Personality and behavior types that match well with me') },
+                { emoji: '🌱', title: tl('함께 성장할 포인트', 'Growth Points'), desc: tl('더 좋은 관계를 위한 개인 성장 방향', 'Personal growth direction for a better relationship') },
               ].map(item => (
                 <div key={item.title} style={{
                   display: 'flex', gap: 12, padding: '14px', borderRadius: 14,
@@ -2144,7 +2270,7 @@ function SoloAnalysisView({ testResults, userName, credits, isMaster, onBack }) 
                 opacity: loading ? 0.7 : 1,
               }}
             >
-              {loading ? '🔮 AI가 분석 중...' : `🔮 분석 시작하기 ${isMaster ? '(무료)' : `(${COST}cr)`}`}
+              {loading ? tl('🔮 AI가 분석 중...', '🔮 AI is analyzing...') : `🔮 ${tl('분석 시작하기', 'Start Analysis')} ${isMaster ? tl('(무료)', '(Free)') : `(${COST}cr)`}`}
             </button>
 
             {error && (
@@ -2156,7 +2282,7 @@ function SoloAnalysisView({ testResults, userName, credits, isMaster, onBack }) 
             <div style={{ textAlign: 'center', marginBottom: 24 }}>
               <div style={{ fontSize: 48, marginBottom: 8 }}>🔮</div>
               <h2 style={{ fontSize: 18, fontWeight: 700, color: C.dark, fontFamily: "'Noto Serif KR', serif" }}>
-                {userName}님의 연애 성향 분석
+                {userName}{tl('님의 연애 성향 분석', '\'s Love Tendency Analysis')}
               </h2>
             </div>
             <div style={{
@@ -2173,13 +2299,13 @@ function SoloAnalysisView({ testResults, userName, credits, isMaster, onBack }) 
                 background: `linear-gradient(135deg, ${C.lavender}, ${C.lavL})`,
                 color: 'white', fontWeight: 700, fontSize: 13,
                 fontFamily: "'Noto Sans KR', sans-serif",
-              }}>📤 결과 공유하기</button>
+              }}>📤 {tl('결과 공유하기', 'Share Result')}</button>
               <button onClick={onBack} style={{
                 flex: 1, padding: '12px', borderRadius: 12,
                 border: `1px solid ${C.lavL}44`, cursor: 'pointer',
                 background: 'white', color: C.lavender, fontWeight: 700, fontSize: 13,
                 fontFamily: "'Noto Sans KR', sans-serif",
-              }}>← 홈으로</button>
+              }}>← {tl('홈으로', 'Home')}</button>
             </div>
           </div>
         )}
@@ -2194,7 +2320,7 @@ function ScoreGauge({ score }) {
   return (
     <div style={{ textAlign: 'center', margin: '16px 0' }}>
       <div style={{ fontSize: 52, fontWeight: 800, color, lineHeight: 1 }}>{score}</div>
-      <div style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>/ 100점</div>
+      <div style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>/ 100{tl('점', '')}</div>
       <div style={{
         display: 'inline-block', marginTop: 8,
         padding: '5px 16px', borderRadius: 100,
@@ -2223,10 +2349,10 @@ function CodeInput({ onJoin, loading }) {
 
   async function handleSubmit() {
     const c = code.trim().toUpperCase();
-    if (c.length !== 6) { setError('6자리 코드를 입력해주세요.'); return; }
+    if (c.length !== 6) { setError(tl('6자리 코드를 입력해주세요.', 'Please enter a 6-digit code.')); return; }
     setError('');
     const result = await onJoin(c);
-    if (!result.success) setError(result.error || '참여 실패');
+    if (!result.success) setError(result.error || tl('참여 실패', 'Join failed'));
   }
 
   return (
@@ -2236,7 +2362,7 @@ function CodeInput({ onJoin, loading }) {
           value={code}
           onChange={e => setCode(e.target.value.toUpperCase().slice(0, 6))}
           onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-          placeholder="6자리 코드 입력"
+          placeholder={tl("6자리 코드 입력", "Enter 6-digit code")}
           maxLength={6}
           style={{
             flex: 1, padding: '12px 16px', borderRadius: 12, fontSize: 18,
@@ -2257,7 +2383,7 @@ function CodeInput({ onJoin, loading }) {
             opacity: loading ? 0.7 : 1,
           }}
         >
-          {loading ? '...' : '참여'}
+          {loading ? '...' : tl('참여', 'Join')}
         </button>
       </div>
       {error && <div style={{ fontSize: 12, color: '#E05555', textAlign: 'center' }}>{error}</div>}
@@ -2286,9 +2412,9 @@ function CoupleReportView({ session, myRole, partnerName, userName, onBack }) {
         setReport(res.data.report);
         setScore(res.data.compatibility_score);
       } else {
-        setError(res.error || '리포트 생성 실패');
+        setError(res.error || tl('리포트 생성 실패', 'Report generation failed'));
       }
-    } catch { setError('서버 오류가 발생했습니다.'); }
+    } catch { setError(tl('서버 오류가 발생했습니다.', 'A server error occurred.')); }
     finally { setGen(false); }
   }
 
@@ -2298,8 +2424,8 @@ function CoupleReportView({ session, myRole, partnerName, userName, onBack }) {
     catch { return false; }
   })();
   const testLabel = session?.test_type || 'BIG5+LOST+DSI';
-  const hostLabel  = myRole === 'host' ? `${userName} (나)` : partnerName;
-  const guestLabel = myRole === 'guest' ? `${userName} (나)` : partnerName;
+  const hostLabel  = myRole === 'host' ? `${userName} ${tl('(나)', '(Me)')}` : partnerName;
+  const guestLabel = myRole === 'guest' ? `${userName} ${tl('(나)', '(Me)')}` : partnerName;
 
   return (
     <div style={{ minHeight: '100vh', background: `linear-gradient(160deg, ${C.rosePale}, ${C.cream})` }}>
@@ -2314,9 +2440,9 @@ function CoupleReportView({ session, myRole, partnerName, userName, onBack }) {
         <button onClick={onBack} style={{
           background: 'none', border: 'none', fontSize: 20, cursor: 'pointer',
           color: C.dark, display: 'flex', alignItems: 'center', gap: 6,
-        }}>← <span style={{ fontSize: 14, fontWeight: 600 }}>결과</span></button>
+        }}>← <span style={{ fontSize: 14, fontWeight: 600 }}>{tl('결과', 'Result')}</span></button>
         <span style={{ fontSize: 15, fontWeight: 700, color: C.dark, fontFamily: "'Noto Serif KR', serif" }}>
-          💕 커플 분석 리포트 {hasDsi && <span style={{ fontSize: 11, background:'#5A8A7A', color:'white', borderRadius:6, padding:'2px 7px', fontWeight:700, marginLeft:4 }}>자아분화 포함</span>}
+          💕 {tl('커플 분석 리포트', 'Couple Analysis Report')} {hasDsi && <span style={{ fontSize: 11, background:'#5A8A7A', color:'white', borderRadius:6, padding:'2px 7px', fontWeight:700, marginLeft:4 }}>{tl('자아분화 포함', 'Incl. Differentiation')}</span>}
         </span>
         <div style={{ width: 60 }}/>
       </nav>
@@ -2345,7 +2471,7 @@ function CoupleReportView({ session, myRole, partnerName, userName, onBack }) {
               <div style={{ textAlign: 'center', padding: '20px 0' }}>
                 <div style={{ fontSize: 36, animation: 'heartbeat 1s infinite' }}>💕</div>
                 <div style={{ fontSize: 14, color: C.muted, marginTop: 12 }}>
-                  AI가 두 사람의 궁합을 분석하는 중...
+                  {tl('AI가 두 사람의 궁합을 분석하는 중...', 'AI is analyzing your compatibility...')}
                 </div>
               </div>
             ) : score > 0 ? (
@@ -2381,7 +2507,7 @@ function CoupleReportView({ session, myRole, partnerName, userName, onBack }) {
               fontFamily: "'Noto Sans KR', sans-serif",
               boxShadow: `0 8px 24px ${C.rose}44`,
             }}>
-              💕 커플 리포트 생성하기
+              💕 {tl('커플 리포트 생성하기', 'Generate Couple Report')}
             </button>
           </div>
         )}
@@ -2396,22 +2522,22 @@ function CoupleReportView({ session, myRole, partnerName, userName, onBack }) {
               border: `1px solid ${C.roseL}22`,
             }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 10 }}>
-                📤 리포트 공유하기
+                📤 {tl('리포트 공유하기', 'Share Report')}
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button onClick={() => {
-                  const text = `${SERVICE_ICON} ${SERVICE_NAME} 분석 결과\n\n궁합 점수: ${score}점 (${scoreLabel(score)})\n\n${report.slice(0, 200)}...\n\n${COUPLE_URL}`;
-                  navigator.share ? navigator.share({ title: `${SERVICE_NAME} 분석 결과`, text }) : navigator.clipboard?.writeText(text);
+                  const text = `${SERVICE_ICON} ${SERVICE_NAME} ${tl('분석 결과', 'Analysis Result')}\n\n${tl('궁합 점수', 'Compatibility Score')}: ${score}${tl('점', '')} (${scoreLabel(score)})\n\n${report.slice(0, 200)}...\n\n${COUPLE_URL}`;
+                  navigator.share ? navigator.share({ title: `${SERVICE_NAME} ${tl('분석 결과', 'Analysis Result')}`, text }) : navigator.clipboard?.writeText(text);
                 }} style={{
                   flex: 1, padding: '10px', borderRadius: 10, border: `1px solid ${C.roseL}44`,
                   background: C.rosePale, color: C.rose, fontWeight: 700, fontSize: 12, cursor: 'pointer',
                   fontFamily: "'Noto Sans KR', sans-serif",
                 }}>
-                  📋 결과 복사
+                  📋 {tl('결과 복사', 'Copy Result')}
                 </button>
                 <button onClick={() => {
                   const el = document.createElement('a');
-                  el.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(`${SERVICE_NAME} 분석 리포트\n궁합: ${score}점\n\n${report}`);
+                  el.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(`${SERVICE_NAME} ${tl('분석 리포트', 'Analysis Report')}\n${tl('궁합', 'Compatibility')}: ${score}${tl('점', '')}\n\n${report}`);
                   el.download = `couple_report_${new Date().toISOString().slice(0,10)}.txt`;
                   el.click();
                 }} style={{
@@ -2419,7 +2545,7 @@ function CoupleReportView({ session, myRole, partnerName, userName, onBack }) {
                   background: C.lavPale, color: C.lavender, fontWeight: 700, fontSize: 12, cursor: 'pointer',
                   fontFamily: "'Noto Sans KR', sans-serif",
                 }}>
-                  💾 텍스트 저장
+                  💾 {tl('텍스트 저장', 'Save as Text')}
                 </button>
               </div>
             </div>
@@ -2431,11 +2557,11 @@ function CoupleReportView({ session, myRole, partnerName, userName, onBack }) {
               border: `1px solid ${C.roseL}33`,
             }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: C.dark, marginBottom: 6 }}>
-                💬 전문 상담사와 더 깊이 나눠보세요
+                💬 {tl('전문 상담사와 더 깊이 나눠보세요', 'Explore Deeper with a Professional Counselor')}
               </div>
               <div style={{ fontSize: 12, color: C.muted, marginBottom: 16, lineHeight: 1.7 }}>
-                AI 분석 결과를 바탕으로 커플·부부 전문 상담사와 1:1 심층 상담을 받아보세요.
-                자아분화 향상 프로그램, Bowen 가족치료 기법 등 전문적인 지원을 받을 수 있습니다.
+                {tl('AI 분석 결과를 바탕으로 커플·부부 전문 상담사와 1:1 심층 상담을 받아보세요.', 'Based on the AI analysis results, get one-on-one in-depth counseling with a couple/marriage specialist.')}
+                {tl(' 자아분화 향상 프로그램, Bowen 가족치료 기법 등 전문적인 지원을 받을 수 있습니다.', ' Professional support including differentiation improvement programs and Bowen family therapy techniques is available.')}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <a href={`${MAUMFUL_URL}/#counseling?type=couple&score=${score}`} style={{
@@ -2446,7 +2572,7 @@ function CoupleReportView({ session, myRole, partnerName, userName, onBack }) {
                   fontFamily: "'Noto Sans KR', sans-serif",
                   boxShadow: `0 6px 20px ${C.rose}44`,
                 }}>
-                  커플 전문 상담사 예약하기 →
+                  {tl('커플 전문 상담사 예약하기 →', 'Book a Couple Counselor →')}
                 </a>
                 {hasDsi && (
                   <a href={`${MAUMFUL_URL}/#counseling?type=bowen&score=${score}`} style={{
@@ -2456,7 +2582,7 @@ function CoupleReportView({ session, myRole, partnerName, userName, onBack }) {
                     fontWeight: 700, fontSize: 13, textDecoration: 'none',
                     fontFamily: "'Noto Sans KR', sans-serif",
                   }}>
-                    🪞 자아분화 전문 상담사 예약하기 →
+                    🪞 {tl('자아분화 전문 상담사 예약하기 →', 'Book a Differentiation Counselor →')}
                   </a>
                 )}
               </div>
@@ -2531,14 +2657,14 @@ function SessionWaitingView({ session, myRole, onRefresh, onReport, onCancel }) 
   useEffect(() => {
     const prev = prevRef.current;
     if (!prev.bothDone && bothDone) {
-      fireBrowserNotif('💕 두 분 모두 준비 완료!', '커플 리포트를 생성할 수 있어요.');
-      setNotifyBanner('🎉 파트너도 검사를 완료했어요! 아래에서 리포트를 생성해보세요.');
+      fireBrowserNotif(tl('💕 두 분 모두 준비 완료!', '💕 Both Ready!'), tl('커플 리포트를 생성할 수 있어요.', 'You can now generate the couple report.'));
+      setNotifyBanner(tl('🎉 파트너도 검사를 완료했어요! 아래에서 리포트를 생성해보세요.', '🎉 Your partner has also completed the test! Generate the report below.'));
     } else if (!prev.isGuestDone && isGuestDone && myRole === 'host') {
-      fireBrowserNotif('💕 파트너가 참여했어요!', '파트너가 검사를 완료했습니다.');
-      setNotifyBanner('💕 파트너가 검사를 완료했어요!');
+      fireBrowserNotif(tl('💕 파트너가 참여했어요!', '💕 Your partner joined!'), tl('파트너가 검사를 완료했습니다.', 'Your partner completed the test.'));
+      setNotifyBanner(tl('💕 파트너가 검사를 완료했어요!', '💕 Your partner completed the test!'));
     } else if (!prev.isHostDone && isHostDone && myRole === 'guest') {
-      fireBrowserNotif('💕 파트너가 검사를 완료했어요!', '이제 리포트를 생성할 수 있어요.');
-      setNotifyBanner('💕 파트너가 검사를 완료했어요!');
+      fireBrowserNotif(tl('💕 파트너가 검사를 완료했어요!', '💕 Your partner completed the test!'), tl('이제 리포트를 생성할 수 있어요.', 'You can now generate the report.'));
+      setNotifyBanner(tl('💕 파트너가 검사를 완료했어요!', '💕 Your partner completed the test!'));
     }
     prevRef.current = { isHostDone, isGuestDone, bothDone };
   }, [isHostDone, isGuestDone, bothDone]);
@@ -2561,7 +2687,7 @@ function SessionWaitingView({ session, myRole, onRefresh, onReport, onCancel }) 
   }
 
   function copyCode() {
-    const msg = `${SERVICE_NAME} 초대코드: ${code}\n함께 심리 분석해봐요 ${SERVICE_ICON}\n${COUPLE_URL}/?code=${code}`;
+    const msg = `${SERVICE_NAME} ${tl('초대코드', 'Invite Code')}: ${code}\n${tl('함께 심리 분석해봐요', 'Let\'s do a psychological analysis together')} ${SERVICE_ICON}\n${COUPLE_URL}/?code=${code}`;
     navigator.clipboard?.writeText(msg).catch(() => {});
   }
 
@@ -2599,14 +2725,14 @@ function SessionWaitingView({ session, myRole, onRefresh, onReport, onCancel }) 
         boxShadow: '0 4px 16px rgba(0,0,0,0.08)', marginBottom: 20,
       }}>
         <div style={{ fontSize: 40, marginBottom: 12 }}>⏰</div>
-        <div style={{ fontSize: 16, fontWeight: 700, color: C.dark, marginBottom: 8 }}>세션이 만료되었습니다</div>
-        <div style={{ fontSize: 13, color: C.muted, marginBottom: 20 }}>72시간이 지나 세션이 만료되었습니다. 새 세션을 만들어 다시 시작해보세요.</div>
+        <div style={{ fontSize: 16, fontWeight: 700, color: C.dark, marginBottom: 8 }}>{tl('세션이 만료되었습니다', 'Session Expired')}</div>
+        <div style={{ fontSize: 13, color: C.muted, marginBottom: 20 }}>{tl('72시간이 지나 세션이 만료되었습니다. 새 세션을 만들어 다시 시작해보세요.', '72 hours have passed and the session has expired. Please create a new session to start again.')}</div>
       </div>
     );
   }
 
   const lastCheckedText = lastChecked
-    ? `${lastChecked.getHours().toString().padStart(2,'0')}:${lastChecked.getMinutes().toString().padStart(2,'0')}:${lastChecked.getSeconds().toString().padStart(2,'0')} 확인됨`
+    ? `${lastChecked.getHours().toString().padStart(2,'0')}:${lastChecked.getMinutes().toString().padStart(2,'0')}:${lastChecked.getSeconds().toString().padStart(2,'0')} ${tl('확인됨', 'checked')}`
     : '';
 
   return (
@@ -2636,19 +2762,19 @@ function SessionWaitingView({ session, myRole, onRefresh, onReport, onCancel }) 
 
       <div style={{ padding: '20px 20px 24px' }}>
         <div style={{ fontSize: 16, fontWeight: 700, color: C.dark, marginBottom: 4 }}>
-          {bothDone ? '🎉 두 사람 모두 준비 완료!' : '파트너를 기다리는 중'}
+          {bothDone ? tl('🎉 두 사람 모두 준비 완료!', '🎉 Both Ready!') : tl('파트너를 기다리는 중', 'Waiting for Partner')}
         </div>
         <div style={{ fontSize: 13, color: C.muted, marginBottom: 20, lineHeight: 1.6 }}>
           {bothDone
-            ? '이제 커플 분석 리포트를 생성할 수 있습니다.'
-            : '파트너 링크를 공유하세요. 파트너는 로그인 없이 바로 검사에 참여할 수 있어요.'}
+            ? tl('이제 커플 분석 리포트를 생성할 수 있습니다.', 'You can now generate the couple analysis report.')
+            : tl('파트너 링크를 공유하세요. 파트너는 로그인 없이 바로 검사에 참여할 수 있어요.', 'Share the partner link. Your partner can join the test right away without logging in.')}
         </div>
 
         {/* 진행 상태 */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
           {[
-            { label: myRole === 'host' ? '나 (host)' : '파트너 A', done: isHostDone },
-            { label: myRole === 'guest' ? '나 (guest)' : '파트너 B', done: isGuestDone },
+            { label: myRole === 'host' ? tl('나 (host)', 'Me (host)') : tl('파트너 A', 'Partner A'), done: isHostDone },
+            { label: myRole === 'guest' ? tl('나 (guest)', 'Me (guest)') : tl('파트너 B', 'Partner B'), done: isGuestDone },
           ].map(({ label, done }, i) => (
             <div key={i} style={{
               flex: 1, padding: '10px 12px', borderRadius: 12, textAlign: 'center',
@@ -2669,10 +2795,10 @@ function SessionWaitingView({ session, myRole, onRefresh, onReport, onCancel }) 
             border: `1px solid ${C.roseL}33`, marginBottom: 16,
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-              <div style={{ fontSize: 11, color: C.muted }}>파트너에게 공유할 초대코드</div>
+              <div style={{ fontSize: 11, color: C.muted }}>{tl('파트너에게 공유할 초대코드', 'Invite Code to Share with Partner')}</div>
               {myRole === 'host' && pushActive && (
                 <span style={{ fontSize: 10, color: '#10B981', fontWeight: 600, background: '#D1FAE5', padding: '2px 8px', borderRadius: 100 }}>
-                  🔔 알림 켜짐
+                  🔔 {tl('알림 켜짐', 'Notifications On')}
                 </span>
               )}
             </div>
@@ -2685,7 +2811,7 @@ function SessionWaitingView({ session, myRole, onRefresh, onReport, onCancel }) 
               background: C.rose, color: 'white', fontWeight: 700, fontSize: 13,
               fontFamily: "'Noto Sans KR', sans-serif",
             }}>
-              🔗 파트너 검사 링크 복사 (로그인 불필요)
+              🔗 {tl('파트너 검사 링크 복사 (로그인 불필요)', 'Copy Partner Test Link (No Login Required)')}
             </button>
             <button onClick={copyCode} style={{
               width: '100%', padding: '8px', borderRadius: 10, marginTop: 8,
@@ -2693,19 +2819,19 @@ function SessionWaitingView({ session, myRole, onRefresh, onReport, onCancel }) 
               background: 'white', color: C.rose, fontWeight: 600, fontSize: 12,
               fontFamily: "'Noto Sans KR', sans-serif",
             }}>
-              📋 {SERVICE_NAME} 코드 복사 (계정 있는 파트너)
+              📋 {SERVICE_NAME} {tl('코드 복사 (계정 있는 파트너)', 'Copy Code (for users with account)')}
             </button>
 
             {/* 이메일로 초대 */}
             <div style={{ marginTop: 12, borderTop: `1px solid ${C.rose}22`, paddingTop: 12 }}>
-              <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>또는 이메일로 직접 초대</div>
+              <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>{tl('또는 이메일로 직접 초대', 'Or invite directly by email')}</div>
               <div style={{ display: 'flex', gap: 6 }}>
                 <input
                   type="email"
                   value={emailInput}
                   onChange={e => { setEmailInput(e.target.value); setEmailResult(null); }}
                   onKeyDown={e => e.key === 'Enter' && sendInviteEmail()}
-                  placeholder="파트너 이메일 주소"
+                  placeholder={tl('파트너 이메일 주소', "Partner's email address")}
                   style={{
                     flex: 1, padding: '8px 10px', borderRadius: 8, border: `1px solid ${C.rose}44`,
                     fontSize: 12, fontFamily: "'Noto Sans KR', sans-serif", outline: 'none',
@@ -2718,14 +2844,14 @@ function SessionWaitingView({ session, myRole, onRefresh, onReport, onCancel }) 
                   color: 'white', fontWeight: 700, fontSize: 12, cursor: (!emailInput || emailSending) ? 'not-allowed' : 'pointer',
                   fontFamily: "'Noto Sans KR', sans-serif", whiteSpace: 'nowrap',
                 }}>
-                  {emailSending ? '...' : '📨 전송'}
+                  {emailSending ? '...' : `📨 ${tl('전송', 'Send')}`}
                 </button>
               </div>
               {emailResult === 'ok' && (
-                <div style={{ fontSize: 11, color: '#4A9A5A', marginTop: 5, fontWeight: 600 }}>✓ 초대 이메일을 발송했어요!</div>
+                <div style={{ fontSize: 11, color: '#4A9A5A', marginTop: 5, fontWeight: 600 }}>{tl('✓ 초대 이메일을 발송했어요!', '✓ Invite email sent!')}</div>
               )}
               {emailResult === 'err' && (
-                <div style={{ fontSize: 11, color: '#D4634A', marginTop: 5 }}>이메일 발송에 실패했습니다. 다시 시도해주세요.</div>
+                <div style={{ fontSize: 11, color: '#D4634A', marginTop: 5 }}>{tl('이메일 발송에 실패했습니다. 다시 시도해주세요.', 'Failed to send email. Please try again.')}</div>
               )}
             </div>
           </div>
@@ -2743,7 +2869,7 @@ function SessionWaitingView({ session, myRole, onRefresh, onReport, onCancel }) 
                   width: 8, height: 8, borderRadius: '50%', background: C.rose,
                   animation: 'pulse 1s infinite',
                 }}/>
-                <span style={{ fontSize: 11, color: C.rose }}>파트너 상태 확인 중...</span>
+                <span style={{ fontSize: 11, color: C.rose }}>{tl('파트너 상태 확인 중...', 'Checking partner status...')}</span>
               </>
             ) : (
               <span style={{ fontSize: 11, color: C.muted }}>{lastCheckedText}</span>
@@ -2756,13 +2882,13 @@ function SessionWaitingView({ session, myRole, onRefresh, onReport, onCancel }) 
             cursor: polling ? 'not-allowed' : 'pointer',
             fontFamily: "'Noto Sans KR', sans-serif",
           }}>
-            {polling ? '...' : '↻ 지금 확인'}
+            {polling ? '...' : `↻ ${tl('지금 확인', 'Refresh Now')}`}
           </button>
         </div>
 
         {/* 만료 시간 */}
         <div style={{ fontSize: 11, color: C.muted, textAlign: 'center', marginBottom: 12 }}>
-          ⏰ 세션 만료: {fmtDate(session?.expires_at)}
+          ⏰ {tl('세션 만료', 'Session Expires')}: {fmtDate(session?.expires_at)}
         </div>
 
         {/* host만 취소 가능 */}
@@ -2773,7 +2899,7 @@ function SessionWaitingView({ session, myRole, onRefresh, onReport, onCancel }) 
             cursor: 'pointer', marginBottom: 8,
             fontFamily: "'Noto Sans KR', sans-serif",
           }}>
-            세션 취소하기
+            {tl('세션 취소하기', 'Cancel Session')}
           </button>
         )}
 
@@ -2786,7 +2912,7 @@ function SessionWaitingView({ session, myRole, onRefresh, onReport, onCancel }) 
             fontFamily: "'Noto Sans KR', sans-serif",
             boxShadow: `0 8px 24px ${C.rose}44`,
           }}>
-            💕 커플 리포트 보기
+            💕 {tl('커플 리포트 보기', 'View Couple Report')}
           </button>
         )}
       </div>
@@ -2801,7 +2927,7 @@ function CoupleHubApp() {
   const [error, setError]         = useState('');
   const [view, setView]           = useState('hub');  // 'hub' | 'report' | 'miniTest' | 'soloAnalysis' | 'checkin' | 'dateCourse'
   const [sessionData, setSession] = useState(null);
-  const [partnerName, setPartner] = useState('파트너');
+  const [partnerName, setPartner] = useState(tl('파트너', 'Partner'));
   const [myRole, setMyRole]       = useState('host');
   const [creating, setCreating]   = useState(false);
   const [joining, setJoining]     = useState(false);
@@ -2822,8 +2948,8 @@ function CoupleHubApp() {
           setSession(res.data.activeSession);
           setMyRole(res.data.activeSession.host_user_id === res.data.user.id ? 'host' : 'guest');
         }
-      } else setError(res.error || '데이터 조회 실패');
-    } catch { setError('서버 연결 실패'); }
+      } else setError(res.error || tl('데이터 조회 실패', 'Failed to load data'));
+    } catch { setError(tl('서버 연결 실패', 'Server connection failed')); }
     finally { setLoading(false); }
   }, [isLoggedIn]);
 
@@ -2861,14 +2987,14 @@ useEffect(() => {
         setSession(res.data.session);
         setMyRole('host');
         setCredit(null);
-        showToast(res.data.isExisting ? '기존 세션을 불러왔습니다.' : '세션이 생성되었습니다!');
+        showToast(res.data.isExisting ? tl('기존 세션을 불러왔습니다.', 'Existing session restored.') : tl('세션이 생성되었습니다!', 'Session created!'));
         if (!res.data.isExisting) refreshCredits(); // 크레딧 차감 즉시 반영
       } else if (res.needsCharge) {
         setCredit({ message: res.error, balance: data?.user?.credits });
       } else {
-        showToast(res.error || '생성 실패');
+        showToast(res.error || tl('생성 실패', 'Failed to create'));
       }
-    } catch { showToast('서버 오류'); }
+    } catch { showToast(tl('서버 오류', 'Server error')); }
     finally { setCreating(false); }
   }
 
@@ -2880,14 +3006,14 @@ useEffect(() => {
       if (res.success) {
         setSession(res.data.session);
         setMyRole('guest');
-        showToast('세션에 참여했습니다! 💕');
+        showToast(tl('세션에 참여했습니다! 💕', 'Joined the session! 💕'));
         // 파트너 이름 조회
         const s = await api.get(`/api/couple/session/${res.data.session.session_code}`);
         if (s.success) setPartner(s.data.partnerName);
       } else {
         return { success: false, error: res.error };
       }
-    } catch { return { success: false, error: '서버 오류' }; }
+    } catch { return { success: false, error: tl('서버 오류', 'Server error') }; }
     finally { setJoining(false); }
     return { success: true };
   }
@@ -2905,19 +3031,19 @@ useEffect(() => {
   // 세션 취소
   async function handleCancelSession() {
     if (!sessionData?.session_code) return;
-    if (!window.confirm('세션을 취소하시겠습니까? 크레딧은 환불되지 않습니다.')) return;
+    if (!window.confirm(tl('세션을 취소하시겠습니까? 크레딧은 환불되지 않습니다.', 'Cancel this session? Credits will not be refunded.'))) return;
     try {
       const res = await api.patch(`/api/couple/session/${sessionData.session_code}/cancel`);
       if (res.success) {
         setSession(null);
-        showToast('세션이 취소되었습니다.');
+        showToast(tl('세션이 취소되었습니다.', 'Session cancelled.'));
         // 크레딧 갱신
         const cr = await api.get('/api/couple/credits');
         if (cr.success) setData(prev => prev ? { ...prev, user: { ...prev.user, credits: cr.data.balance } } : prev);
       } else {
-        showToast(res.error || '취소 실패');
+        showToast(res.error || tl('취소 실패', 'Failed to cancel'));
       }
-    } catch { showToast('서버 오류'); }
+    } catch { showToast(tl('서버 오류', 'Server error')); }
   }
 
   // 크레딧 갱신
@@ -3054,7 +3180,7 @@ useEffect(() => {
         padding: '10px 24px', background: C.rose, color: 'white',
         borderRadius: 10, fontSize: 14, fontWeight: 600,
         textDecoration: 'none', fontFamily: "'Noto Sans KR', sans-serif",
-      }}>{MAIN_SERVICE_NAME}로 돌아가기</a>
+      }}>{tl(`${MAIN_SERVICE_NAME}로 돌아가기`, `Back to ${MAIN_SERVICE_NAME}`)}</a>
     </div>
   );
 
@@ -3088,7 +3214,7 @@ useEffect(() => {
             background: C.rosePale, padding: '4px 12px', borderRadius: 100,
             border: `1px solid ${C.roseL}44`,
           }}>
-            ✦ {user?.credits ?? 0} 크레딧
+            ✦ {user?.credits ?? 0} {tl('크레딧', 'credits')}
           </div>
           <a href={MAUMFUL_URL} style={{
             fontSize: 12, color: C.muted, textDecoration: 'none',
@@ -3112,7 +3238,7 @@ useEffect(() => {
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                 <div style={{ fontSize: 18, fontWeight: 700, color: C.dark }}>
-                  안녕하세요, {displayName(user)}님 👋
+                  {tl(`안녕하세요, ${displayName(user)}님 👋`, `Hello, ${displayName(user)} 👋`)}
                   {isMaster && <span style={{ fontSize: 11, background: C.rose, color: 'white', borderRadius: 6, padding: '2px 8px', fontWeight: 700, marginLeft: 6 }}>MASTER</span>}
                 </div>
                 {myPersonality && (
@@ -3126,7 +3252,7 @@ useEffect(() => {
                 )}
               </div>
               <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.6, marginBottom: 14 }}>
-                심리검사 결과로 파트너와의 관계 패턴을 함께 탐색해보세요.
+                {tl('심리검사 결과로 파트너와의 관계 패턴을 함께 탐색해보세요.', 'Explore your relationship patterns together using psychological test results.')}
               </div>
               {/* 빠른 액션 버튼 — 2×2 그리드 */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -3134,22 +3260,22 @@ useEffect(() => {
                   padding: '10px 8px', borderRadius: 12, border: `1px solid ${C.roseL}33`, cursor: 'pointer',
                   background: C.rosePale, color: C.rose, fontWeight: 700, fontSize: 12,
                   fontFamily: "'Noto Sans KR', sans-serif", lineHeight: 1.4, textAlign: 'center',
-                }}>💝 연애 유형 테스트<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>무료</span></button>
+                }}>{tl('💝 연애 유형 테스트', '💝 Love Type Test')}<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>{tl('무료', 'Free')}</span></button>
                 <button onClick={() => setView('dateCourse')} style={{
                   padding: '10px 8px', borderRadius: 12, border: `1px solid ${C.roseL}33`, cursor: 'pointer',
                   background: `linear-gradient(135deg, ${C.rosePale}, ${C.lavPale})`, color: C.rose, fontWeight: 700, fontSize: 12,
                   fontFamily: "'Noto Sans KR', sans-serif", lineHeight: 1.4, textAlign: 'center',
-                }}>🗺️ 데이트 코스 추천<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>3cr</span></button>
+                }}>{tl('🗺️ 데이트 코스 추천', '🗺️ Date Idea Planner')}<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>3cr</span></button>
                 <button onClick={() => setView('checkin')} style={{
                   padding: '10px 8px', borderRadius: 12, border: '1px solid #4A9A5A33', cursor: 'pointer',
                   background: '#EAF5EC', color: '#4A9A5A', fontWeight: 700, fontSize: 12,
                   fontFamily: "'Noto Sans KR', sans-serif", lineHeight: 1.4, textAlign: 'center',
-                }}>🌱 관계 성장 체크인<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>무료 · 월 1회</span></button>
+                }}>{tl('🌱 관계 성장 체크인', '🌱 Relationship Check-in')}<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>{tl('무료 · 월 1회', 'Free · Monthly')}</span></button>
                 <button onClick={() => setView('soloAnalysis')} style={{
                   padding: '10px 8px', borderRadius: 12, border: `1px solid ${C.lavL}33`, cursor: 'pointer',
                   background: C.lavPale, color: C.lavender, fontWeight: 700, fontSize: 12,
                   fontFamily: "'Noto Sans KR', sans-serif", lineHeight: 1.4, textAlign: 'center',
-                }}>🔮 이상형 성향 분석<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>5cr</span></button>
+                }}>{tl('🔮 이상형 성향 분석', '🔮 Ideal Type Analysis')}<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>5cr</span></button>
               </div>
               {/* 3단계 기능 버튼 행 */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
@@ -3157,22 +3283,22 @@ useEffect(() => {
                   padding: '10px 6px', borderRadius: 12, border: `1px solid ${C.amberL}55`, cursor: 'pointer',
                   background: `linear-gradient(135deg, #FFF8EE, #FEF3E2)`, color: C.amber, fontWeight: 700, fontSize: 11,
                   fontFamily: "'Noto Sans KR', sans-serif", lineHeight: 1.4, textAlign: 'center',
-                }}>🤝 AI 관계 코치<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>3회 무료</span></button>
+                }}>{tl('🤝 AI 관계 코치', '🤝 AI Relationship Coach')}<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>{tl('3회 무료', '3 free')}</span></button>
                 <button onClick={() => setView('quiz')} style={{
                   padding: '10px 6px', borderRadius: 12, border: `1px solid ${C.amberL}55`, cursor: 'pointer',
                   background: `linear-gradient(135deg, #FFFBF0, #FEF9E5)`, color: C.amber, fontWeight: 700, fontSize: 11,
                   fontFamily: "'Noto Sans KR', sans-serif", lineHeight: 1.4, textAlign: 'center',
-                }}>💛 커플 스타일 퀴즈<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>무료</span></button>
+                }}>{tl('💛 커플 스타일 퀴즈', '💛 Couple Style Quiz')}<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>{tl('무료', 'Free')}</span></button>
                 <button onClick={() => setView('anniversary')} style={{
                   padding: '10px 6px', borderRadius: 12, border: `1px solid ${C.roseL}55`, cursor: 'pointer',
                   background: `linear-gradient(135deg, ${C.rosePale}, #FFF5F8)`, color: C.rose, fontWeight: 700, fontSize: 11,
                   fontFamily: "'Noto Sans KR', sans-serif", lineHeight: 1.4, textAlign: 'center',
-                }}>🗓️ 기념일 계산기<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>무료</span></button>
+                }}>{tl('🗓️ 기념일 계산기', '🗓️ Anniversary Calculator')}<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>{tl('무료', 'Free')}</span></button>
                 <button onClick={() => setView('timeline')} style={{
                   padding: '10px 6px', borderRadius: 12, border: '1px solid #e0e7ff55', cursor: 'pointer',
                   background: 'linear-gradient(135deg, #eef2ff, #e0e7ff)', color: '#4f46e5', fontWeight: 700, fontSize: 11,
                   fontFamily: "'Noto Sans KR', sans-serif", lineHeight: 1.4, textAlign: 'center',
-                }}>🗂️ 관계 타임라인<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>무료</span></button>
+                }}>{tl('🗂️ 관계 타임라인', '🗂️ Relationship Timeline')}<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>{tl('무료', 'Free')}</span></button>
               </div>
               {/* BIG5 비교 — 내 BIG5 + 파트너 BIG5 있을 때 강조 표시 */}
               {(() => {
@@ -3184,8 +3310,8 @@ useEffect(() => {
                 const canCompare = !!(testResults?.big5) && hasPartnerBig5;
                 return (
                   <button onClick={() => {
-                    if (!testResults?.big5) { alert(`${MAIN_SERVICE_NAME}에서 BIG5 검사를 먼저 완료해 주세요.`); return; }
-                    if (!hasPartnerBig5) { alert('파트너도 BIG5 검사를 완료해야 비교할 수 있어요.'); return; }
+                    if (!testResults?.big5) { alert(tl(`${MAIN_SERVICE_NAME}에서 BIG5 검사를 먼저 완료해 주세요.`, `Please complete the BIG5 test on ${MAIN_SERVICE_NAME} first.`)); return; }
+                    if (!hasPartnerBig5) { alert(tl('파트너도 BIG5 검사를 완료해야 비교할 수 있어요.', 'Your partner also needs to complete the BIG5 test to compare.')); return; }
                     setView('big5Compare');
                   }} style={{
                     width: '100%', padding: '11px', borderRadius: 12, cursor: 'pointer',
@@ -3199,10 +3325,10 @@ useEffect(() => {
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                     marginTop: 8,
                   }}>
-                    🧬 BIG5 커플 비교
+                    🧬 {tl('BIG5 커플 비교', 'BIG5 Couple Comparison')}
                     {canCompare
-                      ? <span style={{ fontSize: 10, fontWeight: 400 }}>결과 준비 완료 ✓</span>
-                      : <span style={{ fontSize: 10, fontWeight: 400 }}>파트너 결과 필요</span>
+                      ? <span style={{ fontSize: 10, fontWeight: 400 }}>{tl('결과 준비 완료 ✓', 'Results ready ✓')}</span>
+                      : <span style={{ fontSize: 10, fontWeight: 400 }}>{tl('파트너 결과 필요', 'Partner results needed')}</span>
                     }
                   </button>
                 );
@@ -3217,11 +3343,11 @@ useEffect(() => {
           background: 'white', boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
         }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: C.dark, marginBottom: 14 }}>
-            📋 내 검사 결과
+            📋 {tl('내 검사 결과', 'My Test Results')}
           </div>
           {/* 커플 탐색 그룹 */}
           <div style={{ marginBottom: 10 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.rose, marginBottom: 6 }}>💑 커플 탐색</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.rose, marginBottom: 6 }}>💑 {tl('커플 탐색', 'Couple Exploration')}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <TestResultBadge type="BIG5" result={testResults?.big5} date={testResults?.big5?.performed_at}/>
               <TestResultBadge type="LOST" result={testResults?.lost} date={testResults?.lost?.performed_at}/>
@@ -3229,7 +3355,7 @@ useEffect(() => {
           </div>
           {/* 관계 심층 분석 그룹 */}
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#5A8A7A', marginBottom: 6 }}>👨‍👩‍👧 관계 심층 분석</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#5A8A7A', marginBottom: 6 }}>👨‍👩‍👧 {tl('관계 심층 분석', 'Deep Relationship Analysis')}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <TestResultBadge type="DSI"  result={testResults?.dsi}  date={testResults?.dsi?.performed_at}/>
             </div>
@@ -3239,53 +3365,53 @@ useEffect(() => {
               padding: '16px', borderRadius: 14, background: '#FFF8F0',
               border: '1px solid #FFD8A0', fontSize: 13, color: '#A07040',
             }}>
-              <div style={{ fontWeight: 700, marginBottom: 8 }}>💡 검사를 먼저 완료해주세요</div>
+              <div style={{ fontWeight: 700, marginBottom: 8 }}>💡 {tl('검사를 먼저 완료해주세요', 'Please complete a test first')}</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: C.rose, marginBottom: 2 }}>💑 커플 탐색</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: C.rose, marginBottom: 2 }}>💑 {tl('커플 탐색', 'Couple Exploration')}</div>
                 {[
-                  { key: 'BIG5', emoji: '🧬', label: 'BIG5 성격검사', desc: '성격 5요인 — 커플 궁합 핵심' },
-                  { key: 'LOST', emoji: '⚙️', label: 'LOST 행동유형', desc: '의사결정·에너지 스타일 비교' },
-                ].map(t => (
-                  <a key={t.key} href={`${MAUMFUL_URL}?start=${t.key}`} style={{
+                  { key: 'BIG5', emoji: '🧬', label: tl('BIG5 성격검사', 'BIG5 Personality Test'), desc: tl('성격 5요인 — 커플 궁합 핵심', 'Big Five factors — core compatibility') },
+                  { key: 'LOST', emoji: '⚙️', label: tl('LOST 행동유형', 'LOST Behavior Type'), desc: tl('의사결정·에너지 스타일 비교', 'Decision-making & energy style comparison') },
+                ].map(ti => (
+                  <a key={ti.key} href={`${MAUMFUL_URL}?start=${ti.key}`} style={{
                     display: 'flex', alignItems: 'center', gap: 10,
                     padding: '10px 12px', borderRadius: 10,
                     background: 'white', border: '1px solid #FFD8A0',
                     textDecoration: 'none', color: C.dark,
                   }}>
-                    <span style={{ fontSize: 20 }}>{t.emoji}</span>
+                    <span style={{ fontSize: 20 }}>{ti.emoji}</span>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700 }}>{t.label}</div>
-                      <div style={{ fontSize: 11, color: C.muted }}>{t.desc}</div>
+                      <div style={{ fontSize: 12, fontWeight: 700 }}>{ti.label}</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>{ti.desc}</div>
                     </div>
-                    <span style={{ color: C.rose, fontSize: 12, fontWeight: 700 }}>시작 →</span>
+                    <span style={{ color: C.rose, fontSize: 12, fontWeight: 700 }}>{tl('시작 →', 'Start →')}</span>
                   </a>
                 ))}
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#5A8A7A', marginTop: 8, marginBottom: 2 }}>👨‍👩‍👧 관계 심층 분석</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#5A8A7A', marginTop: 8, marginBottom: 2 }}>👨‍👩‍👧 {tl('관계 심층 분석', 'Deep Relationship Analysis')}</div>
                 {[
-                  { key: 'DSI', emoji: '🪞', label: 'SDRI 자아분화', desc: '부부·가족 관계 어려움 — Bowen 이론 기반' },
-                ].map(t => (
-                  <a key={t.key} href={`${MAUMFUL_URL}?start=${t.key}`} style={{
+                  { key: 'DSI', emoji: '🪞', label: tl('SDRI 자아분화', 'SDRI Self-Differentiation'), desc: tl('부부·가족 관계 어려움 — Bowen 이론 기반', 'Couples & family relationship issues — based on Bowen theory') },
+                ].map(ti => (
+                  <a key={ti.key} href={`${MAUMFUL_URL}?start=${ti.key}`} style={{
                     display: 'flex', alignItems: 'center', gap: 10,
                     padding: '10px 12px', borderRadius: 10,
                     background: 'white', border: '1px solid #B8D8D0',
                     textDecoration: 'none', color: C.dark,
                   }}>
-                    <span style={{ fontSize: 20 }}>{t.emoji}</span>
+                    <span style={{ fontSize: 20 }}>{ti.emoji}</span>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700 }}>{t.label}</div>
-                      <div style={{ fontSize: 11, color: C.muted }}>{t.desc}</div>
+                      <div style={{ fontSize: 12, fontWeight: 700 }}>{ti.label}</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>{ti.desc}</div>
                     </div>
-                    <span style={{ color: '#5A8A7A', fontSize: 12, fontWeight: 700 }}>시작 →</span>
+                    <span style={{ color: '#5A8A7A', fontSize: 12, fontWeight: 700 }}>{tl('시작 →', 'Start →')}</span>
                   </a>
                 ))}
               </div>
-              <div style={{ fontSize: 11, color: C.muted }}>{MAIN_SERVICE_NAME}에서 하나 이상 완료하면 바로 커플 분석이 가능해요.</div>
+              <div style={{ fontSize: 11, color: C.muted }}>{tl(`${MAIN_SERVICE_NAME}에서 하나 이상 완료하면 바로 커플 분석이 가능해요.`, `Complete at least one test on ${MAIN_SERVICE_NAME} to start couple analysis.`)}</div>
             </div>
           ) : (
             <div>
               <div style={{ fontSize: 12, color: C.muted, marginBottom: 8 }}>
-                ✓ 커플 분석에 사용할 최신 결과가 준비되어 있습니다.
-                {testResults?.dsi && <span style={{ marginLeft: 6, color: '#5A8A7A', fontWeight: 600 }}>자아분화 포함 ✦</span>}
+                {tl('✓ 커플 분석에 사용할 최신 결과가 준비되어 있습니다.', '✓ Latest results are ready for couple analysis.')}
+                {testResults?.dsi && <span style={{ marginLeft: 6, color: '#5A8A7A', fontWeight: 600 }}>{tl('자아분화 포함 ✦', 'Self-Diff. included ✦')}</span>}
               </div>
               {/* 미완료 검사 빠른 이동 */}
               {(['BIG5','LOST','DSI'].some(t => !{BIG5:testResults?.big5,LOST:testResults?.lost,DSI:testResults?.dsi}[t])) && (
@@ -3299,7 +3425,7 @@ useEffect(() => {
                       <a href={`${MAUMFUL_URL}?start=${t}`} style={{ color: C.rose, fontWeight: 700, textDecoration: 'none' }}>{t}</a>
                       {i < arr.length - 1 && ' + '}
                     </React.Fragment>
-                  ))} 검사도 완료하면 더 정밀한 분석이 가능해요 →
+                  ))} {tl('검사도 완료하면 더 정밀한 분석이 가능해요 →', 'test(s) will enable more precise analysis →')}
                 </div>
               )}
             </div>
@@ -3321,44 +3447,44 @@ useEffect(() => {
             background: 'white', boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
           }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: C.dark, marginBottom: 6 }}>
-              💑 커플 분석 시작하기
+              💑 {tl('커플 분석 시작하기', 'Start Couple Analysis')}
             </div>
             <div style={{ fontSize: 13, color: C.muted, marginBottom: 16, lineHeight: 1.6 }}>
-              검사 조합을 선택해 세션을 만들거나, 파트너가 보낸 코드로 참여하세요.
+              {tl('검사 조합을 선택해 세션을 만들거나, 파트너가 보낸 코드로 참여하세요.', 'Choose a test combination to create a session, or join with a code from your partner.')}
             </div>
 
             {/* 검사 조합 선택 */}
             {hasAny && (() => {
               const coupleOptions = [
                 ...(testResults?.big5 && testResults?.lost ? [
-                  { key: 'BIG5+LOST', label: 'BIG5 + LOST', badge: '추천', cost: COST_TWO,
-                    desc: '성격·행동유형 비교 — 커플 어울림 핵심', color: C.rose }
+                  { key: 'BIG5+LOST', label: 'BIG5 + LOST', badge: tl('추천', 'Recommended'), cost: COST_TWO,
+                    desc: tl('성격·행동유형 비교 — 커플 어울림 핵심', 'Personality & behavior type comparison — compatibility core'), color: C.rose }
                 ] : []),
                 ...(testResults?.big5 && !testResults?.lost ? [
-                  { key: 'BIG5', label: 'BIG5만', badge: null, cost: COST_ONE,
-                    desc: '성격 5요인 비교', color: C.rose }
+                  { key: 'BIG5', label: tl('BIG5만', 'BIG5 only'), badge: null, cost: COST_ONE,
+                    desc: tl('성격 5요인 비교', 'Big Five personality comparison'), color: C.rose }
                 ] : []),
                 ...(!testResults?.big5 && testResults?.lost ? [
-                  { key: 'LOST', label: 'LOST만', badge: null, cost: COST_ONE,
-                    desc: '의사결정·에너지 스타일 비교', color: C.lavender }
+                  { key: 'LOST', label: tl('LOST만', 'LOST only'), badge: null, cost: COST_ONE,
+                    desc: tl('의사결정·에너지 스타일 비교', 'Decision-making & energy style comparison'), color: C.lavender }
                 ] : []),
               ];
               const deepOptions = !testResults?.dsi ? [] : [
                 ...(testResults?.big5 && testResults?.lost ? [
-                  { key: 'BIG5+LOST+DSI', label: 'BIG5 + LOST + 자아분화', badge: '추천', cost: COST_FULL,
-                    desc: '성격·행동유형·자아분화 통합 분석 (부부상담 최적)', color: '#5A8A7A' }
+                  { key: 'BIG5+LOST+DSI', label: tl('BIG5 + LOST + 자아분화', 'BIG5 + LOST + Self-Diff.'), badge: tl('추천', 'Recommended'), cost: COST_FULL,
+                    desc: tl('성격·행동유형·자아분화 통합 분석 (부부상담 최적)', 'Integrated analysis of personality, behavior type & self-differentiation (best for couples)'), color: '#5A8A7A' }
                 ] : []),
                 ...(testResults?.big5 && !testResults?.lost ? [
-                  { key: 'BIG5+DSI', label: 'BIG5 + 자아분화', badge: '추천', cost: COST_TWO,
-                    desc: '성격 특성과 분화 수준 비교', color: '#5A8A7A' }
+                  { key: 'BIG5+DSI', label: tl('BIG5 + 자아분화', 'BIG5 + Self-Diff.'), badge: tl('추천', 'Recommended'), cost: COST_TWO,
+                    desc: tl('성격 특성과 분화 수준 비교', 'Personality traits and differentiation level comparison'), color: '#5A8A7A' }
                 ] : []),
                 ...(!testResults?.big5 && testResults?.lost ? [
-                  { key: 'LOST+DSI', label: 'LOST + 자아분화', badge: '추천', cost: COST_TWO,
-                    desc: '행동유형과 분화 수준 비교', color: '#5A8A7A' }
+                  { key: 'LOST+DSI', label: tl('LOST + 자아분화', 'LOST + Self-Diff.'), badge: tl('추천', 'Recommended'), cost: COST_TWO,
+                    desc: tl('행동유형과 분화 수준 비교', 'Behavior type and differentiation level comparison'), color: '#5A8A7A' }
                 ] : []),
                 ...(!testResults?.big5 && !testResults?.lost ? [
-                  { key: 'DSI', label: 'SDRI 자아분화만', badge: null, cost: COST_ONE,
-                    desc: '관계 분화 수준 집중 분석', color: '#5A8A7A' }
+                  { key: 'DSI', label: tl('SDRI 자아분화만', 'SDRI Self-Diff. only'), badge: null, cost: COST_ONE,
+                    desc: tl('관계 분화 수준 집중 분석', 'Focused analysis on relationship differentiation level'), color: '#5A8A7A' }
                 ] : []),
               ];
 
@@ -3388,7 +3514,7 @@ useEffect(() => {
                         <span style={{
                           fontSize: 12, fontWeight: 700, color: opt.color,
                           whiteSpace: 'nowrap', marginLeft: 12,
-                        }}>{isMaster ? '무료' : `${opt.cost}cr`}</span>
+                        }}>{isMaster ? tl('무료', 'Free') : `${opt.cost}cr`}</span>
                       </div>
                     </button>
                   ))}
@@ -3399,15 +3525,15 @@ useEffect(() => {
                 <div style={{ marginBottom: 16 }}>
                   {coupleOptions.length > 0 && (
                     <div style={{ marginBottom: 16 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: C.rose, marginBottom: 2 }}>💑 커플 탐색</div>
-                      <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>성격·행동유형으로 서로를 알아가는 가벼운 분석</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: C.rose, marginBottom: 2 }}>💑 {tl('커플 탐색', 'Couple Exploration')}</div>
+                      <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>{tl('성격·행동유형으로 서로를 알아가는 가벼운 분석', 'A light analysis to understand each other through personality & behavior type')}</div>
                       {renderOptions(coupleOptions)}
                     </div>
                   )}
                   {deepOptions.length > 0 && (
                     <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: '#5A8A7A', marginBottom: 2 }}>👨‍👩‍👧 관계 심층 분석</div>
-                      <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>자아분화 기반 · 부부·가족 관계 어려움 탐색</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#5A8A7A', marginBottom: 2 }}>👨‍👩‍👧 {tl('관계 심층 분석', 'Deep Relationship Analysis')}</div>
+                      <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>{tl('자아분화 기반 · 부부·가족 관계 어려움 탐색', 'Self-differentiation based · Exploring couples & family relationship difficulties')}</div>
                       {renderOptions(deepOptions)}
                     </div>
                   )}
@@ -3420,7 +3546,7 @@ useEffect(() => {
                 padding: '12px 16px', borderRadius: 12, background: '#FFF8F0',
                 border: '1px solid #FFD8A0', fontSize: 13, color: '#A07040', marginBottom: 16,
               }}>
-                💡 {MAIN_SERVICE_NAME}에서 BIG5, LOST, SDRI 검사 중 하나 이상을 완료해야 세션을 만들 수 있어요.
+                💡 {tl(`${MAIN_SERVICE_NAME}에서 BIG5, LOST, SDRI 검사 중 하나 이상을 완료해야 세션을 만들 수 있어요.`, `You need to complete at least one of BIG5, LOST, or SDRI tests on ${MAIN_SERVICE_NAME} to create a session.`)}
               </div>
             )}
 
@@ -3430,7 +3556,7 @@ useEffect(() => {
               background: C.lavPale, border: `1px solid ${C.lavL}33`,
             }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: C.lavender, marginBottom: 10 }}>
-                📨 파트너 코드로 참여하기
+                📨 {tl('파트너 코드로 참여하기', 'Join with Partner Code')}
               </div>
               <CodeInput onJoin={handleJoin} loading={joining}/>
             </div>
@@ -3451,7 +3577,7 @@ useEffect(() => {
             marginBottom: 20,
           }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: C.dark, marginBottom: 6 }}>
-              📜 이전 분석 리포트
+              📜 {tl('이전 분석 리포트', 'Previous Analysis Reports')}
             </div>
             {/* 점수 변화 히스토리 (2개 이상 시 표시) */}
             {recentReports.length >= 2 && (() => {
@@ -3469,10 +3595,10 @@ useEffect(() => {
                   <div style={{ fontSize: 24 }}>{diff >= 0 ? '📈' : '📉'}</div>
                   <div>
                     <div style={{ fontSize: 12, fontWeight: 700, color: diff >= 0 ? '#4A9A5A' : '#D4634A' }}>
-                      궁합 점수 {diff >= 0 ? `+${diff}점` : `${diff}점`} 변화
+                      {tl('궁합 점수', 'Compatibility Score')} {diff >= 0 ? `+${diff}` : `${diff}`}{tl('점', '')} {tl('변화', 'change')}
                     </div>
                     <div style={{ fontSize: 11, color: C.muted }}>
-                      {diff >= 0 ? '함께 성장하고 있어요! 🌱' : '더 깊이 이해하는 과정이에요. 💪'}
+                      {diff >= 0 ? tl('함께 성장하고 있어요! 🌱', 'Growing together! 🌱') : tl('더 깊이 이해하는 과정이에요. 💪', 'It\'s a journey of deeper understanding. 💪')}
                     </div>
                   </div>
                   {/* 미니 바 차트 */}
@@ -3506,7 +3632,7 @@ useEffect(() => {
                   }}>{r.compatibility_score || '?'}</div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: C.dark }}>
-                      {r.test_type} 분석 · {scoreLabel(r.compatibility_score || 0)}
+                      {r.test_type} {tl('분석', 'Analysis')} · {scoreLabel(r.compatibility_score || 0)}
                     </div>
                     <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>
                       {fmtDate(r.created_at)}
@@ -3532,7 +3658,7 @@ useEffect(() => {
             maxWidth: 320, width: '100%', textAlign: 'center',
           }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>💸</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: C.dark, marginBottom: 8 }}>크레딧 부족</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: C.dark, marginBottom: 8 }}>{tl('크레딧 부족', 'Insufficient Credits')}</div>
             <div style={{ fontSize: 13, color: C.muted, marginBottom: 20, lineHeight: 1.6 }}>
               {creditModal.message}
             </div>
@@ -3541,11 +3667,11 @@ useEffect(() => {
               background: C.rose, color: 'white', fontWeight: 700, fontSize: 14,
               textDecoration: 'none', marginBottom: 10,
               fontFamily: "'Noto Sans KR', sans-serif",
-            }}>{MAIN_SERVICE_NAME}에서 충전하기</a>
+            }}>{tl(`${MAIN_SERVICE_NAME}에서 충전하기`, `Top up on ${MAIN_SERVICE_NAME}`)}</a>
             <button onClick={() => setCredit(null)} style={{
               background: 'none', border: 'none', color: C.muted,
               fontSize: 13, cursor: 'pointer', padding: '8px',
-            }}>취소</button>
+            }}>{tl('취소', 'Cancel')}</button>
           </div>
         </div>
       )}
