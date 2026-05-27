@@ -264,25 +264,21 @@ const HTML = (v: string) => `<!DOCTYPE html>
   </style>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script type="text/babel" src="/static/couple_hub.jsx?v=${v}"></script>
 </head>
 <body>
   <div id="root"></div>
   <script>
-    // URL ?t= 파라미터로 maumful JWT 토큰 수신 (SSO — 별도 로그인 불필요)
+    // SSO 토큰 처리 — React 마운트 전 실행 필수
     const urlParams = new URLSearchParams(window.location.search);
     const t = urlParams.get('t');
-    const codeParam = urlParams.get('code'); // 파트너 초대코드
+    const codeParam = urlParams.get('code');
     if (t) {
       localStorage.setItem('couple_token', t);
       const nextUrl = codeParam ? '/?code=' + encodeURIComponent(codeParam) : '/';
       window.history.replaceState({}, '', nextUrl);
     }
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {});
-    }
   </script>
+  <script src="/static/compiled/couple_hub.js?v=${v}"></script>
 </body>
 </html>`
 

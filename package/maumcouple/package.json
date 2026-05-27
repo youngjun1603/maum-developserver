@@ -4,14 +4,17 @@
   "scripts": {
     "dev": "wrangler dev --local",
     "dev:remote": "wrangler dev",
+    "build:jsx": "npx esbuild public/static/couple_hub.jsx --bundle=false --loader:.jsx=jsx --outdir=public/static/compiled",
     "deploy:staging": "wrangler deploy --config wrangler.dev.toml",
-    "deploy": "wrangler deploy"
+    "deploy": "npm run build:jsx && wrangler deploy",
+    "deploy:cts": "npm run build:jsx && wrangler deploy --config wrangler.lightoflife.toml"
   },
   "dependencies": {
     "hono": "^4.11.9"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260317.1",
+    "esbuild": "^0.28.0",
     "wrangler": "^4.4.0"
   }
 }
