@@ -1,4 +1,3 @@
-"use strict";
 const { useState, useEffect, useRef, useCallback } = React;
 const C = {
   rose: "#B5556A",
