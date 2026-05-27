@@ -82,36 +82,36 @@ function LakeSVG({ circleSize, currentPhase }) {
 const BREATH_METHODS = [
   {
     id: 'box',
-    name: '박스 호흡',
+    name: t('박스 호흡', 'Box Breathing'),
     emoji: '⬜',
-    desc: '집중·스트레스 해소',
+    desc: t('집중·스트레스 해소', 'Focus & stress relief'),
     phases: [
-      { id:'inhale',   label:'들이마시기', color:'#5A8AC0', dur:4 },
-      { id:'hold_in',  label:'참  기',     color:'#4A7C59', dur:4 },
-      { id:'exhale',   label:'내  쉬기',   color:'#9BA8B0', dur:4 },
-      { id:'hold_out', label:'참  기',     color:'#6B8FA8', dur:4 },
+      { id:'inhale',   label:t('들이마시기', 'Inhale'), color:'#5A8AC0', dur:4 },
+      { id:'hold_in',  label:t('참  기',     'Hold'),   color:'#4A7C59', dur:4 },
+      { id:'exhale',   label:t('내  쉬기',   'Exhale'), color:'#9BA8B0', dur:4 },
+      { id:'hold_out', label:t('참  기',     'Hold'),   color:'#6B8FA8', dur:4 },
     ],
   },
   {
     id: '478',
-    name: '4-7-8 호흡',
+    name: t('4-7-8 호흡', '4-7-8 Breathing'),
     emoji: '🌙',
-    desc: '수면·깊은 이완',
+    desc: t('수면·깊은 이완', 'Sleep & deep relaxation'),
     phases: [
-      { id:'inhale',   label:'들이마시기', color:'#5A8AC0', dur:4 },
-      { id:'hold_in',  label:'참  기',     color:'#4A7C59', dur:7 },
-      { id:'exhale',   label:'내  쉬기',   color:'#9BA8B0', dur:8 },
+      { id:'inhale',   label:t('들이마시기', 'Inhale'), color:'#5A8AC0', dur:4 },
+      { id:'hold_in',  label:t('참  기',     'Hold'),   color:'#4A7C59', dur:7 },
+      { id:'exhale',   label:t('내  쉬기',   'Exhale'), color:'#9BA8B0', dur:8 },
     ],
   },
   {
     id: 'calm',
-    name: '빠른 안정',
+    name: t('빠른 안정', 'Quick Calm'),
     emoji: '⚡',
-    desc: '불안·공황 시 빠른 진정',
+    desc: t('불안·공황 시 빠른 진정', 'Fast relief for anxiety & panic'),
     phases: [
-      { id:'inhale',   label:'들이마시기', color:'#5A8AC0', dur:2 },
-      { id:'hold_in',  label:'참  기',     color:'#4A7C59', dur:1 },
-      { id:'exhale',   label:'내  쉬기',   color:'#9BA8B0', dur:4 },
+      { id:'inhale',   label:t('들이마시기', 'Inhale'), color:'#5A8AC0', dur:2 },
+      { id:'hold_in',  label:t('참  기',     'Hold'),   color:'#4A7C59', dur:1 },
+      { id:'exhale',   label:t('내  쉬기',   'Exhale'), color:'#9BA8B0', dur:4 },
     ],
   },
 ];
@@ -218,15 +218,15 @@ function BreathingModule({ onComplete, onBack }) {
           ...gbtn('rgba(255,255,255,0.1)', 'rgba(255,255,255,0.8)'),
           margin:'16px 0 0 16px', padding:'7px 14px', fontSize:12, borderRadius:10, width:'fit-content',
           backdropFilter:'blur(8px)',
-        }}>← 뒤로</button>
+        }}>{t('← 뒤로', '← Back')}</button>
 
         <div style={{ flex:1, padding:'20px 20px 0', overflowY:'auto' }}>
           <h2 style={{
             fontSize:20, fontWeight:700, color:'white', marginBottom:6,
             fontFamily:"'Noto Serif KR', serif",
-          }}>호흡법 선택</h2>
+          }}>{t('호흡법 선택', 'Select Breathing Method')}</h2>
           <p style={{ fontSize:12, color:'rgba(255,255,255,0.55)', marginBottom:20, lineHeight:1.7 }}>
-            오늘 컨디션에 맞는 호흡법을 선택하세요.
+            {t('오늘 컨디션에 맞는 호흡법을 선택하세요.', 'Choose a method that suits how you feel today.')}
           </p>
 
           <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:28 }}>
@@ -243,7 +243,7 @@ function BreathingModule({ onComplete, onBack }) {
                   <div style={{ fontSize:14, fontWeight:700, marginBottom:3 }}>{m.name}</div>
                   <div style={{ fontSize:11, color:'rgba(255,255,255,0.5)' }}>{m.desc}</div>
                   <div style={{ fontSize:10, color:GC.dustyL, marginTop:4, fontWeight:600 }}>
-                    {m.phases.map(p => p.dur).join('-')} 박자
+                    {m.phases.map(p => p.dur).join('-')} {t('박자', 'beats')}
                   </div>
                 </div>
               </button>
@@ -251,7 +251,7 @@ function BreathingModule({ onComplete, onBack }) {
           </div>
 
           <div style={{ fontSize:12, fontWeight:700, color:'rgba(255,255,255,0.6)', marginBottom:10 }}>
-            사이클 수 선택
+            {t('사이클 수 선택', 'Select Number of Cycles')}
           </div>
           <div style={{ display:'flex', gap:8 }}>
             {CYCLE_OPTIONS.map(n => (
@@ -265,12 +265,15 @@ function BreathingModule({ onComplete, onBack }) {
                   padding:'10px 0', fontSize:14, fontWeight:700,
                   border: totalCycles === n ? 'none' : '1px solid rgba(255,255,255,0.12)',
                 }}>
-                {n}회
+                {n}{t('회', 'x')}
               </button>
             ))}
           </div>
           <div style={{ fontSize:11, color:'rgba(255,255,255,0.35)', marginTop:8, textAlign:'center' }}>
-            약 {Math.round(BREATH_METHODS[0].phases.reduce((s,p)=>s+p.dur,0) * totalCycles / 60)}~{Math.round(BREATH_METHODS[1].phases.reduce((s,p)=>s+p.dur,0) * totalCycles / 60 + 1)}분 소요
+            {t(
+              `약 ${Math.round(BREATH_METHODS[0].phases.reduce((s,p)=>s+p.dur,0) * totalCycles / 60)}~${Math.round(BREATH_METHODS[1].phases.reduce((s,p)=>s+p.dur,0) * totalCycles / 60 + 1)}분 소요`,
+              `About ${Math.round(BREATH_METHODS[0].phases.reduce((s,p)=>s+p.dur,0) * totalCycles / 60)}–${Math.round(BREATH_METHODS[1].phases.reduce((s,p)=>s+p.dur,0) * totalCycles / 60 + 1)} min`
+            )}
           </div>
         </div>
       </div>
@@ -289,24 +292,24 @@ function BreathingModule({ onComplete, onBack }) {
       }}>
         <div style={{ fontSize:64, marginBottom:16 }}>🌊</div>
         <h2 style={{ fontSize:24, fontWeight:700, marginBottom:10, fontFamily:"'Noto Serif KR', serif" }}>
-          호흡 훈련 완료
+          {t('호흡 훈련 완료', 'Breathing Session Complete')}
         </h2>
         <p style={{ fontSize:14, opacity:0.8, lineHeight:1.8, marginBottom:28 }}>
-          {selectedMethod?.name} · {cycles}번의 사이클을 마쳤어요.<br/>
-          {GameEngine.formatDuration(sessionSec)} 동안 마음이 고요해졌습니다.
+          {selectedMethod?.name} · {t(`${cycles}번의 사이클을 마쳤어요.`, `${cycles} cycles completed.`)}<br/>
+          {t(`${GameEngine.formatDuration(sessionSec)} 동안 마음이 고요해졌습니다.`, `Your mind became calm for ${GameEngine.formatDuration(sessionSec)}.`)}
         </p>
         <div style={{
           background:'rgba(255,255,255,0.12)', borderRadius:16,
           padding:'16px 28px', marginBottom:28,
           display:'flex', gap:28,
         }}>
-          <div><div style={{ fontSize:24, fontWeight:700 }}>{cycles}회</div><div style={{ fontSize:12, opacity:0.7 }}>완료 사이클</div></div>
+          <div><div style={{ fontSize:24, fontWeight:700 }}>{cycles}{t('회', 'x')}</div><div style={{ fontSize:12, opacity:0.7 }}>{t('완료 사이클', 'Cycles Done')}</div></div>
           <div style={{ width:1, background:'rgba(255,255,255,0.2)' }}/>
-          <div><div style={{ fontSize:24, fontWeight:700 }}>{GameEngine.formatDuration(sessionSec)}</div><div style={{ fontSize:12, opacity:0.7 }}>수련 시간</div></div>
+          <div><div style={{ fontSize:24, fontWeight:700 }}>{GameEngine.formatDuration(sessionSec)}</div><div style={{ fontSize:12, opacity:0.7 }}>{t('수련 시간', 'Session Time')}</div></div>
         </div>
         <button onClick={handleFinish}
           style={{ ...gbtn(`linear-gradient(135deg, ${GC.sage}, ${GC.sageL})`), padding:'14px 40px', fontSize:15 }}>
-          경험치 받기 →
+          {t('경험치 받기', 'Claim EXP')} →
         </button>
       </div>
     );
@@ -326,7 +329,7 @@ function BreathingModule({ onComplete, onBack }) {
         position:'absolute', top:16, left:16, zIndex:10,
         padding:'7px 14px', fontSize:12, borderRadius:10,
         backdropFilter:'blur(8px)',
-      }}>← 뒤로</button>
+      }}>{t('← 뒤로', '← Back')}</button>
 
       {/* 사이클 카운터 */}
       <div style={{
@@ -335,7 +338,7 @@ function BreathingModule({ onComplete, onBack }) {
         borderRadius:10, padding:'6px 14px',
         color:'rgba(255,255,255,0.8)', fontSize:12, fontWeight:600,
       }}>
-        {started ? `${cycles} / ${TOTAL_CYCLES} 사이클` : '숨 쉬는 호수'}
+        {started ? `${cycles} / ${TOTAL_CYCLES} ${t('사이클', 'cycles')}` : t('숨 쉬는 호수', 'Breathing Lake')}
       </div>
 
       {/* 호수 비주얼 */}
@@ -387,17 +390,17 @@ function BreathingModule({ onComplete, onBack }) {
         {!started ? (
           <div>
             <p style={{ color:'rgba(255,255,255,0.75)', fontSize:13, lineHeight:1.7, marginBottom:16 }}>
-              호수처럼 고요하게.<br/>
-              4초 들이마시고 · 4초 참고 · 4초 내쉬어요
+              {t('호수처럼 고요하게.', 'Be still, like a calm lake.')}<br/>
+              {t('4초 들이마시고 · 4초 참고 · 4초 내쉬어요', 'Inhale 4s · Hold 4s · Exhale 4s')}
             </p>
             <button onClick={handleStart}
               style={{ ...gbtn(`linear-gradient(135deg, ${GC.dusty}, ${GC.dustyL})`), padding:'12px 36px', fontSize:14, borderRadius:12 }}>
-              호흡 시작하기
+              {t('호흡 시작하기', 'Start Breathing')}
             </button>
           </div>
         ) : (
           <p style={{ color:'rgba(255,255,255,0.6)', fontSize:12 }}>
-            눈을 감아도 좋아요 · {TOTAL_CYCLES - cycles}사이클 남았어요
+            {t(`눈을 감아도 좋아요 · ${TOTAL_CYCLES - cycles}사이클 남았어요`, `You can close your eyes · ${TOTAL_CYCLES - cycles} cycles left`)}
           </p>
         )}
       </div>
@@ -494,36 +497,36 @@ function TreeSVG({ branchCount = 0, totalBranches = 3 }) {
 // 검사 점수별 씨앗 생각 풀 — PHQ9/GAD7 기반 개인화
 const SEED_THOUGHT_POOLS = {
   anxiety: [ // GAD7 >= 10
-    '모든 일이 잘못될 것 같다.',
-    '나는 통제력을 잃어가고 있다.',
-    '걱정을 멈출 수가 없다.',
-    '나는 늘 최악을 대비해야 한다.',
-    '긴장을 풀면 무언가 잘못될 것 같다.',
-    '나는 아무것도 확실하게 할 수 없다.',
+    t('모든 일이 잘못될 것 같다.', 'Everything seems to go wrong.'),
+    t('나는 통제력을 잃어가고 있다.', 'I feel like I am losing control.'),
+    t('걱정을 멈출 수가 없다.', 'I cannot stop worrying.'),
+    t('나는 늘 최악을 대비해야 한다.', 'I always have to prepare for the worst.'),
+    t('긴장을 풀면 무언가 잘못될 것 같다.', 'If I relax, something will go wrong.'),
+    t('나는 아무것도 확실하게 할 수 없다.', 'I cannot do anything with certainty.'),
   ],
   depression_severe: [ // PHQ9 >= 15
-    '나는 항상 실패할 것이다.',
-    '아무것도 나아지지 않을 것이다.',
-    '나는 아무에게도 필요하지 않다.',
-    '이 감정은 영원히 끝나지 않을 것이다.',
-    '나는 혼자서는 아무것도 할 수 없다.',
-    '내 미래는 어둡다.',
+    t('나는 항상 실패할 것이다.', 'I will always fail.'),
+    t('아무것도 나아지지 않을 것이다.', 'Nothing will ever get better.'),
+    t('나는 아무에게도 필요하지 않다.', 'Nobody needs me.'),
+    t('이 감정은 영원히 끝나지 않을 것이다.', 'This feeling will never end.'),
+    t('나는 혼자서는 아무것도 할 수 없다.', 'I cannot do anything on my own.'),
+    t('내 미래는 어둡다.', 'My future is dark.'),
   ],
   depression_mild: [ // PHQ9 5~14
-    '나는 항상 일을 망친다.',
-    '아무도 나를 이해하지 못한다.',
-    '나는 쓸모없는 사람이다.',
-    '나는 변하지 못할 것이다.',
-    '나는 행복할 자격이 없다.',
-    '모든 것이 내 탓이다.',
+    t('나는 항상 일을 망친다.', 'I always mess things up.'),
+    t('아무도 나를 이해하지 못한다.', 'Nobody understands me.'),
+    t('나는 쓸모없는 사람이다.', 'I am useless.'),
+    t('나는 변하지 못할 것이다.', 'I will never change.'),
+    t('나는 행복할 자격이 없다.', 'I do not deserve to be happy.'),
+    t('모든 것이 내 탓이다.', 'Everything is my fault.'),
   ],
   default: [ // PHQ9 < 5 또는 검사 없음
-    '나는 더 잘할 수 있었는데.',
-    '왜 나만 이럴까.',
-    '나는 너무 민감한 것 같다.',
-    '다른 사람들은 다 잘 사는 것 같다.',
-    '나는 게으른 것 같다.',
-    '나는 좋은 사람이 아닌 것 같다.',
+    t('나는 더 잘할 수 있었는데.', 'I could have done better.'),
+    t('왜 나만 이럴까.', 'Why does this only happen to me?'),
+    t('나는 너무 민감한 것 같다.', 'I think I am too sensitive.'),
+    t('다른 사람들은 다 잘 사는 것 같다.', 'Everyone else seems to be doing fine.'),
+    t('나는 게으른 것 같다.', 'I think I am lazy.'),
+    t('나는 좋은 사람이 아닌 것 같다.', 'I do not think I am a good person.'),
   ],
 };
 
@@ -567,7 +570,7 @@ function CBTModule({ onComplete, onBack, userTestScores = {} }) {
 
   const handleRequestAI = async () => {
     const text = inputText.trim();
-    if (!text || text.length < 3) { setAiError('생각을 더 써주세요'); return; }
+    if (!text || text.length < 3) { setAiError(t('생각을 더 써주세요', 'Please write a bit more')); return; }
     setAiLoading(true); setAiError('');
     try {
       const res = await GameEngine.transformSentence(text);
@@ -575,10 +578,10 @@ function CBTModule({ onComplete, onBack, userTestScores = {} }) {
         setCurrent({ original: text, transformed: res.data.result, editing: false });
         setStep('transform');
       } else {
-        setAiError(res.error || 'AI 변환 실패');
+        setAiError(res.error || t('AI 변환 실패', 'AI transformation failed'));
       }
     } catch {
-      setAiError('연결 오류. 다시 시도해주세요.');
+      setAiError(t('연결 오류. 다시 시도해주세요.', 'Connection error. Please try again.'));
     }
     setAiLoading(false);
   };
@@ -626,11 +629,11 @@ function CBTModule({ onComplete, onBack, userTestScores = {} }) {
         <div style={{ height:180 }}><TreeSVG branchCount={TOTAL_BRANCHES}/></div>
         <div style={{ textAlign:'center', marginBottom:24 }}>
           <h2 style={{ fontSize:22, fontWeight:700, color:GC.dark, marginBottom:8, fontFamily:"'Noto Serif KR', serif" }}>
-            꽃이 피었습니다 🌸
+            {t('꽃이 피었습니다 🌸', 'Flowers Have Bloomed 🌸')}
           </h2>
           <p style={{ fontSize:13, color:GC.muted, lineHeight:1.8 }}>
-            {TOTAL_BRANCHES}개의 생각을 새롭게 바꿨어요.<br/>
-            이 변화가 마음에 스며들고 있어요.
+            {t(`${TOTAL_BRANCHES}개의 생각을 새롭게 바꿨어요.`, `You transformed ${TOTAL_BRANCHES} thoughts.`)}<br/>
+            {t('이 변화가 마음에 스며들고 있어요.', 'This change is seeping into your heart.')}
           </p>
         </div>
 
@@ -641,9 +644,9 @@ function CBTModule({ onComplete, onBack, userTestScores = {} }) {
               background:'white', borderRadius:14, padding:'14px 16px',
               boxShadow:'0 2px 8px rgba(0,0,0,0.06)',
             }}>
-              <div style={{ fontSize:11, fontWeight:700, color:GC.muted, marginBottom:5 }}>이전 생각</div>
+              <div style={{ fontSize:11, fontWeight:700, color:GC.muted, marginBottom:5 }}>{t('이전 생각', 'Previous Thought')}</div>
               <div style={{ fontSize:13, color:GC.muted, marginBottom:8, textDecoration:'line-through' }}>{b.original}</div>
-              <div style={{ fontSize:11, fontWeight:700, color:GC.sage, marginBottom:5 }}>새로운 생각 ✓</div>
+              <div style={{ fontSize:11, fontWeight:700, color:GC.sage, marginBottom:5 }}>{t('새로운 생각', 'New Thought')} ✓</div>
               <div style={{ fontSize:13, color:GC.dark, fontWeight:500, lineHeight:1.6 }}>{b.transformed}</div>
             </div>
           ))}
@@ -651,7 +654,7 @@ function CBTModule({ onComplete, onBack, userTestScores = {} }) {
 
         <button onClick={handleFinish}
           style={{ ...gbtn(`linear-gradient(135deg, ${GC.sage}, ${GC.sageL})`), padding:'14px', fontSize:15, textAlign:'center' }}>
-          경험치 받기 →
+          {t('경험치 받기', 'Claim EXP')} →
         </button>
       </div>
     );
@@ -675,7 +678,7 @@ function CBTModule({ onComplete, onBack, userTestScores = {} }) {
         <button onClick={onBack} style={{
           ...gbtn('rgba(0,0,0,0.06)', GC.muted, { borderRadius:9 }),
           padding:'6px 14px', fontSize:12,
-        }}>← 뒤로</button>
+        }}>{t('← 뒤로', '← Back')}</button>
         <div style={{ display:'flex', alignItems:'center', gap:6 }}>
           {Array.from({length: TOTAL_BRANCHES}).map((_,i) => (
             <div key={i} style={{
@@ -686,7 +689,7 @@ function CBTModule({ onComplete, onBack, userTestScores = {} }) {
           ))}
         </div>
         <div style={{ fontSize:11, color:GC.muted, fontWeight:600 }}>
-          {branches.length}/{TOTAL_BRANCHES} 완성
+          {branches.length}/{TOTAL_BRANCHES} {t('완성', 'done')}
         </div>
       </div>
 
@@ -702,14 +705,14 @@ function CBTModule({ onComplete, onBack, userTestScores = {} }) {
         {step === 'intro' && (
           <div style={{ animation:'fadeUp 0.4s ease' }}>
             <h2 style={{ fontSize:18, fontWeight:700, color:GC.dark, marginBottom:8, fontFamily:"'Noto Serif KR', serif" }}>
-              생각의 가지치기
+              {t('생각의 가지치기', 'Thought Pruning')}
             </h2>
             <p style={{ fontSize:13, color:GC.muted, lineHeight:1.75, marginBottom:20 }}>
-              마음속 부정적인 생각을 하나씩 꺼내어<br/>
-              새로운 시선으로 바라봐요.<br/>
-              {TOTAL_BRANCHES}개의 가지에 꽃을 피워보세요.
+              {t('마음속 부정적인 생각을 하나씩 꺼내어', 'Bring out your negative thoughts one by one')}<br/>
+              {t('새로운 시선으로 바라봐요.', 'and see them from a new perspective.')}<br/>
+              {t(`${TOTAL_BRANCHES}개의 가지에 꽃을 피워보세요.`, `Let flowers bloom on ${TOTAL_BRANCHES} branches.`)}
             </p>
-            <div style={{ fontSize:12, fontWeight:700, color:GC.muted, marginBottom:10 }}>자주 드는 생각을 선택하거나</div>
+            <div style={{ fontSize:12, fontWeight:700, color:GC.muted, marginBottom:10 }}>{t('자주 드는 생각을 선택하거나', 'Choose a common thought, or')}</div>
             <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:20 }}>
               {SEED_THOUGHTS.slice(0,4).map(t => (
                 <button key={t} onClick={() => handleSelectSeed(t)}
@@ -725,7 +728,7 @@ function CBTModule({ onComplete, onBack, userTestScores = {} }) {
             </div>
             <button onClick={() => { setInputText(''); setStep('input'); }}
               style={{ ...gbtn(GC.sagePale, GC.sage, { borderRadius:12 }), padding:'10px 20px', fontSize:13, width:'100%' }}>
-              직접 입력하기
+              {t('직접 입력하기', 'Type your own')}
             </button>
           </div>
         )}
@@ -734,15 +737,15 @@ function CBTModule({ onComplete, onBack, userTestScores = {} }) {
         {step === 'input' && (
           <div style={{ animation:'fadeUp 0.4s ease' }}>
             <div style={{ fontSize:13, fontWeight:700, color:GC.dark, marginBottom:6 }}>
-              {branches.length + 1}번째 생각
+              {t(`${branches.length + 1}번째 생각`, `Thought #${branches.length + 1}`)}
             </div>
             <p style={{ fontSize:12, color:GC.muted, marginBottom:14 }}>
-              지금 마음속에 자주 떠오르는 부정적인 생각을 솔직하게 써주세요.
+              {t('지금 마음속에 자주 떠오르는 부정적인 생각을 솔직하게 써주세요.', 'Write down a negative thought that often comes to mind, honestly.')}
             </p>
             <textarea
               value={inputText}
               onChange={e => setInputText(e.target.value)}
-              placeholder="예) 나는 늘 혼자인 것 같다."
+              placeholder={t('예) 나는 늘 혼자인 것 같다.', 'e.g. I always feel alone.')}
               rows={3}
               style={{
                 width:'100%', padding:'13px 14px',
@@ -761,7 +764,7 @@ function CBTModule({ onComplete, onBack, userTestScores = {} }) {
             <div style={{ display:'flex', gap:9 }}>
               <button onClick={() => setStep('intro')}
                 style={{ ...gbtn('rgba(0,0,0,0.07)', GC.muted, { borderRadius:12, flex:1 }), padding:'11px' }}>
-                다시 선택
+                {t('다시 선택', 'Re-select')}
               </button>
               <button onClick={handleRequestAI} disabled={aiLoading || !inputText.trim()}
                 style={{
@@ -771,7 +774,7 @@ function CBTModule({ onComplete, onBack, userTestScores = {} }) {
                     { borderRadius:12, flex:2 }
                   ), padding:'11px',
                 }}>
-                {aiLoading ? '변환 중...' : '🌱 AI로 새롭게 보기'}
+                {aiLoading ? t('변환 중...', 'Transforming...') : `🌱 ${t('AI로 새롭게 보기', 'See it differently with AI')}`}
               </button>
             </div>
           </div>
@@ -786,7 +789,7 @@ function CBTModule({ onComplete, onBack, userTestScores = {} }) {
               padding:'12px 14px', marginBottom:14,
               borderLeft:`3px solid ${GC.muted}`,
             }}>
-              <div style={{ fontSize:11, fontWeight:700, color:GC.muted, marginBottom:5 }}>이전 생각</div>
+              <div style={{ fontSize:11, fontWeight:700, color:GC.muted, marginBottom:5 }}>{t('이전 생각', 'Previous Thought')}</div>
               <div style={{ fontSize:13, color:GC.muted, lineHeight:1.6, textDecoration:'line-through' }}>
                 {current.original}
               </div>
@@ -799,7 +802,7 @@ function CBTModule({ onComplete, onBack, userTestScores = {} }) {
               border:`1.5px solid ${GC.sage}44`,
             }}>
               <div style={{ fontSize:11, fontWeight:700, color:GC.sage, marginBottom:8 }}>
-                🌸 새로운 시선
+                🌸 {t('새로운 시선', 'New Perspective')}
               </div>
               {current.editing ? (
                 <textarea
@@ -823,11 +826,11 @@ function CBTModule({ onComplete, onBack, userTestScores = {} }) {
             <div style={{ display:'flex', gap:9, marginBottom:10 }}>
               <button onClick={() => setCurrent(c => ({...c, editing:!c.editing}))}
                 style={{ ...gbtn('rgba(0,0,0,0.07)', GC.muted, { borderRadius:12, flex:1 }), padding:'10px', fontSize:12 }}>
-                {current.editing ? '완료' : '✏️ 수정'}
+                {current.editing ? t('완료', 'Done') : `✏️ ${t('수정', 'Edit')}`}
               </button>
               <button onClick={() => { setStep('input'); setAiError(''); }}
                 style={{ ...gbtn(GC.sand, GC.muted, { borderRadius:12, flex:1, border:`1px solid rgba(0,0,0,0.08)` }), padding:'10px', fontSize:12 }}>
-                다시 쓰기
+                {t('다시 쓰기', 'Try Again')}
               </button>
             </div>
 
@@ -838,13 +841,13 @@ function CBTModule({ onComplete, onBack, userTestScores = {} }) {
                 width:'100%', padding:'14px', fontSize:14,
                 borderRadius:14, boxShadow:`0 4px 16px ${GC.sage}40`,
               }}>
-              이 생각을 받아들이기 🌸
+              {t('이 생각을 받아들이기', 'Accept This Thought')} 🌸
             </button>
 
             {/* 완성된 가지 요약 (있을 때) */}
             {branches.length > 0 && (
               <div style={{ marginTop:14 }}>
-                <div style={{ fontSize:11, fontWeight:700, color:GC.muted, marginBottom:6 }}>완성된 가지</div>
+                <div style={{ fontSize:11, fontWeight:700, color:GC.muted, marginBottom:6 }}>{t('완성된 가지', 'Completed Branches')}</div>
                 {branches.map((b, i) => (
                   <div key={i} style={{ fontSize:12, color:GC.sage, marginBottom:4, paddingLeft:8, borderLeft:`2px solid ${GC.sageL}` }}>
                     {b.transformed}
@@ -872,11 +875,11 @@ function GardenGame({ onExit, userTestScores = {} }) {
   const MODULES = [
     {
       id:      'breathing',
-      name:    '숨 쉬는 호수',
+      name:    t('숨 쉬는 호수', 'Breathing Lake'),
       emoji:   '💧',
-      desc:    '4-4-4 박스 호흡으로 몸과 마음을 고요하게',
-      duration:'약 5분',
-      tags:    ['이완', '스트레스'],
+      desc:    t('4-4-4 박스 호흡으로 몸과 마음을 고요하게', 'Calm body and mind with 4-4-4 box breathing'),
+      duration:t('약 5분', 'About 5 min'),
+      tags:    [t('이완', 'Relax'), t('스트레스', 'Stress')],
       color:   GC.dusty,
       colorL:  GC.dustyL,
       bgFrom:  '#1A2A3A',
@@ -884,11 +887,11 @@ function GardenGame({ onExit, userTestScores = {} }) {
     },
     {
       id:      'cbt',
-      name:    '생각의 가지치기',
+      name:    t('생각의 가지치기', 'Thought Pruning'),
       emoji:   '🌱',
-      desc:    '부정적인 생각을 AI와 함께 긍정 확언으로 변환',
-      duration:'약 7~10분',
-      tags:    ['인지교정', 'CBT'],
+      desc:    t('부정적인 생각을 AI와 함께 긍정 확언으로 변환', 'Transform negative thoughts into positive affirmations with AI'),
+      duration:t('약 7~10분', 'About 7–10 min'),
+      tags:    [t('인지교정', 'Cognitive'), 'CBT'],
       color:   GC.sage,
       colorL:  GC.sageL,
       bgFrom:  '#F0EDE5',
@@ -917,11 +920,11 @@ function GardenGame({ onExit, userTestScores = {} }) {
         }}>
           <div style={{ display:'flex', alignItems:'center', gap:8 }}>
             <span style={{ fontSize:20 }}>🌿</span>
-            <span style={{ fontSize:15, fontWeight:700, color:GC.dark, fontFamily:"'Noto Serif KR', serif" }}>마음의 정원</span>
+            <span style={{ fontSize:15, fontWeight:700, color:GC.dark, fontFamily:"'Noto Serif KR', serif" }}>{t('마음의 정원', 'Mind Garden')}</span>
           </div>
           <button onClick={onExit}
             style={{ ...gbtn('rgba(0,0,0,0.06)', GC.muted, { borderRadius:9 }), padding:'6px 13px', fontSize:12 }}>
-            허브로 →
+            {t('허브로', 'Hub')} →
           </button>
         </div>
 
@@ -932,13 +935,13 @@ function GardenGame({ onExit, userTestScores = {} }) {
             marginBottom:22, backdropFilter:'blur(8px)',
             border:'1px solid rgba(255,255,255,0.6)',
           }}>
-            <div style={{ fontSize:12, fontWeight:700, color:GC.muted, marginBottom:5 }}>오늘의 정원</div>
+            <div style={{ fontSize:12, fontWeight:700, color:GC.muted, marginBottom:5 }}>{t('오늘의 정원', "Today's Garden")}</div>
             <div style={{ fontSize:15, color:GC.dark, fontWeight:500 }}>
-              어떤 훈련을 해볼까요?
+              {t('어떤 훈련을 해볼까요?', 'Which practice will you try?')}
             </div>
             <div style={{ fontSize:12, color:GC.muted, marginTop:4, lineHeight:1.6 }}>
-              호흡으로 몸을 안정시키거나,<br/>
-              생각을 새롭게 가꿔보세요.
+              {t('호흡으로 몸을 안정시키거나,', 'Calm your body with breathing,')}<br/>
+              {t('생각을 새롭게 가꿔보세요.', 'or reshape your thoughts.')}
             </div>
           </div>
 
@@ -997,7 +1000,7 @@ function GardenGame({ onExit, userTestScores = {} }) {
           {r.leveledUp ? '🎉' : '🌿'}
         </div>
         <h2 style={{ fontSize:22, fontWeight:700, color:GC.dark, marginBottom:10, fontFamily:"'Noto Serif KR', serif" }}>
-          {r.leveledUp ? '레벨 업!' : '오늘도 수고했어요'}
+          {r.leveledUp ? t('레벨 업!', 'Level Up!') : t('오늘도 수고했어요', 'Great work today')}
         </h2>
         <div style={{
           background:'white', borderRadius:18, padding:'20px 32px',
@@ -1006,7 +1009,7 @@ function GardenGame({ onExit, userTestScores = {} }) {
         }}>
           <div>
             <div style={{ fontSize:26, fontWeight:700, color:GC.sage }}>+{r.expGained}</div>
-            <div style={{ fontSize:12, color:GC.muted }}>경험치</div>
+            <div style={{ fontSize:12, color:GC.muted }}>{t('경험치', 'EXP')}</div>
           </div>
           {r.newAchievements?.length > 0 && (
             <>
@@ -1015,7 +1018,7 @@ function GardenGame({ onExit, userTestScores = {} }) {
                 <div style={{ fontSize:26, fontWeight:700, color:GC.amber }}>
                   {r.newAchievements.map(id => GameEngine.getAchievementInfo(id).emoji).join('')}
                 </div>
-                <div style={{ fontSize:12, color:GC.muted }}>새 업적</div>
+                <div style={{ fontSize:12, color:GC.muted }}>{t('새 업적', 'New Achievement')}</div>
               </div>
             </>
           )}
@@ -1030,7 +1033,7 @@ function GardenGame({ onExit, userTestScores = {} }) {
               const a = GameEngine.getAchievementInfo(id);
               return (
                 <div key={id} style={{ fontSize:13, color:GC.amber, fontWeight:600 }}>
-                  {a.emoji} {a.name} 달성!
+                  {a.emoji} {a.name} {t('달성!', 'Unlocked!')}
                 </div>
               );
             })}
@@ -1040,14 +1043,14 @@ function GardenGame({ onExit, userTestScores = {} }) {
         <div style={{ display:'flex', gap:10, width:'100%', maxWidth:280 }}>
           <button onClick={() => setScreen('select')}
             style={{ ...gbtn(GC.sagePale, GC.sage, { borderRadius:13, flex:1 }), padding:'12px', fontSize:13 }}>
-            한 번 더
+            {t('한 번 더', 'Try Again')}
           </button>
           <button onClick={onExit}
             style={{
               ...gbtn(`linear-gradient(135deg, ${GC.sage}, ${GC.sageL})`),
               flex:2, padding:'12px', fontSize:13, borderRadius:13,
             }}>
-            허브로 →
+            {t('허브로', 'Hub')} →
           </button>
         </div>
       </div>

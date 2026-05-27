@@ -14,35 +14,35 @@ const GE = { // 팔레트
 // ── 감정 꽃 정의 (색상 + 형태로 이중 구분 → 색약 접근성) ──
 const EMOTIONS = {
   happy: {
-    name:'기쁨', label:'기쁜 꽃',
+    name:t('기쁨','Joy'), label:t('기쁜 꽃','Happy Flower'),
     petalColor:'#FCD34D', centerColor:'#F59E0B',
     stemColor:'#4A7C59',
     face: 'happy', // 위로 굽은 미소
     isTarget: true,
   },
   sad: {
-    name:'슬픔', label:'슬픈 꽃',
+    name:t('슬픔','Sadness'), label:t('슬픈 꽃','Sad Flower'),
     petalColor:'#93C5FD', centerColor:'#3B82F6',
     stemColor:'#5A7A9A',
     face: 'sad',   // 아래로 굽은 입
     isTarget: false,
   },
   anxious: {
-    name:'불안', label:'불안한 꽃',
+    name:t('불안','Anxiety'), label:t('불안한 꽃','Anxious Flower'),
     petalColor:'#C4B5FD', centerColor:'#7C3AED',
     stemColor:'#6B5A8A',
     face: 'anxious', // 물결 입
     isTarget: false,
   },
   angry: {
-    name:'화남', label:'화난 꽃',
+    name:t('화남','Anger'), label:t('화난 꽃','Angry Flower'),
     petalColor:'#FCA5A5', centerColor:'#EF4444',
     stemColor:'#8A4A4A',
     face: 'angry',  // 눌린 미간 + 직선 입
     isTarget: false,
   },
   neutral: {
-    name:'무표정', label:'무표정 꽃',
+    name:t('무표정','Neutral'), label:t('무표정 꽃','Neutral Flower'),
     petalColor:'#D1D5DB', centerColor:'#9CA3AF',
     stemColor:'#7A7A6A',
     face: 'neutral', // 직선 입
@@ -152,10 +152,10 @@ function calcDifficulty(phq9Score = null) {
 }
 
 const DIFFICULTY_CONFIG = {
-  easy:      { grid:4, targetRatio:0.4, roundSec:35, rounds:3, label:'기초', desc:'4×4 · 35초 · 목표 40%' },
-  medium:    { grid:4, targetRatio:0.28, roundSec:28, rounds:3, label:'보통', desc:'4×4 · 28초 · 목표 28%' },
-  hard:      { grid:5, targetRatio:0.2,  roundSec:25, rounds:3, label:'심화', desc:'5×5 · 25초 · 목표 20%' },
-  very_hard: { grid:5, targetRatio:0.15, roundSec:20, rounds:3, label:'도전', desc:'5×5 · 20초 · 목표 15%' },
+  easy:      { grid:4, targetRatio:0.4, roundSec:35, rounds:3, label:t('기초','Basic'), desc:t('4×4 · 35초 · 목표 40%','4×4 · 35s · Target 40%') },
+  medium:    { grid:4, targetRatio:0.28, roundSec:28, rounds:3, label:t('보통','Normal'), desc:t('4×4 · 28초 · 목표 28%','4×4 · 28s · Target 28%') },
+  hard:      { grid:5, targetRatio:0.2,  roundSec:25, rounds:3, label:t('심화','Advanced'), desc:t('5×5 · 25초 · 목표 20%','5×5 · 25s · Target 20%') },
+  very_hard: { grid:5, targetRatio:0.15, roundSec:20, rounds:3, label:t('도전','Challenge'), desc:t('5×5 · 20초 · 목표 15%','5×5 · 20s · Target 15%') },
 };
 
 // ── 그리드 생성 ─────────────────────────────────────────────
@@ -388,12 +388,12 @@ function EFMTGame({ onExit }) {
       }}>
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
           <span style={{ fontSize:20 }}>🌸</span>
-          <span style={{ fontSize:15, fontWeight:700, color:GE.dark, fontFamily:"'Noto Serif KR',serif" }}>감정꽃 찾기</span>
+          <span style={{ fontSize:15, fontWeight:700, color:GE.dark, fontFamily:"'Noto Serif KR',serif" }}>{t('감정꽃 찾기','Emotion Flower Hunt')}</span>
         </div>
         <button onClick={()=>onExit(null)} style={{
           fontFamily:"'Noto Sans KR',sans-serif", background:'rgba(0,0,0,0.06)',
           color:GE.muted, border:'none', borderRadius:9, padding:'6px 13px', fontSize:12, cursor:'pointer',
-        }}>허브로 →</button>
+        }}>{t('허브로 →','Hub →')}</button>
       </div>
 
       <div style={{ flex:1, padding:'24px 20px', overflowY:'auto' }}>
@@ -404,7 +404,7 @@ function EFMTGame({ onExit }) {
           border:'1px solid rgba(255,255,255,0.7)',
         }}>
           <div style={{ fontSize:13, fontWeight:700, color:GE.muted, marginBottom:12, textAlign:'center' }}>
-            기쁜 꽃만 빠르게 클릭하세요
+            {t('기쁜 꽃만 빠르게 클릭하세요','Click only the happy flowers quickly')}
           </div>
           <div style={{ display:'flex', justifyContent:'center', gap:14, flexWrap:'wrap' }}>
             {Object.entries(EMOTIONS).map(([key, e]) => (
@@ -422,7 +422,7 @@ function EFMTGame({ onExit }) {
         </div>
 
         {/* 난이도 선택 */}
-        <div style={{ fontSize:12, fontWeight:700, color:GE.muted, marginBottom:10 }}>난이도 선택</div>
+        <div style={{ fontSize:12, fontWeight:700, color:GE.muted, marginBottom:10 }}>{t('난이도 선택','Difficulty')}</div>
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:9, marginBottom:22 }}>
           {Object.entries(DIFFICULTY_CONFIG).map(([key, d]) => (
             <button key={key}
@@ -444,9 +444,10 @@ function EFMTGame({ onExit }) {
 
         <div style={{ fontSize:12, color:GE.muted, lineHeight:1.7, marginBottom:20,
           background:'rgba(255,255,255,0.6)', borderRadius:12, padding:'12px 14px' }}>
-          💡 PHQ-9 점수가 높을수록 심화 난이도를 권장해요.<br/>
-          슬픈·불안한 꽃이 많이 보여도 기쁜 꽃을 찾는 연습이<br/>
-          감정 인식 능력을 키워줍니다.
+          {t(
+            <>💡 PHQ-9 점수가 높을수록 심화 난이도를 권장해요.<br/>슬픈·불안한 꽃이 많이 보여도 기쁜 꽃을 찾는 연습이<br/>감정 인식 능력을 키워줍니다.</>,
+            <>💡 Higher PHQ-9 scores recommend Advanced difficulty.<br/>Even when sad or anxious flowers surround you,<br/>finding the happy flower trains your emotional awareness.</>
+          )}
         </div>
 
         {/* 개인 베스트 배지 */}
@@ -459,7 +460,7 @@ function EFMTGame({ onExit }) {
           }}>
             <span style={{ fontSize:16 }}>🏆</span>
             <span style={{ fontSize:13, fontWeight:700, color:GE.amber }}>
-              내 최고 기록: {personalBest.toLocaleString()}점
+              {t(`내 최고 기록: ${personalBest ? personalBest.toLocaleString() : 0}점`, `Best: ${personalBest ? personalBest.toLocaleString() : 0} pts`)}
             </span>
           </div>
         )}
@@ -472,7 +473,7 @@ function EFMTGame({ onExit }) {
             color:'white', border:'none', borderRadius:14, fontSize:15, fontWeight:700,
             cursor:'pointer', boxShadow:`0 4px 16px ${GE.amber}44`,
           }}>
-          시작하기 🌸
+          {t('시작하기 🌸','Start 🌸')}
         </button>
       </div>
     </div>
@@ -509,7 +510,7 @@ function EFMTGame({ onExit }) {
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
             <div style={{ display:'flex', alignItems:'center', gap:8 }}>
               <div style={{ fontSize:13, fontWeight:700, color:GE.dark }}>
-                라운드 {round} / {cfg.rounds}
+                {t(`라운드 ${round} / ${cfg.rounds}`, `Round ${round} / ${cfg.rounds}`)}
               </div>
               {comboDisplay >= 3 && (
                 <div style={{
@@ -519,7 +520,7 @@ function EFMTGame({ onExit }) {
                   display:'flex', alignItems:'center', gap:4,
                 }}>
                   {comboDisplay >= 10 ? '🔥🔥🔥' : comboDisplay >= 5 ? '🔥🔥' : '🔥'}
-                  {comboDisplay} 콤보
+                  {comboDisplay} {t('콤보','Combo')}
                   {comboMultiplier && <span style={{ fontSize:10, opacity:0.8 }}>{comboMultiplier}</span>}
                 </div>
               )}
@@ -550,7 +551,7 @@ function EFMTGame({ onExit }) {
           fontSize:12, color: isCritical ? GE.warn : GE.muted, fontWeight:600,
           transition:'color 0.3s',
         }}>
-          {isCritical ? '⏰ 서둘러요!' : `기쁜 꽃 ${remaining}개 남았어요 · 다른 꽃은 클릭하지 마세요`}
+          {isCritical ? t('⏰ 서둘러요!','⏰ Hurry up!') : t(`기쁜 꽃 ${remaining}개 남았어요 · 다른 꽃은 클릭하지 마세요`, `${remaining} happy flower${remaining !== 1 ? 's' : ''} left · Don't click the others`)}
         </div>
 
         {/* 꽃 그리드 (상대 위치 컨테이너 — 팝업용) */}
@@ -568,7 +569,7 @@ function EFMTGame({ onExit }) {
               fontFamily:"'Noto Sans KR',sans-serif",
               whiteSpace:'nowrap',
             }}>
-              🔥 콤보 {comboTierAnim}
+              🔥 {t('콤보','Combo')} {comboTierAnim}
             </div>
           )}
 
@@ -615,17 +616,17 @@ function EFMTGame({ onExit }) {
       }}>
         <div style={{ fontSize:52, marginBottom:12 }}>{acc >= 80 ? '🌟' : acc >= 50 ? '🌸' : '🌼'}</div>
         <h3 style={{ fontSize:20, fontWeight:700, color:GE.dark, marginBottom:8, fontFamily:"'Noto Serif KR',serif" }}>
-          라운드 {last.round} 완료
+          {t(`라운드 ${last.round} 완료`, `Round ${last.round} Complete`)}
         </h3>
         <div style={{
           display:'flex', gap:20, marginBottom:24,
           background:'rgba(255,255,255,0.8)', borderRadius:16, padding:'16px 24px',
           boxShadow:'0 2px 12px rgba(0,0,0,0.07)',
         }}>
-          <div><div style={{ fontSize:22, fontWeight:700, color:GE.sage }}>{last.correct}</div><div style={{ fontSize:11, color:GE.muted }}>발견</div></div>
-          <div><div style={{ fontSize:22, fontWeight:700, color:GE.warn }}>{last.missed}</div><div style={{ fontSize:11, color:GE.muted }}>놓침</div></div>
-          <div><div style={{ fontSize:22, fontWeight:700, color:GE.amber }}>{acc}%</div><div style={{ fontSize:11, color:GE.muted }}>정확도</div></div>
-          {last.avgReaction > 0 && <div><div style={{ fontSize:22, fontWeight:700, color:GE.dusty }}>{(last.avgReaction/1000).toFixed(1)}s</div><div style={{ fontSize:11, color:GE.muted }}>반응속도</div></div>}
+          <div><div style={{ fontSize:22, fontWeight:700, color:GE.sage }}>{last.correct}</div><div style={{ fontSize:11, color:GE.muted }}>{t('발견','Found')}</div></div>
+          <div><div style={{ fontSize:22, fontWeight:700, color:GE.warn }}>{last.missed}</div><div style={{ fontSize:11, color:GE.muted }}>{t('놓침','Missed')}</div></div>
+          <div><div style={{ fontSize:22, fontWeight:700, color:GE.amber }}>{acc}%</div><div style={{ fontSize:11, color:GE.muted }}>{t('정확도','Accuracy')}</div></div>
+          {last.avgReaction > 0 && <div><div style={{ fontSize:22, fontWeight:700, color:GE.dusty }}>{(last.avgReaction/1000).toFixed(1)}s</div><div style={{ fontSize:11, color:GE.muted }}>{t('반응속도','Reaction')}</div></div>}
         </div>
         <button
           onClick={() => startRound(round + 1, difficulty)}
@@ -634,7 +635,7 @@ function EFMTGame({ onExit }) {
             padding:'13px 40px', background:`linear-gradient(135deg, ${GE.amber}, #E8C47A)`,
             color:'white', border:'none', borderRadius:14, fontSize:14, fontWeight:700, cursor:'pointer',
           }}>
-          다음 라운드 →
+          {t('다음 라운드 →','Next Round →')}
         </button>
       </div>
     );
@@ -658,13 +659,13 @@ function EFMTGame({ onExit }) {
         <div style={{ textAlign:'center', marginBottom:20 }}>
           <div style={{ fontSize:60, marginBottom:10 }}>🌺</div>
           <h2 style={{ fontSize:22, fontWeight:700, color:GE.dark, fontFamily:"'Noto Serif KR',serif" }}>
-            감정 훈련 완료!
+            {t('감정 훈련 완료!','Training Complete!')}
           </h2>
 
           {/* 이번 점수 + 신기록 */}
           <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, marginTop:10 }}>
             <span style={{ fontSize:28, fontWeight:900, color:GE.amber }}>
-              {computedScore.toLocaleString()}점
+              {computedScore.toLocaleString()}{t('점',' pts')}
             </span>
             {isNewRecord && (
               <span style={{
@@ -672,17 +673,17 @@ function EFMTGame({ onExit }) {
                 background:`linear-gradient(135deg, ${GE.amber}, #E8C47A)`,
                 borderRadius:100, padding:'3px 10px',
                 animation:'pulse 0.6s ease',
-              }}>🏆 신기록!</span>
+              }}>{t('🏆 신기록!','🏆 New Record!')}</span>
             )}
           </div>
           {personalBest !== null && !isNewRecord && (
             <div style={{ fontSize:11, color:GE.muted, marginTop:4 }}>
-              최고 기록 {personalBest.toLocaleString()}점
-              {computedScore > 0 && ` · 차이 ${(personalBest - computedScore).toLocaleString()}점`}
+              {t(`최고 기록 ${personalBest.toLocaleString()}점`, `Best ${personalBest.toLocaleString()} pts`)}
+              {computedScore > 0 && t(` · 차이 ${(personalBest - computedScore).toLocaleString()}점`, ` · Gap ${(personalBest - computedScore).toLocaleString()} pts`)}
             </div>
           )}
           {personalBest === null && (
-            <div style={{ fontSize:11, color:GE.sage, marginTop:4 }}>첫 기록이에요! 🎉</div>
+            <div style={{ fontSize:11, color:GE.sage, marginTop:4 }}>{t('첫 기록이에요! 🎉','First record! 🎉')}</div>
           )}
         </div>
 
@@ -691,13 +692,13 @@ function EFMTGame({ onExit }) {
           background:'white', borderRadius:18, padding:'18px 20px', marginBottom:16,
           boxShadow:'0 4px 16px rgba(0,0,0,0.07)',
         }}>
-          <div style={{ fontSize:12, fontWeight:700, color:GE.muted, marginBottom:12 }}>훈련 결과</div>
+          <div style={{ fontSize:12, fontWeight:700, color:GE.muted, marginBottom:12 }}>{t('훈련 결과','Results')}</div>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px 20px' }}>
             {[
-              { label:'기쁜 꽃 발견', val:`${totalC}개`, color:GE.sage },
-              { label:'전체 정확도', val:`${avgAcc}%`, color: avgAcc >= 90 ? GE.sage : avgAcc >= 75 ? GE.amber : GE.warn },
-              { label:'오클릭', val:`${totalW}회`, color:GE.warn },
-              { label:'최대 콤보', val:`${bestCombo}연속`, color: bestCombo >= 10 ? '#E53E3E' : bestCombo >= 5 ? GE.rose : GE.amber },
+              { label:t('기쁜 꽃 발견','Happy Flowers Found'), val:t(`${totalC}개`,`${totalC}`), color:GE.sage },
+              { label:t('전체 정확도','Accuracy Rate'), val:`${avgAcc}%`, color: avgAcc >= 90 ? GE.sage : avgAcc >= 75 ? GE.amber : GE.warn },
+              { label:t('오클릭','Incorrect'), val:t(`${totalW}회`,`${totalW}`), color:GE.warn },
+              { label:t('최대 콤보','Max Combo'), val:t(`${bestCombo}연속`,`${bestCombo}`), color: bestCombo >= 10 ? '#E53E3E' : bestCombo >= 5 ? GE.rose : GE.amber },
             ].map(({label,val,color})=>(
               <div key={label}>
                 <div style={{ fontSize:11, color:GE.muted, marginBottom:3 }}>{label}</div>
@@ -711,13 +712,13 @@ function EFMTGame({ onExit }) {
               {bestCombo >= 3 && (
                 <span style={{ fontSize:11, color:GE.amber, fontWeight:700,
                   background:GE.amber+'15', borderRadius:6, padding:'2px 8px' }}>
-                  🔥 콤보 보너스 +{bestCombo >= 10 ? bestCombo*15 : bestCombo >= 5 ? bestCombo*10 : bestCombo*6}점
+                  {t(`🔥 콤보 보너스 +${bestCombo >= 10 ? bestCombo*15 : bestCombo >= 5 ? bestCombo*10 : bestCombo*6}점`, `🔥 Combo Bonus +${bestCombo >= 10 ? bestCombo*15 : bestCombo >= 5 ? bestCombo*10 : bestCombo*6} pts`)}
                 </span>
               )}
               {avgAcc >= 75 && (
                 <span style={{ fontSize:11, color:GE.sage, fontWeight:700,
                   background:GE.sage+'15', borderRadius:6, padding:'2px 8px' }}>
-                  🎯 정확도 보너스 +{avgAcc >= 90 ? 30 : 15}점
+                  {t(`🎯 정확도 보너스 +${avgAcc >= 90 ? 30 : 15}점`, `🎯 Accuracy Bonus +${avgAcc >= 90 ? 30 : 15} pts`)}
                 </span>
               )}
             </div>
@@ -736,9 +737,9 @@ function EFMTGame({ onExit }) {
                 {s.correct >= s.totalTargets * 0.8 ? '⭐' : s.correct >= s.totalTargets * 0.5 ? '🌸' : '🌼'}
               </div>
               <div style={{ flex:1 }}>
-                <div style={{ fontSize:13, fontWeight:600, color:GE.dark }}>라운드 {s.round}</div>
+                <div style={{ fontSize:13, fontWeight:600, color:GE.dark }}>{t(`라운드 ${s.round}`,`Round ${s.round}`)}</div>
                 <div style={{ fontSize:11, color:GE.muted }}>
-                  {s.correct}/{s.totalTargets} 발견 · 오클릭 {s.incorrect}회
+                  {t(`${s.correct}/${s.totalTargets} 발견 · 오클릭 ${s.incorrect}회`, `${s.correct}/${s.totalTargets} found · ${s.incorrect} miss`)}
                   {s.avgReaction > 0 && ` · ${(s.avgReaction/1000).toFixed(1)}s`}
                 </div>
               </div>
@@ -755,7 +756,7 @@ function EFMTGame({ onExit }) {
             background:`linear-gradient(135deg, ${GE.sage}, ${GE.sageL})`,
             color:'white', border:'none', borderRadius:14, fontSize:15, fontWeight:700, cursor:'pointer',
           }}>
-          경험치 받기 →
+          {t('경험치 받기 →','Claim EXP →')}
         </button>
       </div>
     );

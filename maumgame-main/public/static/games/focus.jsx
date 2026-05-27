@@ -134,12 +134,12 @@ function NumberRound({ config, roundIndex, totalRounds, onDone }) {
         width:'100%', marginBottom:24,
       }}>
         <div style={{ fontSize:12, fontWeight:700, color:FC.muted }}>
-          라운드 {roundIndex + 1} / {totalRounds}
+          {t('라운드', 'Round')} {roundIndex + 1} / {totalRounds}
         </div>
         <div style={{
           background:FC.indigoPale, color:FC.indigo,
           fontSize:11, fontWeight:700, padding:'3px 12px', borderRadius:100,
-        }}>🔢 숫자 기억</div>
+        }}>🔢 {t('숫자 기억', 'Number Memory')}</div>
       </div>
 
       {/* 호흡 준비 단계 */}
@@ -155,12 +155,12 @@ function NumberRound({ config, roundIndex, totalRounds, onDone }) {
           }}>
             {breathCount > 0 ? breathCount : '🌿'}
           </div>
-          <div style={{ fontSize:16, fontWeight:600, color:FC.dark }}>잠깐 마음을 가다듬어요</div>
+          <div style={{ fontSize:16, fontWeight:600, color:FC.dark }}>{t('잠깐 마음을 가다듬어요', 'Take a moment to settle your mind')}</div>
           <div style={{ fontSize:13, color:FC.muted, textAlign:'center', lineHeight:1.7 }}>
-            숫자가 하나씩 나타날 거예요<br/>순서대로 기억해 두세요
+            {t('숫자가 하나씩 나타날 거예요', 'Numbers will appear one by one')}<br/>{t('순서대로 기억해 두세요', 'Remember them in order')}
           </div>
           <div style={{ fontSize:13, color:FC.sky, fontWeight:700 }}>
-            {config.span}자리 숫자를 기억하세요
+            {t(`${config.span}자리 숫자를 기억하세요`, `Memorize the ${config.span}-digit number`)}
           </div>
         </div>
       )}
@@ -204,7 +204,7 @@ function NumberRound({ config, roundIndex, totalRounds, onDone }) {
           <div style={{ fontSize:13, color:FC.muted }}>
             {currentIdx < numbers.length
               ? `${currentIdx + 1} / ${numbers.length}`
-              : '이제 입력하세요!'}
+              : t('이제 입력하세요!', 'Now enter the numbers!')}
           </div>
         </div>
       )}
@@ -213,7 +213,7 @@ function NumberRound({ config, roundIndex, totalRounds, onDone }) {
       {phase === 'input' && (
         <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:20, width:'100%' }}>
           <div style={{ fontSize:15, fontWeight:700, color:FC.dark }}>
-            기억한 숫자를 순서대로 입력하세요
+            {t('기억한 숫자를 순서대로 입력하세요', 'Enter the numbers in order')}
           </div>
 
           {/* 입력 디스플레이 */}
@@ -272,7 +272,7 @@ function NumberRound({ config, roundIndex, totalRounds, onDone }) {
         <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:20 }}>
           <div style={{ fontSize:52 }}>{result.perfect ? '🎉' : result.correct >= result.total / 2 ? '👍' : '💪'}</div>
           <div style={{ fontSize:20, fontWeight:700, color:FC.dark }}>
-            {result.perfect ? '완벽해요!' : `${result.correct}/${result.total} 맞췄어요`}
+            {result.perfect ? t('완벽해요!', 'Perfect!') : t(`${result.correct}/${result.total} 맞췄어요`, `Got ${result.correct}/${result.total} correct`)}
           </div>
 
           {/* 결과 비교 */}
@@ -281,7 +281,7 @@ function NumberRound({ config, roundIndex, totalRounds, onDone }) {
             background:'rgba(0,0,0,0.04)', borderRadius:16, padding:'14px 20px',
           }}>
             <div style={{ textAlign:'center' }}>
-              <div style={{ fontSize:11, color:FC.muted, marginBottom:4 }}>입력</div>
+              <div style={{ fontSize:11, color:FC.muted, marginBottom:4 }}>{t('입력', 'Input')}</div>
               <div style={{ display:'flex', gap:5 }}>
                 {input.map((d, i) => (
                   <div key={i} style={{
@@ -296,14 +296,14 @@ function NumberRound({ config, roundIndex, totalRounds, onDone }) {
           </div>
 
           <div style={{ fontSize:13, color:FC.muted }}>
-            정답: {numbers.join(' - ')}
+            {t('정답', 'Answer')}: {numbers.join(' - ')}
           </div>
 
           <div style={{
             fontSize:16, fontWeight:700,
             color: result.perfect ? FC.amber : FC.sage,
           }}>
-            +{result.score}점
+            +{result.score}{t('점', 'pts')}
           </div>
 
           <button onClick={() => onDone(result.score)} style={{
@@ -313,7 +313,7 @@ function NumberRound({ config, roundIndex, totalRounds, onDone }) {
             padding:'13px 36px', fontSize:14, fontWeight:700, cursor:'pointer',
             boxShadow:`0 6px 20px ${FC.sage}44`,
           }}>
-            다음 →
+            {t('다음', 'Next')} →
           </button>
         </div>
       )}
@@ -375,19 +375,19 @@ function GridRound({ config, roundIndex, totalRounds, onDone }) {
         width:'100%', marginBottom:24,
       }}>
         <div style={{ fontSize:12, fontWeight:700, color:FC.muted }}>
-          라운드 {roundIndex + 1} / {totalRounds}
+          {t('라운드', 'Round')} {roundIndex + 1} / {totalRounds}
         </div>
         <div style={{
           background:FC.sagePale, color:FC.sage,
           fontSize:11, fontWeight:700, padding:'3px 12px', borderRadius:100,
-        }}>🟢 패턴 기억</div>
+        }}>🟢 {t('패턴 기억', 'Pattern Memory')}</div>
       </div>
 
       {/* 패턴 표시 단계 */}
       {phase === 'show' && (
         <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:20 }}>
           <div style={{ fontSize:15, fontWeight:700, color:FC.dark, textAlign:'center' }}>
-            {showCountdown > 0 ? `${showCountdown}초 후 패턴이 사라져요` : '패턴을 기억하세요!'}
+            {showCountdown > 0 ? t(`${showCountdown}초 후 패턴이 사라져요`, `Pattern disappears in ${showCountdown}s`) : t('패턴을 기억하세요!', 'Memorize the pattern!')}
           </div>
 
           <div style={{
@@ -408,7 +408,7 @@ function GridRound({ config, roundIndex, totalRounds, onDone }) {
           </div>
 
           <div style={{ fontSize:13, color:FC.muted }}>
-            {config.lights}개 칸의 위치를 기억하세요
+            {t(`${config.lights}개 칸의 위치를 기억하세요`, `Remember the position of ${config.lights} cells`)}
           </div>
         </div>
       )}
@@ -417,10 +417,10 @@ function GridRound({ config, roundIndex, totalRounds, onDone }) {
       {phase === 'input' && (
         <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:20 }}>
           <div style={{ fontSize:15, fontWeight:700, color:FC.dark }}>
-            기억한 칸을 눌러보세요
+            {t('기억한 칸을 눌러보세요', 'Tap the cells you remember')}
           </div>
           <div style={{ fontSize:12, color:FC.muted }}>
-            ({selected.size} / {config.lights}개 선택됨)
+            ({selected.size} / {config.lights}{t('개 선택됨', ' selected')})
           </div>
 
           <div style={{
@@ -455,7 +455,7 @@ function GridRound({ config, roundIndex, totalRounds, onDone }) {
               padding:'13px 36px', fontSize:14, fontWeight:700,
               cursor: selected.size > 0 ? 'pointer' : 'not-allowed',
             }}>
-            확인 →
+            {t('확인', 'Confirm')} →
           </button>
         </div>
       )}
@@ -465,7 +465,7 @@ function GridRound({ config, roundIndex, totalRounds, onDone }) {
         <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:20 }}>
           <div style={{ fontSize:52 }}>{result.perfect ? '✨' : result.correct >= result.total / 2 ? '🌿' : '💪'}</div>
           <div style={{ fontSize:20, fontWeight:700, color:FC.dark }}>
-            {result.perfect ? '완벽해요!' : `${result.correct}개 맞추고 ${result.wrong}개 틀렸어요`}
+            {result.perfect ? t('완벽해요!', 'Perfect!') : t(`${result.correct}개 맞추고 ${result.wrong}개 틀렸어요`, `Got ${result.correct} right, ${result.wrong} wrong`)}
           </div>
 
           {/* 결과 그리드 */}
@@ -486,13 +486,13 @@ function GridRound({ config, roundIndex, totalRounds, onDone }) {
           </div>
 
           <div style={{ display:'flex', gap:14, fontSize:11 }}>
-            <span style={{ color:FC.sage }}>■ 정답</span>
-            <span style={{ color:FC.amber }}>■ 놓침</span>
-            <span style={{ color:FC.warn }}>■ 오답</span>
+            <span style={{ color:FC.sage }}>■ {t('정답', 'Correct')}</span>
+            <span style={{ color:FC.amber }}>■ {t('놓침', 'Missed')}</span>
+            <span style={{ color:FC.warn }}>■ {t('오답', 'Wrong')}</span>
           </div>
 
           <div style={{ fontSize:16, fontWeight:700, color: result.perfect ? FC.amber : FC.sage }}>
-            +{result.score}점
+            +{result.score}{t('점', 'pts')}
           </div>
 
           <button onClick={() => onDone(result.score)} style={{
@@ -502,7 +502,7 @@ function GridRound({ config, roundIndex, totalRounds, onDone }) {
             padding:'13px 36px', fontSize:14, fontWeight:700, cursor:'pointer',
             boxShadow:`0 6px 20px ${FC.sage}44`,
           }}>
-            다음 →
+            {t('다음', 'Next')} →
           </button>
         </div>
       )}
@@ -604,14 +604,14 @@ function FocusGame({ onExit }) {
             background:'none', border:'none', cursor:'pointer',
             fontSize:22, padding:'4px 8px', color:FC.muted,
           }}>←</button>
-          <div style={{ fontSize:16, fontWeight:700, color:FC.dark }}>마음 집중력</div>
+          <div style={{ fontSize:16, fontWeight:700, color:FC.dark }}>{t('마음 집중력', 'Mind Focus')}</div>
           {personalBest !== null && (
             <div style={{
               marginLeft:'auto', fontSize:11, fontWeight:700,
               background:FC.amberL + '55', color:FC.amber,
               padding:'3px 10px', borderRadius:100,
             }}>
-              최고 {personalBest}점
+              {t('최고', 'Best')} {personalBest}{t('점', 'pts')}
             </div>
           )}
         </div>
@@ -623,19 +623,19 @@ function FocusGame({ onExit }) {
             fontSize:26, fontWeight:700, color:FC.dark, marginBottom:10,
             fontFamily:"'Noto Serif KR', serif", lineHeight:1.4,
           }}>
-            마음 집중력 훈련
+            {t('마음 집중력 훈련', 'Mind Focus Training')}
           </h1>
           <p style={{ fontSize:14, color:FC.muted, lineHeight:1.8 }}>
-            숫자 기억과 패턴 찾기로<br/>
-            지금 이 순간에 집중하는 연습을 해요
+            {t('숫자 기억과 패턴 찾기로', 'Practice focusing on the present moment')}<br/>
+            {t('지금 이 순간에 집중하는 연습을 해요', 'with number memory and pattern recall')}
           </p>
         </div>
 
         {/* 게임 소개 카드들 */}
         <div style={{ display:'flex', flexDirection:'column', gap:12, marginBottom:28 }}>
           {[
-            { emoji:'🔢', title:'숫자 기억', desc:'순서대로 나타나는 숫자를 기억해 입력해요', color:FC.sky },
-            { emoji:'🟢', title:'패턴 기억', desc:'그리드에 표시된 위치를 기억하고 재현해요', color:FC.sage },
+            { emoji:'🔢', title:t('숫자 기억', 'Number Memory'), desc:t('순서대로 나타나는 숫자를 기억해 입력해요', 'Remember and enter the numbers in sequence'), color:FC.sky },
+            { emoji:'🟢', title:t('패턴 기억', 'Pattern Memory'), desc:t('그리드에 표시된 위치를 기억하고 재현해요', 'Remember and reproduce the highlighted positions on the grid'), color:FC.sage },
           ].map(c => (
             <div key={c.title} style={{
               display:'flex', alignItems:'center', gap:14,
@@ -665,7 +665,7 @@ function FocusGame({ onExit }) {
           border:`1px solid ${FC.indigo}22`, textAlign:'center',
         }}>
           <div style={{ fontSize:13, color:FC.indigo, fontWeight:600 }}>
-            총 {totalRounds}라운드 · 숫자 기억 + 패턴 기억 교차 진행
+            {t(`총 ${totalRounds}라운드 · 숫자 기억 + 패턴 기억 교차 진행`, `${totalRounds} rounds total · Number Memory + Pattern Memory alternating`)}
           </div>
         </div>
 
@@ -677,7 +677,7 @@ function FocusGame({ onExit }) {
           boxShadow:`0 8px 28px ${FC.sky}44`,
           width:'100%',
         }}>
-          집중 훈련 시작하기 →
+          {t('집중 훈련 시작하기', 'Start Focus Training')} →
         </button>
       </div>
     </div>
@@ -697,13 +697,13 @@ function FocusGame({ onExit }) {
           {/* 상단 헤더 + 진행 바 */}
           <div style={{ padding:'0 24px', marginBottom:20 }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
-              <span style={{ fontSize:11, color:FC.muted }}>진행 {roundIndex} / {totalRounds}</span>
+              <span style={{ fontSize:11, color:FC.muted }}>{t('진행', 'Progress')} {roundIndex} / {totalRounds}</span>
               <button onClick={() => onExit(null)} style={{
                 fontFamily:"'Noto Sans KR',sans-serif",
                 background:'rgba(0,0,0,0.06)', color:FC.muted,
                 border:'none', borderRadius:8, padding:'5px 11px',
                 fontSize:11, cursor:'pointer',
-              }}>허브로 →</button>
+              }}>{t('허브로', 'Hub')} →</button>
             </div>
             <div style={{ height:5, background:'rgba(0,0,0,0.07)', borderRadius:10, overflow:'hidden' }}>
               <div style={{
@@ -739,10 +739,10 @@ function FocusGame({ onExit }) {
 
   // ── 완료 화면 ──────────────────────────────────────────
   if (screen === 'done') {
-    const grade = accuracy >= 85 ? { label:'탁월해요', emoji:'🏆', color:FC.amber }
-                : accuracy >= 65 ? { label:'잘 했어요', emoji:'🌟', color:FC.sage }
-                : accuracy >= 45 ? { label:'좋은 시도예요', emoji:'🌿', color:FC.sky }
-                : { label:'계속 연습해요', emoji:'💪', color:FC.muted };
+    const grade = accuracy >= 85 ? { label:t('탁월해요', 'Excellent'), emoji:'🏆', color:FC.amber }
+                : accuracy >= 65 ? { label:t('잘 했어요', 'Well done'), emoji:'🌟', color:FC.sage }
+                : accuracy >= 45 ? { label:t('좋은 시도예요', 'Good try'), emoji:'🌿', color:FC.sky }
+                : { label:t('계속 연습해요', 'Keep practicing'), emoji:'💪', color:FC.muted };
 
     return (
       <div style={{
@@ -757,7 +757,7 @@ function FocusGame({ onExit }) {
               {grade.emoji}
             </div>
             <h2 style={{ fontSize:24, fontWeight:700, color:FC.dark, marginBottom:8, fontFamily:"'Noto Serif KR',serif" }}>
-              훈련 완료!
+              {t('훈련 완료!', 'Training Complete!')}
             </h2>
             <div style={{ fontSize:15, color:grade.color, fontWeight:700 }}>{grade.label}</div>
 
@@ -771,7 +771,7 @@ function FocusGame({ onExit }) {
                 fontSize:13, fontWeight:700,
                 animation:'pulse 1.5s ease-in-out infinite',
               }}>
-                🏆 신기록!
+                🏆 {t('신기록!', 'New Record!')}
               </div>
             )}
           </div>
@@ -787,22 +787,22 @@ function FocusGame({ onExit }) {
               <div style={{ fontSize:52, fontWeight:900, color:grade.color, fontFamily:'monospace' }}>
                 {totalScore}
               </div>
-              <div style={{ fontSize:13, color:FC.muted }}>최종 점수</div>
+              <div style={{ fontSize:13, color:FC.muted }}>{t('최종 점수', 'Final Score')}</div>
               {personalBest !== null && !isNewRecord && (
                 <div style={{ fontSize:12, color:FC.muted, marginTop:4 }}>
-                  최고 기록 {personalBest}점 · 차이 {personalBest - totalScore}점
+                  {t('최고 기록', 'Best')} {personalBest}{t('점', 'pts')} · {t('차이', 'Gap')} {personalBest - totalScore}{t('점', 'pts')}
                 </div>
               )}
               {personalBest === null && (
-                <div style={{ fontSize:12, color:FC.sage, marginTop:4 }}>첫 기록이에요! 🎉</div>
+                <div style={{ fontSize:12, color:FC.sage, marginTop:4 }}>{t('첫 기록이에요!', 'First record!')} 🎉</div>
               )}
             </div>
 
             {/* 통계 그리드 */}
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
               {[
-                { label:'정확도', value:`${accuracy}%`,   color: accuracy >= 85 ? FC.amber : FC.sage },
-                { label:'완료 라운드', value:`${totalRounds}R`, color:FC.sky },
+                { label:t('정확도', 'Accuracy'), value:`${accuracy}%`,   color: accuracy >= 85 ? FC.amber : FC.sage },
+                { label:t('완료 라운드', 'Rounds Done'), value:`${totalRounds}R`, color:FC.sky },
               ].map(s => (
                 <div key={s.label} style={{
                   background:FC.cream, borderRadius:14, padding:'12px 14px', textAlign:'center',
@@ -819,7 +819,7 @@ function FocusGame({ onExit }) {
             background:'rgba(255,255,255,0.7)', borderRadius:16, padding:'16px',
             marginBottom:24, border:'1px solid rgba(255,255,255,0.6)',
           }}>
-            <div style={{ fontSize:12, fontWeight:700, color:FC.muted, marginBottom:10 }}>라운드별 점수</div>
+            <div style={{ fontSize:12, fontWeight:700, color:FC.muted, marginBottom:10 }}>{t('라운드별 점수', 'Score per Round')}</div>
             <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
               {scores.map((s, i) => {
                 const r = rounds[i];
@@ -838,7 +838,7 @@ function FocusGame({ onExit }) {
                       }}/>
                     </div>
                     <div style={{ fontSize:12, fontWeight:700, color:FC.dark, width:40, textAlign:'right' }}>
-                      {s}점
+                      {s}{t('점', 'pts')}
                     </div>
                   </div>
                 );
@@ -855,7 +855,7 @@ function FocusGame({ onExit }) {
                 background:'rgba(255,255,255,0.8)', color:FC.muted,
                 fontSize:13, fontWeight:600, cursor:'pointer',
               }}>
-                허브로 →
+                {t('허브로', 'Hub')} →
               </button>
               <button onClick={handleSave} disabled={isSaving} style={{
                 fontFamily:"'Noto Sans KR',sans-serif",
@@ -865,20 +865,23 @@ function FocusGame({ onExit }) {
                 cursor: isSaving ? 'not-allowed' : 'pointer',
                 boxShadow:`0 6px 20px ${FC.sky}44`,
               }}>
-                {isSaving ? '저장 중...' : '✓ 저장하고 나가기'}
+                {isSaving ? t('저장 중...', 'Saving...') : t('✓ 저장하고 나가기', '✓ Claim EXP')}
               </button>
             </div>
             <button onClick={() => {
-              const text = `🧠 마음 집중력 훈련\n점수 ${totalScore}점 · 정확도 ${accuracy}%\n${totalRounds}라운드 완료${isNewRecord ? ' 🏆 신기록!' : ''}\n\n#마음풀 #마음게임 #집중력훈련`;
-              if (navigator.share) navigator.share({ title:'마음 집중력', text }).catch(()=>{});
-              else navigator.clipboard?.writeText(text).then(()=>alert('복사됐어요!')).catch(()=>{});
+              const text = t(
+                `🧠 마음 집중력 훈련\n점수 ${totalScore}점 · 정확도 ${accuracy}%\n${totalRounds}라운드 완료${isNewRecord ? ' 🏆 신기록!' : ''}\n\n#마음풀 #마음게임 #집중력훈련`,
+                `🧠 Mind Focus Training\nScore ${totalScore}pts · Accuracy ${accuracy}%\n${totalRounds} rounds complete${isNewRecord ? ' 🏆 New Record!' : ''}\n\n#Maumful #MindGame #FocusTraining`
+              );
+              if (navigator.share) navigator.share({ title: t('마음 집중력', 'Mind Focus'), text }).catch(()=>{});
+              else navigator.clipboard?.writeText(text).then(()=>alert(t('복사됐어요!', 'Copied!'))).catch(()=>{});
             }} style={{
               fontFamily:"'Noto Sans KR',sans-serif",
               width:'100%', padding:'11px', borderRadius:14, border:'none',
               background:'rgba(255,255,255,0.6)', color:FC.muted,
               fontSize:13, fontWeight:600, cursor:'pointer',
             }}>
-              공유 🔗
+              {t('공유', 'Share')} 🔗
             </button>
           </div>
         </div>

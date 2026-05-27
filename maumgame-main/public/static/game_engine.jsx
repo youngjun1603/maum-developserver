@@ -3,6 +3,10 @@
 // 모든 게임 컴포넌트가 사용하는 공유 레이어
 // ============================================================
 
+// ── 언어 설정 (전역 — game_registry · game_hub · 각 게임 파일이 참조) ──
+const GAME_LANG = new URLSearchParams(location.search).get('lang') || 'ko';
+const t = (ko, en) => GAME_LANG === 'en' ? en : ko;
+
 const GameEngine = (() => {
   const TOKEN_KEY = 'game_token';
 
@@ -72,12 +76,12 @@ const GameEngine = (() => {
 
   // ── 레벨 정보 계산 ──────────────────────────────────────
   const LEVELS = [
-    { level:1, name:'씨앗',    emoji:'🌱', minExp:0,    maxExp:100  },
-    { level:2, name:'새싹',    emoji:'🌿', minExp:100,  maxExp:250  },
-    { level:3, name:'꽃봉오리', emoji:'🌸', minExp:250,  maxExp:500  },
-    { level:4, name:'꽃피움',  emoji:'🌺', minExp:500,  maxExp:900  },
-    { level:5, name:'만개',    emoji:'🌳', minExp:900,  maxExp:1500 },
-    { level:6, name:'정원사',  emoji:'🏡', minExp:1500, maxExp:9999 },
+    { level:1, name: t('씨앗',     'Seed'),      emoji:'🌱', minExp:0,    maxExp:100  },
+    { level:2, name: t('새싹',     'Sprout'),    emoji:'🌿', minExp:100,  maxExp:250  },
+    { level:3, name: t('꽃봉오리', 'Bud'),       emoji:'🌸', minExp:250,  maxExp:500  },
+    { level:4, name: t('꽃피움',   'Blooming'),  emoji:'🌺', minExp:500,  maxExp:900  },
+    { level:5, name: t('만개',     'Full Bloom'),emoji:'🌳', minExp:900,  maxExp:1500 },
+    { level:6, name: t('정원사',   'Gardener'),  emoji:'🏡', minExp:1500, maxExp:9999 },
   ];
 
   function getLevelInfo(exp) {
@@ -94,20 +98,20 @@ const GameEngine = (() => {
     foggy: {
       sky:    ['#9BA8B0', '#C5CFD6', '#D8DFE4'],
       ground: '#7A8A7A',
-      label:  '안개가 자욱한 정원',
-      desc:   '지금은 많이 힘드시죠. 함께 조금씩 걷어내요.',
+      label:  t('안개가 자욱한 정원', 'Foggy Garden'),
+      desc:   t('지금은 많이 힘드시죠. 함께 조금씩 걷어내요.', "It's been tough. Let's clear the fog together."),
     },
     clearing: {
       sky:    ['#7FA8C8', '#A8C8E0', '#C8DFF0'],
       ground: '#5E8A4E',
-      label:  '맑아지는 정원',
-      desc:   '안개가 걷히고 있어요. 잘 하고 계세요.',
+      label:  t('맑아지는 정원', 'Clearing Garden'),
+      desc:   t('안개가 걷히고 있어요. 잘 하고 계세요.', "The fog is lifting. You're doing great."),
     },
     blooming: {
       sky:    ['#4A8EC2', '#7BB8D8', '#A8D4E8'],
       ground: '#4A7A3E',
-      label:  '꽃이 피는 정원',
-      desc:   '정원이 활짝 피어있어요. 오늘도 수고했어요.',
+      label:  t('꽃이 피는 정원', 'Blooming Garden'),
+      desc:   t('정원이 활짝 피어있어요. 오늘도 수고했어요.', 'Your garden is in full bloom. Well done today.'),
     },
   };
 
@@ -118,29 +122,29 @@ const GameEngine = (() => {
   // ── 업적 정보 ───────────────────────────────────────────
   const ACHIEVEMENTS = {
     // ── 기본 ─────────────────────────────────────────────
-    first_play:      { name: '첫 발걸음',    emoji: '🚶', desc: '처음으로 게임을 플레이했어요' },
+    first_play:      { name: t('첫 발걸음',    'First Steps'),         emoji: '🚶', desc: t('처음으로 게임을 플레이했어요',       'Played a game for the first time') },
     // ── 연속 출석 ─────────────────────────────────────────
-    streak_3:        { name: '3일 연속',     emoji: '🔥', desc: '3일 연속 방문했어요' },
-    streak_7:        { name: '일주일의 기적', emoji: '🔥', desc: '7일 연속 방문했어요' },
-    streak_14:       { name: '두 주의 여정', emoji: '🔥', desc: '14일 연속 방문했어요' },
-    perfect_week:    { name: '완벽한 한 주', emoji: '🌟', desc: '7일 모두 빠짐없이 정원에 왔어요' },
+    streak_3:        { name: t('3일 연속',     '3-Day Streak'),        emoji: '🔥', desc: t('3일 연속 방문했어요',               'Visited 3 days in a row') },
+    streak_7:        { name: t('일주일의 기적', "Week's Miracle"),      emoji: '🔥', desc: t('7일 연속 방문했어요',               'Visited 7 days in a row') },
+    streak_14:       { name: t('두 주의 여정', 'Two-Week Journey'),    emoji: '🔥', desc: t('14일 연속 방문했어요',              'Visited 14 days in a row') },
+    perfect_week:    { name: t('완벽한 한 주', 'Perfect Week'),        emoji: '🌟', desc: t('7일 모두 빠짐없이 정원에 왔어요',   'Visited every day for 7 days') },
     // ── 레벨 ─────────────────────────────────────────────
-    level_3:         { name: '꽃봉오리',     emoji: '🌸', desc: '레벨 3에 도달했어요' },
-    level_5:         { name: '만개',         emoji: '🌳', desc: '레벨 5에 도달했어요' },
+    level_3:         { name: t('꽃봉오리',     'Bud'),                 emoji: '🌸', desc: t('레벨 3에 도달했어요',               'Reached level 3') },
+    level_5:         { name: t('만개',         'Full Bloom'),          emoji: '🌳', desc: t('레벨 5에 도달했어요',               'Reached level 5') },
     // ── 경험치 ───────────────────────────────────────────
-    exp_500:         { name: '성실한 정원사', emoji: '🏅', desc: '경험치 500 달성' },
-    exp_1000:        { name: '숙련된 정원사', emoji: '🥇', desc: '경험치 1000 달성' },
+    exp_500:         { name: t('성실한 정원사', 'Diligent Gardener'),   emoji: '🏅', desc: t('경험치 500 달성',                   'Reached 500 EXP') },
+    exp_1000:        { name: t('숙련된 정원사', 'Skilled Gardener'),    emoji: '🥇', desc: t('경험치 1000 달성',                  'Reached 1,000 EXP') },
     // ── 게임별 숙련 ───────────────────────────────────────
-    breath_master:   { name: '호흡 명인',    emoji: '💧', desc: '호흡 훈련을 10회 완료했어요' },
-    cbt_master:      { name: '생각 교정사',  emoji: '🌱', desc: '생각 교정을 5회 완료했어요' },
-    burnout_fighter: { name: '번아웃 극복',  emoji: '⚡', desc: '번아웃 미션을 5일 완료했어요' },
+    breath_master:   { name: t('호흡 명인',    'Breath Master'),       emoji: '💧', desc: t('호흡 훈련을 10회 완료했어요',       'Completed 10 breathing sessions') },
+    cbt_master:      { name: t('생각 교정사',  'Thought Reformer'),    emoji: '🌱', desc: t('생각 교정을 5회 완료했어요',        'Completed 5 thought reframing sessions') },
+    burnout_fighter: { name: t('번아웃 극복',  'Burnout Fighter'),     emoji: '⚡', desc: t('번아웃 미션을 5일 완료했어요',      'Completed burnout missions for 5 days') },
     // ── 감정 수채화 ───────────────────────────────────────
-    mood_7:          { name: '감정 탐험가',  emoji: '🎨', desc: '7일 연속 감정을 기록했어요' },
-    mood_30:         { name: '감정 예술가',  emoji: '🖼️', desc: '감정 기록을 30번 완료했어요' },
+    mood_7:          { name: t('감정 탐험가',  'Emotion Explorer'),    emoji: '🎨', desc: t('7일 연속 감정을 기록했어요',        'Logged emotions 7 days in a row') },
+    mood_30:         { name: t('감정 예술가',  'Emotion Artist'),      emoji: '🖼️', desc: t('감정 기록을 30번 완료했어요',       'Completed 30 emotion logs') },
     // ── 감사 일기 ─────────────────────────────────────────
-    gratitude_7:     { name: '별빛 수집가',  emoji: '🌠', desc: '7일 연속 감사 일기를 썼어요' },
+    gratitude_7:     { name: t('별빛 수집가',  'Starlight Collector'), emoji: '🌠', desc: t('7일 연속 감사 일기를 썼어요',       'Wrote a gratitude journal 7 days in a row') },
     // ── 탐험 ─────────────────────────────────────────────
-    all_games:       { name: '정원 탐험가',  emoji: '🗺️', desc: '5가지 이상 게임을 모두 경험했어요' },
+    all_games:       { name: t('정원 탐험가',  'Garden Explorer'),     emoji: '🗺️', desc: t('5가지 이상 게임을 모두 경험했어요', 'Experienced 5 or more games') },
   };
 
   function getAchievementInfo(id) {
@@ -149,18 +153,18 @@ const GameEngine = (() => {
 
   // ── 시간 포맷 ───────────────────────────────────────────
   function formatDuration(sec) {
-    if (sec < 60) return `${sec}초`;
-    return `${Math.floor(sec / 60)}분 ${sec % 60}초`;
+    if (sec < 60) return t(`${sec}초`, `${sec}s`);
+    return t(`${Math.floor(sec / 60)}분 ${sec % 60}초`, `${Math.floor(sec / 60)}m ${sec % 60}s`);
   }
 
   function formatRelativeTime(iso) {
     const diff = Date.now() - new Date(iso).getTime();
     const min = Math.floor(diff / 60000);
-    if (min < 1) return '방금 전';
-    if (min < 60) return `${min}분 전`;
+    if (min < 1) return t('방금 전', 'Just now');
+    if (min < 60) return t(`${min}분 전`, `${min}m ago`);
     const hr = Math.floor(min / 60);
-    if (hr < 24) return `${hr}시간 전`;
-    return `${Math.floor(hr / 24)}일 전`;
+    if (hr < 24) return t(`${hr}시간 전`, `${hr}h ago`);
+    return t(`${Math.floor(hr / 24)}일 전`, `${Math.floor(hr / 24)}d ago`);
   }
 
   // ── 검사 점수 저장 ──────────────────────────────────────

@@ -148,13 +148,17 @@ const HTML = (v: string) => `<!DOCTYPE html>
   <script>
     // URL ?t= 파라미터로 maumful JWT 토큰 수신 (SSO — 별도 로그인 불필요)
     const urlParams = new URLSearchParams(window.location.search);
-    const t = urlParams.get('t');
-    const gameParam = urlParams.get('game');
-    if (t) {
-      localStorage.setItem('game_token', t);
-      // ?game= 파라미터는 보존하여 game_hub.jsx가 자동 실행할 수 있도록
-      const nextUrl = gameParam ? '/?game=' + encodeURIComponent(gameParam) : '/';
-      window.history.replaceState({}, '', nextUrl);
+    const tokenParam = urlParams.get('t');
+    const gameParam  = urlParams.get('game');
+    const langParam  = urlParams.get('lang');
+    if (tokenParam) {
+      localStorage.setItem('game_token', tokenParam);
+      // ?game= · ?lang= 파라미터는 보존하여 game_hub.jsx가 참조할 수 있도록
+      const nextParams = new URLSearchParams();
+      if (gameParam) nextParams.set('game', gameParam);
+      if (langParam) nextParams.set('lang', langParam);
+      const qs = nextParams.toString();
+      window.history.replaceState({}, '', qs ? '/?' + qs : '/');
     }
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {});

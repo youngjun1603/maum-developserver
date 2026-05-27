@@ -4,12 +4,12 @@
 // ============================================================
 
 const MOOD_EMOTIONS = [
-  { id:'happy',   emoji:'😊', label:'행복',  color:'#F5C842', bg:'#FFFAE0', textColor:'#8B6800' },
-  { id:'calm',    emoji:'😌', label:'평온',  color:'#7BC4A0', bg:'#E8F5EE', textColor:'#2A6B4A' },
-  { id:'tired',   emoji:'😴', label:'피곤',  color:'#9BB0C0', bg:'#EEF3F7', textColor:'#3A5060' },
-  { id:'anxious', emoji:'😰', label:'불안',  color:'#F5A050', bg:'#FEF0E4', textColor:'#8B4000' },
-  { id:'sad',     emoji:'😢', label:'슬픔',  color:'#6B9ACB', bg:'#EAF1F9', textColor:'#2A4A7A' },
-  { id:'angry',   emoji:'😤', label:'화남',  color:'#E86C6C', bg:'#FDEAEA', textColor:'#7A2020' },
+  { id:'happy',   emoji:'😊', label:t('행복','Joyful'),  color:'#F5C842', bg:'#FFFAE0', textColor:'#8B6800' },
+  { id:'calm',    emoji:'😌', label:t('평온','Calm'),    color:'#7BC4A0', bg:'#E8F5EE', textColor:'#2A6B4A' },
+  { id:'tired',   emoji:'😴', label:t('피곤','Tired'),   color:'#9BB0C0', bg:'#EEF3F7', textColor:'#3A5060' },
+  { id:'anxious', emoji:'😰', label:t('불안','Anxious'), color:'#F5A050', bg:'#FEF0E4', textColor:'#8B4000' },
+  { id:'sad',     emoji:'😢', label:t('슬픔','Sad'),     color:'#6B9ACB', bg:'#EAF1F9', textColor:'#2A4A7A' },
+  { id:'angry',   emoji:'😤', label:t('화남','Angry'),   color:'#E86C6C', bg:'#FDEAEA', textColor:'#7A2020' },
 ];
 
 const MOOD_MAP = Object.fromEntries(MOOD_EMOTIONS.map(e => [e.id, e]));
@@ -40,12 +40,12 @@ function getMoodInsight(history) {
   if (!top || top[1] === 0) return null;
   const e = MOOD_MAP[top[0]];
   const msgs = {
-    happy:   '최근 행복한 날이 많았어요. 그 에너지를 계속 이어가세요 🌟',
-    calm:    '평온함을 자주 느끼고 있어요. 마음이 안정되어 있네요 🌿',
-    tired:   '피로가 쌓여 있는 것 같아요. 충분한 휴식이 필요해요 😴',
-    anxious: '불안한 날이 많았네요. 호흡 훈련이 도움이 될 수 있어요 💧',
-    sad:     '슬픈 감정이 많이 찾아왔군요. 감정은 지나가요. 괜찮아요 🌧️',
-    angry:   '화가 많이 났던 시간이었네요. 그 감정도 소중해요 🔥',
+    happy:   t('최근 행복한 날이 많았어요. 그 에너지를 계속 이어가세요 🌟', 'You\'ve had many joyful days recently. Keep that energy going 🌟'),
+    calm:    t('평온함을 자주 느끼고 있어요. 마음이 안정되어 있네요 🌿', 'You\'ve been feeling calm often. Your mind is at peace 🌿'),
+    tired:   t('피로가 쌓여 있는 것 같아요. 충분한 휴식이 필요해요 😴', 'It seems fatigue has been building up. You need enough rest 😴'),
+    anxious: t('불안한 날이 많았네요. 호흡 훈련이 도움이 될 수 있어요 💧', 'You\'ve had many anxious days. Breathing exercises can help 💧'),
+    sad:     t('슬픈 감정이 많이 찾아왔군요. 감정은 지나가요. 괜찮아요 🌧️', 'Sadness has visited often. Feelings pass. It\'s okay 🌧️'),
+    angry:   t('화가 많이 났던 시간이었네요. 그 감정도 소중해요 🔥', 'It\'s been a time of much anger. That feeling matters too 🔥'),
   };
   return { emoji: e.emoji, label: e.label, color: e.color, bg: e.bg, textColor: e.textColor, msg: msgs[top[0]] };
 }
@@ -109,7 +109,7 @@ function MoodGame({ onExit }) {
         background:MC.bg, flexDirection:'column', gap:12 }}>
         <div style={{ fontSize:40, animation:'float 2s ease-in-out infinite' }}>🎨</div>
         <div style={{ fontSize:13, color:MC.muted, fontFamily:"'Noto Sans KR',sans-serif" }}>
-          감정 기록을 불러오는 중...
+          {t('감정 기록을 불러오는 중...', 'Loading emotion log...')}
         </div>
       </div>
     );
@@ -118,9 +118,9 @@ function MoodGame({ onExit }) {
   function shareMood() {
     const e = MOOD_MAP[selEmotion] || MOOD_MAP.calm;
     const stars = '⭐'.repeat(intensity);
-    const text = `${e.emoji} 오늘의 감정: ${e.label} ${stars}${note ? `\n"${note}"` : ''}\n\n마음게임에서 함께해요 💕\nhttps://game.maumful.com`;
+    const text = `${e.emoji} ${t('오늘의 감정','Today\'s Emotion')}: ${e.label} ${stars}${note ? `\n"${note}"` : ''}\n\n${t('마음게임에서 함께해요','Join us on MaumGame')} 💕\nhttps://game.maumful.com`;
     navigator.share
-      ? navigator.share({ title: '오늘의 감정 기록', text }).catch(() => {})
+      ? navigator.share({ title: t('오늘의 감정 기록', 'Today\'s Emotion Log'), text }).catch(() => {})
       : navigator.clipboard?.writeText(text).catch(() => {});
   }
 
@@ -137,10 +137,10 @@ function MoodGame({ onExit }) {
         <div style={{ fontSize:72, marginBottom:16 }}>{e.emoji}</div>
         <h2 style={{ fontSize:22, fontWeight:700, color:MC.text, marginBottom:8,
           fontFamily:"'Noto Serif KR',serif" }}>
-          오늘의 감정이 기록됐어요
+          {t('오늘의 감정이 기록됐어요', 'Today\'s Emotion Logged')}
         </h2>
         <div style={{ fontSize:14, color:MC.muted, marginBottom:24, lineHeight:1.8 }}>
-          {e.label} · 강도 {'⭐'.repeat(intensity)}
+          {e.label} · {t('강도','Intensity')} {'⭐'.repeat(intensity)}
           {note && <><br/><span style={{ fontStyle:'italic', color:MC.text }}>"{note}"</span></>}
         </div>
         {result?.expGained > 0 && (
@@ -148,27 +148,27 @@ function MoodGame({ onExit }) {
             background:'rgba(255,255,255,0.8)', borderRadius:16, padding:'14px 28px', marginBottom:24,
           }}>
             <div style={{ fontSize:24, fontWeight:700, color:MC.accent }}>+{result.expGained}</div>
-            <div style={{ fontSize:12, color:MC.muted }}>경험치</div>
+            <div style={{ fontSize:12, color:MC.muted }}>{t('경험치','EXP')}</div>
           </div>
         )}
         <button onClick={shareMood} style={{
           ...mbtn('rgba(255,255,255,0.85)', MC.muted, { borderRadius:13, width:'100%', maxWidth:280 }),
           padding:'11px', fontSize:13, marginBottom:10,
         }}>
-          💕 파트너와 공유하기
+          💕 {t('파트너와 공유하기','Share with Partner')}
         </button>
         <div style={{ display:'flex', gap:10, width:'100%', maxWidth:280 }}>
           <button onClick={() => setScreen('calendar')} style={{
             ...mbtn('rgba(255,255,255,0.85)', MC.muted, { borderRadius:13, flex:1 }),
             padding:'12px', fontSize:13,
           }}>
-            📅 달력 보기
+            📅 {t('달력 보기','Calendar')}
           </button>
           <button onClick={onExit} style={{
             ...mbtn(`linear-gradient(135deg, ${MC.accent}, #5AA888)`, 'white', { flex:2, borderRadius:13 }),
             padding:'12px', fontSize:13, boxShadow:`0 4px 16px ${MC.accent}50`,
           }}>
-            허브로 →
+            {t('허브로 →','Hub →')}
           </button>
         </div>
       </div>
@@ -196,9 +196,9 @@ function MoodGame({ onExit }) {
           <button onClick={() => setScreen('home')} style={{
             ...mbtn('rgba(0,0,0,0.06)', MC.muted, { borderRadius:9 }),
             padding:'6px 14px', fontSize:12,
-          }}>← 뒤로</button>
+          }}>{t('← 뒤로','← Back')}</button>
           <div style={{ fontSize:15, fontWeight:700, color:MC.text, fontFamily:"'Noto Serif KR',serif" }}>
-            🎨 30일 감정 달력
+            🎨 {t('30일 감정 달력','30-Day Emotion Calendar')}
           </div>
           <div style={{ width:64 }}/>
         </div>
@@ -214,7 +214,7 @@ function MoodGame({ onExit }) {
               boxShadow:`0 2px 12px ${insight.color}20`,
             }}>
               <div style={{ fontSize:11, fontWeight:700, color:insight.textColor, marginBottom:5, letterSpacing:'0.5px' }}>
-                {insight.emoji} 최근 30일 감정 인사이트
+                {insight.emoji} {t('최근 30일 감정 인사이트','Last 30 Days Emotion Insight')}
               </div>
               <div style={{ fontSize:13, color:MC.text, lineHeight:1.6 }}>{insight.msg}</div>
             </div>
@@ -268,7 +268,7 @@ function MoodGame({ onExit }) {
               background:'rgba(255,255,255,0.8)', borderRadius:14, padding:'14px',
               border:'1px solid rgba(0,0,0,0.06)', marginBottom:16,
             }}>
-              <div style={{ fontSize:12, fontWeight:700, color:MC.text, marginBottom:10 }}>📊 감정 분포</div>
+              <div style={{ fontSize:12, fontWeight:700, color:MC.text, marginBottom:10 }}>📊 {t('감정 분포','Emotion Distribution')}</div>
               <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                 {MOOD_EMOTIONS.map(e => {
                   const count = history.filter(d => d.emotion === e.id).length;
@@ -281,7 +281,7 @@ function MoodGame({ onExit }) {
                       background:e.bg, border:`1px solid ${e.color}40`,
                     }}>
                       <span style={{ fontSize:12 }}>{e.emoji}</span>
-                      <span style={{ fontSize:11, fontWeight:700, color:e.textColor }}>{count}일 ({pct}%)</span>
+                      <span style={{ fontSize:11, fontWeight:700, color:e.textColor }}>{count}{t('일','d')} ({pct}%)</span>
                     </div>
                   );
                 })}
@@ -292,7 +292,7 @@ function MoodGame({ onExit }) {
           {/* 최근 기록 목록 */}
           {history.length > 0 && (
             <div>
-              <div style={{ fontSize:12, fontWeight:700, color:MC.text, marginBottom:10 }}>최근 기록</div>
+              <div style={{ fontSize:12, fontWeight:700, color:MC.text, marginBottom:10 }}>{t('최근 기록','Recent Logs')}</div>
               <div style={{ display:'flex', flexDirection:'column', gap:7 }}>
                 {history.slice(0, 7).map((entry, i) => {
                   const e = MOOD_MAP[entry.emotion] || MOOD_MAP.calm;
@@ -337,9 +337,9 @@ function MoodGame({ onExit }) {
           <button onClick={() => setScreen('home')} style={{
             ...mbtn('rgba(0,0,0,0.06)', MC.muted, { borderRadius:9 }),
             padding:'6px 14px', fontSize:12,
-          }}>← 뒤로</button>
+          }}>{t('← 뒤로','← Back')}</button>
           <div style={{ fontSize:15, fontWeight:700, color:MC.text, fontFamily:"'Noto Serif KR',serif" }}>
-            오늘의 감정
+            {t('오늘의 감정','Today\'s Emotion')}
           </div>
           <div style={{ width:64 }}/>
         </div>
@@ -347,7 +347,9 @@ function MoodGame({ onExit }) {
         <div style={{ flex:1, padding:'28px 20px 24px', display:'flex', flexDirection:'column' }}>
           <p style={{ fontSize:15, color:MC.muted, textAlign:'center', marginBottom:28, lineHeight:1.7,
             fontFamily:"'Noto Sans KR',sans-serif" }}>
-            지금 이 순간, 어떤 감정이<br/>가장 크게 느껴지나요?
+            {t('지금 이 순간, 어떤 감정이','Right now, which emotion')}
+            <br/>
+            {t('가장 크게 느껴지나요?','feels the strongest?')}
           </p>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:12 }}>
             {MOOD_EMOTIONS.map(e => (
@@ -384,7 +386,7 @@ function MoodGame({ onExit }) {
           <button onClick={() => setScreen('checkin_emotion')} style={{
             ...mbtn('rgba(0,0,0,0.06)', MC.muted, { borderRadius:9 }),
             padding:'6px 14px', fontSize:12,
-          }}>← 뒤로</button>
+          }}>{t('← 뒤로','← Back')}</button>
           <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:15, fontWeight:700, color:MC.text,
             fontFamily:"'Noto Serif KR',serif" }}>
             <span>{e.emoji}</span> {e.label}
@@ -397,7 +399,7 @@ function MoodGame({ onExit }) {
           <div style={{ marginBottom:28 }}>
             <div style={{ fontSize:14, fontWeight:700, color:MC.text, marginBottom:12, textAlign:'center',
               fontFamily:"'Noto Sans KR',sans-serif" }}>
-              감정의 강도는?
+              {t('감정의 강도는?','How intense is the emotion?')}
             </div>
             <div style={{ display:'flex', justifyContent:'center', gap:10 }}>
               {[1,2,3,4,5].map(n => (
@@ -411,7 +413,14 @@ function MoodGame({ onExit }) {
             </div>
             <div style={{ textAlign:'center', fontSize:11, color:MC.muted, marginTop:8,
               fontFamily:"'Noto Sans KR',sans-serif" }}>
-              {['','매우 약하게','약하게','보통','강하게','매우 강하게'][intensity]}
+              {[
+                '',
+                t('매우 약하게','Very Mild'),
+                t('약하게','Mild'),
+                t('보통','Moderate'),
+                t('강하게','Strong'),
+                t('매우 강하게','Very Strong'),
+              ][intensity]}
             </div>
           </div>
 
@@ -419,12 +428,12 @@ function MoodGame({ onExit }) {
           <div style={{ marginBottom:24 }}>
             <div style={{ fontSize:13, fontWeight:700, color:MC.text, marginBottom:8,
               fontFamily:"'Noto Sans KR',sans-serif" }}>
-              한 마디 <span style={{ color:MC.muted, fontWeight:400 }}>(선택사항)</span>
+              {t('한 마디','A note')} <span style={{ color:MC.muted, fontWeight:400 }}>({t('선택사항','optional')})</span>
             </div>
             <textarea
               value={note}
               onChange={ev => setNote(ev.target.value)}
-              placeholder="오늘 이 감정이 든 이유나 메모를 남겨요..."
+              placeholder={t('오늘 이 감정이 든 이유나 메모를 남겨요...','Leave a note about why you feel this way today...')}
               rows={3}
               maxLength={100}
               style={{
@@ -449,7 +458,7 @@ function MoodGame({ onExit }) {
             boxShadow: saving ? 'none' : `0 4px 16px ${e.color}40`,
             cursor: saving ? 'not-allowed' : 'pointer',
           }}>
-            {saving ? '저장 중...' : '오늘의 감정 기록하기 🎨'}
+            {saving ? t('저장 중...','Saving...') : t('오늘의 감정 기록하기 🎨','Log Today\'s Emotion 🎨')}
           </button>
         </div>
       </div>
@@ -462,7 +471,9 @@ function MoodGame({ onExit }) {
   for (let i = 6; i >= 0; i--) {
     const d = new Date(); d.setDate(d.getDate() - i);
     const iso = d.toISOString().slice(0, 10);
-    recentDays.push({ iso, dow:['일','월','화','수','목','금','토'][d.getDay()], entry:histMap[iso] });
+    const DOW_KO = ['일','월','화','수','목','금','토'];
+    const DOW_EN = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+    recentDays.push({ iso, dow:t(DOW_KO[d.getDay()], DOW_EN[d.getDay()]), entry:histMap[iso] });
   }
   const todayEmotionData = todayEntry ? MOOD_MAP[todayEntry.emotion] : null;
   const insight = getMoodInsight(history);
@@ -478,13 +489,13 @@ function MoodGame({ onExit }) {
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
           <span style={{ fontSize:20 }}>🎨</span>
           <span style={{ fontSize:15, fontWeight:700, color:MC.text, fontFamily:"'Noto Serif KR',serif" }}>
-            감정 수채화
+            {t('감정 수채화','Emotion Watercolor')}
           </span>
         </div>
         <button onClick={onExit} style={{
           ...mbtn('rgba(0,0,0,0.06)', MC.muted, { borderRadius:9 }),
           padding:'6px 13px', fontSize:12,
-        }}>허브로 →</button>
+        }}>{t('허브로 →','Hub →')}</button>
       </div>
 
       <div style={{ flex:1, overflowY:'auto', padding:'20px 16px 32px' }}>
@@ -497,7 +508,7 @@ function MoodGame({ onExit }) {
             marginBottom:20, boxShadow:`0 4px 20px ${todayEmotionData.color}20`,
           }}>
             <div style={{ fontSize:11, fontWeight:700, color:MC.muted, marginBottom:8, letterSpacing:'0.5px',
-              fontFamily:"'Noto Sans KR',sans-serif" }}>오늘의 감정 ✓</div>
+              fontFamily:"'Noto Sans KR',sans-serif" }}>{t('오늘의 감정','Today\'s Emotion')} ✓</div>
             <div style={{ display:'flex', alignItems:'center', gap:12 }}>
               <span style={{ fontSize:40 }}>{todayEmotionData.emoji}</span>
               <div>
@@ -518,18 +529,18 @@ function MoodGame({ onExit }) {
             border:'1px solid rgba(0,0,0,0.06)',
           }}>
             <div style={{ fontSize:11, fontWeight:700, color:MC.muted, marginBottom:6, letterSpacing:'0.5px',
-              fontFamily:"'Noto Sans KR',sans-serif" }}>오늘의 감정</div>
+              fontFamily:"'Noto Sans KR',sans-serif" }}>{t('오늘의 감정','Today\'s Emotion')}</div>
             <div style={{ fontSize:14, color:MC.text, fontWeight:500, marginBottom:16, lineHeight:1.7,
               fontFamily:"'Noto Sans KR',sans-serif" }}>
-              오늘의 감정을 기록해보세요.<br/>
-              <span style={{ color:MC.muted, fontSize:12 }}>감정을 알아차리는 것이 치유의 시작이에요.</span>
+              {t('오늘의 감정을 기록해보세요.','Record today\'s emotion.')}<br/>
+              <span style={{ color:MC.muted, fontSize:12 }}>{t('감정을 알아차리는 것이 치유의 시작이에요.','Recognizing your emotions is the beginning of healing.')}</span>
             </div>
             <button onClick={() => setScreen('checkin_emotion')} style={{
               ...mbtn(`linear-gradient(135deg, ${MC.accent}, #5AA888)`),
               width:'100%', padding:'13px', fontSize:14,
               boxShadow:`0 4px 16px ${MC.accent}40`,
             }}>
-              🎨 오늘의 감정 기록하기
+              🎨 {t('오늘의 감정 기록하기','Log Today\'s Emotion')}
             </button>
           </div>
         )}
@@ -541,12 +552,12 @@ function MoodGame({ onExit }) {
         }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
             <div style={{ fontSize:12, fontWeight:700, color:MC.text, fontFamily:"'Noto Sans KR',sans-serif" }}>
-              📅 최근 7일
+              📅 {t('최근 7일','Last 7 Days')}
             </div>
             <button onClick={() => setScreen('calendar')} style={{
               background:'none', border:'none', fontSize:11, color:MC.accent, fontWeight:700, cursor:'pointer',
               fontFamily:"'Noto Sans KR',sans-serif",
-            }}>전체 보기 →</button>
+            }}>{t('전체 보기 →','View All →')}</button>
           </div>
           <div style={{ display:'flex', gap:6, justifyContent:'space-between' }}>
             {recentDays.map(({ iso, dow, entry }) => {
@@ -578,7 +589,7 @@ function MoodGame({ onExit }) {
           }}>
             <div style={{ fontSize:11, fontWeight:700, color:insight.textColor, marginBottom:5, letterSpacing:'0.5px',
               fontFamily:"'Noto Sans KR',sans-serif" }}>
-              {insight.emoji} 감정 인사이트
+              {insight.emoji} {t('감정 인사이트','Emotion Insight')}
             </div>
             <div style={{ fontSize:13, color:MC.text, lineHeight:1.6, fontFamily:"'Noto Sans KR',sans-serif" }}>
               {insight.msg}

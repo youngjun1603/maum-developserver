@@ -177,7 +177,7 @@ function LevelBar({ levelInfo }) {
           <span style={{ fontSize:22 }}>{emoji}</span>
           <div>
             <div style={{ fontSize:15, fontWeight:700, color:C.dark }}>Lv.{level} {name}</div>
-            <div style={{ fontSize:11, color:C.muted }}>다음 레벨까지 {maxExp - currentExp} EXP</div>
+            <div style={{ fontSize:11, color:C.muted }}>{t('다음 레벨까지', 'Next level in')} {maxExp - currentExp} EXP</div>
           </div>
         </div>
         <div style={{ fontSize:13, fontWeight:600, color:C.sage }}>{currentExp} EXP</div>
@@ -198,21 +198,21 @@ function LevelBar({ levelInfo }) {
 // TestBadge — 연결된 검사 표시
 // ──────────────────────────────────────────────────────────
 const TEST_META_HUB = {
-  PHQ9:    { label:'PHQ-9',   emoji:'🌱', desc:'우울 선별' },
-  GAD7:    { label:'GAD-7',   emoji:'💙', desc:'불안 선별' },
-  DASS21:  { label:'DASS-21', emoji:'🌊', desc:'스트레스' },
-  BIG5:    { label:'Big5',    emoji:'🧠', desc:'성격 분석' },
-  SCT:     { label:'SCT',     emoji:'✍️', desc:'문장 완성' },
-  DSI:     { label:'DSI',     emoji:'🪞', desc:'자아 분화' },
-  BURNOUT: { label:'K-MBI+',  emoji:'🔥', desc:'번아웃' },
-  LOST:    { label:'LOST',    emoji:'🧭', desc:'행동 양식' },
+  PHQ9:    { label:'PHQ-9',   emoji:'🌱', desc:t('우울 선별', 'Depression') },
+  GAD7:    { label:'GAD-7',   emoji:'💙', desc:t('불안 선별', 'Anxiety') },
+  DASS21:  { label:'DASS-21', emoji:'🌊', desc:t('스트레스', 'Stress') },
+  BIG5:    { label:'Big5',    emoji:'🧠', desc:t('성격 분석', 'Personality') },
+  SCT:     { label:'SCT',     emoji:'✍️', desc:t('문장 완성', 'Sentence Completion') },
+  DSI:     { label:'DSI',     emoji:'🪞', desc:t('자아 분화', 'Self Differentiation') },
+  BURNOUT: { label:'K-MBI+',  emoji:'🔥', desc:t('번아웃', 'Burnout') },
+  LOST:    { label:'LOST',    emoji:'🧭', desc:t('행동 양식', 'Behavior Pattern') },
 };
 
 function TestBadgeRow({ completedTests = [] }) {
   const allTests = Object.keys(TEST_META_HUB);
   return (
     <div>
-      <div style={{ fontSize:12, fontWeight:600, color:C.muted, marginBottom:10, letterSpacing:'0.5px' }}>연결된 심리검사</div>
+      <div style={{ fontSize:12, fontWeight:600, color:C.muted, marginBottom:10, letterSpacing:'0.5px' }}>{t('연결된 심리검사', 'Linked Tests')}</div>
       <div style={{ display:'flex', flexWrap:'wrap', gap:7 }}>
         {allTests.map(t => {
           const meta = TEST_META_HUB[t];
@@ -236,9 +236,9 @@ function TestBadgeRow({ completedTests = [] }) {
       </div>
       {completedTests.length === 0 && (
         <div style={{ marginTop:10, fontSize:12, color:C.muted, lineHeight:1.6 }}>
-          심리검사를 완료하면 게임이 더 풍성해져요.{' '}
+          {t('심리검사를 완료하면 게임이 더 풍성해져요.', 'Complete psych tests to enrich your game experience.')}{' '}
           <a href={PHYWEB_URL} style={{ color:C.sage, fontWeight:600, textDecoration:'none' }}>
-            마음풀에서 검사하기 →
+            {t('마음풀에서 검사하기 →', 'Take a test at Maumful →')}
           </a>
         </div>
       )}
@@ -353,7 +353,7 @@ function GameCard({ game, onPlay, enterDelay = 0 }) {
           background:'rgba(0,0,0,0.08)', color:C.muted,
           fontSize:10, fontWeight:700, padding:'3px 9px', borderRadius:100,
           letterSpacing:'0.5px',
-        }}>준비 중</div>
+        }}>{t('준비 중', 'Coming Soon')}</div>
       )}
 
       {/* 레벨 잠금 표시 */}
@@ -362,7 +362,7 @@ function GameCard({ game, onPlay, enterDelay = 0 }) {
           position:'absolute', top:12, right:12,
           background:C.sand, color:C.amber,
           fontSize:10, fontWeight:700, padding:'3px 9px', borderRadius:100,
-        }}>Lv.{game.unlockLevel} 해금</div>
+        }}>{t(`Lv.${game.unlockLevel} 해금`, `Lv.${game.unlockLevel} Unlock`)}</div>
       )}
 
       {/* 이모지 */}
@@ -395,13 +395,13 @@ function GameCard({ game, onPlay, enterDelay = 0 }) {
       {/* 크레딧 비용 */}
       <div style={{ fontSize:11, fontWeight:600, marginBottom:4,
         color: game.creditCost > 0 ? '#D4954A' : '#4A7C59' }}>
-        {game.creditCost > 0 ? `🌿 ${game.creditCost} 크레딧` : '무료'}
+        {game.creditCost > 0 ? `🌿 ${game.creditCost} ${t('크레딧', 'Credits')}` : t('무료', 'Free')}
       </div>
 
       {/* 필요 검사 */}
       {game.requiredTests.length > 0 && (
         <div style={{ fontSize:11, color:C.dusty, marginBottom:12 }}>
-          {game.requiredTests.map(t => TEST_META_HUB[t]?.label || t).join(' · ')} 연동
+          {game.requiredTests.map(t => TEST_META_HUB[t]?.label || t).join(' · ')} {t('연동', 'linked')}
         </div>
       )}
 
@@ -429,7 +429,7 @@ function GameCard({ game, onPlay, enterDelay = 0 }) {
           boxShadow: !locked ? `0 4px 12px ${C.sage}40` : 'none',
         }}
       >
-        {comingSoon ? '곧 출시됩니다' : locked ? '🔒 잠금 해제 필요' : '시작하기 →'}
+        {comingSoon ? t('곧 출시됩니다', 'Coming Soon') : locked ? `🔒 ${t('잠금 해제 필요', 'Locked')}` : t('시작하기 →', 'Start →')}
       </button>
     </div>
   );
@@ -442,11 +442,14 @@ function StreakCalendar({ recentPlayDates = [], streakDays = 0, streakRecover = 
   const [recovering, setRecovering] = useState(false);
 
   const days = [];
+  const dowLabels = GAME_LANG === 'en'
+    ? ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+    : ['일','월','화','수','목','금','토'];
   for (let i = 6; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
     const iso = d.toISOString().slice(0, 10);
-    const dow = ['일','월','화','수','목','금','토'][d.getDay()];
+    const dow = dowLabels[d.getDay()];
     days.push({ iso, dow, played: recentPlayDates.includes(iso) });
   }
 
@@ -471,11 +474,11 @@ function StreakCalendar({ recentPlayDates = [], streakDays = 0, streakRecover = 
     <div style={{ padding:'16px 20px', background:'rgba(255,255,255,0.7)', borderRadius:16, backdropFilter:'blur(8px)' }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
         <div style={{ fontSize:13, fontWeight:700, color:C.dark, display:'flex', alignItems:'center', gap:6 }}>
-          📅 최근 7일 출석
+          📅 {t('최근 7일 출석', '7-Day Attendance')}
         </div>
         {streakDays > 0 && (
           <div style={{ fontSize:12, fontWeight:700, color:C.amber, display:'flex', alignItems:'center', gap:4 }}>
-            {fireEmoji} {streakDays}일 연속
+            {fireEmoji} {t(`${streakDays}일 연속`, `${streakDays}-Day Streak`)}
           </div>
         )}
       </div>
@@ -500,8 +503,8 @@ function StreakCalendar({ recentPlayDates = [], streakDays = 0, streakRecover = 
       {nextMilestone && (
         <div style={{ marginBottom: streakRecover > 0 && streakDays === 0 ? 10 : 0 }}>
           <div style={{ display:'flex', justifyContent:'space-between', fontSize:10, color:C.muted, marginBottom:4 }}>
-            <span>다음 목표: {nextMilestone}일 연속 🏅</span>
-            <span>{streakDays} / {nextMilestone}일</span>
+            <span>{t('다음 목표', 'Next Goal')}: {t(`${nextMilestone}일 연속 🏅`, `${nextMilestone}-Day Streak 🏅`)}</span>
+            <span>{streakDays} / {t(`${nextMilestone}일`, `${nextMilestone} days`)}</span>
           </div>
           <div style={{ height:5, borderRadius:10, background:'rgba(0,0,0,0.07)', overflow:'hidden' }}>
             <div style={{
@@ -522,14 +525,14 @@ function StreakCalendar({ recentPlayDates = [], streakDays = 0, streakRecover = 
           color:'white', fontSize:12, fontWeight:700, cursor: recovering ? 'not-allowed' : 'pointer',
           fontFamily:"'Noto Sans KR',sans-serif",
         }}>
-          {recovering ? '복구 중...' : `🛡️ 복구권 사용하여 스트릭 복원 (${streakRecover}개 보유)`}
+          {recovering ? t('복구 중...', 'Restoring...') : `🛡️ ${t('복구권 사용하여 스트릭 복원', 'Use Recovery Pass')} (${t(`${streakRecover}개 보유`, `${streakRecover} held`)})`}
         </button>
       )}
 
       {/* 복구권 보유 안내 (streak>0 상태) */}
       {streakRecover > 0 && streakDays > 0 && (
         <div style={{ marginTop:8, fontSize:10, color:C.amber, fontWeight:600, textAlign:'right' }}>
-          🛡️ 복구권 {streakRecover}개 보유 (연속 끊길 때 자동 사용 가능)
+          🛡️ {t(`복구권 ${streakRecover}개 보유`, `${streakRecover} Recovery Pass(es) held`)} ({t('연속 끊길 때 자동 사용 가능', 'auto-used when streak breaks')})
         </div>
       )}
     </div>
@@ -564,7 +567,7 @@ function DailyTip({ hubData }) {
     }}>
       <div style={{ fontSize:12, color:C.muted, animation:'pulse 1.5s infinite',
         fontFamily:"'Noto Sans KR',sans-serif" }}>
-        🤖 오늘의 코치 메시지를 불러오는 중...
+        🤖 {t('오늘의 코치 메시지를 불러오는 중...', "Loading today's coach message...")}
       </div>
     </div>
   );
@@ -578,7 +581,7 @@ function DailyTip({ hubData }) {
       border:`1px solid ${C.sage}25`, backdropFilter:'blur(8px)',
     }}>
       <div style={{ fontSize:10, fontWeight:700, color:C.sage, marginBottom:5, letterSpacing:'0.5px' }}>
-        🤖 오늘의 코치 메시지
+        🤖 {t('오늘의 코치 메시지', "Today's Coach Message")}
       </div>
       <div style={{ fontSize:13, color:C.dark, lineHeight:1.65, fontWeight:500,
         fontFamily:"'Noto Sans KR',sans-serif" }}>
@@ -603,13 +606,13 @@ function Leaderboard({ currentUserEmail }) {
 
   if (loading) return (
     <div style={{ textAlign:'center', padding:'20px 0' }}>
-      <div style={{ fontSize:13, color:C.muted, animation:'pulse 1.5s infinite' }}>순위를 불러오는 중...</div>
+      <div style={{ fontSize:13, color:C.muted, animation:'pulse 1.5s infinite' }}>{t('순위를 불러오는 중...', 'Loading rankings...')}</div>
     </div>
   );
 
   if (!data?.length) return (
     <div style={{ textAlign:'center', padding:'20px 0', color:C.muted, fontSize:13 }}>
-      아직 순위 데이터가 없어요
+      {t('아직 순위 데이터가 없어요', 'No ranking data yet')}
     </div>
   );
 
@@ -634,12 +637,12 @@ function Leaderboard({ currentUserEmail }) {
             <div style={{ fontSize:14 }}>{levelInfo.emoji}</div>
             <div style={{ flex:1, minWidth:0 }}>
               <div style={{ fontSize:13, fontWeight:700, color:C.dark, display:'flex', alignItems:'center', gap:5 }}>
-                {entry.nickname || entry.email?.split('@')[0] || '정원사'}
-                {isMe && <span style={{ fontSize:10, background:C.sage, color:'white', borderRadius:4, padding:'1px 5px' }}>나</span>}
+                {entry.nickname || entry.email?.split('@')[0] || t('정원사', 'Gardener')}
+                {isMe && <span style={{ fontSize:10, background:C.sage, color:'white', borderRadius:4, padding:'1px 5px' }}>{t('나', 'Me')}</span>}
               </div>
               <div style={{ fontSize:11, color:C.muted }}>
                 Lv.{entry.garden_level} {levelInfo.name}
-                {(entry.streak_days || 0) > 1 && ` · 🔥 ${entry.streak_days}일`}
+                {(entry.streak_days || 0) > 1 && ` · 🔥 ${t(`${entry.streak_days}일`, `${entry.streak_days}d`)}`}
               </div>
             </div>
             <div style={{ textAlign:'right', flexShrink:0 }}>
@@ -662,21 +665,21 @@ function RecentActivity({ sessions = [] }) {
   if (sessions.length === 0) return null;
 
   const MODULE_LABEL = {
-    breathing:         { emoji:'💧', name:'호흡 훈련' },
-    cbt:               { emoji:'🌱', name:'생각 교정' },
-    efmt:              { emoji:'🌸', name:'감정 훈련' },
-    relax:             { emoji:'🏞️', name:'이완 훈련' },
-    missions:          { emoji:'🎯', name:'회복 미션' },
-    city:              { emoji:'🏙️', name:'회복 도시' },
-    weekly_report:     { emoji:'📊', name:'주간 리포트' },
-    checkin:           { emoji:'🎨', name:'감정 체크인' },
-    daily_quest_bonus: { emoji:'🎁', name:'데일리 퀘스트 보너스' },
+    breathing:         { emoji:'💧', name:t('호흡 훈련', 'Breathing Training') },
+    cbt:               { emoji:'🌱', name:t('생각 교정', 'Thought Reframing') },
+    efmt:              { emoji:'🌸', name:t('감정 훈련', 'Emotion Training') },
+    relax:             { emoji:'🏞️', name:t('이완 훈련', 'Relaxation Training') },
+    missions:          { emoji:'🎯', name:t('회복 미션', 'Recovery Mission') },
+    city:              { emoji:'🏙️', name:t('회복 도시', 'Recovery City') },
+    weekly_report:     { emoji:'📊', name:t('주간 리포트', 'Weekly Report') },
+    checkin:           { emoji:'🎨', name:t('감정 체크인', 'Emotion Check-in') },
+    daily_quest_bonus: { emoji:'🎁', name:t('데일리 퀘스트 보너스', 'Daily Quest Bonus') },
   };
 
   return (
     <div style={{ marginTop:32 }}>
       <div style={{ fontSize:14, fontWeight:700, color:C.dark, marginBottom:14, display:'flex', alignItems:'center', gap:6 }}>
-        <span style={{ fontSize:16 }}>📜</span> 최근 플레이 기록
+        <span style={{ fontSize:16 }}>📜</span> {t('최근 플레이 기록', 'Recent Activity')}
       </div>
       <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
         {sessions.map((s, i) => {
@@ -695,7 +698,7 @@ function RecentActivity({ sessions = [] }) {
               </div>
               <div style={{ textAlign:'right' }}>
                 <div style={{ fontSize:13, fontWeight:600, color:C.sage }}>+{s.exp_gained} EXP</div>
-                <div style={{ fontSize:11, color:C.muted }}>점수 {s.score}</div>
+                <div style={{ fontSize:11, color:C.muted }}>{t('점수', 'Score')} {s.score}</div>
               </div>
             </div>
           );
@@ -718,13 +721,13 @@ function LoginGate() {
     }}>
       <div style={{ fontSize:72, marginBottom:20, animation:'float 3s ease-in-out infinite' }}>🌿</div>
       <h1 style={{ fontSize:28, fontWeight:700, color:C.dark, marginBottom:10, fontFamily:"'Noto Serif KR', serif" }}>
-        마음의 정원
+        {t('마음의 정원', 'Mind Garden')}
       </h1>
       <p style={{ fontSize:15, color:C.muted, lineHeight:1.8, marginBottom:32, maxWidth:300 }}>
-        마음풀에서 로그인하면<br/>
-        별도 로그인 없이 바로 이용할 수 있어요.<br/>
-        심리검사 결과와 연결하여<br/>
-        나만의 정원을 가꾸세요 🌿
+        {t(
+          <>마음풀에서 로그인하면<br/>별도 로그인 없이 바로 이용할 수 있어요.<br/>심리검사 결과와 연결하여<br/>나만의 정원을 가꾸세요 🌿</>,
+          <>Log in to Maumful<br/>and enjoy without a separate login.<br/>Connect your psych test results<br/>and grow your own garden 🌿</>
+        )}
       </p>
       <a href={PHYWEB_URL} style={{
         display:'inline-block', padding:'14px 36px',
@@ -734,7 +737,7 @@ function LoginGate() {
         boxShadow:`0 8px 24px ${C.sage}44`,
         fontFamily:"'Noto Sans KR', sans-serif",
       }}>
-        마음풀 로그인하고 시작하기 →
+        {t('마음풀 로그인하고 시작하기 →', 'Log in to Maumful to start →')}
       </a>
     </div>
   );
@@ -768,56 +771,56 @@ const ALL_ACHIEVEMENT_IDS = [
 const CAMPAIGN_DEF = [
   {
     id: 'ch1',
-    title: '첫 발걸음',
-    subtitle: '마음 챙기기',
+    title: t('첫 발걸음', 'First Steps'),
+    subtitle: t('마음 챙기기', 'Mindfulness'),
     emoji: '🌱',
     color: '#4A7C59',
     colorLight: '#EAF2EC',
-    desc: '나의 감정을 알아채고 마음을 돌보는 첫 여정을 시작해요',
+    desc: t('나의 감정을 알아채고 마음을 돌보는 첫 여정을 시작해요', 'Begin your first journey to notice your emotions and care for your mind.'),
     steps: [
-      { game:'mood',      module:'checkin',         name:'감정 수채화 — 오늘 감정 기록하기',    emoji:'🎨' },
-      { game:'garden',    module:'breathing',        name:'마음의 정원 — 호흡 훈련 완료하기',    emoji:'💧' },
-      { game:'gratitude', module:'gratitude_write',  name:'별빛 감사 일기 — 감사 일기 쓰기',    emoji:'⭐' },
+      { game:'mood',      module:'checkin',         name:t('감정 수채화 — 오늘 감정 기록하기', 'Emotion Watercolor — Record today\'s emotion'),    emoji:'🎨' },
+      { game:'garden',    module:'breathing',        name:t('마음의 정원 — 호흡 훈련 완료하기', 'Mind Garden — Complete breathing training'),    emoji:'💧' },
+      { game:'gratitude', module:'gratitude_write',  name:t('별빛 감사 일기 — 감사 일기 쓰기', 'Starlight Gratitude — Write a gratitude journal'),    emoji:'⭐' },
     ],
     rewardCredits: 30,
     rewardBadge: '🌱',
-    rewardName: '마음 씨앗',
+    rewardName: t('마음 씨앗', 'Mind Seed'),
     unlockLevel: 1,
   },
   {
     id: 'ch2',
-    title: '마음 교정',
-    subtitle: '인지 훈련',
+    title: t('마음 교정', 'Mind Correction'),
+    subtitle: t('인지 훈련', 'Cognitive Training'),
     emoji: '🌸',
     color: '#C97B8A',
     colorLight: '#FAE8EC',
-    desc: '부정적인 생각 패턴을 인식하고 감정 인지 능력을 키워요',
+    desc: t('부정적인 생각 패턴을 인식하고 감정 인지 능력을 키워요', 'Recognize negative thought patterns and develop emotional awareness.'),
     steps: [
-      { game:'garden',  module:'cbt',       name:'마음의 정원 — 생각 교정 완료하기',         emoji:'🌱' },
-      { game:'efmt',    module:null,        name:'감정꽃 찾기 — 감정 인식 훈련 완료하기',    emoji:'🌸' },
-      { game:'burnout', module:'missions',  name:'번아웃 회복 — 회복 미션 완료하기',          emoji:'⚡' },
+      { game:'garden',  module:'cbt',       name:t('마음의 정원 — 생각 교정 완료하기', 'Mind Garden — Complete thought reframing'),         emoji:'🌱' },
+      { game:'efmt',    module:null,        name:t('감정꽃 찾기 — 감정 인식 훈련 완료하기', 'Emotion Flower — Complete emotion recognition training'),    emoji:'🌸' },
+      { game:'burnout', module:'missions',  name:t('번아웃 회복 — 회복 미션 완료하기', 'BURNOUT Recovery — Complete a recovery mission'),          emoji:'⚡' },
     ],
     rewardCredits: 50,
     rewardBadge: '🌸',
-    rewardName: '마음 꽃봉오리',
+    rewardName: t('마음 꽃봉오리', 'Mind Bud'),
     unlockLevel: 2,
   },
   {
     id: 'ch3',
-    title: '깊은 성장',
-    subtitle: '자아 탐험',
+    title: t('깊은 성장', 'Deep Growth'),
+    subtitle: t('자아 탐험', 'Self Exploration'),
     emoji: '🌳',
     color: '#5A9BBF',
     colorLight: '#E8F4FA',
-    desc: '집중력과 내면의 나무를 통해 자아를 깊이 탐험해요',
+    desc: t('집중력과 내면의 나무를 통해 자아를 깊이 탐험해요', 'Deeply explore yourself through focus and your inner tree.'),
     steps: [
-      { game:'focus', module:null, name:'마음 집중력 — 집중력 훈련 완료하기',  emoji:'🧠' },
-      { game:'tree',  module:null, name:'내면의 나무 — 자아 탐험하기',         emoji:'🌳' },
-      { game:'efmt',  module:null, name:'감정꽃 찾기 — 감정 인식 재도전하기',  emoji:'💭' },
+      { game:'focus', module:null, name:t('마음 집중력 — 집중력 훈련 완료하기', 'Mind Focus — Complete focus training'),  emoji:'🧠' },
+      { game:'tree',  module:null, name:t('내면의 나무 — 자아 탐험하기', 'Inner Tree — Explore your inner self'),         emoji:'🌳' },
+      { game:'efmt',  module:null, name:t('감정꽃 찾기 — 감정 인식 재도전하기', 'Emotion Flower — Retry emotion recognition'),  emoji:'💭' },
     ],
     rewardCredits: 80,
     rewardBadge: '🌳',
-    rewardName: '마음 만개',
+    rewardName: t('마음 만개', 'Mind Full Bloom'),
     unlockLevel: 3,
   },
 ];
@@ -853,7 +856,7 @@ function CampaignSection({ onPlay }) {
         const fresh = await GameEngine.getCampaign();
         if (fresh.success) setData(fresh.data);
       } else {
-        alert(res.error || '보상 수령 실패');
+        alert(res.error || t('보상 수령 실패', 'Failed to claim reward'));
       }
     } finally {
       setClaiming(null);
@@ -883,18 +886,18 @@ function CampaignSection({ onPlay }) {
       }}>
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
           <span style={{ fontSize:16 }}>📖</span>
-          <span style={{ fontSize:14, fontWeight:700, color:C.dark }}>스토리 캠페인</span>
+          <span style={{ fontSize:14, fontWeight:700, color:C.dark }}>{t('스토리 캠페인', 'Story Campaign')}</span>
           {rewardedCount > 0 && (
             <span style={{
               fontSize:11, fontWeight:700,
               background:`linear-gradient(135deg, ${C.amber}, ${C.amberL})`,
               color:'white', borderRadius:100, padding:'2px 9px',
             }}>
-              {rewardedCount} / {CAMPAIGN_DEF.length} 완료
+              {rewardedCount} / {CAMPAIGN_DEF.length} {t('완료', 'Completed')}
             </span>
           )}
         </div>
-        <span style={{ fontSize:12, color:C.muted }}>{expanded ? '접기 ▲' : '펼치기 ▼'}</span>
+        <span style={{ fontSize:12, color:C.muted }}>{expanded ? t('접기 ▲', 'Collapse ▲') : t('펼치기 ▼', 'Expand ▼')}</span>
       </button>
 
       {expanded && (
@@ -905,7 +908,7 @@ function CampaignSection({ onPlay }) {
         }}>
           {loading && (
             <div style={{ textAlign:'center', padding:'24px', color:C.muted, fontSize:13 }}>
-              불러오는 중...
+              {t('불러오는 중...', 'Loading...')}
             </div>
           )}
 
@@ -921,10 +924,10 @@ function CampaignSection({ onPlay }) {
               <span style={{ fontSize:24 }}>🎉</span>
               <div>
                 <div style={{ fontSize:13, fontWeight:700, color:C.amber }}>
-                  챕터 보상 수령 완료!
+                  {t('챕터 보상 수령 완료!', 'Chapter reward claimed!')}
                 </div>
                 <div style={{ fontSize:12, color:C.muted }}>
-                  +{claimResult.credits} 크레딧이 지급됐어요
+                  +{claimResult.credits} {t('크레딧이 지급됐어요', 'credits have been sent.')}
                 </div>
               </div>
               <button onClick={() => setClaimResult(null)} style={{
@@ -1038,7 +1041,7 @@ function CampaignSection({ onPlay }) {
                                   color:'white', border:'none', borderRadius:8,
                                   padding:'4px 10px', fontSize:10, fontWeight:700, cursor:'pointer',
                                 }}>
-                                  하기 →
+                                  {t('하기 →', 'Go →')}
                                 </button>
                               )}
                             </div>
@@ -1058,10 +1061,10 @@ function CampaignSection({ onPlay }) {
                         }}>
                           <div>
                             <div style={{ fontSize:11, fontWeight:700, color: rewarded ? ch.color : canClaim ? C.amber : C.muted }}>
-                              {rewarded ? `✅ ${ch.rewardBadge} ${ch.rewardName} 획득!` : `🎁 챕터 완료 보상: +${ch.rewardCredits} 크레딧 · ${ch.rewardBadge} ${ch.rewardName}`}
+                              {rewarded ? `✅ ${ch.rewardBadge} ${ch.rewardName} ${t('획득!', 'Earned!')}` : `🎁 ${t('챕터 완료 보상', 'Chapter Reward')}: +${ch.rewardCredits} ${t('크레딧', 'Credits')} · ${ch.rewardBadge} ${ch.rewardName}`}
                             </div>
                             {rewarded && (
-                              <div style={{ fontSize:10, color:C.muted, marginTop:2 }}>보상이 지급됐어요</div>
+                              <div style={{ fontSize:10, color:C.muted, marginTop:2 }}>{t('보상이 지급됐어요', 'Reward has been sent.')}</div>
                             )}
                           </div>
                           {canClaim && (
@@ -1077,7 +1080,7 @@ function CampaignSection({ onPlay }) {
                                 flexShrink:0,
                                 boxShadow:`0 4px 12px ${C.amber}44`,
                               }}>
-                              {claiming === ch.id ? '...' : '보상 받기 🎁'}
+                              {claiming === ch.id ? '...' : `${t('보상 받기', 'Claim Reward')} 🎁`}
                             </button>
                           )}
                         </div>
@@ -1087,7 +1090,7 @@ function CampaignSection({ onPlay }) {
                     {/* 잠금 안내 */}
                     {locked && (
                       <div style={{ padding:'10px 16px 14px', textAlign:'center', fontSize:12, color:C.muted }}>
-                        이전 챕터를 완료하면 해금돼요
+                        {t('이전 챕터를 완료하면 해금돼요', 'Complete the previous chapter to unlock.')}
                       </div>
                     )}
                   </div>
@@ -1103,14 +1106,14 @@ function CampaignSection({ onPlay }) {
 
 // ── 게임 통계 섹션 ───────────────────────────────────────
 const STATS_GAME_META = {
-  garden:    { name:'마음 정원', emoji:'🌿' },
-  mood:      { name:'감정 체크인', emoji:'🎨' },
-  efmt:      { name:'감정 탐색', emoji:'💭' },
-  gratitude: { name:'감사 일기', emoji:'⭐' },
-  tree:      { name:'생각 나무', emoji:'🌳' },
-  burnout:   { name:'번아웃 체크', emoji:'🔥' },
-  focus:     { name:'마음 집중력', emoji:'🧠' },
-  worry:     { name:'걱정 풍선', emoji:'🫧' },
+  garden:    { name:t('마음 정원', 'Mind Garden'), emoji:'🌿' },
+  mood:      { name:t('감정 체크인', 'Emotion Check-in'), emoji:'🎨' },
+  efmt:      { name:t('감정 탐색', 'Emotion Exploration'), emoji:'💭' },
+  gratitude: { name:t('감사 일기', 'Gratitude Journal'), emoji:'⭐' },
+  tree:      { name:t('생각 나무', 'Thought Tree'), emoji:'🌳' },
+  burnout:   { name:t('번아웃 체크', 'BURNOUT Check'), emoji:'🔥' },
+  focus:     { name:t('마음 집중력', 'Mind Focus'), emoji:'🧠' },
+  worry:     { name:t('걱정 풍선', 'Worry Balloon'), emoji:'🫧' },
 };
 
 function GameStatsSection() {
@@ -1142,9 +1145,9 @@ function GameStatsSection() {
         cursor:'pointer', fontFamily:"'Noto Sans KR',sans-serif",
       }}>
         <div style={{ fontSize:14, fontWeight:700, color:C.dark, display:'flex', alignItems:'center', gap:6 }}>
-          <span style={{ fontSize:16 }}>📊</span> 내 게임 통계
+          <span style={{ fontSize:16 }}>📊</span> {t('내 게임 통계', 'My Game Stats')}
         </div>
-        <span style={{ fontSize:12, color:C.muted }}>{expanded ? '접기 ▲' : '펼치기 ▼'}</span>
+        <span style={{ fontSize:12, color:C.muted }}>{expanded ? t('접기 ▲', 'Collapse ▲') : t('펼치기 ▼', 'Expand ▼')}</span>
       </button>
 
       {expanded && (
@@ -1154,14 +1157,14 @@ function GameStatsSection() {
           border:'1px solid rgba(255,255,255,0.6)', borderTop:'none',
           marginTop:-4,
         }}>
-          {loading && <div style={{ textAlign:'center', padding:'24px', color:C.muted, fontSize:13 }}>불러오는 중...</div>}
+          {loading && <div style={{ textAlign:'center', padding:'24px', color:C.muted, fontSize:13 }}>{t('불러오는 중...', 'Loading...')}</div>}
           {!loading && stats && (
             <>
               {/* 요약 카드 */}
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:16, paddingTop:16 }}>
                 {[
-                  { label:'이번 주 플레이', value:`${week.playCount||0}회`, sub:`+${week.expGained||0} EXP`, color:C.sage },
-                  { label:'이번 달 플레이', value:`${month.playCount||0}회`, sub:`+${month.expGained||0} EXP`, color:C.amber },
+                  { label:t('이번 주 플레이', 'This Week'), value:`${week.playCount||0}${t('회', 'x')}`, sub:`+${week.expGained||0} EXP`, color:C.sage },
+                  { label:t('이번 달 플레이', 'This Month'), value:`${month.playCount||0}${t('회', 'x')}`, sub:`+${month.expGained||0} EXP`, color:C.amber },
                 ].map(c => (
                   <div key={c.label} style={{
                     background:'white', borderRadius:14, padding:'14px 16px',
@@ -1176,10 +1179,10 @@ function GameStatsSection() {
 
               {/* 게임별 통계 */}
               <div style={{ fontSize:12, fontWeight:700, color:C.muted, marginBottom:10, letterSpacing:'0.5px' }}>
-                게임별 수행 현황
+                {t('게임별 수행 현황', 'Performance by Game')}
               </div>
               {perGame.length === 0 && (
-                <div style={{ textAlign:'center', padding:'20px', color:C.muted, fontSize:13 }}>아직 플레이 기록이 없어요</div>
+                <div style={{ textAlign:'center', padding:'20px', color:C.muted, fontSize:13 }}>{t('아직 플레이 기록이 없어요', 'No play records yet')}</div>
               )}
               <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                 {perGame.map(g => {
@@ -1194,13 +1197,13 @@ function GameStatsSection() {
                         <span style={{ fontSize:20 }}>{meta.emoji}</span>
                         <div>
                           <div style={{ fontSize:13, fontWeight:600, color:C.dark }}>{meta.name}</div>
-                          <div style={{ fontSize:11, color:C.muted }}>마지막: {lastDate}</div>
+                          <div style={{ fontSize:11, color:C.muted }}>{t('마지막', 'Last')}: {lastDate}</div>
                         </div>
                       </div>
                       <div style={{ textAlign:'right' }}>
-                        <div style={{ fontSize:15, fontWeight:700, color:C.sage }}>{(g.play_count||0)}회</div>
+                        <div style={{ fontSize:15, fontWeight:700, color:C.sage }}>{(g.play_count||0)}{t('회', 'x')}</div>
                         {(g.best_score||0) > 0 && (
-                          <div style={{ fontSize:11, color:C.amber }}>베스트 {g.best_score}점</div>
+                          <div style={{ fontSize:11, color:C.amber }}>{t('베스트', 'Best')} {g.best_score}{t('점', 'pts')}</div>
                         )}
                       </div>
                     </div>
@@ -1240,7 +1243,7 @@ function AchievementPanel({ earned = [], isMaster = false }) {
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
         <div style={{ display:'flex', alignItems:'center', gap:7 }}>
           <span style={{ fontSize:16 }}>🏅</span>
-          <span style={{ fontSize:13, fontWeight:700, color:C.dark }}>업적</span>
+          <span style={{ fontSize:13, fontWeight:700, color:C.dark }}>{t('업적', 'Achievements')}</span>
           <span style={{
             fontSize:11, fontWeight:700,
             background: earnedCount === totalCount ? `linear-gradient(135deg, ${C.amber}, ${C.amberL})` : C.sagePale,
@@ -1292,7 +1295,7 @@ function AchievementPanel({ earned = [], isMaster = false }) {
           fontSize:12, color:C.muted, fontWeight:600,
           fontFamily:"'Noto Sans KR',sans-serif", padding:'2px 0',
         }}>
-          {expanded ? '접기 ▲' : `+${sorted.length - 6}개 더보기 ▼`}
+          {expanded ? t('접기 ▲', 'Collapse ▲') : t(`+${sorted.length - 6}개 더보기 ▼`, `+${sorted.length - 6} more ▼`)}
         </button>
       )}
     </div>
@@ -1329,7 +1332,7 @@ function AchievementToast({ achievements = [], onDismiss }) {
           }}>
             <span style={{ fontSize:24 }}>{a.emoji}</span>
             <div>
-              <div style={{ fontSize:13, fontWeight:700, color:C.dark }}>업적 달성!</div>
+              <div style={{ fontSize:13, fontWeight:700, color:C.dark }}>{t('업적 달성!', 'Achievement Unlocked!')}</div>
               <div style={{ fontSize:12, color:C.sage, fontWeight:600 }}>{a.name}</div>
             </div>
           </div>
@@ -1343,10 +1346,10 @@ function AchievementToast({ achievements = [], onDismiss }) {
 // BurnoutTrendSection — 번아웃 점수 이력 차트
 // ──────────────────────────────────────────────────────────
 const BURNOUT_LEVELS = [
-  { max:  39, label:'낮음',   color:'#52B788', bg:'#D8F3DC' },
-  { max:  59, label:'보통',   color:'#F59E0B', bg:'#FEF3C7' },
-  { max:  79, label:'높음',   color:'#F97316', bg:'#FFEDD5' },
-  { max: 100, label:'심각',   color:'#EF4444', bg:'#FEF2F2' },
+  { max:  39, label:t('낮음', 'Low'),    color:'#52B788', bg:'#D8F3DC' },
+  { max:  59, label:t('보통', 'Medium'), color:'#F59E0B', bg:'#FEF3C7' },
+  { max:  79, label:t('높음', 'High'),   color:'#F97316', bg:'#FFEDD5' },
+  { max: 100, label:t('심각', 'Severe'), color:'#EF4444', bg:'#FEF2F2' },
 ];
 function getBurnoutLevel(score) {
   return BURNOUT_LEVELS.find(l => score <= l.max) || BURNOUT_LEVELS[BURNOUT_LEVELS.length - 1];
@@ -1392,26 +1395,26 @@ function BurnoutTrendSection({ userTestScores }) {
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
         <div style={{ display:'flex', alignItems:'center', gap:7 }}>
           <span style={{ fontSize:16 }}>🔥</span>
-          <span style={{ fontSize:13, fontWeight:700, color:C.dark }}>번아웃 지수 추이</span>
+          <span style={{ fontSize:13, fontWeight:700, color:C.dark }}>{t('번아웃 지수 추이', 'BURNOUT Score Trend')}</span>
           <span style={{
             fontSize:11, fontWeight:700,
             background: level.bg, color: level.color,
             borderRadius:100, padding:'2px 8px',
-          }}>현재 {burnoutScore}점 · {level.label}</span>
+          }}>{t('현재', 'Current')} {burnoutScore}{t('점', 'pts')} · {level.label}</span>
         </div>
         <button onClick={handleToggle} style={{
           background:'none', border:'none', cursor:'pointer',
           fontSize:12, color:C.muted, fontWeight:600,
           fontFamily:"'Noto Sans KR',sans-serif",
-        }}>{expanded ? '접기 ▲' : '펼치기 ▼'}</button>
+        }}>{expanded ? t('접기 ▲', 'Collapse ▲') : t('펼치기 ▼', 'Expand ▼')}</button>
       </div>
 
       {expanded && (
         <div style={{ marginTop:14, animation:'fadeUp 0.3s ease' }}>
-          {loading && <div style={{ textAlign:'center', padding:16, color:C.muted, fontSize:12 }}>불러오는 중...</div>}
+          {loading && <div style={{ textAlign:'center', padding:16, color:C.muted, fontSize:12 }}>{t('불러오는 중...', 'Loading...')}</div>}
           {!loading && history && entries.length === 0 && (
             <div style={{ textAlign:'center', padding:16, color:C.muted, fontSize:12 }}>
-              아직 번아웃 게임 기록이 없어요.<br/>게임을 플레이하면 점수 변화를 확인할 수 있어요!
+              {t('아직 번아웃 게임 기록이 없어요.', 'No BURNOUT game records yet.')}<br/>{t('게임을 플레이하면 점수 변화를 확인할 수 있어요!', 'Play the game to track score changes!')}
             </div>
           )}
           {!loading && entries.length >= 2 && (
@@ -1419,7 +1422,7 @@ function BurnoutTrendSection({ userTestScores }) {
               background:'white', borderRadius:14, padding:'14px 16px', marginBottom:12,
               border:`1px solid ${level.color}22`,
             }}>
-              <div style={{ fontSize:11, color:C.muted, marginBottom:8 }}>번아웃 점수 이력 (낮을수록 건강)</div>
+              <div style={{ fontSize:11, color:C.muted, marginBottom:8 }}>{t('번아웃 점수 이력 (낮을수록 건강)', 'BURNOUT score history (lower is healthier)')}</div>
               <svg viewBox={`0 0 ${W} ${H}`} style={{ width:'100%', height:'auto', display:'block' }}>
                 {/* 위험 구간 배경 */}
                 <rect x={PAD} y={PAD} width={plotW} height={toY(60) - PAD} fill="#FEF3C7" opacity="0.4" rx="2"/>
@@ -1437,7 +1440,7 @@ function BurnoutTrendSection({ userTestScores }) {
                   <g key={i}>
                     <circle cx={p.x} cy={p.y} r="3.5" fill="white" stroke={level.color} strokeWidth="2"/>
                     <text x={p.x} y={H-1} textAnchor="middle" fontSize="7" fill="#C0C0C0">
-                      {new Date(p.date+'T00:00:00').toLocaleDateString('ko-KR',{month:'numeric',day:'numeric'})}
+                      {new Date(p.date+'T00:00:00').toLocaleDateString(GAME_LANG === 'en' ? 'en-US' : 'ko-KR',{month:'numeric',day:'numeric'})}
                     </text>
                   </g>
                 ))}
@@ -1455,7 +1458,7 @@ function BurnoutTrendSection({ userTestScores }) {
                     marginTop:8, fontSize:12, fontWeight:600, textAlign:'center',
                     color: diff <= 0 ? '#52B788' : '#EF4444',
                   }}>
-                    {diff <= 0 ? `✅ 지난 회 대비 ${Math.abs(diff)}점 개선됐어요!` : `⚠️ 지난 회 대비 ${diff}점 높아졌어요. 쉬어가세요.`}
+                    {diff <= 0 ? t(`✅ 지난 회 대비 ${Math.abs(diff)}점 개선됐어요!`, `✅ Improved by ${Math.abs(diff)}pts from last time!`) : t(`⚠️ 지난 회 대비 ${diff}점 높아졌어요. 쉬어가세요.`, `⚠️ Up by ${diff}pts from last time. Take a break.`)}
                   </div>
                 );
               })()}
@@ -1467,7 +1470,7 @@ function BurnoutTrendSection({ userTestScores }) {
               <div key={l.label} style={{
                 fontSize:10, padding:'3px 8px', borderRadius:100,
                 background:l.bg, color:l.color, fontWeight:600,
-              }}>{l.label} ~{l.max}점</div>
+              }}>{l.label} ~{l.max}{t('점', 'pts')}</div>
             ))}
           </div>
         </div>
@@ -1480,14 +1483,14 @@ function BurnoutTrendSection({ userTestScores }) {
 // GameHistorySection — 최근 게임 플레이 이력
 // ──────────────────────────────────────────────────────────
 const HISTORY_GAME_META = {
-  mood:     { name:'감정 수채화', emoji:'😊', color:'#6366F1' },
-  garden:   { name:'마음의 정원', emoji:'🌿', color:'#22C55E' },
-  efmt:     { name:'감정꽃',     emoji:'🌸', color:'#EC4899' },
-  gratitude:{ name:'감사 일기',  emoji:'🙏', color:'#F59E0B' },
-  burnout:  { name:'번아웃 회복',emoji:'🔋', color:'#F97316' },
-  focus:    { name:'집중력 훈련',emoji:'🧠', color:'#0EA5E9' },
-  worry:    { name:'걱정 풍선',  emoji:'🫧', color:'#8B5CF6' },
-  tree:     { name:'마음 나무',  emoji:'🌲', color:'#16A34A' },
+  mood:     { name:t('감정 수채화', 'Emotion Watercolor'), emoji:'😊', color:'#6366F1' },
+  garden:   { name:t('마음의 정원', 'Mind Garden'),        emoji:'🌿', color:'#22C55E' },
+  efmt:     { name:t('감정꽃',     'Emotion Flower'),      emoji:'🌸', color:'#EC4899' },
+  gratitude:{ name:t('감사 일기',  'Gratitude Journal'),   emoji:'🙏', color:'#F59E0B' },
+  burnout:  { name:t('번아웃 회복','BURNOUT Recovery'),    emoji:'🔋', color:'#F97316' },
+  focus:    { name:t('집중력 훈련','Focus Training'),      emoji:'🧠', color:'#0EA5E9' },
+  worry:    { name:t('걱정 풍선',  'Worry Balloon'),       emoji:'🫧', color:'#8B5CF6' },
+  tree:     { name:t('마음 나무',  'Mind Tree'),           emoji:'🌲', color:'#16A34A' },
 };
 function GameHistorySection() {
   const [sessions, setSessions] = React.useState(null);
@@ -1508,24 +1511,25 @@ function GameHistorySection() {
     <div style={{ background:'rgba(255,255,255,0.7)', backdropFilter:'blur(8px)', borderRadius:20, padding:'16px 20px', marginBottom:24, border:'1px solid rgba(255,255,255,0.6)' }}>
       <button onClick={handleToggle} style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between', background:'none', border:'none', cursor:'pointer', fontFamily:"'Noto Sans KR',sans-serif" }}>
         <div style={{ fontSize:14, fontWeight:700, color:C.dark, display:'flex', alignItems:'center', gap:6 }}>
-          <span>📅</span> 게임 플레이 이력
+          <span>📅</span> {t('게임 플레이 이력', 'Game Play History')}
         </div>
-        <span style={{ fontSize:12, color:C.muted }}>{expanded ? '접기 ▲' : '펼치기 ▼'}</span>
+        <span style={{ fontSize:12, color:C.muted }}>{expanded ? t('접기 ▲', 'Collapse ▲') : t('펼치기 ▼', 'Expand ▼')}</span>
       </button>
       {expanded && (
         <div style={{ marginTop:14 }}>
-          {loading && <div style={{ textAlign:'center', padding:16, color:C.muted, fontSize:12 }}>불러오는 중...</div>}
+          {loading && <div style={{ textAlign:'center', padding:16, color:C.muted, fontSize:12 }}>{t('불러오는 중...', 'Loading...')}</div>}
           {!loading && sessions && sessions.length === 0 && (
-            <div style={{ textAlign:'center', padding:16, color:C.muted, fontSize:12 }}>아직 플레이 기록이 없어요</div>
+            <div style={{ textAlign:'center', padding:16, color:C.muted, fontSize:12 }}>{t('아직 플레이 기록이 없어요', 'No play records yet')}</div>
           )}
           {!loading && sessions && sessions.length > 0 && (
             <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
               {sessions.map((s, i) => {
                 const meta = HISTORY_GAME_META[s.game_id] || { name:s.game_id, emoji:'🎮', color:'#6B7280' };
                 const date = new Date(s.created_at);
-                const dateStr = date.toLocaleDateString('ko-KR', { month:'short', day:'numeric' });
-                const timeStr = date.toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit' });
-                const dur = s.duration_sec > 0 ? (s.duration_sec >= 60 ? `${Math.floor(s.duration_sec/60)}분` : `${s.duration_sec}초`) : null;
+                const locale = GAME_LANG === 'en' ? 'en-US' : 'ko-KR';
+                const dateStr = date.toLocaleDateString(locale, { month:'short', day:'numeric' });
+                const timeStr = date.toLocaleTimeString(locale, { hour:'2-digit', minute:'2-digit' });
+                const dur = s.duration_sec > 0 ? (s.duration_sec >= 60 ? t(`${Math.floor(s.duration_sec/60)}분`, `${Math.floor(s.duration_sec/60)}m`) : t(`${s.duration_sec}초`, `${s.duration_sec}s`)) : null;
                 return (
                   <div key={i} style={{ display:'flex', alignItems:'center', gap:12, background:'white', borderRadius:12, padding:'10px 14px', borderLeft:`3px solid ${meta.color}` }}>
                     <span style={{ fontSize:20, flexShrink:0 }}>{meta.emoji}</span>
@@ -1534,7 +1538,7 @@ function GameHistorySection() {
                       <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>{dateStr} {timeStr}{dur ? ` · ${dur}` : ''}</div>
                     </div>
                     <div style={{ textAlign:'right', flexShrink:0 }}>
-                      {s.score > 0 && <div style={{ fontSize:14, fontWeight:700, color:meta.color }}>{s.score}점</div>}
+                      {s.score > 0 && <div style={{ fontSize:14, fontWeight:700, color:meta.color }}>{s.score}{t('점', 'pts')}</div>}
                       <div style={{ fontSize:11, color:C.muted }}>+{s.exp_gained || 0} EXP</div>
                     </div>
                   </div>
@@ -1573,9 +1577,9 @@ function AIDiarySection() {
 
   function share() {
     if (!diary) return;
-    const text = `📔 오늘의 마음 일기\n${diary}\n\n마음게임에서 기록했어요 🌿 https://game.maumful.com`;
-    if (navigator.share) { navigator.share({ title: '마음 일기', text }).catch(() => {}); }
-    else { navigator.clipboard?.writeText(text).then(() => alert('복사됐어요!')); }
+    const text = t(`📔 오늘의 마음 일기\n${diary}\n\n마음게임에서 기록했어요 🌿 https://game.maumful.com`, `📔 Today's Mind Diary\n${diary}\n\nRecorded on Maumgame 🌿 https://game.maumful.com`);
+    if (navigator.share) { navigator.share({ title: t('마음 일기', 'Mind Diary'), text }).catch(() => {}); }
+    else { navigator.clipboard?.writeText(text).then(() => alert(t('복사됐어요!', 'Copied!'))); }
   }
 
   if (!checked && !diary) {
@@ -1584,14 +1588,14 @@ function AIDiarySection() {
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
           <div style={{display:'flex',alignItems:'center',gap:8}}>
             <span style={{fontSize:18}}>📔</span>
-            <span style={{fontSize:14,fontWeight:700,color:'#2D6A4F'}}>오늘의 마음 일기</span>
+            <span style={{fontSize:14,fontWeight:700,color:'#2D6A4F'}}>{t('오늘의 마음 일기', "Today's Mind Diary")}</span>
           </div>
           <button onClick={loadDiary} disabled={loading}
             style={{fontSize:12,background:'#2D6A4F',color:'white',border:'none',borderRadius:20,padding:'5px 14px',cursor:'pointer',fontFamily:"'Noto Sans KR',sans-serif"}}>
-            {loading ? '생성 중...' : '✍️ 일기 생성'}
+            {loading ? t('생성 중...', 'Generating...') : t('✍️ 일기 생성', '✍️ Generate Diary')}
           </button>
         </div>
-        <p style={{fontSize:12,color:'#9A9A9A',margin:0}}>오늘의 감정 기록을 바탕으로 AI가 마음 일기를 작성해 드려요.</p>
+        <p style={{fontSize:12,color:'#9A9A9A',margin:0}}>{t('오늘의 감정 기록을 바탕으로 AI가 마음 일기를 작성해 드려요.', 'AI writes a mind diary based on your emotion records today.')}</p>
       </div>
     );
   }
@@ -1606,13 +1610,13 @@ function AIDiarySection() {
         <div style={{display:'flex',alignItems:'center',gap:8}}>
           <span style={{fontSize:18}}>📔</span>
           <div>
-            <span style={{fontSize:14,fontWeight:700,color:'#15803d'}}>오늘의 마음 일기</span>
+            <span style={{fontSize:14,fontWeight:700,color:'#15803d'}}>{t('오늘의 마음 일기', "Today's Mind Diary")}</span>
             <span style={{fontSize:11,color:'#86efac',marginLeft:8}}>{todayStr}</span>
           </div>
         </div>
         <button onClick={share}
           style={{fontSize:11,background:'transparent',color:'#16a34a',border:'1px solid #86efac',borderRadius:20,padding:'4px 10px',cursor:'pointer',fontFamily:"'Noto Sans KR',sans-serif"}}>
-          공유 🔗
+          {t('공유 🔗', 'Share 🔗')}
         </button>
       </div>
       <p style={{fontSize:14,color:'#166534',lineHeight:1.7,margin:0,fontStyle:'italic'}}>{diary}</p>
@@ -1627,7 +1631,9 @@ const MOOD_EMOJI_MAP = {
   happy:'😊', calm:'😌', tired:'😴', anxious:'😰', sad:'😢',
   angry:'😤', hopeful:'🌟', bored:'😑',
 };
-const DAY_LABELS = ['일','월','화','수','목','금','토'];
+const DAY_LABELS = GAME_LANG === 'en'
+  ? ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+  : ['일','월','화','수','목','금','토'];
 
 function WeekMoodSummaryCard() {
   const [entries, setEntries] = useState(null);
@@ -1675,9 +1681,9 @@ function WeekMoodSummaryCard() {
         display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12,
       }}>
         <div style={{ fontSize:13, fontWeight:700, color:C.dark, display:'flex', alignItems:'center', gap:6 }}>
-          {dominantEmoji} 이번 주 감정 흐름
+          {dominantEmoji} {t('이번 주 감정 흐름', "This Week's Mood Flow")}
         </div>
-        <div style={{ fontSize:11, color:C.muted }}>{entries.length}일 기록</div>
+        <div style={{ fontSize:11, color:C.muted }}>{t(`${entries.length}일 기록`, `${entries.length} days recorded`)}</div>
       </div>
 
       {/* 7일 도트 차트 */}
@@ -1709,11 +1715,11 @@ function WeekMoodSummaryCard() {
 
       {dominant && (
         <div style={{ fontSize:12, color:C.muted, marginTop:10, textAlign:'center' }}>
-          이번 주 주요 감정:{' '}
+          {t('이번 주 주요 감정', "This week's dominant mood")}:{' '}
           <span style={{ color:C.dark, fontWeight:600 }}>
-            {dominantEmoji} {dominant[0] === 'happy' ? '행복' : dominant[0] === 'calm' ? '평온' : dominant[0] === 'tired' ? '피곤' : dominant[0] === 'anxious' ? '불안' : dominant[0] === 'sad' ? '슬픔' : dominant[0]}
+            {dominantEmoji} {dominant[0] === 'happy' ? t('행복', 'Happy') : dominant[0] === 'calm' ? t('평온', 'Calm') : dominant[0] === 'tired' ? t('피곤', 'Tired') : dominant[0] === 'anxious' ? t('불안', 'Anxious') : dominant[0] === 'sad' ? t('슬픔', 'Sad') : dominant[0]}
           </span>{' '}
-          ({dominant[1]}일)
+          ({t(`${dominant[1]}일`, `${dominant[1]} days`)})
         </div>
       )}
     </div>
@@ -1723,12 +1729,12 @@ function WeekMoodSummaryCard() {
 // EmotionWeeklyReport — AI 감정 주간 분석 (접기/펼치기)
 // ──────────────────────────────────────────────────────────
 const EMOTION_DISPLAY = {
-  happy:   { emoji:'😊', label:'행복', color:'#F59E0B' },
-  calm:    { emoji:'😌', label:'평온', color:'#7BA88A' },
-  tired:   { emoji:'😴', label:'피곤', color:'#9BA8B0' },
-  anxious: { emoji:'😰', label:'불안', color:'#C4B5FD' },
-  sad:     { emoji:'😢', label:'슬픔', color:'#93C5FD' },
-  angry:   { emoji:'😤', label:'화남', color:'#FCA5A5' },
+  happy:   { emoji:'😊', label:t('행복', 'Happy'),   color:'#F59E0B' },
+  calm:    { emoji:'😌', label:t('평온', 'Calm'),    color:'#7BA88A' },
+  tired:   { emoji:'😴', label:t('피곤', 'Tired'),   color:'#9BA8B0' },
+  anxious: { emoji:'😰', label:t('불안', 'Anxious'), color:'#C4B5FD' },
+  sad:     { emoji:'😢', label:t('슬픔', 'Sad'),     color:'#93C5FD' },
+  angry:   { emoji:'😤', label:t('화남', 'Angry'),   color:'#FCA5A5' },
 };
 
 function EmotionWeeklyReport() {
@@ -1756,13 +1762,13 @@ function EmotionWeeklyReport() {
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
         <div style={{ display:'flex', alignItems:'center', gap:7 }}>
           <span style={{ fontSize:16 }}>📊</span>
-          <span style={{ fontSize:13, fontWeight:700, color:C.dark }}>이번 주 감정 흐름</span>
+          <span style={{ fontSize:13, fontWeight:700, color:C.dark }}>{t('이번 주 감정 흐름', "This Week's Mood Flow")}</span>
           {entries.length > 0 && (
             <span style={{
               fontSize:11, fontWeight:600,
               background:C.sagePale, color:C.sage,
               borderRadius:100, padding:'2px 8px',
-            }}>{entries.length}일 기록</span>
+            }}>{t(`${entries.length}일 기록`, `${entries.length} days recorded`)}</span>
           )}
         </div>
         <div style={{ display:'flex', gap:6 }}>
@@ -1771,23 +1777,23 @@ function EmotionWeeklyReport() {
               const topEmotion = entries.length > 0
                 ? (EMOTION_DISPLAY[entries[entries.length-1]?.emotion] || { emoji:'😶', label:entries[entries.length-1]?.emotion })
                 : null;
-              const text = `🌿 이번 주 마음의 정원\n${topEmotion ? topEmotion.emoji + ' ' + topEmotion.label + ' ' : ''}${entries.length}일 감정 기록\n\n${reportData.report.slice(0,80)}...\n\n#마음풀 #마음게임 #감정기록`;
+              const text = t(`🌿 이번 주 마음의 정원\n${topEmotion ? topEmotion.emoji + ' ' + topEmotion.label + ' ' : ''}${entries.length}일 감정 기록\n\n${reportData.report.slice(0,80)}...\n\n#마음풀 #마음게임 #감정기록`, `🌿 This Week's Mind Garden\n${topEmotion ? topEmotion.emoji + ' ' + topEmotion.label + ' ' : ''}${entries.length} days recorded\n\n${reportData.report.slice(0,80)}...\n\n#Maumful #MindGame #EmotionLog`);
               if (navigator.share) {
-                navigator.share({ title:'이번 주 감정 흐름', text }).catch(()=>{});
+                navigator.share({ title:t('이번 주 감정 흐름', "This Week's Mood Flow"), text }).catch(()=>{});
               } else {
-                navigator.clipboard?.writeText(text).then(()=>alert('복사됐어요!')).catch(()=>{});
+                navigator.clipboard?.writeText(text).then(()=>alert(t('복사됐어요!', 'Copied!'))).catch(()=>{});
               }
             }} style={{
               background:'none', border:'none', cursor:'pointer',
               fontSize:12, color:C.muted, fontWeight:600,
               fontFamily:"'Noto Sans KR',sans-serif",
-            }}>공유 🔗</button>
+            }}>{t('공유 🔗', 'Share 🔗')}</button>
           )}
           <button onClick={() => setExpanded(v => !v)} style={{
             background:'none', border:'none', cursor:'pointer',
             fontSize:12, color:C.muted, fontWeight:600,
             fontFamily:"'Noto Sans KR',sans-serif",
-          }}>{expanded ? '접기 ▲' : '펼치기 ▼'}</button>
+          }}>{expanded ? t('접기 ▲', 'Collapse ▲') : t('펼치기 ▼', 'Expand ▼')}</button>
         </div>
       </div>
 
@@ -1812,7 +1818,7 @@ function EmotionWeeklyReport() {
                       display:'flex', alignItems:'center', justifyContent:'center', fontSize:18,
                     }}>{em.emoji}</div>
                     <div style={{ fontSize:9, color:C.muted, textAlign:'center' }}>
-                      {new Date(e.date + 'T00:00:00').toLocaleDateString('ko-KR', { month:'numeric', day:'numeric' })}
+                      {new Date(e.date + 'T00:00:00').toLocaleDateString(GAME_LANG === 'en' ? 'en-US' : 'ko-KR', { month:'numeric', day:'numeric' })}
                     </div>
                     {/* 강도 점 */}
                     <div style={{
@@ -1833,7 +1839,7 @@ function EmotionWeeklyReport() {
             border:`1px solid ${C.sage}22`,
           }}>
             <div style={{ fontSize:10, fontWeight:700, color:C.sage, marginBottom:6, letterSpacing:'0.5px' }}>
-              🤖 AI 감정 패턴 분석
+              🤖 {t('AI 감정 패턴 분석', 'AI Emotion Pattern Analysis')}
             </div>
             <div style={{ fontSize:13, color:C.dark, lineHeight:1.75,
               fontFamily:"'Noto Sans KR',sans-serif" }}>
@@ -1841,7 +1847,7 @@ function EmotionWeeklyReport() {
             </div>
             {reportData.cached && (
               <div style={{ fontSize:10, color:C.muted, marginTop:6 }}>
-                이번 주 분석 · 매주 월요일 갱신
+                {t('이번 주 분석 · 매주 월요일 갱신', 'This week\'s analysis · Updated every Monday')}
               </div>
             )}
           </div>
@@ -1855,14 +1861,14 @@ function EmotionWeeklyReport() {
 // TodayRecommendCard — 오늘의 게임 추천 (클라이언트 사이드)
 // ──────────────────────────────────────────────────────────
 const GAME_META = {
-  garden:    { name:'마음의 정원',      emoji:'🌿' },
-  mood:      { name:'감정 수채화',      emoji:'🎨' },
-  efmt:      { name:'감정꽃 찾기',      emoji:'🌸' },
-  gratitude: { name:'별빛 감사 일기',   emoji:'⭐' },
-  tree:      { name:'내면의 나무',      emoji:'🌳' },
-  burnout:   { name:'번아웃 회복',      emoji:'⚡' },
-  focus:     { name:'마음 집중력',      emoji:'🧠' },
-  worry:     { name:'걱정 풍선',        emoji:'🫧' },
+  garden:    { name:t('마음의 정원',    'Mind Garden'),            emoji:'🌿' },
+  mood:      { name:t('감정 수채화',    'Emotion Watercolor'),     emoji:'🎨' },
+  efmt:      { name:t('감정꽃 찾기',    'Emotion Flower'),         emoji:'🌸' },
+  gratitude: { name:t('별빛 감사 일기', 'Starlight Gratitude'),    emoji:'⭐' },
+  tree:      { name:t('내면의 나무',    'Inner Tree'),             emoji:'🌳' },
+  burnout:   { name:t('번아웃 회복',    'BURNOUT Recovery'),       emoji:'⚡' },
+  focus:     { name:t('마음 집중력',    'Mind Focus'),             emoji:'🧠' },
+  worry:     { name:t('걱정 풍선',      'Worry Balloon'),          emoji:'🫧' },
 };
 
 function TodayRecommendCard({ hubData, onPlay }) {
@@ -1879,23 +1885,23 @@ function TodayRecommendCard({ hubData, onPlay }) {
   const gad7 = userTestScores.GAD7;
 
   if (phq9 !== undefined && phq9 >= 15) {
-    rec = { gameId:'garden', reason:`PHQ-9 ${phq9}점 — 지금 호흡 훈련이 마음을 안정시켜줘요`, color:C.dusty };
+    rec = { gameId:'garden', reason:t(`PHQ-9 ${phq9}점 — 지금 호흡 훈련이 마음을 안정시켜줘요`, `PHQ-9 ${phq9}pts — Breathing training will calm your mind`), color:C.dusty };
   } else if (gad7 !== undefined && gad7 >= 10) {
-    rec = { gameId:'worry', reason:`GAD-7 ${gad7}점 — 불안한 생각을 풍선에 담아 내려놓아요 🫧`, color:'#7B9ED9' };
+    rec = { gameId:'worry', reason:t(`GAD-7 ${gad7}점 — 불안한 생각을 풍선에 담아 내려놓아요 🫧`, `GAD-7 ${gad7}pts — Release anxious thoughts into a balloon 🫧`), color:'#7B9ED9' };
   } else if (burnout !== undefined && burnout >= 60 && level >= 2) {
-    rec = { gameId:'burnout', reason:`번아웃 지수 ${burnout}점 — 오늘 회복 미션을 시작해보세요`, color:C.amber };
+    rec = { gameId:'burnout', reason:t(`번아웃 지수 ${burnout}점 — 오늘 회복 미션을 시작해보세요`, `BURNOUT score ${burnout}pts — Start a recovery mission today`), color:C.amber };
   } else if (!recentIds.includes('mood')) {
-    rec = { gameId:'mood', reason:'오늘 감정 기록을 아직 안 했어요 ✍️', color:C.sage };
+    rec = { gameId:'mood', reason:t("오늘 감정 기록을 아직 안 했어요 ✍️", "You haven't recorded your emotions today ✍️"), color:C.sage };
   } else if (phq9 !== undefined && phq9 >= 5) {
-    rec = { gameId:'worry', reason:'마음속 걱정을 풍선에 담아 날려 보낼까요? 🫧', color:'#7B9ED9' };
+    rec = { gameId:'worry', reason:t('마음속 걱정을 풍선에 담아 날려 보낼까요? 🫧', 'Float away your worries in a balloon? 🫧'), color:'#7B9ED9' };
   } else if (level >= 2 && !recentIds.includes('efmt')) {
-    rec = { gameId:'efmt', reason:'감정꽃 찾기로 감정 인식력을 키워보세요 🌸', color:'#C97B8A' };
+    rec = { gameId:'efmt', reason:t('감정꽃 찾기로 감정 인식력을 키워보세요 🌸', 'Build emotional awareness with Emotion Flower 🌸'), color:'#C97B8A' };
   } else if (level >= 2 && !recentIds.includes('gratitude')) {
-    rec = { gameId:'gratitude', reason:'오늘의 감사 일기를 써볼까요? ⭐', color:C.amber };
+    rec = { gameId:'gratitude', reason:t('오늘의 감사 일기를 써볼까요? ⭐', "Write today's gratitude journal? ⭐"), color:C.amber };
   } else if (!recentIds.includes('worry')) {
-    rec = { gameId:'worry', reason:'걱정 풍선으로 마음속 짐을 가볍게 해보세요 🫧', color:'#7B9ED9' };
+    rec = { gameId:'worry', reason:t('걱정 풍선으로 마음속 짐을 가볍게 해보세요 🫧', 'Lighten your mental load with Worry Balloon 🫧'), color:'#7B9ED9' };
   } else {
-    rec = { gameId:'garden', reason:'잠깐 호흡을 가다듬고 정원을 가꿔볼까요? 🌿', color:C.sage };
+    rec = { gameId:'garden', reason:t('잠깐 호흡을 가다듬고 정원을 가꿔볼까요? 🌿', 'Take a breath and tend your garden? 🌿'), color:C.sage };
   }
 
   const game = GAME_META[rec.gameId];
@@ -1908,7 +1914,7 @@ function TodayRecommendCard({ hubData, onPlay }) {
       border:`1px solid ${rec.color}28`,
     }}>
       <div style={{ fontSize:10, fontWeight:700, color:rec.color, marginBottom:10, letterSpacing:'0.5px' }}>
-        ✨ 오늘의 추천
+        ✨ {t('오늘의 추천', "Today's Pick")}
       </div>
       <div style={{ display:'flex', alignItems:'center', gap:14 }}>
         <div style={{
@@ -1926,7 +1932,7 @@ function TodayRecommendCard({ hubData, onPlay }) {
           background:`linear-gradient(135deg, ${rec.color}, ${rec.color}BB)`,
           color:'white', border:'none', borderRadius:12,
           padding:'9px 16px', fontSize:12, fontWeight:700, cursor:'pointer', flexShrink:0,
-        }}>시작 →</button>
+        }}>{t('시작 →', 'Start →')}</button>
       </div>
     </div>
   );
@@ -1936,15 +1942,15 @@ function TodayRecommendCard({ hubData, onPlay }) {
 // DailyQuestCard — 데일리 퀘스트 (날짜 시드 기반)
 // ──────────────────────────────────────────────────────────
 const QUEST_POOL = [
-  { id:'play_mood',      game:'mood',      module:'checkin',        text:'오늘의 감정 기록하기',           emoji:'🎨', exp:15 },
-  { id:'play_breathing', game:'garden',    module:'breathing',      text:'호흡 훈련 한 번 완료하기',       emoji:'💧', exp:20 },
-  { id:'play_cbt',       game:'garden',    module:'cbt',            text:'생각 교정 한 번 완료하기',       emoji:'🌱', exp:20 },
-  { id:'play_gratitude', game:'gratitude', module:'gratitude_write',text:'감사 일기 쓰기',                emoji:'⭐', exp:20 },
-  { id:'play_efmt',      game:'efmt',      module:'efmt_easy',      text:'감정꽃 찾기 한 번 완료하기',     emoji:'🌸', exp:20, minLevel:2 },
-  { id:'play_burnout',   game:'burnout',   module:'missions',       text:'번아웃 회복 미션 완료하기',      emoji:'⚡', exp:20, minLevel:2 },
-  { id:'play_tree',      game:'tree',      module:'roots',          text:'내면의 나무 탐험하기',           emoji:'🌳', exp:25, minLevel:4 },
-  { id:'play_focus',     game:'focus',     module:'focus_training', text:'집중력 훈련 한 번 완료하기',      emoji:'🧠', exp:20, minLevel:3 },
-  { id:'play_any',       game:null,        module:null,             text:'아무 게임이나 한 번 플레이하기',  emoji:'🎮', exp:10 },
+  { id:'play_mood',      game:'mood',      module:'checkin',        text:t('오늘의 감정 기록하기', "Record today's emotion"),           emoji:'🎨', exp:15 },
+  { id:'play_breathing', game:'garden',    module:'breathing',      text:t('호흡 훈련 한 번 완료하기', 'Complete one breathing training'),       emoji:'💧', exp:20 },
+  { id:'play_cbt',       game:'garden',    module:'cbt',            text:t('생각 교정 한 번 완료하기', 'Complete one thought reframing'),       emoji:'🌱', exp:20 },
+  { id:'play_gratitude', game:'gratitude', module:'gratitude_write',text:t('감사 일기 쓰기', 'Write a gratitude journal'),                emoji:'⭐', exp:20 },
+  { id:'play_efmt',      game:'efmt',      module:'efmt_easy',      text:t('감정꽃 찾기 한 번 완료하기', 'Complete one Emotion Flower session'),     emoji:'🌸', exp:20, minLevel:2 },
+  { id:'play_burnout',   game:'burnout',   module:'missions',       text:t('번아웃 회복 미션 완료하기', 'Complete a BURNOUT recovery mission'),      emoji:'⚡', exp:20, minLevel:2 },
+  { id:'play_tree',      game:'tree',      module:'roots',          text:t('내면의 나무 탐험하기', 'Explore the Inner Tree'),           emoji:'🌳', exp:25, minLevel:4 },
+  { id:'play_focus',     game:'focus',     module:'focus_training', text:t('집중력 훈련 한 번 완료하기', 'Complete one focus training session'),      emoji:'🧠', exp:20, minLevel:3 },
+  { id:'play_any',       game:null,        module:null,             text:t('아무 게임이나 한 번 플레이하기', 'Play any game once'),  emoji:'🎮', exp:10 },
 ];
 
 function getDailyQuests(level = 1, userId = 0) {
@@ -2001,7 +2007,7 @@ function DailyQuestCard({ todaySessions = [], level = 1, userId = 0, streakRecov
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
         <div style={{ display:'flex', alignItems:'center', gap:7 }}>
           <span style={{ fontSize:16 }}>📋</span>
-          <span style={{ fontSize:13, fontWeight:700, color:C.dark }}>오늘의 퀘스트</span>
+          <span style={{ fontSize:13, fontWeight:700, color:C.dark }}>{t('오늘의 퀘스트', "Today's Quests")}</span>
           <span style={{
             fontSize:11, fontWeight:700,
             background: allDone ? `linear-gradient(135deg, ${C.amber}, ${C.amberL})` : C.sagePale,
@@ -2023,7 +2029,7 @@ function DailyQuestCard({ todaySessions = [], level = 1, userId = 0, streakRecov
         )}
         {bonusDone && (
           <span style={{ fontSize:11, color:C.sage, fontWeight:700 }}>
-            ✓ 보너스 획득!{streakRecover > 0 && ` 🛡️${streakRecover}`}
+            ✓ {t('보너스 획득!', 'Bonus earned!')}{streakRecover > 0 && ` 🛡️${streakRecover}`}
           </span>
         )}
       </div>
@@ -2058,7 +2064,7 @@ function DailyQuestCard({ todaySessions = [], level = 1, userId = 0, streakRecov
                   color:'white', border:'none', borderRadius:8,
                   padding:'5px 12px', fontSize:11, fontWeight:700, cursor:'pointer',
                 }}>
-                  시작 →
+                  {t('시작 →', 'Start →')}
                 </button>
               )}
             </div>
@@ -2077,18 +2083,18 @@ function OnboardingOverlay({ onDone }) {
   const steps = [
     {
       emoji: '🌿',
-      title: '마음의 정원에 오신 것을 환영해요',
-      body: '마음풀의 심리검사 결과와 연동하여 나만의 치유 공간을 가꾸는 게임 플랫폼이에요. 게임을 즐기며 마음을 돌보세요.',
+      title: t('마음의 정원에 오신 것을 환영해요', 'Welcome to Mind Garden'),
+      body: t('마음풀의 심리검사 결과와 연동하여 나만의 치유 공간을 가꾸는 게임 플랫폼이에요. 게임을 즐기며 마음을 돌보세요.', 'A healing game platform linked to your Maumful psych test results. Enjoy games and care for your mind.'),
     },
     {
       emoji: '🌱',
-      title: '레벨업으로 새 게임을 해금해요',
-      body: '게임을 플레이하면 EXP가 쌓여 레벨업해요. 레벨 2부터 감정꽃 찾기·번아웃 회복 등 더 많은 게임이 열립니다.',
+      title: t('레벨업으로 새 게임을 해금해요', 'Level up to unlock new games'),
+      body: t('게임을 플레이하면 EXP가 쌓여 레벨업해요. 레벨 2부터 감정꽃 찾기·번아웃 회복 등 더 많은 게임이 열립니다.', 'Playing games earns EXP and levels you up. From level 2, more games like Emotion Flower and BURNOUT Recovery unlock.'),
     },
     {
       emoji: '🎨',
-      title: '먼저 오늘의 감정을 기록해볼까요?',
-      body: '감정 수채화는 매일 내 감정을 기록하는 기초 게임이에요. 레벨 1부터 무료로 즐길 수 있어요!',
+      title: t('먼저 오늘의 감정을 기록해볼까요?', "Let's record today's emotion first!"),
+      body: t('감정 수채화는 매일 내 감정을 기록하는 기초 게임이에요. 레벨 1부터 무료로 즐길 수 있어요!', 'Emotion Watercolor is a basic game to record your daily emotions. Free from level 1!'),
     },
   ];
   const isLast = step === steps.length - 1;
@@ -2136,7 +2142,7 @@ function OnboardingOverlay({ onDone }) {
           color:'white', border:'none', fontSize:14, fontWeight:700,
           cursor:'pointer', boxShadow:`0 8px 24px ${C.sage}44`,
         }}>
-          {isLast ? '🌿 정원 탐험 시작하기' : '다음 →'}
+          {isLast ? t('🌿 정원 탐험 시작하기', '🌿 Start Exploring') : t('다음 →', 'Next →')}
         </button>
         <button onClick={dismiss} style={{
           fontFamily:"'Noto Sans KR', sans-serif",
@@ -2144,7 +2150,7 @@ function OnboardingOverlay({ onDone }) {
           fontSize:12, color:C.muted, marginTop:10, padding:'4px 0',
           display:'block', width:'100%',
         }}>
-          건너뛰기
+          {t('건너뛰기', 'Skip')}
         </button>
       </div>
     </div>
@@ -2178,9 +2184,9 @@ function GameHubApp() {
           if ((res.data.gameStatus?.total_exp || 0) === 0 && !localStorage.getItem('onboarding_done')) {
             setShowOnboarding(true);
           }
-        } else setError(res.error || '데이터 조회 실패');
+        } else setError(res.error || t('데이터 조회 실패', 'Failed to load data'));
       })
-      .catch(() => setError('서버 연결 실패'))
+      .catch(() => setError(t('서버 연결 실패', 'Server connection failed')))
       .finally(() => setLoading(false));
   }, []);
 
@@ -2236,18 +2242,18 @@ function GameHubApp() {
       const lvl = getBurnoutLevel(burnoutTestScore);
       setCounselingPrompt({
         emoji: '🔥', level: lvl.label, color: lvl.color,
-        msg: `번아웃 점수가 ${burnoutTestScore}점(${lvl.label})이에요. 전문 상담사와 이야기해보세요.`,
+        msg: t(`번아웃 점수가 ${burnoutTestScore}점(${lvl.label})이에요. 전문 상담사와 이야기해보세요.`, `Your BURNOUT score is ${burnoutTestScore}pts (${lvl.label}). Consider speaking with a counselor.`),
       });
     } else if (gid === 'mood' && result?.metadata?.intensity >= 4
       && ['angry','anxious','sad'].includes(result?.metadata?.mood)) {
       setCounselingPrompt({
-        emoji: '💙', level: '감정 주의', color: '#6366F1',
-        msg: `강한 부정 감정이 감지됐어요. 전문 상담사와 대화해보는 건 어떨까요?`,
+        emoji: '💙', level: t('감정 주의', 'Emotion Alert'), color: '#6366F1',
+        msg: t('강한 부정 감정이 감지됐어요. 전문 상담사와 대화해보는 건 어떨까요?', 'Strong negative emotions detected. How about talking to a counselor?'),
       });
     } else if (phq9TestScore >= 10 && ['burnout','mood','garden'].includes(gid)) {
       setCounselingPrompt({
-        emoji: '🌱', level: 'PHQ-9 주의', color: '#0EA5E9',
-        msg: `PHQ-9 점수(${phq9TestScore}점)로 보아 전문 상담이 도움이 될 수 있어요.`,
+        emoji: '🌱', level: t('PHQ-9 주의', 'PHQ-9 Alert'), color: '#0EA5E9',
+        msg: t(`PHQ-9 점수(${phq9TestScore}점)로 보아 전문 상담이 도움이 될 수 있어요.`, `Based on your PHQ-9 score (${phq9TestScore}pts), professional counseling may help.`),
       });
     }
     // 허브 데이터 새로고침 (경험치 + 크레딧 잔액 반영)
@@ -2285,10 +2291,10 @@ function GameHubApp() {
       } else if (res.errorCode === 'insufficient_credits') {
         setCreditModal(prev => ({ ...prev, balance: res.balance, insufficient: true }));
       } else {
-        alert(res.error || '크레딧 차감 실패. 다시 시도해주세요.');
+        alert(res.error || t('크레딧 차감 실패. 다시 시도해주세요.', 'Credit deduction failed. Please try again.'));
       }
     } catch {
-      alert('네트워크 오류. 다시 시도해주세요.');
+      alert(t('네트워크 오류. 다시 시도해주세요.', 'Network error. Please try again.'));
     }
     setSpendLoading(false);
   }, [creditModal]);
@@ -2358,7 +2364,7 @@ function GameHubApp() {
         padding:'10px 24px', background:C.sage, color:'white',
         borderRadius:10, fontSize:14, fontWeight:600,
         textDecoration:'none', fontFamily:"'Noto Sans KR', sans-serif",
-      }}>마음풀으로 돌아가기</a>
+      }}>{t('마음풀으로 돌아가기', 'Back to Maumful')}</a>
     </div>
   );
 
@@ -2404,7 +2410,7 @@ function GameHubApp() {
                   color:'white', borderRadius:12, fontSize:14, fontWeight:700,
                   textDecoration:'none', fontFamily:"'Noto Sans KR',sans-serif",
                 }}>
-                🏠 전문 상담사 연결하기
+                🏠 {t('전문 상담사 연결하기', 'Connect with a Counselor')}
               </a>
               <button onClick={() => setCounselingPrompt(null)}
                 style={{
@@ -2412,7 +2418,7 @@ function GameHubApp() {
                   border:'none', borderRadius:12, fontSize:13, fontWeight:600,
                   cursor:'pointer', fontFamily:"'Noto Sans KR',sans-serif",
                 }}>
-                괜찮아요, 계속 게임할게요
+                {t("괜찮아요, 계속 게임할게요", "I'm fine, continue playing")}
               </button>
             </div>
           </div>
@@ -2430,7 +2436,7 @@ function GameHubApp() {
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
           <span style={{ fontSize:20 }}>🌿</span>
           <span style={{ fontSize:16, fontWeight:700, color:C.dark, fontFamily:"'Noto Serif KR', serif" }}>
-            마음의 정원
+            {t('마음의 정원', 'Mind Garden')}
           </span>
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
@@ -2445,7 +2451,7 @@ function GameHubApp() {
             padding:'5px 12px', borderRadius:8,
             border:`1px solid rgba(0,0,0,0.08)`,
             background:'rgba(255,255,255,0.6)',
-          }}>← 마음풀</a>
+          }}>← {t('마음풀', 'Maumful')}</a>
         </div>
       </nav>
 
@@ -2479,7 +2485,7 @@ function GameHubApp() {
                 fontSize:11, fontWeight:700, color:C.amber,
                 display:'flex', alignItems:'center', gap:5,
               }}>
-                🔥 {gameStatus.streak_days}일 연속
+                🔥 {t(`${gameStatus.streak_days}일 연속`, `${gameStatus.streak_days}-Day Streak`)}
               </div>
             )}
           </div>
@@ -2488,7 +2494,7 @@ function GameHubApp() {
           <div style={{ padding:'16px 20px 20px', display:'flex', flexDirection:'column', gap:12 }}>
             <div>
               <div style={{ fontSize:18, fontWeight:700, color:C.dark, marginBottom:4 }}>
-                안녕하세요, {user?.nickname || user?.email?.split('@')[0]}님 👋{isMaster && <span style={{fontSize:11,background:'#2D6A4F',color:'white',borderRadius:6,padding:'2px 8px',fontWeight:700,marginLeft:6}}>MASTER</span>}
+                {t(`안녕하세요, ${user?.nickname || user?.email?.split('@')[0]}님 👋`, `Hello, ${user?.nickname || user?.email?.split('@')[0]} 👋`)}{isMaster && <span style={{fontSize:11,background:'#2D6A4F',color:'white',borderRadius:6,padding:'2px 8px',fontWeight:700,marginLeft:6}}>MASTER</span>}
               </div>
               <div style={{ fontSize:13, color:C.muted }}>{gardenTheme.desc}</div>
             </div>
@@ -2540,7 +2546,7 @@ function GameHubApp() {
         {/* ── 게임 목록 ── */}
         <div style={{ marginBottom:24 }}>
           <div style={{ fontSize:15, fontWeight:700, color:C.dark, marginBottom:16, display:'flex', alignItems:'center', gap:6 }}>
-            <span style={{ fontSize:18 }}>🎮</span> 치유 게임
+            <span style={{ fontSize:18 }}>🎮</span> {t('치유 게임', 'Healing Games')}
           </div>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:14 }} className="game-grid">
             {games.map((game, i) => (
@@ -2578,9 +2584,9 @@ function GameHubApp() {
               cursor:'pointer', fontFamily:"'Noto Sans KR',sans-serif",
             }}>
             <div style={{ fontSize:14, fontWeight:700, color:C.dark, display:'flex', alignItems:'center', gap:6 }}>
-              <span style={{ fontSize:16 }}>🏆</span> 정원사 순위
+              <span style={{ fontSize:16 }}>🏆</span> {t('정원사 순위', 'Gardener Rankings')}
             </div>
-            <span style={{ fontSize:12, color:C.muted }}>{showLeaderboard ? '접기 ▲' : '펼치기 ▼'}</span>
+            <span style={{ fontSize:12, color:C.muted }}>{showLeaderboard ? t('접기 ▲', 'Collapse ▲') : t('펼치기 ▼', 'Expand ▼')}</span>
           </button>
           {showLeaderboard && (
             <div style={{ marginTop:10 }}>
@@ -2611,7 +2617,7 @@ function GameHubApp() {
                 fontFamily:"'Noto Serif KR', sans-serif",
               }}>{creditModal.gameName}</h3>
               <p style={{ fontSize:13, color:'#8A8A78', lineHeight:1.6 }}>
-                이 게임은 플레이 시 크레딧이 차감됩니다
+                {t('이 게임은 플레이 시 크레딧이 차감됩니다', 'Credits will be deducted to play this game')}
               </p>
             </div>
 
@@ -2620,21 +2626,21 @@ function GameHubApp() {
               background:'#F5EFE0', borderRadius:14, padding:'14px 16px', marginBottom:18,
             }}>
               <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6, fontSize:13 }}>
-                <span style={{ color:'#8A8A78' }}>현재 크레딧</span>
-                <span style={{ fontWeight:700, color:'#2C2C20' }}>{creditModal.balance} 크레딧</span>
+                <span style={{ color:'#8A8A78' }}>{t('현재 크레딧', 'Current Credits')}</span>
+                <span style={{ fontWeight:700, color:'#2C2C20' }}>{creditModal.balance} {t('크레딧', 'Credits')}</span>
               </div>
               <div style={{ display:'flex', justifyContent:'space-between', fontSize:13 }}>
-                <span style={{ color:'#8A8A78' }}>차감 예정</span>
-                <span style={{ fontWeight:700, color:'#D4954A' }}>- {creditModal.cost} 크레딧</span>
+                <span style={{ color:'#8A8A78' }}>{t('차감 예정', 'To be deducted')}</span>
+                <span style={{ fontWeight:700, color:'#D4954A' }}>- {creditModal.cost} {t('크레딧', 'Credits')}</span>
               </div>
               <div style={{ height:1, background:'rgba(0,0,0,0.08)', margin:'10px 0' }}/>
               <div style={{ display:'flex', justifyContent:'space-between', fontSize:14 }}>
-                <span style={{ fontWeight:700, color:'#2C2C20' }}>차감 후 잔액</span>
+                <span style={{ fontWeight:700, color:'#2C2C20' }}>{t('차감 후 잔액', 'Balance after')}</span>
                 <span style={{
                   fontWeight:700,
                   color: creditModal.balance >= creditModal.cost ? '#4A7C59' : '#C05050',
                 }}>
-                  {Math.max(0, creditModal.balance - creditModal.cost)} 크레딧
+                  {Math.max(0, creditModal.balance - creditModal.cost)} {t('크레딧', 'Credits')}
                 </span>
               </div>
             </div>
@@ -2646,7 +2652,7 @@ function GameHubApp() {
                 borderRadius:10, padding:'10px 14px', marginBottom:14,
                 fontSize:12, color:'#C05050', lineHeight:1.6,
               }}>
-                크레딧이 부족해요. 마음풀에서 크레딧을 충전한 후 다시 시도해주세요.
+                {t('크레딧이 부족해요. 마음풀에서 크레딧을 충전한 후 다시 시도해주세요.', 'Insufficient credits. Please recharge on Maumful and try again.')}
               </div>
             )}
 
@@ -2656,7 +2662,7 @@ function GameHubApp() {
                 flex:1, padding:'12px', background:'rgba(0,0,0,0.07)',
                 color:'#8A8A78', border:'none', borderRadius:12, fontSize:13,
                 fontWeight:600, cursor:'pointer',
-              }}>취소</button>
+              }}>{t('취소', 'Cancel')}</button>
 
               {creditModal.balance < creditModal.cost ? (
                 <a href={PHYWEB_URL} style={{
@@ -2666,7 +2672,7 @@ function GameHubApp() {
                   fontWeight:700, cursor:'pointer', textDecoration:'none',
                   display:'flex', alignItems:'center', justifyContent:'center',
                   fontFamily:"'Noto Sans KR',sans-serif",
-                }}>크레딧 충전하기 →</a>
+                }}>{t('크레딧 충전하기 →', 'Recharge Credits →')}</a>
               ) : (
                 <button
                   onClick={handleCreditConfirm}
@@ -2681,7 +2687,7 @@ function GameHubApp() {
                     border:'none', borderRadius:12, fontSize:13,
                     fontWeight:700, cursor: spendLoading ? 'not-allowed' : 'pointer',
                   }}>
-                  {spendLoading ? '처리 중...' : `${creditModal.cost} 크레딧으로 시작`}
+                  {spendLoading ? t('처리 중...', 'Processing...') : t(`${creditModal.cost} 크레딧으로 시작`, `Start with ${creditModal.cost} Credits`)}
                 </button>
               )}
             </div>
@@ -2708,7 +2714,7 @@ function GameHubApp() {
             <span style={{ fontSize:24, flexShrink:0, lineHeight:1.2 }}>{sessionFeedback.emoji}</span>
             <div style={{ flex:1 }}>
               <div style={{ fontSize:12, fontWeight:700, color:C.sage, marginBottom:4 }}>
-                게임 완료! 🎉
+                {t('게임 완료! 🎉', 'Game Complete! 🎉')}
               </div>
               <div style={{ fontSize:13, color:'#374151', lineHeight:1.6 }}>
                 {sessionFeedback.feedback}
