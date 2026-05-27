@@ -1,5 +1,3 @@
-"use strict";
-import { Fragment, jsx, jsxs } from "react/jsx-runtime";
 const MOOD_EMOTIONS = [
   { id: "happy", emoji: "\u{1F60A}", label: t("\uD589\uBCF5", "Joyful"), color: "#F5C842", bg: "#FFFAE0", textColor: "#8B6800" },
   { id: "calm", emoji: "\u{1F60C}", label: t("\uD3C9\uC628", "Calm"), color: "#7BC4A0", bg: "#E8F5EE", textColor: "#2A6B4A" },
@@ -101,7 +99,7 @@ function MoodGame({ onExit }) {
     setSaving(false);
   }, [selEmotion, intensity, note, today]);
   if (screen === "loading") {
-    return /* @__PURE__ */ jsxs("div", { style: {
+    return /* @__PURE__ */ React.createElement("div", { style: {
       flex: 1,
       display: "flex",
       alignItems: "center",
@@ -109,10 +107,7 @@ function MoodGame({ onExit }) {
       background: MC.bg,
       flexDirection: "column",
       gap: 12
-    }, children: [
-      /* @__PURE__ */ jsx("div", { style: { fontSize: 40, animation: "float 2s ease-in-out infinite" }, children: "\u{1F3A8}" }),
-      /* @__PURE__ */ jsx("div", { style: { fontSize: 13, color: MC.muted, fontFamily: "'Noto Sans KR',sans-serif" }, children: t("\uAC10\uC815 \uAE30\uB85D\uC744 \uBD88\uB7EC\uC624\uB294 \uC911...", "Loading emotion log...") })
-    ] });
+    } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 40, animation: "float 2s ease-in-out infinite" } }, "\u{1F3A8}"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: MC.muted, fontFamily: "'Noto Sans KR',sans-serif" } }, t("\uAC10\uC815 \uAE30\uB85D\uC744 \uBD88\uB7EC\uC624\uB294 \uC911...", "Loading emotion log...")));
   }
   function shareMood() {
     const e = MOOD_MAP[selEmotion] || MOOD_MAP.calm;
@@ -128,7 +123,7 @@ https://game.maumful.com`;
   }
   if (screen === "done") {
     const e = MOOD_MAP[selEmotion] || MOOD_MAP.calm;
-    return /* @__PURE__ */ jsxs("div", { style: {
+    return /* @__PURE__ */ React.createElement("div", { style: {
       flex: 1,
       display: "flex",
       flexDirection: "column",
@@ -138,68 +133,32 @@ https://game.maumful.com`;
       justifyContent: "center",
       textAlign: "center",
       animation: "fadeUp 0.5s ease"
-    }, children: [
-      /* @__PURE__ */ jsx("div", { style: { fontSize: 72, marginBottom: 16 }, children: e.emoji }),
-      /* @__PURE__ */ jsx("h2", { style: {
-        fontSize: 22,
-        fontWeight: 700,
-        color: MC.text,
-        marginBottom: 8,
-        fontFamily: "'Noto Serif KR',serif"
-      }, children: t("\uC624\uB298\uC758 \uAC10\uC815\uC774 \uAE30\uB85D\uB410\uC5B4\uC694", "Today's Emotion Logged") }),
-      /* @__PURE__ */ jsxs("div", { style: { fontSize: 14, color: MC.muted, marginBottom: 24, lineHeight: 1.8 }, children: [
-        e.label,
-        " \xB7 ",
-        t("\uAC15\uB3C4", "Intensity"),
-        " ",
-        "\u2B50".repeat(intensity),
-        note && /* @__PURE__ */ jsxs(Fragment, { children: [
-          /* @__PURE__ */ jsx("br", {}),
-          /* @__PURE__ */ jsxs("span", { style: { fontStyle: "italic", color: MC.text }, children: [
-            '"',
-            note,
-            '"'
-          ] })
-        ] })
-      ] }),
-      result?.expGained > 0 && /* @__PURE__ */ jsxs("div", { style: {
-        background: "rgba(255,255,255,0.8)",
-        borderRadius: 16,
-        padding: "14px 28px",
-        marginBottom: 24
-      }, children: [
-        /* @__PURE__ */ jsxs("div", { style: { fontSize: 24, fontWeight: 700, color: MC.accent }, children: [
-          "+",
-          result.expGained
-        ] }),
-        /* @__PURE__ */ jsx("div", { style: { fontSize: 12, color: MC.muted }, children: t("\uACBD\uD5D8\uCE58", "EXP") })
-      ] }),
-      /* @__PURE__ */ jsxs("button", { onClick: shareMood, style: {
-        ...mbtn("rgba(255,255,255,0.85)", MC.muted, { borderRadius: 13, width: "100%", maxWidth: 280 }),
-        padding: "11px",
-        fontSize: 13,
-        marginBottom: 10
-      }, children: [
-        "\u{1F495} ",
-        t("\uD30C\uD2B8\uB108\uC640 \uACF5\uC720\uD558\uAE30", "Share with Partner")
-      ] }),
-      /* @__PURE__ */ jsxs("div", { style: { display: "flex", gap: 10, width: "100%", maxWidth: 280 }, children: [
-        /* @__PURE__ */ jsxs("button", { onClick: () => setScreen("calendar"), style: {
-          ...mbtn("rgba(255,255,255,0.85)", MC.muted, { borderRadius: 13, flex: 1 }),
-          padding: "12px",
-          fontSize: 13
-        }, children: [
-          "\u{1F4C5} ",
-          t("\uB2EC\uB825 \uBCF4\uAE30", "Calendar")
-        ] }),
-        /* @__PURE__ */ jsx("button", { onClick: onExit, style: {
-          ...mbtn(`linear-gradient(135deg, ${MC.accent}, #5AA888)`, "white", { flex: 2, borderRadius: 13 }),
-          padding: "12px",
-          fontSize: 13,
-          boxShadow: `0 4px 16px ${MC.accent}50`
-        }, children: t("\uD5C8\uBE0C\uB85C \u2192", "Hub \u2192") })
-      ] })
-    ] });
+    } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 72, marginBottom: 16 } }, e.emoji), /* @__PURE__ */ React.createElement("h2", { style: {
+      fontSize: 22,
+      fontWeight: 700,
+      color: MC.text,
+      marginBottom: 8,
+      fontFamily: "'Noto Serif KR',serif"
+    } }, t("\uC624\uB298\uC758 \uAC10\uC815\uC774 \uAE30\uB85D\uB410\uC5B4\uC694", "Today's Emotion Logged")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, color: MC.muted, marginBottom: 24, lineHeight: 1.8 } }, e.label, " \xB7 ", t("\uAC15\uB3C4", "Intensity"), " ", "\u2B50".repeat(intensity), note && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { style: { fontStyle: "italic", color: MC.text } }, '"', note, '"'))), result?.expGained > 0 && /* @__PURE__ */ React.createElement("div", { style: {
+      background: "rgba(255,255,255,0.8)",
+      borderRadius: 16,
+      padding: "14px 28px",
+      marginBottom: 24
+    } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 24, fontWeight: 700, color: MC.accent } }, "+", result.expGained), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: MC.muted } }, t("\uACBD\uD5D8\uCE58", "EXP"))), /* @__PURE__ */ React.createElement("button", { onClick: shareMood, style: {
+      ...mbtn("rgba(255,255,255,0.85)", MC.muted, { borderRadius: 13, width: "100%", maxWidth: 280 }),
+      padding: "11px",
+      fontSize: 13,
+      marginBottom: 10
+    } }, "\u{1F495} ", t("\uD30C\uD2B8\uB108\uC640 \uACF5\uC720\uD558\uAE30", "Share with Partner")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, width: "100%", maxWidth: 280 } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setScreen("calendar"), style: {
+      ...mbtn("rgba(255,255,255,0.85)", MC.muted, { borderRadius: 13, flex: 1 }),
+      padding: "12px",
+      fontSize: 13
+    } }, "\u{1F4C5} ", t("\uB2EC\uB825 \uBCF4\uAE30", "Calendar")), /* @__PURE__ */ React.createElement("button", { onClick: onExit, style: {
+      ...mbtn(`linear-gradient(135deg, ${MC.accent}, #5AA888)`, "white", { flex: 2, borderRadius: 13 }),
+      padding: "12px",
+      fontSize: 13,
+      boxShadow: `0 4px 16px ${MC.accent}50`
+    } }, t("\uD5C8\uBE0C\uB85C \u2192", "Hub \u2192"))));
   }
   if (screen === "calendar") {
     const histMap2 = Object.fromEntries(history.map((d) => [d.date, d]));
@@ -211,332 +170,224 @@ https://game.maumful.com`;
       days.push({ iso, day: d.getDate(), entry: histMap2[iso] });
     }
     const insight2 = getMoodInsight(history);
-    return /* @__PURE__ */ jsxs("div", { style: { flex: 1, display: "flex", flexDirection: "column", background: MC.bg, overflow: "hidden" }, children: [
-      /* @__PURE__ */ jsxs("div", { style: {
+    return /* @__PURE__ */ React.createElement("div", { style: { flex: 1, display: "flex", flexDirection: "column", background: MC.bg, overflow: "hidden" } }, /* @__PURE__ */ React.createElement("div", { style: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: "14px 18px",
+      background: "rgba(255,255,255,0.85)",
+      backdropFilter: "blur(10px)",
+      borderBottom: "1px solid rgba(0,0,0,0.06)"
+    } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setScreen("home"), style: {
+      ...mbtn("rgba(0,0,0,0.06)", MC.muted, { borderRadius: 9 }),
+      padding: "6px 14px",
+      fontSize: 12
+    } }, t("\u2190 \uB4A4\uB85C", "\u2190 Back")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 700, color: MC.text, fontFamily: "'Noto Serif KR',serif" } }, "\u{1F3A8} ", t("30\uC77C \uAC10\uC815 \uB2EC\uB825", "30-Day Emotion Calendar")), /* @__PURE__ */ React.createElement("div", { style: { width: 64 } })), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "20px 16px 28px" } }, insight2 && /* @__PURE__ */ React.createElement("div", { style: {
+      background: `linear-gradient(135deg, ${insight2.bg}, rgba(255,255,255,0.9))`,
+      border: `1px solid ${insight2.color}40`,
+      borderRadius: 16,
+      padding: "14px 16px",
+      marginBottom: 20,
+      boxShadow: `0 2px 12px ${insight2.color}20`
+    } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: insight2.textColor, marginBottom: 5, letterSpacing: "0.5px" } }, insight2.emoji, " ", t("\uCD5C\uADFC 30\uC77C \uAC10\uC815 \uC778\uC0AC\uC774\uD2B8", "Last 30 Days Emotion Insight")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: MC.text, lineHeight: 1.6 } }, insight2.msg)), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 16, justifyContent: "center" } }, MOOD_EMOTIONS.map((e) => /* @__PURE__ */ React.createElement("div", { key: e.id, style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 3,
+      padding: "3px 8px",
+      borderRadius: 100,
+      background: e.bg,
+      border: `1px solid ${e.color}40`
+    } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11 } }, e.emoji), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, fontWeight: 600, color: e.textColor } }, e.label)))), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 5, marginBottom: 20 } }, days.map(({ iso, day, entry }) => {
+      const e = entry ? MOOD_MAP[entry.emotion] : null;
+      const isToday = iso === today;
+      return /* @__PURE__ */ React.createElement("div", { key: iso, style: {
+        aspectRatio: "1",
+        borderRadius: 10,
+        background: e ? e.bg : "rgba(0,0,0,0.04)",
+        border: isToday ? `2px solid ${MC.accent}` : `1px solid ${e ? e.color + "30" : "rgba(0,0,0,0.06)"}`,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center"
+      } }, e ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14 } }, e.emoji), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 8, color: e.textColor, fontWeight: 600 } }, day)) : /* @__PURE__ */ React.createElement("div", { style: { fontSize: 9, color: "rgba(0,0,0,0.18)", fontWeight: 500 } }, day));
+    })), history.length > 0 && /* @__PURE__ */ React.createElement("div", { style: {
+      background: "rgba(255,255,255,0.8)",
+      borderRadius: 14,
+      padding: "14px",
+      border: "1px solid rgba(0,0,0,0.06)",
+      marginBottom: 16
+    } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: MC.text, marginBottom: 10 } }, "\u{1F4CA} ", t("\uAC10\uC815 \uBD84\uD3EC", "Emotion Distribution")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap" } }, MOOD_EMOTIONS.map((e) => {
+      const count = history.filter((d) => d.emotion === e.id).length;
+      if (count === 0) return null;
+      const pct = Math.round(count / history.length * 100);
+      return /* @__PURE__ */ React.createElement("div", { key: e.id, style: {
         display: "flex",
         alignItems: "center",
-        justifyContent: "space-between",
-        padding: "14px 18px",
-        background: "rgba(255,255,255,0.85)",
-        backdropFilter: "blur(10px)",
-        borderBottom: "1px solid rgba(0,0,0,0.06)"
-      }, children: [
-        /* @__PURE__ */ jsx("button", { onClick: () => setScreen("home"), style: {
-          ...mbtn("rgba(0,0,0,0.06)", MC.muted, { borderRadius: 9 }),
-          padding: "6px 14px",
-          fontSize: 12
-        }, children: t("\u2190 \uB4A4\uB85C", "\u2190 Back") }),
-        /* @__PURE__ */ jsxs("div", { style: { fontSize: 15, fontWeight: 700, color: MC.text, fontFamily: "'Noto Serif KR',serif" }, children: [
-          "\u{1F3A8} ",
-          t("30\uC77C \uAC10\uC815 \uB2EC\uB825", "30-Day Emotion Calendar")
-        ] }),
-        /* @__PURE__ */ jsx("div", { style: { width: 64 } })
-      ] }),
-      /* @__PURE__ */ jsxs("div", { style: { flex: 1, overflowY: "auto", padding: "20px 16px 28px" }, children: [
-        insight2 && /* @__PURE__ */ jsxs("div", { style: {
-          background: `linear-gradient(135deg, ${insight2.bg}, rgba(255,255,255,0.9))`,
-          border: `1px solid ${insight2.color}40`,
-          borderRadius: 16,
-          padding: "14px 16px",
-          marginBottom: 20,
-          boxShadow: `0 2px 12px ${insight2.color}20`
-        }, children: [
-          /* @__PURE__ */ jsxs("div", { style: { fontSize: 11, fontWeight: 700, color: insight2.textColor, marginBottom: 5, letterSpacing: "0.5px" }, children: [
-            insight2.emoji,
-            " ",
-            t("\uCD5C\uADFC 30\uC77C \uAC10\uC815 \uC778\uC0AC\uC774\uD2B8", "Last 30 Days Emotion Insight")
-          ] }),
-          /* @__PURE__ */ jsx("div", { style: { fontSize: 13, color: MC.text, lineHeight: 1.6 }, children: insight2.msg })
-        ] }),
-        /* @__PURE__ */ jsx("div", { style: { display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 16, justifyContent: "center" }, children: MOOD_EMOTIONS.map((e) => /* @__PURE__ */ jsxs("div", { style: {
-          display: "flex",
-          alignItems: "center",
-          gap: 3,
-          padding: "3px 8px",
-          borderRadius: 100,
-          background: e.bg,
-          border: `1px solid ${e.color}40`
-        }, children: [
-          /* @__PURE__ */ jsx("span", { style: { fontSize: 11 }, children: e.emoji }),
-          /* @__PURE__ */ jsx("span", { style: { fontSize: 10, fontWeight: 600, color: e.textColor }, children: e.label })
-        ] }, e.id)) }),
-        /* @__PURE__ */ jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 5, marginBottom: 20 }, children: days.map(({ iso, day, entry }) => {
-          const e = entry ? MOOD_MAP[entry.emotion] : null;
-          const isToday = iso === today;
-          return /* @__PURE__ */ jsx("div", { style: {
-            aspectRatio: "1",
-            borderRadius: 10,
-            background: e ? e.bg : "rgba(0,0,0,0.04)",
-            border: isToday ? `2px solid ${MC.accent}` : `1px solid ${e ? e.color + "30" : "rgba(0,0,0,0.06)"}`,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center"
-          }, children: e ? /* @__PURE__ */ jsxs(Fragment, { children: [
-            /* @__PURE__ */ jsx("div", { style: { fontSize: 14 }, children: e.emoji }),
-            /* @__PURE__ */ jsx("div", { style: { fontSize: 8, color: e.textColor, fontWeight: 600 }, children: day })
-          ] }) : /* @__PURE__ */ jsx("div", { style: { fontSize: 9, color: "rgba(0,0,0,0.18)", fontWeight: 500 }, children: day }) }, iso);
-        }) }),
-        history.length > 0 && /* @__PURE__ */ jsxs("div", { style: {
-          background: "rgba(255,255,255,0.8)",
-          borderRadius: 14,
-          padding: "14px",
-          border: "1px solid rgba(0,0,0,0.06)",
-          marginBottom: 16
-        }, children: [
-          /* @__PURE__ */ jsxs("div", { style: { fontSize: 12, fontWeight: 700, color: MC.text, marginBottom: 10 }, children: [
-            "\u{1F4CA} ",
-            t("\uAC10\uC815 \uBD84\uD3EC", "Emotion Distribution")
-          ] }),
-          /* @__PURE__ */ jsx("div", { style: { display: "flex", gap: 6, flexWrap: "wrap" }, children: MOOD_EMOTIONS.map((e) => {
-            const count = history.filter((d) => d.emotion === e.id).length;
-            if (count === 0) return null;
-            const pct = Math.round(count / history.length * 100);
-            return /* @__PURE__ */ jsxs("div", { style: {
-              display: "flex",
-              alignItems: "center",
-              gap: 4,
-              padding: "5px 10px",
-              borderRadius: 100,
-              background: e.bg,
-              border: `1px solid ${e.color}40`
-            }, children: [
-              /* @__PURE__ */ jsx("span", { style: { fontSize: 12 }, children: e.emoji }),
-              /* @__PURE__ */ jsxs("span", { style: { fontSize: 11, fontWeight: 700, color: e.textColor }, children: [
-                count,
-                t("\uC77C", "d"),
-                " (",
-                pct,
-                "%)"
-              ] })
-            ] }, e.id);
-          }) })
-        ] }),
-        history.length > 0 && /* @__PURE__ */ jsxs("div", { children: [
-          /* @__PURE__ */ jsx("div", { style: { fontSize: 12, fontWeight: 700, color: MC.text, marginBottom: 10 }, children: t("\uCD5C\uADFC \uAE30\uB85D", "Recent Logs") }),
-          /* @__PURE__ */ jsx("div", { style: { display: "flex", flexDirection: "column", gap: 7 }, children: history.slice(0, 7).map((entry, i) => {
-            const e = MOOD_MAP[entry.emotion] || MOOD_MAP.calm;
-            return /* @__PURE__ */ jsxs("div", { style: {
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              background: "rgba(255,255,255,0.8)",
-              borderRadius: 12,
-              padding: "10px 14px",
-              border: `1px solid ${e.color}25`
-            }, children: [
-              /* @__PURE__ */ jsx("span", { style: { fontSize: 22 }, children: e.emoji }),
-              /* @__PURE__ */ jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [
-                /* @__PURE__ */ jsxs("div", { style: { fontSize: 13, fontWeight: 600, color: MC.text }, children: [
-                  e.label,
-                  " \xB7 ",
-                  "\u2B50".repeat(entry.intensity || 3)
-                ] }),
-                entry.note && /* @__PURE__ */ jsx("div", { style: { fontSize: 11, color: MC.muted, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: entry.note })
-              ] }),
-              /* @__PURE__ */ jsx("div", { style: { fontSize: 11, color: MC.muted, flexShrink: 0 }, children: entry.date?.slice(5) })
-            ] }, i);
-          }) })
-        ] })
-      ] })
-    ] });
+        gap: 4,
+        padding: "5px 10px",
+        borderRadius: 100,
+        background: e.bg,
+        border: `1px solid ${e.color}40`
+      } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12 } }, e.emoji), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, fontWeight: 700, color: e.textColor } }, count, t("\uC77C", "d"), " (", pct, "%)"));
+    }))), history.length > 0 && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: MC.text, marginBottom: 10 } }, t("\uCD5C\uADFC \uAE30\uB85D", "Recent Logs")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 7 } }, history.slice(0, 7).map((entry, i) => {
+      const e = MOOD_MAP[entry.emotion] || MOOD_MAP.calm;
+      return /* @__PURE__ */ React.createElement("div", { key: i, style: {
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        background: "rgba(255,255,255,0.8)",
+        borderRadius: 12,
+        padding: "10px 14px",
+        border: `1px solid ${e.color}25`
+      } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 22 } }, e.emoji), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 600, color: MC.text } }, e.label, " \xB7 ", "\u2B50".repeat(entry.intensity || 3)), entry.note && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: MC.muted, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, entry.note)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: MC.muted, flexShrink: 0 } }, entry.date?.slice(5)));
+    })))));
   }
   if (screen === "checkin_emotion") {
-    return /* @__PURE__ */ jsxs("div", { style: { flex: 1, display: "flex", flexDirection: "column", background: MC.bg, overflow: "hidden" }, children: [
-      /* @__PURE__ */ jsxs("div", { style: {
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "14px 18px",
-        background: "rgba(255,255,255,0.85)",
-        backdropFilter: "blur(10px)",
-        borderBottom: "1px solid rgba(0,0,0,0.06)"
-      }, children: [
-        /* @__PURE__ */ jsx("button", { onClick: () => setScreen("home"), style: {
-          ...mbtn("rgba(0,0,0,0.06)", MC.muted, { borderRadius: 9 }),
-          padding: "6px 14px",
-          fontSize: 12
-        }, children: t("\u2190 \uB4A4\uB85C", "\u2190 Back") }),
-        /* @__PURE__ */ jsx("div", { style: { fontSize: 15, fontWeight: 700, color: MC.text, fontFamily: "'Noto Serif KR',serif" }, children: t("\uC624\uB298\uC758 \uAC10\uC815", "Today's Emotion") }),
-        /* @__PURE__ */ jsx("div", { style: { width: 64 } })
-      ] }),
-      /* @__PURE__ */ jsxs("div", { style: { flex: 1, padding: "28px 20px 24px", display: "flex", flexDirection: "column" }, children: [
-        /* @__PURE__ */ jsxs("p", { style: {
-          fontSize: 15,
-          color: MC.muted,
-          textAlign: "center",
-          marginBottom: 28,
-          lineHeight: 1.7,
-          fontFamily: "'Noto Sans KR',sans-serif"
-        }, children: [
-          t("\uC9C0\uAE08 \uC774 \uC21C\uAC04, \uC5B4\uB5A4 \uAC10\uC815\uC774", "Right now, which emotion"),
-          /* @__PURE__ */ jsx("br", {}),
-          t("\uAC00\uC7A5 \uD06C\uAC8C \uB290\uAEF4\uC9C0\uB098\uC694?", "feels the strongest?")
-        ] }),
-        /* @__PURE__ */ jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }, children: MOOD_EMOTIONS.map((e) => /* @__PURE__ */ jsxs(
-          "button",
-          {
-            onClick: () => {
-              setSelEmotion(e.id);
-              setIntensity(3);
-              setNote("");
-              setScreen("checkin_detail");
-            },
-            style: {
-              background: e.bg,
-              border: `2px solid ${e.color}70`,
-              borderRadius: 18,
-              padding: "18px 10px",
-              cursor: "pointer",
-              fontFamily: "'Noto Sans KR',sans-serif",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 8,
-              transition: "all 0.2s",
-              boxShadow: `0 2px 12px ${e.color}25`
-            },
-            children: [
-              /* @__PURE__ */ jsx("span", { style: { fontSize: 32 }, children: e.emoji }),
-              /* @__PURE__ */ jsx("span", { style: { fontSize: 12, fontWeight: 700, color: e.textColor }, children: e.label })
-            ]
-          },
-          e.id
-        )) })
-      ] })
-    ] });
+    return /* @__PURE__ */ React.createElement("div", { style: { flex: 1, display: "flex", flexDirection: "column", background: MC.bg, overflow: "hidden" } }, /* @__PURE__ */ React.createElement("div", { style: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: "14px 18px",
+      background: "rgba(255,255,255,0.85)",
+      backdropFilter: "blur(10px)",
+      borderBottom: "1px solid rgba(0,0,0,0.06)"
+    } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setScreen("home"), style: {
+      ...mbtn("rgba(0,0,0,0.06)", MC.muted, { borderRadius: 9 }),
+      padding: "6px 14px",
+      fontSize: 12
+    } }, t("\u2190 \uB4A4\uB85C", "\u2190 Back")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 700, color: MC.text, fontFamily: "'Noto Serif KR',serif" } }, t("\uC624\uB298\uC758 \uAC10\uC815", "Today's Emotion")), /* @__PURE__ */ React.createElement("div", { style: { width: 64 } })), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, padding: "28px 20px 24px", display: "flex", flexDirection: "column" } }, /* @__PURE__ */ React.createElement("p", { style: {
+      fontSize: 15,
+      color: MC.muted,
+      textAlign: "center",
+      marginBottom: 28,
+      lineHeight: 1.7,
+      fontFamily: "'Noto Sans KR',sans-serif"
+    } }, t("\uC9C0\uAE08 \uC774 \uC21C\uAC04, \uC5B4\uB5A4 \uAC10\uC815\uC774", "Right now, which emotion"), /* @__PURE__ */ React.createElement("br", null), t("\uAC00\uC7A5 \uD06C\uAC8C \uB290\uAEF4\uC9C0\uB098\uC694?", "feels the strongest?")), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 } }, MOOD_EMOTIONS.map((e) => /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        key: e.id,
+        onClick: () => {
+          setSelEmotion(e.id);
+          setIntensity(3);
+          setNote("");
+          setScreen("checkin_detail");
+        },
+        style: {
+          background: e.bg,
+          border: `2px solid ${e.color}70`,
+          borderRadius: 18,
+          padding: "18px 10px",
+          cursor: "pointer",
+          fontFamily: "'Noto Sans KR',sans-serif",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 8,
+          transition: "all 0.2s",
+          boxShadow: `0 2px 12px ${e.color}25`
+        }
+      },
+      /* @__PURE__ */ React.createElement("span", { style: { fontSize: 32 } }, e.emoji),
+      /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: e.textColor } }, e.label)
+    )))));
   }
   if (screen === "checkin_detail") {
     const e = MOOD_MAP[selEmotion] || MOOD_MAP.calm;
-    return /* @__PURE__ */ jsxs("div", { style: {
+    return /* @__PURE__ */ React.createElement("div", { style: {
       flex: 1,
       display: "flex",
       flexDirection: "column",
       background: `linear-gradient(160deg, ${e.bg}, ${MC.bg})`,
       overflow: "hidden"
-    }, children: [
-      /* @__PURE__ */ jsxs("div", { style: {
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "14px 18px",
-        background: "rgba(255,255,255,0.75)",
-        backdropFilter: "blur(10px)",
-        borderBottom: "1px solid rgba(0,0,0,0.06)"
-      }, children: [
-        /* @__PURE__ */ jsx("button", { onClick: () => setScreen("checkin_emotion"), style: {
-          ...mbtn("rgba(0,0,0,0.06)", MC.muted, { borderRadius: 9 }),
-          padding: "6px 14px",
-          fontSize: 12
-        }, children: t("\u2190 \uB4A4\uB85C", "\u2190 Back") }),
-        /* @__PURE__ */ jsxs("div", { style: {
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          fontSize: 15,
-          fontWeight: 700,
-          color: MC.text,
-          fontFamily: "'Noto Serif KR',serif"
-        }, children: [
-          /* @__PURE__ */ jsx("span", { children: e.emoji }),
-          " ",
-          e.label
-        ] }),
-        /* @__PURE__ */ jsx("div", { style: { width: 64 } })
-      ] }),
-      /* @__PURE__ */ jsxs("div", { style: { flex: 1, padding: "28px 20px 24px", display: "flex", flexDirection: "column" }, children: [
-        /* @__PURE__ */ jsxs("div", { style: { marginBottom: 28 }, children: [
-          /* @__PURE__ */ jsx("div", { style: {
-            fontSize: 14,
-            fontWeight: 700,
-            color: MC.text,
-            marginBottom: 12,
-            textAlign: "center",
-            fontFamily: "'Noto Sans KR',sans-serif"
-          }, children: t("\uAC10\uC815\uC758 \uAC15\uB3C4\uB294?", "How intense is the emotion?") }),
-          /* @__PURE__ */ jsx("div", { style: { display: "flex", justifyContent: "center", gap: 10 }, children: [1, 2, 3, 4, 5].map((n) => /* @__PURE__ */ jsx("button", { onClick: () => setIntensity(n), style: {
-            fontSize: 30,
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            padding: 4,
-            opacity: n <= intensity ? 1 : 0.2,
-            transform: n <= intensity ? "scale(1.1)" : "scale(1)",
-            transition: "all 0.15s"
-          }, children: "\u2B50" }, n)) }),
-          /* @__PURE__ */ jsx("div", { style: {
-            textAlign: "center",
-            fontSize: 11,
-            color: MC.muted,
-            marginTop: 8,
-            fontFamily: "'Noto Sans KR',sans-serif"
-          }, children: [
-            "",
-            t("\uB9E4\uC6B0 \uC57D\uD558\uAC8C", "Very Mild"),
-            t("\uC57D\uD558\uAC8C", "Mild"),
-            t("\uBCF4\uD1B5", "Moderate"),
-            t("\uAC15\uD558\uAC8C", "Strong"),
-            t("\uB9E4\uC6B0 \uAC15\uD558\uAC8C", "Very Strong")
-          ][intensity] })
-        ] }),
-        /* @__PURE__ */ jsxs("div", { style: { marginBottom: 24 }, children: [
-          /* @__PURE__ */ jsxs("div", { style: {
-            fontSize: 13,
-            fontWeight: 700,
-            color: MC.text,
-            marginBottom: 8,
-            fontFamily: "'Noto Sans KR',sans-serif"
-          }, children: [
-            t("\uD55C \uB9C8\uB514", "A note"),
-            " ",
-            /* @__PURE__ */ jsxs("span", { style: { color: MC.muted, fontWeight: 400 }, children: [
-              "(",
-              t("\uC120\uD0DD\uC0AC\uD56D", "optional"),
-              ")"
-            ] })
-          ] }),
-          /* @__PURE__ */ jsx(
-            "textarea",
-            {
-              value: note,
-              onChange: (ev) => setNote(ev.target.value),
-              placeholder: t("\uC624\uB298 \uC774 \uAC10\uC815\uC774 \uB4E0 \uC774\uC720\uB098 \uBA54\uBAA8\uB97C \uB0A8\uACA8\uC694...", "Leave a note about why you feel this way today..."),
-              rows: 3,
-              maxLength: 100,
-              style: {
-                width: "100%",
-                padding: "12px 14px",
-                border: `1.5px solid ${e.color}60`,
-                borderRadius: 12,
-                fontSize: 14,
-                fontFamily: "'Noto Sans KR',sans-serif",
-                outline: "none",
-                resize: "none",
-                lineHeight: 1.65,
-                background: "rgba(255,255,255,0.9)",
-                color: MC.text
-              },
-              onFocus: (ev) => ev.target.style.borderColor = e.color,
-              onBlur: (ev) => ev.target.style.borderColor = `${e.color}60`
-            }
-          ),
-          /* @__PURE__ */ jsxs("div", { style: { textAlign: "right", fontSize: 10, color: MC.muted, marginTop: 3 }, children: [
-            note.length,
-            "/100"
-          ] })
-        ] }),
-        /* @__PURE__ */ jsx("button", { onClick: handleSave, disabled: saving, style: {
-          ...mbtn(
-            saving ? "rgba(0,0,0,0.1)" : `linear-gradient(135deg, ${e.color}, ${e.color}CC)`,
-            saving ? MC.muted : "white"
-          ),
-          padding: "14px",
-          fontSize: 15,
-          boxShadow: saving ? "none" : `0 4px 16px ${e.color}40`,
-          cursor: saving ? "not-allowed" : "pointer"
-        }, children: saving ? t("\uC800\uC7A5 \uC911...", "Saving...") : t("\uC624\uB298\uC758 \uAC10\uC815 \uAE30\uB85D\uD558\uAE30 \u{1F3A8}", "Log Today's Emotion \u{1F3A8}") })
-      ] })
-    ] });
+    } }, /* @__PURE__ */ React.createElement("div", { style: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: "14px 18px",
+      background: "rgba(255,255,255,0.75)",
+      backdropFilter: "blur(10px)",
+      borderBottom: "1px solid rgba(0,0,0,0.06)"
+    } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setScreen("checkin_emotion"), style: {
+      ...mbtn("rgba(0,0,0,0.06)", MC.muted, { borderRadius: 9 }),
+      padding: "6px 14px",
+      fontSize: 12
+    } }, t("\u2190 \uB4A4\uB85C", "\u2190 Back")), /* @__PURE__ */ React.createElement("div", { style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 6,
+      fontSize: 15,
+      fontWeight: 700,
+      color: MC.text,
+      fontFamily: "'Noto Serif KR',serif"
+    } }, /* @__PURE__ */ React.createElement("span", null, e.emoji), " ", e.label), /* @__PURE__ */ React.createElement("div", { style: { width: 64 } })), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, padding: "28px 20px 24px", display: "flex", flexDirection: "column" } }, /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 28 } }, /* @__PURE__ */ React.createElement("div", { style: {
+      fontSize: 14,
+      fontWeight: 700,
+      color: MC.text,
+      marginBottom: 12,
+      textAlign: "center",
+      fontFamily: "'Noto Sans KR',sans-serif"
+    } }, t("\uAC10\uC815\uC758 \uAC15\uB3C4\uB294?", "How intense is the emotion?")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "center", gap: 10 } }, [1, 2, 3, 4, 5].map((n) => /* @__PURE__ */ React.createElement("button", { key: n, onClick: () => setIntensity(n), style: {
+      fontSize: 30,
+      background: "none",
+      border: "none",
+      cursor: "pointer",
+      padding: 4,
+      opacity: n <= intensity ? 1 : 0.2,
+      transform: n <= intensity ? "scale(1.1)" : "scale(1)",
+      transition: "all 0.15s"
+    } }, "\u2B50"))), /* @__PURE__ */ React.createElement("div", { style: {
+      textAlign: "center",
+      fontSize: 11,
+      color: MC.muted,
+      marginTop: 8,
+      fontFamily: "'Noto Sans KR',sans-serif"
+    } }, [
+      "",
+      t("\uB9E4\uC6B0 \uC57D\uD558\uAC8C", "Very Mild"),
+      t("\uC57D\uD558\uAC8C", "Mild"),
+      t("\uBCF4\uD1B5", "Moderate"),
+      t("\uAC15\uD558\uAC8C", "Strong"),
+      t("\uB9E4\uC6B0 \uAC15\uD558\uAC8C", "Very Strong")
+    ][intensity])), /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 24 } }, /* @__PURE__ */ React.createElement("div", { style: {
+      fontSize: 13,
+      fontWeight: 700,
+      color: MC.text,
+      marginBottom: 8,
+      fontFamily: "'Noto Sans KR',sans-serif"
+    } }, t("\uD55C \uB9C8\uB514", "A note"), " ", /* @__PURE__ */ React.createElement("span", { style: { color: MC.muted, fontWeight: 400 } }, "(", t("\uC120\uD0DD\uC0AC\uD56D", "optional"), ")")), /* @__PURE__ */ React.createElement(
+      "textarea",
+      {
+        value: note,
+        onChange: (ev) => setNote(ev.target.value),
+        placeholder: t("\uC624\uB298 \uC774 \uAC10\uC815\uC774 \uB4E0 \uC774\uC720\uB098 \uBA54\uBAA8\uB97C \uB0A8\uACA8\uC694...", "Leave a note about why you feel this way today..."),
+        rows: 3,
+        maxLength: 100,
+        style: {
+          width: "100%",
+          padding: "12px 14px",
+          border: `1.5px solid ${e.color}60`,
+          borderRadius: 12,
+          fontSize: 14,
+          fontFamily: "'Noto Sans KR',sans-serif",
+          outline: "none",
+          resize: "none",
+          lineHeight: 1.65,
+          background: "rgba(255,255,255,0.9)",
+          color: MC.text
+        },
+        onFocus: (ev) => ev.target.style.borderColor = e.color,
+        onBlur: (ev) => ev.target.style.borderColor = `${e.color}60`
+      }
+    ), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "right", fontSize: 10, color: MC.muted, marginTop: 3 } }, note.length, "/100")), /* @__PURE__ */ React.createElement("button", { onClick: handleSave, disabled: saving, style: {
+      ...mbtn(
+        saving ? "rgba(0,0,0,0.1)" : `linear-gradient(135deg, ${e.color}, ${e.color}CC)`,
+        saving ? MC.muted : "white"
+      ),
+      padding: "14px",
+      fontSize: 15,
+      boxShadow: saving ? "none" : `0 4px 16px ${e.color}40`,
+      cursor: saving ? "not-allowed" : "pointer"
+    } }, saving ? t("\uC800\uC7A5 \uC911...", "Saving...") : t("\uC624\uB298\uC758 \uAC10\uC815 \uAE30\uB85D\uD558\uAE30 \u{1F3A8}", "Log Today's Emotion \u{1F3A8}"))));
   }
   const histMap = Object.fromEntries(history.map((d) => [d.date, d]));
   const recentDays = [];
@@ -550,169 +401,106 @@ https://game.maumful.com`;
   }
   const todayEmotionData = todayEntry ? MOOD_MAP[todayEntry.emotion] : null;
   const insight = getMoodInsight(history);
-  return /* @__PURE__ */ jsxs("div", { style: { flex: 1, display: "flex", flexDirection: "column", background: MC.bg, overflow: "hidden" }, children: [
-    /* @__PURE__ */ jsxs("div", { style: {
+  return /* @__PURE__ */ React.createElement("div", { style: { flex: 1, display: "flex", flexDirection: "column", background: MC.bg, overflow: "hidden" } }, /* @__PURE__ */ React.createElement("div", { style: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "14px 18px",
+    background: "rgba(255,255,255,0.85)",
+    backdropFilter: "blur(10px)",
+    borderBottom: "1px solid rgba(0,0,0,0.06)"
+  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 20 } }, "\u{1F3A8}"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 15, fontWeight: 700, color: MC.text, fontFamily: "'Noto Serif KR',serif" } }, t("\uAC10\uC815 \uC218\uCC44\uD654", "Emotion Watercolor"))), /* @__PURE__ */ React.createElement("button", { onClick: onExit, style: {
+    ...mbtn("rgba(0,0,0,0.06)", MC.muted, { borderRadius: 9 }),
+    padding: "6px 13px",
+    fontSize: 12
+  } }, t("\uD5C8\uBE0C\uB85C \u2192", "Hub \u2192"))), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "20px 16px 32px" } }, todayDone && todayEmotionData ? /* @__PURE__ */ React.createElement("div", { style: {
+    background: `linear-gradient(135deg, ${todayEmotionData.bg}, white)`,
+    border: `1px solid ${todayEmotionData.color}40`,
+    borderRadius: 20,
+    padding: "20px",
+    marginBottom: 20,
+    boxShadow: `0 4px 20px ${todayEmotionData.color}20`
+  } }, /* @__PURE__ */ React.createElement("div", { style: {
+    fontSize: 11,
+    fontWeight: 700,
+    color: MC.muted,
+    marginBottom: 8,
+    letterSpacing: "0.5px",
+    fontFamily: "'Noto Sans KR',sans-serif"
+  } }, t("\uC624\uB298\uC758 \uAC10\uC815", "Today's Emotion"), " \u2713"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 40 } }, todayEmotionData.emoji), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: {
+    fontSize: 17,
+    fontWeight: 700,
+    color: MC.text,
+    marginBottom: 3,
+    fontFamily: "'Noto Sans KR',sans-serif"
+  } }, todayEmotionData.label, " \xB7 ", "\u2B50".repeat(todayEntry.intensity || 3)), todayEntry.note && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: MC.muted, fontStyle: "italic" } }, '"', todayEntry.note, '"')))) : /* @__PURE__ */ React.createElement("div", { style: {
+    background: "rgba(255,255,255,0.92)",
+    borderRadius: 20,
+    padding: "22px 20px",
+    marginBottom: 20,
+    boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
+    border: "1px solid rgba(0,0,0,0.06)"
+  } }, /* @__PURE__ */ React.createElement("div", { style: {
+    fontSize: 11,
+    fontWeight: 700,
+    color: MC.muted,
+    marginBottom: 6,
+    letterSpacing: "0.5px",
+    fontFamily: "'Noto Sans KR',sans-serif"
+  } }, t("\uC624\uB298\uC758 \uAC10\uC815", "Today's Emotion")), /* @__PURE__ */ React.createElement("div", { style: {
+    fontSize: 14,
+    color: MC.text,
+    fontWeight: 500,
+    marginBottom: 16,
+    lineHeight: 1.7,
+    fontFamily: "'Noto Sans KR',sans-serif"
+  } }, t("\uC624\uB298\uC758 \uAC10\uC815\uC744 \uAE30\uB85D\uD574\uBCF4\uC138\uC694.", "Record today's emotion."), /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { style: { color: MC.muted, fontSize: 12 } }, t("\uAC10\uC815\uC744 \uC54C\uC544\uCC28\uB9AC\uB294 \uAC83\uC774 \uCE58\uC720\uC758 \uC2DC\uC791\uC774\uC5D0\uC694.", "Recognizing your emotions is the beginning of healing."))), /* @__PURE__ */ React.createElement("button", { onClick: () => setScreen("checkin_emotion"), style: {
+    ...mbtn(`linear-gradient(135deg, ${MC.accent}, #5AA888)`),
+    width: "100%",
+    padding: "13px",
+    fontSize: 14,
+    boxShadow: `0 4px 16px ${MC.accent}40`
+  } }, "\u{1F3A8} ", t("\uC624\uB298\uC758 \uAC10\uC815 \uAE30\uB85D\uD558\uAE30", "Log Today's Emotion"))), /* @__PURE__ */ React.createElement("div", { style: {
+    background: "rgba(255,255,255,0.8)",
+    borderRadius: 16,
+    padding: "16px",
+    marginBottom: 20,
+    backdropFilter: "blur(8px)",
+    border: "1px solid rgba(255,255,255,0.6)"
+  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: MC.text, fontFamily: "'Noto Sans KR',sans-serif" } }, "\u{1F4C5} ", t("\uCD5C\uADFC 7\uC77C", "Last 7 Days")), /* @__PURE__ */ React.createElement("button", { onClick: () => setScreen("calendar"), style: {
+    background: "none",
+    border: "none",
+    fontSize: 11,
+    color: MC.accent,
+    fontWeight: 700,
+    cursor: "pointer",
+    fontFamily: "'Noto Sans KR',sans-serif"
+  } }, t("\uC804\uCCB4 \uBCF4\uAE30 \u2192", "View All \u2192"))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, justifyContent: "space-between" } }, recentDays.map(({ iso, dow, entry }) => {
+    const e = entry ? MOOD_MAP[entry.emotion] : null;
+    const isToday = iso === today;
+    return /* @__PURE__ */ React.createElement("div", { key: iso, style: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: MC.muted, fontWeight: 500 } }, dow), /* @__PURE__ */ React.createElement("div", { style: {
+      width: "100%",
+      aspectRatio: "1",
+      borderRadius: 9,
+      background: e ? e.bg : "rgba(0,0,0,0.05)",
+      border: isToday ? `2px solid ${MC.accent}` : e ? `1px solid ${e.color}40` : "none",
       display: "flex",
       alignItems: "center",
-      justifyContent: "space-between",
-      padding: "14px 18px",
-      background: "rgba(255,255,255,0.85)",
-      backdropFilter: "blur(10px)",
-      borderBottom: "1px solid rgba(0,0,0,0.06)"
-    }, children: [
-      /* @__PURE__ */ jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8 }, children: [
-        /* @__PURE__ */ jsx("span", { style: { fontSize: 20 }, children: "\u{1F3A8}" }),
-        /* @__PURE__ */ jsx("span", { style: { fontSize: 15, fontWeight: 700, color: MC.text, fontFamily: "'Noto Serif KR',serif" }, children: t("\uAC10\uC815 \uC218\uCC44\uD654", "Emotion Watercolor") })
-      ] }),
-      /* @__PURE__ */ jsx("button", { onClick: onExit, style: {
-        ...mbtn("rgba(0,0,0,0.06)", MC.muted, { borderRadius: 9 }),
-        padding: "6px 13px",
-        fontSize: 12
-      }, children: t("\uD5C8\uBE0C\uB85C \u2192", "Hub \u2192") })
-    ] }),
-    /* @__PURE__ */ jsxs("div", { style: { flex: 1, overflowY: "auto", padding: "20px 16px 32px" }, children: [
-      todayDone && todayEmotionData ? /* @__PURE__ */ jsxs("div", { style: {
-        background: `linear-gradient(135deg, ${todayEmotionData.bg}, white)`,
-        border: `1px solid ${todayEmotionData.color}40`,
-        borderRadius: 20,
-        padding: "20px",
-        marginBottom: 20,
-        boxShadow: `0 4px 20px ${todayEmotionData.color}20`
-      }, children: [
-        /* @__PURE__ */ jsxs("div", { style: {
-          fontSize: 11,
-          fontWeight: 700,
-          color: MC.muted,
-          marginBottom: 8,
-          letterSpacing: "0.5px",
-          fontFamily: "'Noto Sans KR',sans-serif"
-        }, children: [
-          t("\uC624\uB298\uC758 \uAC10\uC815", "Today's Emotion"),
-          " \u2713"
-        ] }),
-        /* @__PURE__ */ jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12 }, children: [
-          /* @__PURE__ */ jsx("span", { style: { fontSize: 40 }, children: todayEmotionData.emoji }),
-          /* @__PURE__ */ jsxs("div", { children: [
-            /* @__PURE__ */ jsxs("div", { style: {
-              fontSize: 17,
-              fontWeight: 700,
-              color: MC.text,
-              marginBottom: 3,
-              fontFamily: "'Noto Sans KR',sans-serif"
-            }, children: [
-              todayEmotionData.label,
-              " \xB7 ",
-              "\u2B50".repeat(todayEntry.intensity || 3)
-            ] }),
-            todayEntry.note && /* @__PURE__ */ jsxs("div", { style: { fontSize: 12, color: MC.muted, fontStyle: "italic" }, children: [
-              '"',
-              todayEntry.note,
-              '"'
-            ] })
-          ] })
-        ] })
-      ] }) : /* @__PURE__ */ jsxs("div", { style: {
-        background: "rgba(255,255,255,0.92)",
-        borderRadius: 20,
-        padding: "22px 20px",
-        marginBottom: 20,
-        boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
-        border: "1px solid rgba(0,0,0,0.06)"
-      }, children: [
-        /* @__PURE__ */ jsx("div", { style: {
-          fontSize: 11,
-          fontWeight: 700,
-          color: MC.muted,
-          marginBottom: 6,
-          letterSpacing: "0.5px",
-          fontFamily: "'Noto Sans KR',sans-serif"
-        }, children: t("\uC624\uB298\uC758 \uAC10\uC815", "Today's Emotion") }),
-        /* @__PURE__ */ jsxs("div", { style: {
-          fontSize: 14,
-          color: MC.text,
-          fontWeight: 500,
-          marginBottom: 16,
-          lineHeight: 1.7,
-          fontFamily: "'Noto Sans KR',sans-serif"
-        }, children: [
-          t("\uC624\uB298\uC758 \uAC10\uC815\uC744 \uAE30\uB85D\uD574\uBCF4\uC138\uC694.", "Record today's emotion."),
-          /* @__PURE__ */ jsx("br", {}),
-          /* @__PURE__ */ jsx("span", { style: { color: MC.muted, fontSize: 12 }, children: t("\uAC10\uC815\uC744 \uC54C\uC544\uCC28\uB9AC\uB294 \uAC83\uC774 \uCE58\uC720\uC758 \uC2DC\uC791\uC774\uC5D0\uC694.", "Recognizing your emotions is the beginning of healing.") })
-        ] }),
-        /* @__PURE__ */ jsxs("button", { onClick: () => setScreen("checkin_emotion"), style: {
-          ...mbtn(`linear-gradient(135deg, ${MC.accent}, #5AA888)`),
-          width: "100%",
-          padding: "13px",
-          fontSize: 14,
-          boxShadow: `0 4px 16px ${MC.accent}40`
-        }, children: [
-          "\u{1F3A8} ",
-          t("\uC624\uB298\uC758 \uAC10\uC815 \uAE30\uB85D\uD558\uAE30", "Log Today's Emotion")
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxs("div", { style: {
-        background: "rgba(255,255,255,0.8)",
-        borderRadius: 16,
-        padding: "16px",
-        marginBottom: 20,
-        backdropFilter: "blur(8px)",
-        border: "1px solid rgba(255,255,255,0.6)"
-      }, children: [
-        /* @__PURE__ */ jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }, children: [
-          /* @__PURE__ */ jsxs("div", { style: { fontSize: 12, fontWeight: 700, color: MC.text, fontFamily: "'Noto Sans KR',sans-serif" }, children: [
-            "\u{1F4C5} ",
-            t("\uCD5C\uADFC 7\uC77C", "Last 7 Days")
-          ] }),
-          /* @__PURE__ */ jsx("button", { onClick: () => setScreen("calendar"), style: {
-            background: "none",
-            border: "none",
-            fontSize: 11,
-            color: MC.accent,
-            fontWeight: 700,
-            cursor: "pointer",
-            fontFamily: "'Noto Sans KR',sans-serif"
-          }, children: t("\uC804\uCCB4 \uBCF4\uAE30 \u2192", "View All \u2192") })
-        ] }),
-        /* @__PURE__ */ jsx("div", { style: { display: "flex", gap: 6, justifyContent: "space-between" }, children: recentDays.map(({ iso, dow, entry }) => {
-          const e = entry ? MOOD_MAP[entry.emotion] : null;
-          const isToday = iso === today;
-          return /* @__PURE__ */ jsxs("div", { style: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }, children: [
-            /* @__PURE__ */ jsx("div", { style: { fontSize: 10, color: MC.muted, fontWeight: 500 }, children: dow }),
-            /* @__PURE__ */ jsx("div", { style: {
-              width: "100%",
-              aspectRatio: "1",
-              borderRadius: 9,
-              background: e ? e.bg : "rgba(0,0,0,0.05)",
-              border: isToday ? `2px solid ${MC.accent}` : e ? `1px solid ${e.color}40` : "none",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: e ? 14 : 0,
-              transition: "all 0.2s"
-            }, children: e ? e.emoji : "" })
-          ] }, iso);
-        }) })
-      ] }),
-      insight && /* @__PURE__ */ jsxs("div", { style: {
-        background: `linear-gradient(135deg, ${insight.bg}, rgba(255,255,255,0.9))`,
-        border: `1px solid ${insight.color}30`,
-        borderRadius: 14,
-        padding: "14px 16px"
-      }, children: [
-        /* @__PURE__ */ jsxs("div", { style: {
-          fontSize: 11,
-          fontWeight: 700,
-          color: insight.textColor,
-          marginBottom: 5,
-          letterSpacing: "0.5px",
-          fontFamily: "'Noto Sans KR',sans-serif"
-        }, children: [
-          insight.emoji,
-          " ",
-          t("\uAC10\uC815 \uC778\uC0AC\uC774\uD2B8", "Emotion Insight")
-        ] }),
-        /* @__PURE__ */ jsx("div", { style: { fontSize: 13, color: MC.text, lineHeight: 1.6, fontFamily: "'Noto Sans KR',sans-serif" }, children: insight.msg })
-      ] })
-    ] })
-  ] });
+      justifyContent: "center",
+      fontSize: e ? 14 : 0,
+      transition: "all 0.2s"
+    } }, e ? e.emoji : ""));
+  }))), insight && /* @__PURE__ */ React.createElement("div", { style: {
+    background: `linear-gradient(135deg, ${insight.bg}, rgba(255,255,255,0.9))`,
+    border: `1px solid ${insight.color}30`,
+    borderRadius: 14,
+    padding: "14px 16px"
+  } }, /* @__PURE__ */ React.createElement("div", { style: {
+    fontSize: 11,
+    fontWeight: 700,
+    color: insight.textColor,
+    marginBottom: 5,
+    letterSpacing: "0.5px",
+    fontFamily: "'Noto Sans KR',sans-serif"
+  } }, insight.emoji, " ", t("\uAC10\uC815 \uC778\uC0AC\uC774\uD2B8", "Emotion Insight")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: MC.text, lineHeight: 1.6, fontFamily: "'Noto Sans KR',sans-serif" } }, insight.msg))));
 }

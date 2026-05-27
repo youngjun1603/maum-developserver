@@ -1,4 +1,3 @@
-"use strict";
 const GAME_REGISTRY = [
   // ── 감정 수채화 (0호 — Lv.1 기본 제공) ─────────────────
   {

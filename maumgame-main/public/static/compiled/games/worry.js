@@ -1,5 +1,3 @@
-"use strict";
-import { Fragment, jsx, jsxs } from "react/jsx-runtime";
 (function() {
   const id = "worry-bubble-styles";
   if (document.getElementById(id)) return;
@@ -97,7 +95,7 @@ function buildBubbles(texts) {
   })).filter((b) => b.text.length > 0);
 }
 function WBHeader({ title, left, right }) {
-  return /* @__PURE__ */ jsxs("div", { style: {
+  return /* @__PURE__ */ React.createElement("div", { style: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
@@ -106,11 +104,7 @@ function WBHeader({ title, left, right }) {
     background: "rgba(255,255,255,0.55)",
     backdropFilter: "blur(10px)",
     borderBottom: "1px solid rgba(0,0,0,0.06)"
-  }, children: [
-    /* @__PURE__ */ jsx("div", { style: { minWidth: 64 }, children: left }),
-    /* @__PURE__ */ jsx("span", { style: { fontSize: 15, fontWeight: 700, color: "#2C3E50", fontFamily: "'Noto Serif KR',serif" }, children: title }),
-    /* @__PURE__ */ jsx("div", { style: { minWidth: 64, display: "flex", justifyContent: "flex-end" }, children: right })
-  ] });
+  } }, /* @__PURE__ */ React.createElement("div", { style: { minWidth: 64 } }, left), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 15, fontWeight: 700, color: "#2C3E50", fontFamily: "'Noto Serif KR',serif" } }, title), /* @__PURE__ */ React.createElement("div", { style: { minWidth: 64, display: "flex", justifyContent: "flex-end" } }, right));
 }
 const WorryGame = ({ onExit }) => {
   const [screen, setScreen] = React.useState("intro");
@@ -165,507 +159,392 @@ const WorryGame = ({ onExit }) => {
     setInputs([shuffled[0], shuffled[1], shuffled[2]]);
   }
   const canStart = inputs.some((t2) => t2.trim());
-  if (screen === "intro") return /* @__PURE__ */ jsxs("div", { style: {
+  if (screen === "intro") return /* @__PURE__ */ React.createElement("div", { style: {
     flex: 1,
     display: "flex",
     flexDirection: "column",
     background: "linear-gradient(160deg, #DFF0F5, #EAE8F8, #E8F3EA)",
     height: "100%"
-  }, children: [
-    /* @__PURE__ */ jsx(
-      WBHeader,
-      {
-        title: t("\u{1FAE7} \uAC71\uC815 \uD48D\uC120", "\u{1FAE7} Worry Bubbles"),
-        right: /* @__PURE__ */ jsx("button", { onClick: () => onExit(null), style: {
-          fontFamily: "'Noto Sans KR',sans-serif",
-          background: "rgba(0,0,0,0.06)",
-          color: "#666",
-          border: "none",
-          borderRadius: 9,
-          padding: "6px 12px",
-          fontSize: 12,
-          cursor: "pointer"
-        }, children: t("\uD5C8\uBE0C\uB85C \u2192", "Hub \u2192") })
-      }
-    ),
-    /* @__PURE__ */ jsxs("div", { style: {
-      flex: 1,
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "24px 24px 32px",
-      gap: 20
-    }, children: [
-      /* @__PURE__ */ jsx("div", { style: { fontSize: 72, lineHeight: 1, animation: "wbFloat 8s ease-in-out infinite" }, children: "\u{1FAE7}" }),
-      /* @__PURE__ */ jsxs("div", { style: { textAlign: "center", maxWidth: 280 }, children: [
-        /* @__PURE__ */ jsx("div", { style: {
-          fontSize: 22,
-          fontWeight: 700,
-          color: "#2C3E50",
-          fontFamily: "'Noto Serif KR',serif",
-          marginBottom: 10
-        }, children: t("\uAC71\uC815\uC744 \uD48D\uC120\uC5D0 \uB2F4\uC544\uC694", "Put your worries in a bubble") }),
-        /* @__PURE__ */ jsxs("div", { style: { fontSize: 14, color: "#5A6A7A", lineHeight: 1.75 }, children: [
-          t(
-            /* @__PURE__ */ jsxs(Fragment, { children: [
-              "\uC9C0\uAE08 \uB9C8\uC74C\uC744 \uBB34\uAC81\uAC8C \uD558\uB294 \uAC71\uC815\uB4E4\uC744",
-              /* @__PURE__ */ jsx("br", {}),
-              "\uD48D\uC120\uC5D0 \uB2F4\uACE0 \uD558\uB098\uC529 \uD130\uB728\uB824 \uBCF4\uC138\uC694."
-            ] }),
-            /* @__PURE__ */ jsxs(Fragment, { children: [
-              "Put the worries weighing on your heart",
-              /* @__PURE__ */ jsx("br", {}),
-              "into bubbles and pop them one by one."
-            ] })
-          ),
-          /* @__PURE__ */ jsx("br", {}),
-          /* @__PURE__ */ jsx("span", { style: { color: "#8A9AB0" }, children: t("\uB0B4\uB824\uB193\uB294 \uC5F0\uC2B5\uC774 \uB9C8\uC74C\uC744 \uAC00\uBCCD\uAC8C \uD574\uC694.", "Letting go makes your heart feel lighter.") })
-        ] })
-      ] }),
-      /* @__PURE__ */ jsx("div", { style: {
-        background: "rgba(255,255,255,0.75)",
-        borderRadius: 16,
-        padding: "14px 20px",
-        width: "100%",
-        maxWidth: 300,
-        boxShadow: "0 4px 16px rgba(0,0,0,0.06)"
-      }, children: [
-        { emoji: "\u270D\uFE0F", text: t("\uAC71\uC815\uC744 1~3\uAC00\uC9C0 \uC801\uC5B4\uC694", "Write 1\u20133 worries") },
-        { emoji: "\u{1FAE7}", text: t("\uAC71\uC815\uB4E4\uC774 \uD48D\uC120\uC73C\uB85C \uB5A0\uC624\uB985\uB2C8\uB2E4", "Your worries rise up as bubbles") },
-        { emoji: "\u{1F4A5}", text: t("\uD074\uB9AD\uD574\uC11C \uD558\uB098\uC529 \uD130\uB728\uB824\uC694", "Click to pop them one by one") }
-      ].map((s, i) => /* @__PURE__ */ jsxs("div", { style: {
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-        padding: "8px 0",
-        borderBottom: i < 2 ? "1px solid rgba(0,0,0,0.05)" : "none"
-      }, children: [
-        /* @__PURE__ */ jsx("span", { style: { fontSize: 18, minWidth: 26, textAlign: "center" }, children: s.emoji }),
-        /* @__PURE__ */ jsx("span", { style: { fontSize: 13, color: "#5A6A7A" }, children: s.text })
-      ] }, i)) }),
-      /* @__PURE__ */ jsx("button", { onClick: () => setScreen("input"), style: {
+  } }, /* @__PURE__ */ React.createElement(
+    WBHeader,
+    {
+      title: t("\u{1FAE7} \uAC71\uC815 \uD48D\uC120", "\u{1FAE7} Worry Bubbles"),
+      right: /* @__PURE__ */ React.createElement("button", { onClick: () => onExit(null), style: {
         fontFamily: "'Noto Sans KR',sans-serif",
-        background: "linear-gradient(135deg, #7B9ED9, #5B7EC8)",
-        color: "white",
+        background: "rgba(0,0,0,0.06)",
+        color: "#666",
         border: "none",
-        borderRadius: 14,
-        padding: "14px 0",
-        fontSize: 16,
-        fontWeight: 700,
-        cursor: "pointer",
-        boxShadow: "0 4px 16px rgba(91,126,200,0.4)",
-        width: "100%",
-        maxWidth: 300
-      }, children: t("\uC2DC\uC791\uD558\uAE30", "Start") })
-    ] })
-  ] });
-  if (screen === "input") return /* @__PURE__ */ jsxs("div", { style: {
+        borderRadius: 9,
+        padding: "6px 12px",
+        fontSize: 12,
+        cursor: "pointer"
+      } }, t("\uD5C8\uBE0C\uB85C \u2192", "Hub \u2192"))
+    }
+  ), /* @__PURE__ */ React.createElement("div", { style: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "24px 24px 32px",
+    gap: 20
+  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 72, lineHeight: 1, animation: "wbFloat 8s ease-in-out infinite" } }, "\u{1FAE7}"), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", maxWidth: 280 } }, /* @__PURE__ */ React.createElement("div", { style: {
+    fontSize: 22,
+    fontWeight: 700,
+    color: "#2C3E50",
+    fontFamily: "'Noto Serif KR',serif",
+    marginBottom: 10
+  } }, t("\uAC71\uC815\uC744 \uD48D\uC120\uC5D0 \uB2F4\uC544\uC694", "Put your worries in a bubble")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, color: "#5A6A7A", lineHeight: 1.75 } }, t(
+    /* @__PURE__ */ React.createElement(React.Fragment, null, "\uC9C0\uAE08 \uB9C8\uC74C\uC744 \uBB34\uAC81\uAC8C \uD558\uB294 \uAC71\uC815\uB4E4\uC744", /* @__PURE__ */ React.createElement("br", null), "\uD48D\uC120\uC5D0 \uB2F4\uACE0 \uD558\uB098\uC529 \uD130\uB728\uB824 \uBCF4\uC138\uC694."),
+    /* @__PURE__ */ React.createElement(React.Fragment, null, "Put the worries weighing on your heart", /* @__PURE__ */ React.createElement("br", null), "into bubbles and pop them one by one.")
+  ), /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { style: { color: "#8A9AB0" } }, t("\uB0B4\uB824\uB193\uB294 \uC5F0\uC2B5\uC774 \uB9C8\uC74C\uC744 \uAC00\uBCCD\uAC8C \uD574\uC694.", "Letting go makes your heart feel lighter.")))), /* @__PURE__ */ React.createElement("div", { style: {
+    background: "rgba(255,255,255,0.75)",
+    borderRadius: 16,
+    padding: "14px 20px",
+    width: "100%",
+    maxWidth: 300,
+    boxShadow: "0 4px 16px rgba(0,0,0,0.06)"
+  } }, [
+    { emoji: "\u270D\uFE0F", text: t("\uAC71\uC815\uC744 1~3\uAC00\uC9C0 \uC801\uC5B4\uC694", "Write 1\u20133 worries") },
+    { emoji: "\u{1FAE7}", text: t("\uAC71\uC815\uB4E4\uC774 \uD48D\uC120\uC73C\uB85C \uB5A0\uC624\uB985\uB2C8\uB2E4", "Your worries rise up as bubbles") },
+    { emoji: "\u{1F4A5}", text: t("\uD074\uB9AD\uD574\uC11C \uD558\uB098\uC529 \uD130\uB728\uB824\uC694", "Click to pop them one by one") }
+  ].map((s, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    padding: "8px 0",
+    borderBottom: i < 2 ? "1px solid rgba(0,0,0,0.05)" : "none"
+  } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 18, minWidth: 26, textAlign: "center" } }, s.emoji), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: "#5A6A7A" } }, s.text)))), /* @__PURE__ */ React.createElement("button", { onClick: () => setScreen("input"), style: {
+    fontFamily: "'Noto Sans KR',sans-serif",
+    background: "linear-gradient(135deg, #7B9ED9, #5B7EC8)",
+    color: "white",
+    border: "none",
+    borderRadius: 14,
+    padding: "14px 0",
+    fontSize: 16,
+    fontWeight: 700,
+    cursor: "pointer",
+    boxShadow: "0 4px 16px rgba(91,126,200,0.4)",
+    width: "100%",
+    maxWidth: 300
+  } }, t("\uC2DC\uC791\uD558\uAE30", "Start"))));
+  if (screen === "input") return /* @__PURE__ */ React.createElement("div", { style: {
     flex: 1,
     display: "flex",
     flexDirection: "column",
     background: "linear-gradient(160deg, #DFF0F5, #EAE8F8, #E8F3EA)",
     height: "100%"
-  }, children: [
-    /* @__PURE__ */ jsx(
-      WBHeader,
-      {
-        title: t("\uAC71\uC815 \uC801\uAE30", "Enter your worry"),
-        left: /* @__PURE__ */ jsx("button", { onClick: () => setScreen("intro"), style: {
-          fontFamily: "'Noto Sans KR',sans-serif",
-          background: "none",
-          color: "#5A6A7A",
-          border: "none",
-          fontSize: 13,
-          cursor: "pointer",
-          padding: "4px 0"
-        }, children: t("\u2190 \uB3CC\uC544\uAC00\uAE30", "\u2190 Back") })
-      }
-    ),
-    /* @__PURE__ */ jsxs("div", { style: { flex: 1, overflowY: "auto", padding: "20px 24px 0" }, children: [
-      /* @__PURE__ */ jsxs("div", { style: { textAlign: "center", marginBottom: 22 }, children: [
-        /* @__PURE__ */ jsx("div", { style: { fontSize: 16, fontWeight: 600, color: "#2C3E50", fontFamily: "'Noto Serif KR',serif" }, children: t("\uC9C0\uAE08 \uB9C8\uC74C\uC744 \uBB34\uAC81\uAC8C \uD558\uB294 \uAC83\uB4E4\uC740?", "What's weighing on your mind right now?") }),
-        /* @__PURE__ */ jsx("div", { style: { fontSize: 12, color: "#8A9AB0", marginTop: 5 }, children: t("\uC544\uC8FC \uC791\uC740 \uAC71\uC815\uB3C4 \uAD1C\uCC2E\uC544\uC694 \xB7 \uCD5C\uC18C 1\uAC1C \uC774\uC0C1", "Even tiny worries count \xB7 at least 1") })
-      ] }),
-      inputs.map((val, i) => {
-        const c = WB_COLORS[i];
-        return /* @__PURE__ */ jsxs("div", { style: { marginBottom: 14 }, children: [
-          /* @__PURE__ */ jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }, children: [
-            /* @__PURE__ */ jsx("div", { style: {
-              width: 22,
-              height: 22,
-              borderRadius: "50%",
-              background: `linear-gradient(135deg, ${c.from}, ${c.to})`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 11,
-              color: "white",
-              fontWeight: 700,
-              flexShrink: 0
-            }, children: i + 1 }),
-            /* @__PURE__ */ jsxs("span", { style: { fontSize: 12, color: "#8A9AB0" }, children: [
-              t("\uAC71\uC815", "Worry"),
-              " ",
-              i + 1,
-              i > 0 ? t(" (\uC120\uD0DD)", " (optional)") : ""
-            ] })
-          ] }),
-          /* @__PURE__ */ jsx(
-            "input",
-            {
-              type: "text",
-              value: val,
-              onChange: (e) => {
-                const next = [...inputs];
-                next[i] = e.target.value;
-                setInputs(next);
-              },
-              placeholder: i === 0 ? t("\uC9C0\uAE08 \uAC00\uC7A5 \uB9C8\uC74C\uC5D0 \uAC78\uB9AC\uB294 \uAC83...", "The thing bothering you most right now...") : t("\uB610 \uB2E4\uB978 \uAC71\uC815\uC774 \uC788\uB2E4\uBA74...", "Another worry, if any..."),
-              maxLength: 35,
-              style: {
-                fontFamily: "'Noto Sans KR',sans-serif",
-                width: "100%",
-                padding: "11px 14px",
-                fontSize: 14,
-                color: "#2C3E50",
-                background: "white",
-                border: `1.5px solid ${val.trim() ? c.shine + "99" : "rgba(0,0,0,0.1)"}`,
-                borderRadius: 12,
-                outline: "none",
-                boxSizing: "border-box",
-                transition: "border-color 0.2s",
-                boxShadow: val.trim() ? `0 0 0 3px ${c.shine}18` : "none"
-              }
-            }
-          )
-        ] }, i);
-      }),
-      /* @__PURE__ */ jsx("button", { onClick: fillExamples, style: {
+  } }, /* @__PURE__ */ React.createElement(
+    WBHeader,
+    {
+      title: t("\uAC71\uC815 \uC801\uAE30", "Enter your worry"),
+      left: /* @__PURE__ */ React.createElement("button", { onClick: () => setScreen("intro"), style: {
         fontFamily: "'Noto Sans KR',sans-serif",
         background: "none",
-        border: "1.5px dashed rgba(0,0,0,0.13)",
-        borderRadius: 12,
-        padding: "10px 16px",
-        fontSize: 12,
-        color: "#8A9AB0",
+        color: "#5A6A7A",
+        border: "none",
+        fontSize: 13,
         cursor: "pointer",
-        width: "100%",
-        marginTop: 2
-      }, children: t("\u2728 \uC608\uC2DC\uB85C \uCC44\uC6CC\uBCF4\uAE30", "\u2728 Fill with examples") })
-    ] }),
-    /* @__PURE__ */ jsx("div", { style: { padding: "16px 24px 32px" }, children: /* @__PURE__ */ jsx(
-      "button",
+        padding: "4px 0"
+      } }, t("\u2190 \uB3CC\uC544\uAC00\uAE30", "\u2190 Back"))
+    }
+  ), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "20px 24px 0" } }, /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", marginBottom: 22 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 16, fontWeight: 600, color: "#2C3E50", fontFamily: "'Noto Serif KR',serif" } }, t("\uC9C0\uAE08 \uB9C8\uC74C\uC744 \uBB34\uAC81\uAC8C \uD558\uB294 \uAC83\uB4E4\uC740?", "What's weighing on your mind right now?")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "#8A9AB0", marginTop: 5 } }, t("\uC544\uC8FC \uC791\uC740 \uAC71\uC815\uB3C4 \uAD1C\uCC2E\uC544\uC694 \xB7 \uCD5C\uC18C 1\uAC1C \uC774\uC0C1", "Even tiny worries count \xB7 at least 1"))), inputs.map((val, i) => {
+    const c = WB_COLORS[i];
+    return /* @__PURE__ */ React.createElement("div", { key: i, style: { marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 5 } }, /* @__PURE__ */ React.createElement("div", { style: {
+      width: 22,
+      height: 22,
+      borderRadius: "50%",
+      background: `linear-gradient(135deg, ${c.from}, ${c.to})`,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: 11,
+      color: "white",
+      fontWeight: 700,
+      flexShrink: 0
+    } }, i + 1), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: "#8A9AB0" } }, t("\uAC71\uC815", "Worry"), " ", i + 1, i > 0 ? t(" (\uC120\uD0DD)", " (optional)") : "")), /* @__PURE__ */ React.createElement(
+      "input",
       {
-        onClick: handleStart,
-        disabled: !canStart,
+        type: "text",
+        value: val,
+        onChange: (e) => {
+          const next = [...inputs];
+          next[i] = e.target.value;
+          setInputs(next);
+        },
+        placeholder: i === 0 ? t("\uC9C0\uAE08 \uAC00\uC7A5 \uB9C8\uC74C\uC5D0 \uAC78\uB9AC\uB294 \uAC83...", "The thing bothering you most right now...") : t("\uB610 \uB2E4\uB978 \uAC71\uC815\uC774 \uC788\uB2E4\uBA74...", "Another worry, if any..."),
+        maxLength: 35,
         style: {
           fontFamily: "'Noto Sans KR',sans-serif",
-          background: canStart ? "linear-gradient(135deg, #7B9ED9, #5B7EC8)" : "rgba(0,0,0,0.08)",
-          color: canStart ? "white" : "#AAA",
-          border: "none",
-          borderRadius: 14,
-          padding: "14px",
-          fontSize: 16,
-          fontWeight: 700,
-          cursor: canStart ? "pointer" : "not-allowed",
           width: "100%",
-          boxShadow: canStart ? "0 4px 14px rgba(91,126,200,0.4)" : "none",
-          transition: "all 0.2s"
-        },
-        children: t("\uD48D\uC120 \uB9CC\uB4E4\uAE30 \u{1FAE7}", "Make bubbles \u{1FAE7}")
+          padding: "11px 14px",
+          fontSize: 14,
+          color: "#2C3E50",
+          background: "white",
+          border: `1.5px solid ${val.trim() ? c.shine + "99" : "rgba(0,0,0,0.1)"}`,
+          borderRadius: 12,
+          outline: "none",
+          boxSizing: "border-box",
+          transition: "border-color 0.2s",
+          boxShadow: val.trim() ? `0 0 0 3px ${c.shine}18` : "none"
+        }
       }
-    ) })
-  ] });
+    ));
+  }), /* @__PURE__ */ React.createElement("button", { onClick: fillExamples, style: {
+    fontFamily: "'Noto Sans KR',sans-serif",
+    background: "none",
+    border: "1.5px dashed rgba(0,0,0,0.13)",
+    borderRadius: 12,
+    padding: "10px 16px",
+    fontSize: 12,
+    color: "#8A9AB0",
+    cursor: "pointer",
+    width: "100%",
+    marginTop: 2
+  } }, t("\u2728 \uC608\uC2DC\uB85C \uCC44\uC6CC\uBCF4\uAE30", "\u2728 Fill with examples"))), /* @__PURE__ */ React.createElement("div", { style: { padding: "16px 24px 32px" } }, /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: handleStart,
+      disabled: !canStart,
+      style: {
+        fontFamily: "'Noto Sans KR',sans-serif",
+        background: canStart ? "linear-gradient(135deg, #7B9ED9, #5B7EC8)" : "rgba(0,0,0,0.08)",
+        color: canStart ? "white" : "#AAA",
+        border: "none",
+        borderRadius: 14,
+        padding: "14px",
+        fontSize: 16,
+        fontWeight: 700,
+        cursor: canStart ? "pointer" : "not-allowed",
+        width: "100%",
+        boxShadow: canStart ? "0 4px 14px rgba(91,126,200,0.4)" : "none",
+        transition: "all 0.2s"
+      }
+    },
+    t("\uD48D\uC120 \uB9CC\uB4E4\uAE30 \u{1FAE7}", "Make bubbles \u{1FAE7}")
+  )));
   if (screen === "pop") {
     const totalCount = bubbles.length;
     const poppedCount = poppedIds.size;
-    return /* @__PURE__ */ jsxs("div", { style: {
+    return /* @__PURE__ */ React.createElement("div", { style: {
       flex: 1,
       display: "flex",
       flexDirection: "column",
       background: "linear-gradient(160deg, #C8E8F5, #D8D4F0, #C8EAD8)",
       height: "100%",
       overflow: "hidden"
-    }, children: [
-      /* @__PURE__ */ jsx(
-        WBHeader,
+    } }, /* @__PURE__ */ React.createElement(
+      WBHeader,
+      {
+        title: saving ? t("\uC800\uC7A5 \uC911...", "Saving...") : `${poppedCount === totalCount ? "\u{1F389}" : "\u{1FAE7}"} ${poppedCount}/${totalCount} ${t("\uD130\uB728\uB838\uC5B4\uC694", "popped")}`,
+        left: !saving && /* @__PURE__ */ React.createElement("button", { onClick: () => setScreen("input"), style: {
+          fontFamily: "'Noto Sans KR',sans-serif",
+          background: "none",
+          color: "#7A8A9A",
+          border: "none",
+          fontSize: 12,
+          cursor: "pointer"
+        } }, t("\u2190 \uB2E4\uC2DC \uC785\uB825", "\u2190 Re-enter")),
+        right: /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 5, alignItems: "center" } }, bubbles.map((b) => /* @__PURE__ */ React.createElement("div", { key: b.id, style: {
+          width: 9,
+          height: 9,
+          borderRadius: "50%",
+          background: poppedIds.has(b.id) ? "rgba(0,0,0,0.12)" : `linear-gradient(135deg, ${WB_COLORS[b.colorIdx].from}, ${WB_COLORS[b.colorIdx].to})`,
+          transition: "background 0.4s"
+        } })))
+      }
+    ), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, position: "relative", overflow: "hidden" } }, poppedCount === 0 && !saving && /* @__PURE__ */ React.createElement("div", { style: {
+      position: "absolute",
+      bottom: 24,
+      left: 0,
+      right: 0,
+      textAlign: "center",
+      pointerEvents: "none",
+      zIndex: 0,
+      color: "rgba(90,106,122,0.45)",
+      fontSize: 13
+    } }, t("\uD48D\uC120\uC744 \uB20C\uB7EC\uC11C \uD130\uB728\uB824 \uBCF4\uC138\uC694 \u{1F4A5}", "Tap a bubble to pop it \u{1F4A5}")), saving && /* @__PURE__ */ React.createElement("div", { style: {
+      position: "absolute",
+      inset: 0,
+      zIndex: 20,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      background: "rgba(255,255,255,0.5)",
+      backdropFilter: "blur(4px)"
+    } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "#5A6A7A", animation: "pulse 1.5s infinite" } }, t("\uAC71\uC815\uB4E4\uC774 \uC0AC\uB77C\uC9C0\uB294 \uC911... \u{1F308}", "Your worries are fading away... \u{1F308}"))), bubbles.map((b) => {
+      const c = WB_COLORS[b.colorIdx];
+      const isPopped = poppedIds.has(b.id);
+      const sz = b.size;
+      return /* @__PURE__ */ React.createElement(
+        "div",
         {
-          title: saving ? t("\uC800\uC7A5 \uC911...", "Saving...") : `${poppedCount === totalCount ? "\u{1F389}" : "\u{1FAE7}"} ${poppedCount}/${totalCount} ${t("\uD130\uB728\uB838\uC5B4\uC694", "popped")}`,
-          left: !saving && /* @__PURE__ */ jsx("button", { onClick: () => setScreen("input"), style: {
-            fontFamily: "'Noto Sans KR',sans-serif",
-            background: "none",
-            color: "#7A8A9A",
-            border: "none",
-            fontSize: 12,
-            cursor: "pointer"
-          }, children: t("\u2190 \uB2E4\uC2DC \uC785\uB825", "\u2190 Re-enter") }),
-          right: /* @__PURE__ */ jsx("div", { style: { display: "flex", gap: 5, alignItems: "center" }, children: bubbles.map((b) => /* @__PURE__ */ jsx("div", { style: {
-            width: 9,
-            height: 9,
-            borderRadius: "50%",
-            background: poppedIds.has(b.id) ? "rgba(0,0,0,0.12)" : `linear-gradient(135deg, ${WB_COLORS[b.colorIdx].from}, ${WB_COLORS[b.colorIdx].to})`,
-            transition: "background 0.4s"
-          } }, b.id)) })
-        }
-      ),
-      /* @__PURE__ */ jsxs("div", { style: { flex: 1, position: "relative", overflow: "hidden" }, children: [
-        poppedCount === 0 && !saving && /* @__PURE__ */ jsx("div", { style: {
-          position: "absolute",
-          bottom: 24,
-          left: 0,
-          right: 0,
-          textAlign: "center",
-          pointerEvents: "none",
-          zIndex: 0,
-          color: "rgba(90,106,122,0.45)",
-          fontSize: 13
-        }, children: t("\uD48D\uC120\uC744 \uB20C\uB7EC\uC11C \uD130\uB728\uB824 \uBCF4\uC138\uC694 \u{1F4A5}", "Tap a bubble to pop it \u{1F4A5}") }),
-        saving && /* @__PURE__ */ jsx("div", { style: {
-          position: "absolute",
-          inset: 0,
-          zIndex: 20,
+          key: b.id,
+          className: `wb-float wb-appear${isPopped ? " wb-popped" : ""}`,
+          style: {
+            left: `${b.xPct}%`,
+            top: `${b.yPct}%`,
+            "--dur": b.dur,
+            "--delay": b.delay,
+            marginLeft: -sz / 2,
+            marginTop: -sz / 2,
+            animationDelay: `${0.1 * b.id}s`,
+            zIndex: 10
+          },
+          onClick: () => !isPopped && !saving && handlePop(b.id)
+        },
+        /* @__PURE__ */ React.createElement("div", { className: "wb-bubble", style: {
+          width: sz,
+          height: sz,
+          borderRadius: "50%",
+          background: `radial-gradient(circle at 38% 35%, ${c.from}F0, ${c.to}CC)`,
+          border: `2px solid ${c.border}`,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "rgba(255,255,255,0.5)",
-          backdropFilter: "blur(4px)"
-        }, children: /* @__PURE__ */ jsx("div", { style: { fontSize: 13, color: "#5A6A7A", animation: "pulse 1.5s infinite" }, children: t("\uAC71\uC815\uB4E4\uC774 \uC0AC\uB77C\uC9C0\uB294 \uC911... \u{1F308}", "Your worries are fading away... \u{1F308}") }) }),
-        bubbles.map((b) => {
-          const c = WB_COLORS[b.colorIdx];
-          const isPopped = poppedIds.has(b.id);
-          const sz = b.size;
-          return /* @__PURE__ */ jsx(
-            "div",
-            {
-              className: `wb-float wb-appear${isPopped ? " wb-popped" : ""}`,
-              style: {
-                left: `${b.xPct}%`,
-                top: `${b.yPct}%`,
-                "--dur": b.dur,
-                "--delay": b.delay,
-                marginLeft: -sz / 2,
-                marginTop: -sz / 2,
-                animationDelay: `${0.1 * b.id}s`,
-                zIndex: 10
-              },
-              onClick: () => !isPopped && !saving && handlePop(b.id),
-              children: /* @__PURE__ */ jsxs("div", { className: "wb-bubble", style: {
-                width: sz,
-                height: sz,
-                borderRadius: "50%",
-                background: `radial-gradient(circle at 38% 35%, ${c.from}F0, ${c.to}CC)`,
-                border: `2px solid ${c.border}`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                textAlign: "center",
-                padding: 10,
-                boxShadow: `0 8px 28px ${c.to}50, inset 0 -4px 8px rgba(0,0,0,0.05), inset 0 4px 10px rgba(255,255,255,0.55)`,
-                position: "relative",
-                overflow: "hidden",
-                cursor: isPopped ? "default" : "pointer"
-              }, children: [
-                /* @__PURE__ */ jsx("div", { style: {
-                  position: "absolute",
-                  top: 10,
-                  left: 11,
-                  width: 13,
-                  height: 9,
-                  borderRadius: "50%",
-                  background: "rgba(255,255,255,0.65)",
-                  transform: "rotate(-30deg)",
-                  pointerEvents: "none"
-                } }),
-                /* @__PURE__ */ jsx("span", { style: {
-                  fontSize: sz < 108 ? 11 : 12,
-                  fontFamily: "'Noto Sans KR',sans-serif",
-                  fontWeight: 600,
-                  color: c.text,
-                  lineHeight: 1.45,
-                  maxWidth: sz - 26,
-                  wordBreak: "break-word",
-                  pointerEvents: "none"
-                }, children: b.text })
-              ] })
-            },
-            b.id
-          );
-        })
-      ] })
-    ] });
+          textAlign: "center",
+          padding: 10,
+          boxShadow: `0 8px 28px ${c.to}50, inset 0 -4px 8px rgba(0,0,0,0.05), inset 0 4px 10px rgba(255,255,255,0.55)`,
+          position: "relative",
+          overflow: "hidden",
+          cursor: isPopped ? "default" : "pointer"
+        } }, /* @__PURE__ */ React.createElement("div", { style: {
+          position: "absolute",
+          top: 10,
+          left: 11,
+          width: 13,
+          height: 9,
+          borderRadius: "50%",
+          background: "rgba(255,255,255,0.65)",
+          transform: "rotate(-30deg)",
+          pointerEvents: "none"
+        } }), /* @__PURE__ */ React.createElement("span", { style: {
+          fontSize: sz < 108 ? 11 : 12,
+          fontFamily: "'Noto Sans KR',sans-serif",
+          fontWeight: 600,
+          color: c.text,
+          lineHeight: 1.45,
+          maxWidth: sz - 26,
+          wordBreak: "break-word",
+          pointerEvents: "none"
+        } }, b.text))
+      );
+    })));
   }
-  if (screen === "done") return /* @__PURE__ */ jsxs("div", { style: {
+  if (screen === "done") return /* @__PURE__ */ React.createElement("div", { style: {
     flex: 1,
     display: "flex",
     flexDirection: "column",
     background: "linear-gradient(160deg, #E0EFF8, #ECE8F8, #E2F2E6)",
     height: "100%"
-  }, children: [
-    /* @__PURE__ */ jsx(
-      WBHeader,
-      {
-        title: t("\u{1FAE7} \uAC71\uC815 \uD48D\uC120", "\u{1FAE7} Worry Bubbles"),
-        right: /* @__PURE__ */ jsx("button", { onClick: () => onExit(doneData || null), style: {
-          fontFamily: "'Noto Sans KR',sans-serif",
-          background: "rgba(0,0,0,0.06)",
-          color: "#666",
-          border: "none",
-          borderRadius: 9,
-          padding: "6px 12px",
-          fontSize: 12,
-          cursor: "pointer"
-        }, children: t("\uD5C8\uBE0C\uB85C \u2192", "Hub \u2192") })
-      }
-    ),
-    /* @__PURE__ */ jsxs("div", { style: {
-      flex: 1,
-      overflowY: "auto",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "20px 24px 32px",
-      gap: 18
-    }, children: [
-      /* @__PURE__ */ jsx("div", { style: { fontSize: 64, lineHeight: 1, animation: "wbAppear 0.6s ease" }, children: "\u{1F308}" }),
-      /* @__PURE__ */ jsxs("div", { style: { textAlign: "center" }, children: [
-        /* @__PURE__ */ jsx("div", { style: {
-          fontSize: 22,
-          fontWeight: 700,
-          color: "#2C3E50",
-          fontFamily: "'Noto Serif KR',serif"
-        }, children: t("\uAC71\uC815\uB4E4\uC774 \uB0A0\uC544\uAC14\uC5B4\uC694!", "Your worries have flown away!") }),
-        /* @__PURE__ */ jsx("div", { style: { fontSize: 14, color: "#5A6A7A", marginTop: 8, lineHeight: 1.75 }, children: t(
-          /* @__PURE__ */ jsxs(Fragment, { children: [
-            bubbles.length,
-            "\uAC1C\uC758 \uAC71\uC815\uC744 \uD48D\uC120\uC5D0 \uB2F4\uACE0",
-            /* @__PURE__ */ jsx("br", {}),
-            "\uBAA8\uB450 \uD130\uB728\uB824 \uB0B4\uB824\uB193\uC558\uC5B4\uC694 \u2728"
-          ] }),
-          /* @__PURE__ */ jsxs(Fragment, { children: [
-            "You put ",
-            bubbles.length,
-            " ",
-            bubbles.length === 1 ? "worry" : "worries",
-            " in bubbles",
-            /* @__PURE__ */ jsx("br", {}),
-            "and let them all go \u2728"
-          ] })
-        ) })
-      ] }),
-      doneData && /* @__PURE__ */ jsxs("div", { style: {
-        background: "white",
-        borderRadius: 16,
-        padding: "14px 24px",
-        boxShadow: "0 4px 16px rgba(0,0,0,0.06)",
-        display: "flex",
-        gap: 28,
-        textAlign: "center",
-        animation: "wbFadeUp 0.5s ease 0.2s both"
-      }, children: [
-        /* @__PURE__ */ jsxs("div", { children: [
-          /* @__PURE__ */ jsx("div", { style: { fontSize: 24, fontWeight: 800, color: "#5B7EC8" }, children: doneData.score }),
-          /* @__PURE__ */ jsx("div", { style: { fontSize: 11, color: "#8A9AB0", marginTop: 2 }, children: t("\uC810\uC218", "Score") })
-        ] }),
-        /* @__PURE__ */ jsx("div", { style: { width: 1, background: "rgba(0,0,0,0.07)" } }),
-        /* @__PURE__ */ jsxs("div", { children: [
-          /* @__PURE__ */ jsxs("div", { style: { fontSize: 24, fontWeight: 800, color: "#4A8A5A" }, children: [
-            "+",
-            doneData.expGained
-          ] }),
-          /* @__PURE__ */ jsx("div", { style: { fontSize: 11, color: "#8A9AB0", marginTop: 2 }, children: t("\uACBD\uD5D8\uCE58", "EXP") })
-        ] })
-      ] }),
-      doneData?.leveledUp && /* @__PURE__ */ jsx("div", { style: {
-        background: "linear-gradient(135deg, #FFD700, #FFA500)",
-        borderRadius: 12,
-        padding: "10px 20px",
-        fontSize: 14,
-        fontWeight: 700,
-        color: "white",
-        animation: "wbAppear 0.5s ease"
-      }, children: t("\u{1F389} \uB808\uBCA8 \uC5C5!", "\u{1F389} Level Up!") }),
-      /* @__PURE__ */ jsxs("div", { style: {
-        background: "rgba(255,255,255,0.7)",
-        borderRadius: 16,
-        padding: "14px 18px",
-        width: "100%",
-        maxWidth: 320,
-        animation: "wbFadeUp 0.5s ease 0.35s both"
-      }, children: [
-        /* @__PURE__ */ jsx("div", { style: { fontSize: 12, color: "#8A9AB0", marginBottom: 10, textAlign: "center" }, children: t("\uC624\uB298 \uB0B4\uB824\uB193\uC740 \uAC71\uC815\uB4E4 \u{1F33F}", "Today's released worries \u{1F33F}") }),
-        bubbles.map((b, i) => /* @__PURE__ */ jsxs("div", { style: {
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          padding: "6px 0",
-          borderBottom: i < bubbles.length - 1 ? "1px solid rgba(0,0,0,0.05)" : "none"
-        }, children: [
-          /* @__PURE__ */ jsx("span", { style: { fontSize: 13 }, children: "\u{1F4A8}" }),
-          /* @__PURE__ */ jsx("span", { style: {
-            fontSize: 13,
-            color: "#9AAABA",
-            textDecoration: "line-through",
-            textDecorationColor: WB_COLORS[i % 5].shine + "99"
-          }, children: b.text })
-        ] }, i))
-      ] }),
-      /* @__PURE__ */ jsx("div", { style: {
-        fontSize: 13,
-        color: "#8A9AB0",
-        textAlign: "center",
-        maxWidth: 260,
-        lineHeight: 1.75,
-        animation: "wbFadeUp 0.5s ease 0.5s both"
-      }, children: t(
-        /* @__PURE__ */ jsxs(Fragment, { children: [
-          "\uAC71\uC815\uC740 \uC0DD\uAC01\uC77C \uBFD0\uC774\uC5D0\uC694.",
-          /* @__PURE__ */ jsx("br", {}),
-          "\uC9C0\uAE08 \uC774 \uC21C\uAC04 \uB2F9\uC2E0\uC740 \uAD1C\uCC2E\uC544\uC694 \u{1F499}"
-        ] }),
-        /* @__PURE__ */ jsxs(Fragment, { children: [
-          "Worry is just a thought.",
-          /* @__PURE__ */ jsx("br", {}),
-          "Right now, in this moment, you are okay \u{1F499}"
-        ] })
-      ) }),
-      /* @__PURE__ */ jsxs("div", { style: {
-        display: "flex",
-        gap: 10,
-        width: "100%",
-        maxWidth: 320,
-        animation: "wbFadeUp 0.5s ease 0.6s both"
-      }, children: [
-        /* @__PURE__ */ jsx("button", { onClick: () => {
-          setInputs(["", "", ""]);
-          setScreen("input");
-        }, style: {
-          fontFamily: "'Noto Sans KR',sans-serif",
-          flex: 1,
-          background: "rgba(0,0,0,0.06)",
-          color: "#5A6A7A",
-          border: "none",
-          borderRadius: 12,
-          padding: "12px",
-          fontSize: 13,
-          cursor: "pointer"
-        }, children: t("\uB2E4\uC2DC \uD558\uAE30", "Play again") }),
-        /* @__PURE__ */ jsx("button", { onClick: () => onExit(doneData), style: {
-          fontFamily: "'Noto Sans KR',sans-serif",
-          flex: 2,
-          background: "linear-gradient(135deg, #7B9ED9, #5B7EC8)",
-          color: "white",
-          border: "none",
-          borderRadius: 12,
-          padding: "12px",
-          fontSize: 14,
-          fontWeight: 700,
-          cursor: "pointer",
-          boxShadow: "0 4px 12px rgba(91,126,200,0.4)"
-        }, children: t("\uC815\uC6D0\uC73C\uB85C \uB3CC\uC544\uAC00\uAE30 \u{1F33F}", "Back to hub \u{1F33F}") })
-      ] })
-    ] })
-  ] });
+  } }, /* @__PURE__ */ React.createElement(
+    WBHeader,
+    {
+      title: t("\u{1FAE7} \uAC71\uC815 \uD48D\uC120", "\u{1FAE7} Worry Bubbles"),
+      right: /* @__PURE__ */ React.createElement("button", { onClick: () => onExit(doneData || null), style: {
+        fontFamily: "'Noto Sans KR',sans-serif",
+        background: "rgba(0,0,0,0.06)",
+        color: "#666",
+        border: "none",
+        borderRadius: 9,
+        padding: "6px 12px",
+        fontSize: 12,
+        cursor: "pointer"
+      } }, t("\uD5C8\uBE0C\uB85C \u2192", "Hub \u2192"))
+    }
+  ), /* @__PURE__ */ React.createElement("div", { style: {
+    flex: 1,
+    overflowY: "auto",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "20px 24px 32px",
+    gap: 18
+  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 64, lineHeight: 1, animation: "wbAppear 0.6s ease" } }, "\u{1F308}"), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center" } }, /* @__PURE__ */ React.createElement("div", { style: {
+    fontSize: 22,
+    fontWeight: 700,
+    color: "#2C3E50",
+    fontFamily: "'Noto Serif KR',serif"
+  } }, t("\uAC71\uC815\uB4E4\uC774 \uB0A0\uC544\uAC14\uC5B4\uC694!", "Your worries have flown away!")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, color: "#5A6A7A", marginTop: 8, lineHeight: 1.75 } }, t(
+    /* @__PURE__ */ React.createElement(React.Fragment, null, bubbles.length, "\uAC1C\uC758 \uAC71\uC815\uC744 \uD48D\uC120\uC5D0 \uB2F4\uACE0", /* @__PURE__ */ React.createElement("br", null), "\uBAA8\uB450 \uD130\uB728\uB824 \uB0B4\uB824\uB193\uC558\uC5B4\uC694 \u2728"),
+    /* @__PURE__ */ React.createElement(React.Fragment, null, "You put ", bubbles.length, " ", bubbles.length === 1 ? "worry" : "worries", " in bubbles", /* @__PURE__ */ React.createElement("br", null), "and let them all go \u2728")
+  ))), doneData && /* @__PURE__ */ React.createElement("div", { style: {
+    background: "white",
+    borderRadius: 16,
+    padding: "14px 24px",
+    boxShadow: "0 4px 16px rgba(0,0,0,0.06)",
+    display: "flex",
+    gap: 28,
+    textAlign: "center",
+    animation: "wbFadeUp 0.5s ease 0.2s both"
+  } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 24, fontWeight: 800, color: "#5B7EC8" } }, doneData.score), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "#8A9AB0", marginTop: 2 } }, t("\uC810\uC218", "Score"))), /* @__PURE__ */ React.createElement("div", { style: { width: 1, background: "rgba(0,0,0,0.07)" } }), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 24, fontWeight: 800, color: "#4A8A5A" } }, "+", doneData.expGained), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "#8A9AB0", marginTop: 2 } }, t("\uACBD\uD5D8\uCE58", "EXP")))), doneData?.leveledUp && /* @__PURE__ */ React.createElement("div", { style: {
+    background: "linear-gradient(135deg, #FFD700, #FFA500)",
+    borderRadius: 12,
+    padding: "10px 20px",
+    fontSize: 14,
+    fontWeight: 700,
+    color: "white",
+    animation: "wbAppear 0.5s ease"
+  } }, t("\u{1F389} \uB808\uBCA8 \uC5C5!", "\u{1F389} Level Up!")), /* @__PURE__ */ React.createElement("div", { style: {
+    background: "rgba(255,255,255,0.7)",
+    borderRadius: 16,
+    padding: "14px 18px",
+    width: "100%",
+    maxWidth: 320,
+    animation: "wbFadeUp 0.5s ease 0.35s both"
+  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "#8A9AB0", marginBottom: 10, textAlign: "center" } }, t("\uC624\uB298 \uB0B4\uB824\uB193\uC740 \uAC71\uC815\uB4E4 \u{1F33F}", "Today's released worries \u{1F33F}")), bubbles.map((b, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    padding: "6px 0",
+    borderBottom: i < bubbles.length - 1 ? "1px solid rgba(0,0,0,0.05)" : "none"
+  } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13 } }, "\u{1F4A8}"), /* @__PURE__ */ React.createElement("span", { style: {
+    fontSize: 13,
+    color: "#9AAABA",
+    textDecoration: "line-through",
+    textDecorationColor: WB_COLORS[i % 5].shine + "99"
+  } }, b.text)))), /* @__PURE__ */ React.createElement("div", { style: {
+    fontSize: 13,
+    color: "#8A9AB0",
+    textAlign: "center",
+    maxWidth: 260,
+    lineHeight: 1.75,
+    animation: "wbFadeUp 0.5s ease 0.5s both"
+  } }, t(
+    /* @__PURE__ */ React.createElement(React.Fragment, null, "\uAC71\uC815\uC740 \uC0DD\uAC01\uC77C \uBFD0\uC774\uC5D0\uC694.", /* @__PURE__ */ React.createElement("br", null), "\uC9C0\uAE08 \uC774 \uC21C\uAC04 \uB2F9\uC2E0\uC740 \uAD1C\uCC2E\uC544\uC694 \u{1F499}"),
+    /* @__PURE__ */ React.createElement(React.Fragment, null, "Worry is just a thought.", /* @__PURE__ */ React.createElement("br", null), "Right now, in this moment, you are okay \u{1F499}")
+  )), /* @__PURE__ */ React.createElement("div", { style: {
+    display: "flex",
+    gap: 10,
+    width: "100%",
+    maxWidth: 320,
+    animation: "wbFadeUp 0.5s ease 0.6s both"
+  } }, /* @__PURE__ */ React.createElement("button", { onClick: () => {
+    setInputs(["", "", ""]);
+    setScreen("input");
+  }, style: {
+    fontFamily: "'Noto Sans KR',sans-serif",
+    flex: 1,
+    background: "rgba(0,0,0,0.06)",
+    color: "#5A6A7A",
+    border: "none",
+    borderRadius: 12,
+    padding: "12px",
+    fontSize: 13,
+    cursor: "pointer"
+  } }, t("\uB2E4\uC2DC \uD558\uAE30", "Play again")), /* @__PURE__ */ React.createElement("button", { onClick: () => onExit(doneData), style: {
+    fontFamily: "'Noto Sans KR',sans-serif",
+    flex: 2,
+    background: "linear-gradient(135deg, #7B9ED9, #5B7EC8)",
+    color: "white",
+    border: "none",
+    borderRadius: 12,
+    padding: "12px",
+    fontSize: 14,
+    fontWeight: 700,
+    cursor: "pointer",
+    boxShadow: "0 4px 12px rgba(91,126,200,0.4)"
+  } }, t("\uC815\uC6D0\uC73C\uB85C \uB3CC\uC544\uAC00\uAE30 \u{1F33F}", "Back to hub \u{1F33F}")))));
   return null;
 };

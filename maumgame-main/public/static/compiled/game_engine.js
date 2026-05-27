@@ -1,4 +1,3 @@
-"use strict";
 const GAME_LANG = new URLSearchParams(location.search).get("lang") || "ko";
 const t = (ko, en) => GAME_LANG === "en" ? en : ko;
 const GameEngine = (() => {
