@@ -2378,7 +2378,7 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
     " ",
     t("\uD06C\uB808\uB527", "cr")
   );
-  const CreditModal = () => !showCreditModal ? null : /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl shadow-2xl p-7 w-full max-w-sm" }, /* @__PURE__ */ React.createElement("div", { className: "text-center mb-5" }, /* @__PURE__ */ React.createElement("div", { className: "text-4xl mb-3" }, "\u2726"), /* @__PURE__ */ React.createElement("h2", { className: "text-xl font-bold text-gray-800 mb-1" }, "\uD06C\uB808\uB527\uC774 \uBD80\uC871\uD569\uB2C8\uB2E4"), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-gray-500" }, "\uC2EC\uB9AC\uAC80\uC0AC 1\uD68C = 10 \uD06C\uB808\uB527", /* @__PURE__ */ React.createElement("br", null), "AI \uCC44\uD305 1\uD68C = 5 \uD06C\uB808\uB527")), /* @__PURE__ */ React.createElement("div", { className: "bg-green-50 rounded-xl p-3 mb-5 text-center" }, /* @__PURE__ */ React.createElement("span", { className: "text-green-800 font-semibold" }, "\uD604\uC7AC \uC794\uC561: ", credits, " \uD06C\uB808\uB527")), /* @__PURE__ */ React.createElement(
+  const CreditModal = () => !showCreditModal ? null : /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl shadow-2xl p-7 w-full max-w-sm" }, /* @__PURE__ */ React.createElement("div", { className: "text-center mb-5" }, /* @__PURE__ */ React.createElement("div", { className: "text-4xl mb-3" }, "\u2726"), /* @__PURE__ */ React.createElement("h2", { className: "text-xl font-bold text-gray-800 mb-1" }, t("\uD06C\uB808\uB527\uC774 \uBD80\uC871\uD569\uB2C8\uB2E4", "Not Enough Credits")), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-gray-500" }, t("\uC2EC\uB9AC\uAC80\uC0AC 1\uD68C = 10 \uD06C\uB808\uB527", "Assessment = 10 credits"), /* @__PURE__ */ React.createElement("br", null), t("AI \uCC44\uD305 1\uD68C = 5 \uD06C\uB808\uB527", "AI chat = 5 credits"))), /* @__PURE__ */ React.createElement("div", { className: "bg-green-50 rounded-xl p-3 mb-5 text-center" }, /* @__PURE__ */ React.createElement("span", { className: "text-green-800 font-semibold" }, t("\uD604\uC7AC \uC794\uC561", "Balance"), ": ", credits, " ", t("\uD06C\uB808\uB527", "credits"))), /* @__PURE__ */ React.createElement(
     "button",
     {
       onClick: () => {
@@ -2387,14 +2387,14 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
       },
       className: "w-full bg-green-700 text-white py-3 rounded-xl font-bold hover:bg-green-800 transition mb-3"
     },
-    "\uD06C\uB808\uB527 \uCDA9\uC804\uD558\uAE30"
+    t("\uD06C\uB808\uB527 \uCDA9\uC804\uD558\uAE30", "Buy Credits")
   ), /* @__PURE__ */ React.createElement(
     "button",
     {
       onClick: () => setShowCreditModal(false),
       className: "w-full bg-gray-100 text-gray-600 py-3 rounded-xl font-semibold hover:bg-gray-200 transition"
     },
-    "\uB098\uC911\uC5D0"
+    t("\uB098\uC911\uC5D0", "Later")
   )));
   const AiLimitModal = () => !showAiLimitModal ? null : /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl shadow-2xl p-7 w-full max-w-sm" }, !isLoggedIn ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "text-center mb-5" }, /* @__PURE__ */ React.createElement("div", { className: "text-4xl mb-3" }, "\u{1F33F}"), /* @__PURE__ */ React.createElement("h2", { className: "text-xl font-bold text-gray-800 mb-2" }, t("\uBB34\uB8CC \uCCB4\uD5D8\uC774 \uB05D\uB0AC\uC2B5\uB2C8\uB2E4", "Free trial ended")), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-gray-500 leading-relaxed" }, t(/* @__PURE__ */ React.createElement(React.Fragment, null, "AI \uC0C1\uB2F4 ", /* @__PURE__ */ React.createElement("strong", null, AI_GUEST_TOTAL, "\uD68C"), "\uB97C \uBAA8\uB450 \uC0AC\uC6A9\uD588\uC5B4\uC694.", /* @__PURE__ */ React.createElement("br", null), "\uD68C\uC6D0\uAC00\uC785\uD558\uBA74 ", /* @__PURE__ */ React.createElement("span", { className: "text-green-700 font-bold" }, "20 \uD06C\uB808\uB527 \uC989\uC2DC \uC9C0\uAE09"), " +", /* @__PURE__ */ React.createElement("br", null), "\uAC80\uC0AC \uACB0\uACFC \uC800\uC7A5 \xB7 \uD558\uB8E8 5\uD68C AI \uC0C1\uB2F4\uC774 \uC81C\uACF5\uB429\uB2C8\uB2E4."), /* @__PURE__ */ React.createElement(React.Fragment, null, "You've used all ", /* @__PURE__ */ React.createElement("strong", null, AI_GUEST_TOTAL), " free AI sessions.", /* @__PURE__ */ React.createElement("br", null), "Sign up to get ", /* @__PURE__ */ React.createElement("span", { className: "text-green-700 font-bold" }, "20 credits instantly"), " +", /* @__PURE__ */ React.createElement("br", null), "saved history & 5 AI chats per day.")))), /* @__PURE__ */ React.createElement("div", { className: "space-y-2 mb-4" }, window.KAKAO_APP_KEY && /* @__PURE__ */ React.createElement(
     "button",
@@ -3387,7 +3387,7 @@ Visit Maumful and take the same test again to compare your progress.`));
           /* @__PURE__ */ React.createElement("div", { className: "mt-2" }, /* @__PURE__ */ React.createElement("span", { className: `text-xs font-bold px-2 py-0.5 rounded-full ${r.free ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}` }, r.free ? t("\u2713 \uBB34\uB8CC", "\u2713 Free") : t("10 \uD06C\uB808\uB527", "10 Credits")))
         );
       })));
-    })(), dailyCtxCard && !localStorage.getItem(`maumful_ai_checkin_${new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 10)}`) && /* @__PURE__ */ React.createElement("div", { className: "bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200 rounded-2xl p-4 mb-6" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-start gap-3" }, /* @__PURE__ */ React.createElement("div", { className: "w-9 h-9 rounded-full bg-violet-100 flex items-center justify-center flex-shrink-0 text-lg" }, "\u{1F916}"), /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0" }, /* @__PURE__ */ React.createElement("p", { className: "text-xs font-semibold text-violet-500 mb-1 uppercase tracking-wide" }, "AI \uC0C1\uB2F4\uC0AC"), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-violet-800 mb-3 leading-relaxed font-medium" }, '"', dailyCtxCard.greeting, '"'), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 flex-wrap" }, /* @__PURE__ */ React.createElement(
+    })(), dailyCtxCard && !localStorage.getItem(`maumful_ai_checkin_${new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 10)}`) && /* @__PURE__ */ React.createElement("div", { className: "bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200 rounded-2xl p-4 mb-6" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-start gap-3" }, /* @__PURE__ */ React.createElement("div", { className: "w-9 h-9 rounded-full bg-violet-100 flex items-center justify-center flex-shrink-0 text-lg" }, "\u{1F916}"), /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0" }, /* @__PURE__ */ React.createElement("p", { className: "text-xs font-semibold text-violet-500 mb-1 uppercase tracking-wide" }, t("AI \uC0C1\uB2F4\uC0AC", "AI Counselor")), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-violet-800 mb-3 leading-relaxed font-medium" }, '"', dailyCtxCard.greeting, '"'), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 flex-wrap" }, /* @__PURE__ */ React.createElement(
       "button",
       {
         onClick: () => {
@@ -3397,7 +3397,8 @@ Visit Maumful and take the same test again to compare your progress.`));
         },
         className: "bg-violet-500 hover:bg-violet-600 text-white text-xs font-bold px-4 py-2 rounded-xl transition flex items-center gap-1.5"
       },
-      "\u{1F4AC} AI\uC640 \uB300\uD654\uD558\uAE30"
+      "\u{1F4AC} ",
+      t("AI\uC640 \uB300\uD654\uD558\uAE30", "Chat with AI")
     ), /* @__PURE__ */ React.createElement(
       "button",
       {
@@ -3408,7 +3409,7 @@ Visit Maumful and take the same test again to compare your progress.`));
         },
         className: "text-xs text-violet-400 hover:text-violet-600 px-3 py-2 rounded-xl hover:bg-violet-100 transition"
       },
-      "\uB098\uC911\uC5D0"
+      t("\uB098\uC911\uC5D0", "Later")
     ))))), (() => {
       const trendTypes = ["PHQ9", "GAD7", "BURNOUT"].filter(
         (t2) => testHistory.filter((h) => h.test_type === t2 && h.score != null).length >= 3

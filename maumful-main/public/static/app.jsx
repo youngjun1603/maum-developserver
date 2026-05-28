@@ -2421,20 +2421,20 @@ function PsychologicalTestSystem() {
       <div className="bg-white rounded-2xl shadow-2xl p-7 w-full max-w-sm">
         <div className="text-center mb-5">
           <div className="text-4xl mb-3">✦</div>
-          <h2 className="text-xl font-bold text-gray-800 mb-1">크레딧이 부족합니다</h2>
-          <p className="text-sm text-gray-500">심리검사 1회 = 10 크레딧<br/>AI 채팅 1회 = 5 크레딧</p>
+          <h2 className="text-xl font-bold text-gray-800 mb-1">{t('크레딧이 부족합니다', 'Not Enough Credits')}</h2>
+          <p className="text-sm text-gray-500">{t('심리검사 1회 = 10 크레딧', 'Assessment = 10 credits')}<br/>{t('AI 채팅 1회 = 5 크레딧', 'AI chat = 5 credits')}</p>
         </div>
         <div className="bg-green-50 rounded-xl p-3 mb-5 text-center">
-          <span className="text-green-800 font-semibold">현재 잔액: {credits} 크레딧</span>
+          <span className="text-green-800 font-semibold">{t('현재 잔액', 'Balance')}: {credits} {t('크레딧', 'credits')}</span>
         </div>
         <button
           onClick={() => { setShowCreditModal(false); setShowChargeView(true); }}
           className="w-full bg-green-700 text-white py-3 rounded-xl font-bold hover:bg-green-800 transition mb-3"
-        >크레딧 충전하기</button>
+        >{t('크레딧 충전하기', 'Buy Credits')}</button>
         <button
           onClick={() => setShowCreditModal(false)}
           className="w-full bg-gray-100 text-gray-600 py-3 rounded-xl font-semibold hover:bg-gray-200 transition"
-        >나중에</button>
+        >{t('나중에', 'Later')}</button>
       </div>
     </div>
   );
@@ -3911,7 +3911,7 @@ function PsychologicalTestSystem() {
               <div className="flex items-start gap-3">
                 <div className="w-9 h-9 rounded-full bg-violet-100 flex items-center justify-center flex-shrink-0 text-lg">🤖</div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-violet-500 mb-1 uppercase tracking-wide">AI 상담사</p>
+                  <p className="text-xs font-semibold text-violet-500 mb-1 uppercase tracking-wide">{t('AI 상담사', 'AI Counselor')}</p>
                   <p className="text-sm text-violet-800 mb-3 leading-relaxed font-medium">"{dailyCtxCard.greeting}"</p>
                   <div className="flex gap-2 flex-wrap">
                     <button
@@ -3921,7 +3921,7 @@ function PsychologicalTestSystem() {
                         setView('aiCounsel');
                       }}
                       className="bg-violet-500 hover:bg-violet-600 text-white text-xs font-bold px-4 py-2 rounded-xl transition flex items-center gap-1.5">
-                      💬 AI와 대화하기
+                      💬 {t('AI와 대화하기', 'Chat with AI')}
                     </button>
                     <button
                       onClick={() => {
@@ -3930,7 +3930,7 @@ function PsychologicalTestSystem() {
                         setDailyCtxCard(null);
                       }}
                       className="text-xs text-violet-400 hover:text-violet-600 px-3 py-2 rounded-xl hover:bg-violet-100 transition">
-                      나중에
+                      {t('나중에', 'Later')}
                     </button>
                   </div>
                 </div>
