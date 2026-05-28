@@ -4892,29 +4892,11 @@ function PsychologicalTestSystem() {
                 </ul>
               </div>
 
-              <div style={{ background:'#FFF7ED', border:'1px solid #FED7AA', borderRadius:12,
-                padding:'14px 16px', marginBottom:4 }}>
-                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
-                  <span style={{ fontSize:16 }}>🔧</span>
-                  <span style={{ fontSize:13, fontWeight:700, color:'#92400E' }}>{t("결제 시스템 준비 중","Payment coming soon")}</span>
-                </div>
-                <p style={{ fontSize:12, color:'#78350F', lineHeight:1.6, margin:0 }}>
-                  {t(<>현재 결제 서비스를 준비하고 있습니다.<br />오픈 후 support@maumful.com으로 문의하시면 크레딧을 우선 지급해 드립니다.</>,
-                     <>We're setting up payment processing.<br />Email support@maumful.com after launch for early credit access.</>)}
-                </p>
-              </div>
-              <div style={{ textAlign:'center', marginTop:10, fontSize:11, color:'#9CA3AF' }}>
-                {isKorea ? t('토스페이먼츠 연동 준비 중','Payment coming soon') : 'Payment coming soon'}
-              </div>
             </>)}
 
             {/* ── 멤버십 플랜 탭 ── */}
             {activeTab === 'plans' && (<>
-              <div style={{ background:'#FFF8E7', borderRadius:12, padding:'10px 14px',
-                marginBottom:12, border:'1px solid #FDE68A', fontSize:12, color:'#92400E' }}>
-                🚀 {t("사업자 등록 완료 후 정식 오픈 예정입니다. 관심 등록하시면 오픈 시 알려드려요!","Launching after business registration. Register your interest and we'll notify you!")}
-              </div>
-              <div style={{ display:'flex', justifyContent:'center', marginBottom:14 }}>
+<div style={{ display:'flex', justifyContent:'center', marginBottom:14 }}>
                 <div style={{ background:'#F3F4F6', borderRadius:12, padding:3, display:'inline-flex', gap:2 }}>
                   {[['monthly',t('월간','Monthly')],['annual',t('연간 🎉 20% 할인','Annual 🎉 20% off')]].map(([cyc, lbl]) => (
                     <button key={cyc} onClick={() => setBillingCycle(cyc)} style={{

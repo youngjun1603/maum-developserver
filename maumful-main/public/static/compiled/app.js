@@ -4062,24 +4062,7 @@ Visit Maumful and take the same test again to compare your progress.`));
       ), isKorea && t(
         /* @__PURE__ */ React.createElement("li", null, "\uACB0\uC81C \uC2DC \uC774\uBA54\uC77C\xB7\uACB0\uC81C\uAE08\uC561\uC774 ", /* @__PURE__ */ React.createElement("strong", null, "\uD1A0\uC2A4\uD398\uC774\uBA3C\uCE20(\uC8FC)"), "\uC5D0 \uC81C\uACF5\uB429\uB2C8\uB2E4. (\uACB0\uC81C \uCC98\uB9AC \uBAA9\uC801)"),
         /* @__PURE__ */ React.createElement("li", null, "Your email and payment amount will be shared with ", /* @__PURE__ */ React.createElement("strong", null, "TossPayments"), " for processing.")
-      ), /* @__PURE__ */ React.createElement("li", null, t("\uD658\uBD88 \uBB38\uC758:", "Refund inquiries:"), " support@maumful.com"))), /* @__PURE__ */ React.createElement("div", { style: {
-        background: "#FFF7ED",
-        border: "1px solid #FED7AA",
-        borderRadius: 12,
-        padding: "14px 16px",
-        marginBottom: 4
-      } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 4 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16 } }, "\u{1F527}"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, fontWeight: 700, color: "#92400E" } }, t("\uACB0\uC81C \uC2DC\uC2A4\uD15C \uC900\uBE44 \uC911", "Payment coming soon"))), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: "#78350F", lineHeight: 1.6, margin: 0 } }, t(
-        /* @__PURE__ */ React.createElement(React.Fragment, null, "\uD604\uC7AC \uACB0\uC81C \uC11C\uBE44\uC2A4\uB97C \uC900\uBE44\uD558\uACE0 \uC788\uC2B5\uB2C8\uB2E4.", /* @__PURE__ */ React.createElement("br", null), "\uC624\uD508 \uD6C4 support@maumful.com\uC73C\uB85C \uBB38\uC758\uD558\uC2DC\uBA74 \uD06C\uB808\uB527\uC744 \uC6B0\uC120 \uC9C0\uAE09\uD574 \uB4DC\uB9BD\uB2C8\uB2E4."),
-        /* @__PURE__ */ React.createElement(React.Fragment, null, "We're setting up payment processing.", /* @__PURE__ */ React.createElement("br", null), "Email support@maumful.com after launch for early credit access.")
-      ))), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", marginTop: 10, fontSize: 11, color: "#9CA3AF" } }, isKorea ? t("\uD1A0\uC2A4\uD398\uC774\uBA3C\uCE20 \uC5F0\uB3D9 \uC900\uBE44 \uC911", "Payment coming soon") : "Payment coming soon")), activeTab === "plans" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: {
-        background: "#FFF8E7",
-        borderRadius: 12,
-        padding: "10px 14px",
-        marginBottom: 12,
-        border: "1px solid #FDE68A",
-        fontSize: 12,
-        color: "#92400E"
-      } }, "\u{1F680} ", t("\uC0AC\uC5C5\uC790 \uB4F1\uB85D \uC644\uB8CC \uD6C4 \uC815\uC2DD \uC624\uD508 \uC608\uC815\uC785\uB2C8\uB2E4. \uAD00\uC2EC \uB4F1\uB85D\uD558\uC2DC\uBA74 \uC624\uD508 \uC2DC \uC54C\uB824\uB4DC\uB824\uC694!", "Launching after business registration. Register your interest and we'll notify you!")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "center", marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { background: "#F3F4F6", borderRadius: 12, padding: 3, display: "inline-flex", gap: 2 } }, [["monthly", t("\uC6D4\uAC04", "Monthly")], ["annual", t("\uC5F0\uAC04 \u{1F389} 20% \uD560\uC778", "Annual \u{1F389} 20% off")]].map(([cyc, lbl]) => /* @__PURE__ */ React.createElement("button", { key: cyc, onClick: () => setBillingCycle(cyc), style: {
+      ), /* @__PURE__ */ React.createElement("li", null, t("\uD658\uBD88 \uBB38\uC758:", "Refund inquiries:"), " support@maumful.com")))), activeTab === "plans" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "center", marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { background: "#F3F4F6", borderRadius: 12, padding: 3, display: "inline-flex", gap: 2 } }, [["monthly", t("\uC6D4\uAC04", "Monthly")], ["annual", t("\uC5F0\uAC04 \u{1F389} 20% \uD560\uC778", "Annual \u{1F389} 20% off")]].map(([cyc, lbl]) => /* @__PURE__ */ React.createElement("button", { key: cyc, onClick: () => setBillingCycle(cyc), style: {
         padding: "6px 14px",
         borderRadius: 10,
         fontSize: 12,
