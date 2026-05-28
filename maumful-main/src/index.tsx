@@ -1629,7 +1629,7 @@ app.post('/api/test/analyze-pdf', async (c) => {
   const apiKey = await getAnthropicKey(DB, c.env)
   if (!apiKey) return c.json({ error: 'AI 서비스 미설정' }, 500)
 
-  const PDF_COST = 2
+  const PDF_COST = 3
   const creditResult = await spendCredits(DB, userId, PDF_COST, 'pdf_analyze')
   if (!creditResult.ok) {
     return c.json({ error: `크레딧이 부족합니다. (필요: ${PDF_COST}cr, 보유: ${creditResult.balance}cr)`, needsCharge: true }, 402)
@@ -1953,32 +1953,37 @@ app.post('/api/ai-chat', async (c) => {
       const rl = await checkRateLimit(KV, `chat:${userId}`, 20, 60)
       if (!rl.allowed) return c.json({ success: false, error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' }, 429)
 
-      // 일일 횟수 제한 (크레딧 기반)
-      chatDailyKey = `ai_daily:${userId}:${today}`
-      const dailyUsed = parseInt(await KV.get(chatDailyKey) || '0', 10)
-      const dailyLimit = (userRow?.credits ?? 0) > 0 ? 10 : 5
+      const COST = 2
+      const hasCredits = (userRow?.credits ?? 0) >= COST
 
-      if (dailyUsed >= dailyLimit) {
-        return c.json({
-          success: false,
-          error: `오늘 AI 상담 횟수(${dailyLimit}회)를 모두 사용했습니다.`,
-          dailyUsed, dailyLimit,
-          needsCharge: (userRow?.credits ?? 0) <= 0,
-          errorCode: 'daily_limit_exceeded',
-        }, 429)
-      }
+      if (hasCredits) {
+        // 크레딧 보유: 소진될 때까지 무제한 (일일 한도 없음)
+        const result = await spendCredits(DB, userId, COST, 'chat')
+        if (!result.ok) {
+          return c.json({
+            success: false,
+            error: `크레딧 부족 (보유: ${result.balance}, 필요: ${COST})`,
+            balance: result.balance,
+            needsCharge: true,
+          }, 402)
+        }
+      } else {
+        // 크레딧 없음: 일일 5회 무료 제공
+        chatDailyKey = `ai_daily:${userId}:${today}`
+        const dailyUsed = parseInt(await KV.get(chatDailyKey) || '0', 10)
+        const dailyLimit = 5
 
-      await KV.put(chatDailyKey, String(dailyUsed + 1), { expirationTtl: 86400 })
+        if (dailyUsed >= dailyLimit) {
+          return c.json({
+            success: false,
+            error: `오늘 무료 AI 상담 횟수(${dailyLimit}회)를 모두 사용했습니다.`,
+            dailyUsed, dailyLimit,
+            needsCharge: true,
+            errorCode: 'daily_limit_exceeded',
+          }, 429)
+        }
 
-      const COST = 5
-      const result = await spendCredits(DB, userId, COST, 'chat')
-      if (!result.ok) {
-        return c.json({
-          success: false,
-          error: `크레딧 부족 (보유: ${result.balance}, 필요: ${COST})`,
-          balance: result.balance,
-          needsCharge: true,
-        }, 402)
+        await KV.put(chatDailyKey, String(dailyUsed + 1), { expirationTtl: 86400 })
       }
     }
     // 마스터 계정: 횟수 제한·크레딧 차감 없이 바로 통과
@@ -1988,10 +1993,13 @@ app.post('/api/ai-chat', async (c) => {
   async function refundChat() {
     if (!isGuest && userId && !chatIsMaster) {
       if (chatDailyKey) {
+        // 무료 사용자 카운터 복구
         const cnt = parseInt(await KV.get(chatDailyKey) || '1', 10)
         await KV.put(chatDailyKey, String(Math.max(0, cnt - 1)), { expirationTtl: 86400 })
+      } else {
+        // 크레딧 차감 복구
+        await gainCredits(DB, userId, 2, 'refund_api_error')
       }
-      await gainCredits(DB, userId, 5, 'refund_api_error')
     }
   }
 

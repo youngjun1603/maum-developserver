@@ -17,7 +17,6 @@ const tokenStore = {
 // ============================================================
 const FREE_TESTS      = ['PHQ9', 'GAD7'];            // 무료 검사 2종 (PHQ-9·GAD-7)
 const AI_LIMIT_FREE   = 5;   // 로그인(크레딧 없음): 하루 5회
-const AI_LIMIT_PAID   = 10;  // 로그인(크레딧 보유): 하루 10회 (회당 5크레딧)
 const AI_LIMIT_KEY    = 'ai_chat_used_v2';           // localStorage 키 (로그인 사용자 일일 카운터)
 const AI_GUEST_TOTAL  = 3;   // 비회원 평생 체험 횟수
 const AI_GUEST_KEY    = 'maumful_guest_ai_total';    // localStorage 키 (비회원 누적, 절대 초기화 안 함)
@@ -2426,7 +2425,7 @@ function PsychologicalTestSystem() {
         <div className="text-center mb-5">
           <div className="text-4xl mb-3">✦</div>
           <h2 className="text-xl font-bold text-gray-800 mb-1">{t('크레딧이 부족합니다', 'Not Enough Credits')}</h2>
-          <p className="text-sm text-gray-500">{t('심리검사 1회 = 10 크레딧', 'Assessment = 10 credits')}<br/>{t('AI 채팅 1회 = 5 크레딧', 'AI chat = 5 credits')}</p>
+          <p className="text-sm text-gray-500">{t('심리검사 1회 = 10 크레딧', 'Assessment = 10 credits')}<br/>{t('AI 채팅 1회 = 2 크레딧', 'AI chat = 2 credits')}</p>
         </div>
         <div className="bg-green-50 rounded-xl p-3 mb-5 text-center">
           <span className="text-green-800 font-semibold">{t('현재 잔액', 'Balance')}: {credits} {t('크레딧', 'credits')}</span>
@@ -2489,7 +2488,7 @@ function PsychologicalTestSystem() {
               <p className="text-sm text-gray-500 leading-relaxed">
                 {credits <= 0
                   ? t(`크레딧이 없으면 AI 상담을 하루 ${AI_LIMIT_FREE}회까지 이용할 수 있습니다.`, `Without credits you can use ${AI_LIMIT_FREE} AI sessions per day.`)
-                  : t(`크레딧 보유 시 AI 상담을 하루 최대 ${AI_LIMIT_PAID}회 이용할 수 있습니다.`, `With credits you can use up to ${AI_LIMIT_PAID} AI sessions per day.`)}
+                  : t(`크레딧 보유 시 AI 상담을 크레딧이 소진될 때까지 무제한 이용할 수 있습니다. (1회 = 2 크레딧)`, `With credits, use AI chat unlimited until credits run out. (2 credits per chat)`)}
               </p>
             </div>
             <div className="space-y-3 mb-4">
@@ -3853,7 +3852,7 @@ function PsychologicalTestSystem() {
               <button onClick={() => setShowChargeView(true)} className="text-xs bg-white/20 px-3 py-1 rounded-full hover:bg-white/30 transition">{t("충전 →", "Top up →")}</button>
             </div>
             <div className="text-4xl font-bold">✦ {credits}</div>
-            <div className="text-xs opacity-70 mt-1">{t(`검사 ${Math.floor(credits / 10)}회 · AI 채팅 ${Math.floor(credits / 5)}회 가능`, `${Math.floor(credits / 10)} tests · ${Math.floor(credits / 5)} AI chats available`)}</div>
+            <div className="text-xs opacity-70 mt-1">{t(`검사 ${Math.floor(credits / 10)}회 · AI 채팅 ${Math.floor(credits / 2)}회 가능`, `${Math.floor(credits / 10)} tests · ${Math.floor(credits / 2)} AI chats available`)}</div>
           </div>
 
           {/* 추천 검사 카드 — 이력 기반 개인화 */}
@@ -4801,7 +4800,7 @@ function PsychologicalTestSystem() {
             </div>
             <div style={{ marginTop:14, fontSize:12, opacity:0.85,
               background:'rgba(255,255,255,0.15)', borderRadius:8, padding:'6px 12px', display:'inline-block' }}>
-              {t("심리검사 1회 = 10 크레딧 · AI 채팅 1회 = 5 크레딧","Assessment = 10 cr · AI chat = 5 cr")}
+              {t("심리검사 1회 = 10 크레딧 · AI 채팅 1회 = 2 크레딧","Assessment = 10 cr · AI chat = 2 cr")}
             </div>
           </div>
 
@@ -7275,7 +7274,7 @@ function PsychologicalTestSystem() {
                         </div>
                         {pdfStatus === 'ready' && (
                           <button onClick={analyzePdf} className="w-full mt-4 bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white text-sm font-bold py-3 rounded-xl transition flex items-center justify-center gap-2">
-                            ✨ AI 해석 시작 (2 크레딧)
+                            ✨ AI 해석 시작 (3 크레딧)
                           </button>
                         )}
                         {pdfStatus === 'analyzing' && (
