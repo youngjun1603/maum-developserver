@@ -4143,7 +4143,35 @@ Visit Maumful and take the same test again to compare your progress.`));
           fontWeight: 700,
           fontFamily: F
         } }, t("\u{1F514} \uC624\uD508 \uC54C\uB9BC \uC2E0\uCCAD", "\u{1F514} Notify Me"))));
-      }), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "#9CA3AF", marginTop: 4, lineHeight: 1.8 } }, /* @__PURE__ */ React.createElement("div", null, t("* \uAD6C\uB3C5 \uD50C\uB79C\uC740 \uD1A0\uC2A4\uD398\uC774\uBA3C\uCE20 \uC2EC\uC0AC \uC644\uB8CC \uD6C4 \uC815\uC2DD \uCD9C\uC2DC\uB429\uB2C8\uB2E4", "* Subscription plans will launch after payment provider review is complete")), /* @__PURE__ */ React.createElement("div", null, t("* \uBAA8\uB4E0 \uAE08\uC561\uC740 \uBD80\uAC00\uAC00\uCE58\uC138(VAT 10%) \uD3EC\uD568 \uAC00\uACA9\uC785\uB2C8\uB2E4", "* All prices include VAT (10%)")), /* @__PURE__ */ React.createElement("div", null, t("* \uB9CC 19\uC138 \uBBF8\uB9CC \uBBF8\uC131\uB144\uC790\uC758 \uAD6C\uB3C5 \uACB0\uC81C\uB294 \uBC95\uC815\uB300\uB9AC\uC778 \uB3D9\uC758\uAC00 \uD544\uC694\uD569\uB2C8\uB2E4 (\uBBFC\uBC95 \uC81C5\uC870)", "* Minors under 19 require parental consent for subscription purchases"))))))
+      }), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "#9CA3AF", marginTop: 4, lineHeight: 1.8 } }, /* @__PURE__ */ React.createElement("div", null, t("* \uAD6C\uB3C5 \uD50C\uB79C\uC740 \uD1A0\uC2A4\uD398\uC774\uBA3C\uCE20 \uC2EC\uC0AC \uC644\uB8CC \uD6C4 \uC815\uC2DD \uCD9C\uC2DC\uB429\uB2C8\uB2E4", "* Subscription plans will launch after payment provider review is complete")), /* @__PURE__ */ React.createElement("div", null, t("* \uBAA8\uB4E0 \uAE08\uC561\uC740 \uBD80\uAC00\uAC00\uCE58\uC138(VAT 10%) \uD3EC\uD568 \uAC00\uACA9\uC785\uB2C8\uB2E4", "* All prices include VAT (10%)")), /* @__PURE__ */ React.createElement("div", null, t("* \uB9CC 19\uC138 \uBBF8\uB9CC \uBBF8\uC131\uB144\uC790\uC758 \uAD6C\uB3C5 \uACB0\uC81C\uB294 \uBC95\uC815\uB300\uB9AC\uC778 \uB3D9\uC758\uAC00 \uD544\uC694\uD569\uB2C8\uB2E4 (\uBBFC\uBC95 \uC81C5\uC870)", "* Minors under 19 require parental consent for subscription purchases"))))), activeTab === "credits" && /* @__PURE__ */ React.createElement("div", { style: { padding: "14px 24px 20px", borderTop: "1px solid #E5E7EB" } }, errMsg && /* @__PURE__ */ React.createElement("div", { style: {
+        background: "#FEF2F2",
+        border: "1px solid #FCA5A5",
+        borderRadius: 10,
+        padding: "10px 14px",
+        marginBottom: 10,
+        fontSize: 12,
+        color: "#DC2626"
+      } }, errMsg), /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          onClick: handlePay,
+          disabled: loading || !selPkg,
+          style: {
+            width: "100%",
+            padding: "14px",
+            borderRadius: 13,
+            border: "none",
+            cursor: loading || !selPkg ? "default" : "pointer",
+            background: loading || !selPkg ? "#D1FAE5" : "linear-gradient(135deg,#2D6A4F,#40916C)",
+            color: "white",
+            fontSize: 15,
+            fontWeight: 800,
+            fontFamily: F,
+            opacity: loading || !selPkg ? 0.7 : 1
+          }
+        },
+        loading ? t("\uACB0\uC81C \uC900\uBE44 \uC911...", "Processing...") : selPkg ? t(`${selPkg.label} \xB7 \u2726 ${selPkg.credits} \uD06C\uB808\uB527 \uACB0\uC81C\uD558\uAE30`, `Pay \xB7 \u2726 ${selPkg.credits} Credits`) : t("\uD328\uD0A4\uC9C0\uB97C \uC120\uD0DD\uD558\uC138\uC694", "Select a package")
+      )))
     );
   }
   function getTimeRemaining(createdAt) {

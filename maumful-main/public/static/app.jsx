@@ -4983,6 +4983,30 @@ function PsychologicalTestSystem() {
               </div>
             </>)}
           </div>
+
+          {/* 결제 버튼 — 크레딧 탭 전용 고정 푸터 */}
+          {activeTab === 'credits' && (
+            <div style={{ padding:'14px 24px 20px', borderTop:'1px solid #E5E7EB' }}>
+              {errMsg && (
+                <div style={{ background:'#FEF2F2', border:'1px solid #FCA5A5', borderRadius:10,
+                  padding:'10px 14px', marginBottom:10, fontSize:12, color:'#DC2626' }}>
+                  {errMsg}
+                </div>
+              )}
+              <button onClick={handlePay} disabled={loading || !selPkg}
+                style={{ width:'100%', padding:'14px', borderRadius:13, border:'none',
+                  cursor: loading||!selPkg ? 'default' : 'pointer',
+                  background: loading||!selPkg ? '#D1FAE5' : 'linear-gradient(135deg,#2D6A4F,#40916C)',
+                  color:'white', fontSize:15, fontWeight:800, fontFamily:F,
+                  opacity: loading||!selPkg ? 0.7 : 1 }}>
+                {loading
+                  ? t('결제 준비 중...', 'Processing...')
+                  : selPkg
+                    ? t(`${selPkg.label} · ✦ ${selPkg.credits} 크레딧 결제하기`, `Pay · ✦ ${selPkg.credits} Credits`)
+                    : t('패키지를 선택하세요', 'Select a package')}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
