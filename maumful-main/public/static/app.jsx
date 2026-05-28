@@ -4739,21 +4739,15 @@ function PsychologicalTestSystem() {
           if (!res.success) { setErrMsg(res.error || t('결제 준비 실패','Payment preparation failed')); setLoading(false); return; }
           const d = res.data;
 
-          // v2 SDK 로드 (이미 로드된 경우 재사용)
-          if (!window.TossPayments) {
-            await new Promise((ok, ng) => {
-              const s = document.createElement('script');
-              s.src = 'https://js.tosspayments.com/v2/base';
-              s.onload = ok; s.onerror = ng;
-              document.head.appendChild(s);
-            });
+          // v1 SDK: TossPayments(clientKey) — 동기 초기화
+          if (typeof window.TossPayments !== 'function') {
+            setErrMsg(t('결제 SDK 로드 실패. 페이지를 새로고침(Ctrl+Shift+R) 후 다시 시도해주세요.', 'Payment SDK failed to load. Please hard-refresh and try again.'));
+            setLoading(false);
+            return;
           }
-          // v2 API: tossPayments.payment({ customerKey }).requestPayment({ method, amount:{value,currency}, ... })
           const tossPayments = window.TossPayments(d.clientKey);
-          const payment = tossPayments.payment({ customerKey: d.customerKey });
-          await payment.requestPayment({
-            method: 'CARD',
-            amount: { value: d.amount, currency: 'KRW' },
+          await tossPayments.requestPayment('카드', {
+            amount:        d.amount,
             orderId:       d.orderId,
             orderName:     d.orderName,
             customerName:  d.customerName,
@@ -4769,8 +4763,10 @@ function PsychologicalTestSystem() {
           if (d.checkoutUrl) window.location.href = d.checkoutUrl;
         }
       } catch (err) {
+        console.error('[Toss] 결제 에러:', err);
         if (err?.code !== 'USER_CANCEL') {
-          setErrMsg(t('결제 중 오류가 발생했습니다. 다시 시도해 주세요.','A payment error occurred. Please try again.'));
+          const detail = err?.message ? ` (${err.code || ''}: ${err.message})` : '';
+          setErrMsg(t('결제 중 오류가 발생했습니다.' + detail, 'Payment error: ' + detail));
         }
         setLoading(false);
       }
@@ -4783,7 +4779,8 @@ function PsychologicalTestSystem() {
         display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
         onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
         <div style={{ background:'white', borderRadius:22, maxWidth:420, width:'100%',
-          boxShadow:'0 24px 64px rgba(0,0,0,0.22)', overflow:'hidden', fontFamily:F }}>
+          boxShadow:'0 24px 64px rgba(0,0,0,0.22)', overflow:'hidden', fontFamily:F,
+          display:'flex', flexDirection:'column', maxHeight:'92vh' }}>
 
           {/* 헤더 */}
           <div style={{ background:'linear-gradient(135deg,#2D6A4F,#40916C)', padding:'22px 24px', color:'white' }}>

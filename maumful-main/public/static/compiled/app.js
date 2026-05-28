@@ -3872,20 +3872,14 @@ Visit Maumful and take the same test again to compare your progress.`));
             return;
           }
           const d = res.data;
-          if (!window.TossPayments) {
-            await new Promise((ok, ng) => {
-              const s = document.createElement("script");
-              s.src = "https://js.tosspayments.com/v2/base";
-              s.onload = ok;
-              s.onerror = ng;
-              document.head.appendChild(s);
-            });
+          if (typeof window.TossPayments !== "function") {
+            setErrMsg(t("\uACB0\uC81C SDK \uB85C\uB4DC \uC2E4\uD328. \uD398\uC774\uC9C0\uB97C \uC0C8\uB85C\uACE0\uCE68(Ctrl+Shift+R) \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.", "Payment SDK failed to load. Please hard-refresh and try again."));
+            setLoading(false);
+            return;
           }
           const tossPayments = window.TossPayments(d.clientKey);
-          const payment = tossPayments.payment({ customerKey: d.customerKey });
-          await payment.requestPayment({
-            method: "CARD",
-            amount: { value: d.amount, currency: "KRW" },
+          await tossPayments.requestPayment("\uCE74\uB4DC", {
+            amount: d.amount,
             orderId: d.orderId,
             orderName: d.orderName,
             customerName: d.customerName,
@@ -3904,8 +3898,10 @@ Visit Maumful and take the same test again to compare your progress.`));
           if (d.checkoutUrl) window.location.href = d.checkoutUrl;
         }
       } catch (err) {
+        console.error("[Toss] \uACB0\uC81C \uC5D0\uB7EC:", err);
         if ((err == null ? void 0 : err.code) !== "USER_CANCEL") {
-          setErrMsg(t("\uACB0\uC81C \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4. \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.", "A payment error occurred. Please try again."));
+          const detail = (err == null ? void 0 : err.message) ? ` (${err.code || ""}: ${err.message})` : "";
+          setErrMsg(t("\uACB0\uC81C \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4." + detail, "Payment error: " + detail));
         }
         setLoading(false);
       }
@@ -3935,7 +3931,10 @@ Visit Maumful and take the same test again to compare your progress.`));
         width: "100%",
         boxShadow: "0 24px 64px rgba(0,0,0,0.22)",
         overflow: "hidden",
-        fontFamily: F
+        fontFamily: F,
+        display: "flex",
+        flexDirection: "column",
+        maxHeight: "92vh"
       } }, /* @__PURE__ */ React.createElement("div", { style: { background: "linear-gradient(135deg,#2D6A4F,#40916C)", padding: "22px 24px", color: "white" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, opacity: 0.8, marginBottom: 4 } }, t("\uD604\uC7AC \uC794\uC561", "Balance")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 28, fontWeight: 800 } }, "\u2726 ", credits2), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, opacity: 0.75, marginTop: 2 } }, t("\uD06C\uB808\uB527", "credits"))), /* @__PURE__ */ React.createElement(
         "button",
         {
