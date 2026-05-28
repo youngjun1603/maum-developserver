@@ -1861,7 +1861,7 @@ function RelationshipCheckinView({ onBack, onDone }) {
                       setTimeout(() => setStep(s => s + 1), 200);
                     }
                   }} style={{
-                    padding: '14px 20px', borderRadius: 14, border: 'none', cursor: 'pointer',
+                    padding: '14px 20px', borderRadius: 14, cursor: 'pointer',
                     background: isSelected ? colors[idx] + '22' : 'white',
                     border: `1.5px solid ${isSelected ? colors[idx] : '#E8D0D8'}`,
                     display: 'flex', alignItems: 'center', gap: 12,
@@ -2041,7 +2041,7 @@ function DateCourseView({ credits, isMaster, onBack }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {DATE_MOODS.map(m => (
                   <button key={m.key} onClick={() => setMood(m.key)} style={{
-                    padding: '12px 16px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                    padding: '12px 16px', borderRadius: 12, cursor: 'pointer',
                     background: mood === m.key ? C.rosePale : 'white',
                     border: `1.5px solid ${mood === m.key ? C.roseL : '#E8D8E0'}`,
                     display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left',
@@ -2063,7 +2063,7 @@ function DateCourseView({ credits, isMaster, onBack }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {DATE_DURATIONS.map(d => (
                   <button key={d} onClick={() => setDuration(d)} style={{
-                    padding: '11px 16px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                    padding: '11px 16px', borderRadius: 12, cursor: 'pointer',
                     background: duration === d ? C.lavPale : 'white',
                     border: `1.5px solid ${duration === d ? C.lavL : '#E8D8E0'}`,
                     fontSize: 13, fontWeight: duration === d ? 700 : 500, color: C.dark,
@@ -2080,7 +2080,7 @@ function DateCourseView({ credits, isMaster, onBack }) {
               <div style={{ display: 'flex', gap: 8 }}>
                 {DATE_BUDGETS.map(b => (
                   <button key={b} onClick={() => setBudget(b)} style={{
-                    flex: 1, padding: '10px 8px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                    flex: 1, padding: '10px 8px', borderRadius: 12, cursor: 'pointer',
                     background: budget === b ? C.lavPale : 'white',
                     border: `1.5px solid ${budget === b ? C.lavL : '#E8D8E0'}`,
                     fontSize: 11, fontWeight: budget === b ? 700 : 500, color: C.dark,
