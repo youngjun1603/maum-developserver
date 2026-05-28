@@ -154,6 +154,10 @@ const api = {
   async prepareCharge(packageKey, pg) {
     const r = await this._fetch("/api/credits/prepare-charge", { method: "POST", body: JSON.stringify({ packageKey, pg }) });
     return r.json();
+  },
+  async tossCheckout(packageKey) {
+    const r = await this._fetch("/api/payment/toss/checkout", { method: "POST", body: JSON.stringify({ packageKey }) });
+    return r.json();
   }
 };
 const storage = {
@@ -3861,26 +3865,28 @@ Visit Maumful and take the same test again to compare your progress.`));
       setLoading(true);
       setErrMsg("");
       try {
-        const res = await api.prepareCharge(selected, isKorea ? "toss" : "stripe");
-        if (!res.success) {
-          setErrMsg(res.error || t("\uACB0\uC81C \uC900\uBE44 \uC2E4\uD328", "Payment preparation failed"));
-          setLoading(false);
-          return;
-        }
-        const d = res.data;
         if (isKorea) {
+          const res = await api.tossCheckout(selected);
+          if (!res.success) {
+            setErrMsg(res.error || t("\uACB0\uC81C \uC900\uBE44 \uC2E4\uD328", "Payment preparation failed"));
+            setLoading(false);
+            return;
+          }
+          const d = res.data;
           if (!window.TossPayments) {
             await new Promise((ok, ng) => {
               const s = document.createElement("script");
-              s.src = "https://js.tosspayments.com/v1/payment";
+              s.src = "https://js.tosspayments.com/v2/base";
               s.onload = ok;
               s.onerror = ng;
               document.head.appendChild(s);
             });
           }
-          const tp = window.TossPayments(d.clientKey);
-          await tp.requestPayment("\uCE74\uB4DC", {
-            amount: d.amount,
+          const tossPayments = window.TossPayments(d.clientKey);
+          const payment = tossPayments.payment({ customerKey: d.customerKey });
+          await payment.requestPayment({
+            method: "CARD",
+            amount: { value: d.amount, currency: "KRW" },
             orderId: d.orderId,
             orderName: d.orderName,
             customerName: d.customerName,
@@ -3889,6 +3895,13 @@ Visit Maumful and take the same test again to compare your progress.`));
             failUrl: d.failUrl
           });
         } else {
+          const res = await api.prepareCharge(selected, "stripe");
+          if (!res.success) {
+            setErrMsg(res.error || t("\uACB0\uC81C \uC900\uBE44 \uC2E4\uD328", "Payment preparation failed"));
+            setLoading(false);
+            return;
+          }
+          const d = res.data;
           if (d.checkoutUrl) window.location.href = d.checkoutUrl;
         }
       } catch (err) {

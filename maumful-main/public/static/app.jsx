@@ -139,6 +139,10 @@ const api = {
     const r = await this._fetch('/api/credits/prepare-charge', { method: 'POST', body: JSON.stringify({ packageKey, pg }) });
     return r.json();
   },
+  async tossCheckout(packageKey) {
+    const r = await this._fetch('/api/payment/toss/checkout', { method: 'POST', body: JSON.stringify({ packageKey }) });
+    return r.json();
+  },
 };
 
 // ============================================================
@@ -4730,23 +4734,27 @@ function PsychologicalTestSystem() {
       if (!currentUser) { onClose(); setView('memberLogin'); return; }
       setLoading(true); setErrMsg('');
       try {
-        const res = await api.prepareCharge(selected, isKorea ? 'toss' : 'stripe');
-        if (!res.success) { setErrMsg(res.error || t('결제 준비 실패','Payment preparation failed')); setLoading(false); return; }
-        const d = res.data;
-
         if (isKorea) {
-          // 토스페이먼츠 SDK 로드
+          // 토스페이먼츠 v2 결제창 연동
+          const res = await api.tossCheckout(selected);
+          if (!res.success) { setErrMsg(res.error || t('결제 준비 실패','Payment preparation failed')); setLoading(false); return; }
+          const d = res.data;
+
+          // v2 SDK 로드 (이미 로드된 경우 재사용)
           if (!window.TossPayments) {
             await new Promise((ok, ng) => {
               const s = document.createElement('script');
-              s.src = 'https://js.tosspayments.com/v1/payment';
+              s.src = 'https://js.tosspayments.com/v2/base';
               s.onload = ok; s.onerror = ng;
               document.head.appendChild(s);
             });
           }
-          const tp = window.TossPayments(d.clientKey);
-          await tp.requestPayment('카드', {
-            amount:        d.amount,
+          // v2 API: tossPayments.payment({ customerKey }).requestPayment({ method, amount:{value,currency}, ... })
+          const tossPayments = window.TossPayments(d.clientKey);
+          const payment = tossPayments.payment({ customerKey: d.customerKey });
+          await payment.requestPayment({
+            method: 'CARD',
+            amount: { value: d.amount, currency: 'KRW' },
             orderId:       d.orderId,
             orderName:     d.orderName,
             customerName:  d.customerName,
@@ -4756,6 +4764,9 @@ function PsychologicalTestSystem() {
           });
         } else {
           // 스트라이프 — checkoutUrl로 리다이렉트
+          const res = await api.prepareCharge(selected, 'stripe');
+          if (!res.success) { setErrMsg(res.error || t('결제 준비 실패','Payment preparation failed')); setLoading(false); return; }
+          const d = res.data;
           if (d.checkoutUrl) window.location.href = d.checkoutUrl;
         }
       } catch (err) {

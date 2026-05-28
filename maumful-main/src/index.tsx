@@ -2520,6 +2520,7 @@ app.post('/api/payment/toss/checkout', async (c) => {
     success: true,
     data: {
       clientKey:     tossClientKey,
+      customerKey:   `maumful_user_${userId}`,
       orderId,
       orderName:     `${pkg.label} 크레딧 ${pkg.credits}개`,
       amount:        pkg.amount,
@@ -2541,14 +2542,15 @@ app.get('/api/payment/toss/success', async (c) => {
   if (!tossKey) return c.redirect('/?payment=fail&msg=서버오류')
 
   try {
-    // 토스 결제 승인 API 호출
-    const confirmRes = await fetch('https://api.tosspayments.com/v1/payments/confirm', {
+    // 토스 결제 승인 API 호출 (v2: paymentKey를 URL에 포함)
+    const confirmRes = await fetch(`https://api.tosspayments.com/v1/payments/${paymentKey}/confirm`, {
       method: 'POST',
       headers: {
         'Content-Type':  'application/json',
         'Authorization': 'Basic ' + btoa(tossKey + ':'),
+        'Idempotency-Key': orderId,
       },
-      body: JSON.stringify({ paymentKey, orderId, amount: parseInt(amount) }),
+      body: JSON.stringify({ orderId, amount: parseInt(amount) }),
     })
 
     if (!confirmRes.ok) {
