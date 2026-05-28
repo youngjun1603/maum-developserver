@@ -129,7 +129,7 @@ npm run deploy:cts       # lightoflife-couple (wrangler.lightoflife.toml) 배포
 
 ### 외부 검사 결과 입력 (ExternalResultSection)
 - 점수 직접 입력 탭: `/api/test/external-result` POST
-- PDF 업로드 + AI 해석 탭: pdf.js로 텍스트 추출 → `/api/test/analyze-pdf` POST (2 크레딧)
+- PDF 업로드 + AI 해석 탭: pdf.js로 텍스트 추출 → `/api/test/analyze-pdf` POST (3 크레딧)
 - 히스토리 탭에 `📥 외부 검사 결과 입력 · AI 해석` 버튼으로 진입
 
 ### CBT 8주 자기관리 플랜 (CbtPlanCard)
@@ -157,6 +157,66 @@ npm run deploy:cts       # lightoflife-couple (wrangler.lightoflife.toml) 배포
 
 **번역 완료 파일 (maumgame 11개, cts-game 추가 +qt.jsx):**
 `game_engine.jsx`, `game_registry.jsx`, `game_hub.jsx`, `games/mood.jsx`, `games/garden.jsx`, `games/burnout.jsx`, `games/efmt.jsx`, `games/gratitude.jsx`, `games/tree.jsx`, `games/focus.jsx`, `games/worry.jsx`
+
+---
+
+## 크레딧 시스템
+
+### 단가 구조 (maumful-main/src/index.tsx)
+
+| 기능 | 크레딧 | 비고 |
+|------|--------|------|
+| 심리검사 1회 | 10 cr | PHQ-9·GAD-7는 무료 |
+| AI 채팅 1회 | 2 cr | 크레딧 보유 시 소진까지 무제한 |
+| AI 채팅 (크레딧 없음) | 무료 | 하루 5회 제한 |
+| PDF 분석 1회 | 3 cr | 외부 검사 AI 해석 |
+
+### 크레딧 패키지 (KRW)
+
+| 패키지 | 크레딧 | 가격 | 단가 |
+|--------|--------|------|------|
+| 스타터 | 50 | 2,900원 | 58원/cr |
+| 표준 | 120 | 5,900원 | 49원/cr |
+| 프리미엄 | 300 | 12,900원 | 43원/cr |
+| 대용량 | 700 | 24,900원 | 36원/cr |
+
+### 일일 제한 로직 (`src/index.tsx`)
+- 크레딧 ≥ 2: 차감 후 무제한 (KV 일일 카운터 없음)
+- 크레딧 < 2: 무료 5회/일 (`ai_daily:{userId}:{today}` KV, TTL 86400)
+- 비회원: 평생 3회 (`guest_chat:{ip}` KV, TTL 없음)
+- 마스터 계정: 무제한·무차감
+
+---
+
+## 토스페이먼츠 결제 연동
+
+### SDK
+
+- **사용 버전:** v1 (`https://js.tosspayments.com/v1`) — HTML `<head>`에 포함
+- ⚠️ `https://js.tosspayments.com/v2/base` → **403 Forbidden** — 사용 불가
+- `window.TossPayments(clientKey)` → 동기 초기화, `requestPayment('카드', {...})` 방식
+
+### 결제 플로우
+
+```
+프론트 → POST /api/payment/toss/checkout
+       → { clientKey, customerKey, orderId, orderName, amount, successUrl, failUrl } 반환
+       → window.TossPayments(clientKey).requestPayment('카드', {...})
+       → 결제 완료 → GET /api/payment/toss/success?paymentKey=&orderId=&amount=&chargeId=
+       → 토스 confirm API 호출 → 크레딧 지급
+       → POST /api/webhook/toss (이중지급 방지)
+```
+
+### 시크릿 설정
+
+```bash
+npx wrangler secret put TOSS_CLIENT_KEY   # test_ck_... 또는 live_ck_...
+npx wrangler secret put TOSS_SECRET_KEY   # test_sk_... 또는 live_sk_...
+# TOSS_WEBHOOK_SECRET: 미설정 시 검증 건너뜀 (실서비스 전 설정 권장)
+```
+
+- 테스트 키는 `test_ck_` / `test_sk_` prefix — 실결제 없음
+- 실서비스 전환 시 `live_ck_` / `live_sk_` 로 교체 (코드 변경 불필요)
 
 ---
 
