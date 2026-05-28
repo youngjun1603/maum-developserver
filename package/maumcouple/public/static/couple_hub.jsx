@@ -74,7 +74,7 @@ function displayName(user) {
 }
 function fmtDate(dt) {
   if (!dt) return '';
-  return new Date(dt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
+  return new Date(dt).toLocaleDateString(COUPLE_LANG === 'en' ? 'en-US' : 'ko-KR', { month: 'long', day: 'numeric' });
 }
 function scoreColor(score) {
   if (score >= 80) return '#4A9A5A';
