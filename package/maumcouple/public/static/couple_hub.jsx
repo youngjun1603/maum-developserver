@@ -3557,8 +3557,8 @@ useEffect(() => {
       items: [
         { icon:'💬', label:tl('감정 번역기','Emotion Translator'),   desc:tl('"그냥 됐어"의 진짜 의미','"Never mind" — what did they mean?'), cost:'1cr', view:'emotionTranslate' },
         { icon:'🕊️', label:tl('싸움 중재 AI','Fight Mediator'),       desc:tl('양쪽 입장 정리 + 화해 문구','Neutral mediation & reconciliation tips'), cost:'2cr', view:'fightMediate' },
-        { icon:'🤝', label:tl('AI 관계 코치','AI Relationship Coach'), desc:tl('고민 상담 · 관계 조언','Talk through your worries'), cost:tl('3회 무료','3 free'), view:'coach' },
-        { icon:'🔮', label:tl('이상형 성향 분석','Ideal Type Analysis'),desc:tl('내 검사 결과 기반 AI 분석','AI analysis from your test results'), cost:'5cr', view:'soloAnalysis' },
+        { icon:'🤝', label:tl('AI 관계 코치','AI Relationship Coach'), desc:tl('고민 상담 · 관계 조언','Talk through your worries'), cost:null, view:'coach' },
+        { icon:'🔮', label:tl('이상형 성향 분석','Ideal Type Analysis'),desc:tl('내 검사 결과 기반 AI 분석','AI analysis from your test results'), cost:isMaster ? null : '5cr', view:'soloAnalysis' },
         { icon:'🗺️', label:tl('데이트 코스 추천','Date Idea Planner'), desc:tl('지역·분위기·예산 맞춤 코스','Personalized date recommendations'), cost:'3cr', view:'dateCourse' },
         { icon:'📊', label:tl('카톡 대화 분석','KakaoTalk Analysis'),  desc:tl('대화 패턴 AI 리포트','.txt 파일 업로드 → 대화 패턴 리포트'), cost:'3cr', view:'kakaoAnalysis' },
       ],
@@ -3566,16 +3566,16 @@ useEffect(() => {
     {
       title: tl('🧪 심리 테스트', '🧪 Psych Tests'),
       items: [
-        { icon:'💝', label:tl('연애 유형 테스트','Love Type Test'),    desc:tl('S·R·P·F 4가지 유형 중 나는?','Which love type are you? S·R·P·F'), cost:tl('무료','Free'), view:'miniTest' },
-        { icon:'💛', label:tl('커플 스타일 퀴즈','Couple Style Quiz'), desc:tl('10문항으로 보는 커플 호환성','10-question couple compatibility'), cost:tl('무료','Free'), view:'quiz' },
+        { icon:'💝', label:tl('연애 유형 테스트','Love Type Test'),    desc:tl('S·R·P·F 4가지 유형 중 나는?','Which love type are you? S·R·P·F'), cost:null, view:'miniTest' },
+        { icon:'💛', label:tl('커플 스타일 퀴즈','Couple Style Quiz'), desc:tl('10문항으로 보는 커플 호환성','10-question couple compatibility'), cost:null, view:'quiz' },
       ],
     },
     {
       title: tl('📅 관계 관리', '📅 Relationship'),
       items: [
-        { icon:'🌱', label:tl('관계 성장 체크인','Relationship Check-in'), desc:tl('월 1회 관계 건강도 체크','Monthly relationship health check'), cost:tl('무료','Free'), view:'checkin' },
-        { icon:'🗓️', label:tl('기념일 계산기','Anniversary Calculator'),   desc:tl('D+N일 · 기념일 알림','D+N day counter & anniversary tracker'), cost:tl('무료','Free'), view:'anniversary' },
-        { icon:'🗂️', label:tl('관계 타임라인','Relationship Timeline'),    desc:tl('함께한 순간들의 기록','A visual record of your journey'), cost:tl('무료','Free'), view:'timeline' },
+        { icon:'🌱', label:tl('관계 성장 체크인','Relationship Check-in'), desc:tl('월 1회 관계 건강도 체크','Monthly relationship health check'), cost:null, view:'checkin' },
+        { icon:'🗓️', label:tl('기념일 계산기','Anniversary Calculator'),   desc:tl('D+N일 · 기념일 알림','D+N day counter & anniversary tracker'), cost:null, view:'anniversary' },
+        { icon:'🗂️', label:tl('관계 타임라인','Relationship Timeline'),    desc:tl('함께한 순간들의 기록','A visual record of your journey'), cost:null, view:'timeline' },
       ],
     },
   ];
@@ -3639,7 +3639,7 @@ useEffect(() => {
               {[
                 { icon:'💬', label:tl('감정\n번역기','Emotion\nTranslator'), cost:'1cr', view:'emotionTranslate', color:C.rose,    bg:C.rosePale },
                 { icon:'🕊️', label:tl('싸움\n중재','Fight\nMediator'),     cost:'2cr', view:'fightMediate',     color:C.lavender, bg:C.lavPale },
-                { icon:'🤝', label:tl('AI\n코치','AI\nCoach'),              cost:tl('무료','Free'), view:'coach', color:C.amber,    bg:'#FFF8EE' },
+                { icon:'🤝', label:tl('AI\n코치','AI\nCoach'),              cost:null, view:'coach', color:C.amber,    bg:'#FFF8EE' },
                 { icon:'🗺️', label:tl('데이트\n코스','Date\nIdeas'),        cost:'3cr', view:'dateCourse',       color:C.rose,    bg:'#FFF0F5' },
                 { icon:'📊', label:tl('카톡\n분석','KakaoTalk\nAnalysis'), cost:'3cr', view:'kakaoAnalysis',    color:'#2E8B57',  bg:'#EAF5EC' },
               ].map(t => (
@@ -3651,7 +3651,7 @@ useEffect(() => {
                 }}>
                   <span style={{ fontSize: 22 }}>{t.icon}</span>
                   <span style={{ fontSize: 10, fontWeight: 700, color: t.color, lineHeight: 1.3, whiteSpace: 'pre-line', textAlign: 'center' }}>{t.label}</span>
-                  <span style={{ fontSize: 9, color: C.muted, fontWeight: 600 }}>{t.cost}</span>
+                  {t.cost && <span style={{ fontSize: 9, color: C.muted, fontWeight: 600 }}>{t.cost}</span>}
                 </button>
               ))}
             </div>
@@ -3681,7 +3681,7 @@ useEffect(() => {
                       <div style={{ fontSize: 11, color: C.muted, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.desc}</div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: C.rose, background: C.rosePale, padding: '3px 8px', borderRadius: 100 }}>{item.cost}</span>
+                      {item.cost && <span style={{ fontSize: 11, fontWeight: 700, color: C.rose, background: C.rosePale, padding: '3px 8px', borderRadius: 100 }}>{item.cost}</span>}
                       <span style={{ color: '#D0D0D0', fontSize: 16 }}>›</span>
                     </div>
                   </button>
