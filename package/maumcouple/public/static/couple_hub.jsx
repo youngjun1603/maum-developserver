@@ -2342,7 +2342,7 @@ function KakaoAnalysisView({ credits, isMaster, onBack }) {
     const counts = {}, chars = {};
     const sampleLines = [];
     // 패턴: "YYYY년 MM월 DD일" 또는 "[이름] [오전/오후 HH:MM] 내용"
-    const msgRegex = /^\[(.+?)\] \[(?:오전|오후|AM|PM) \d{1,2}:\d{2}\] (.+)/;
+    const msgRegex = /^\[(.+?)\]\s*\[(?:오전|오후|AM|PM)\s*\d{1,2}:\d{2}\]\s*(.+)/;
     let days = 0;
     const daySet = new Set();
 
@@ -3869,7 +3869,7 @@ useEffect(() => {
       {/* ── 바텀 내비게이션 ── */}
       <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', zIndex:100, background:'rgba(253,252,247,0.95)', backdropFilter:'blur(20px)', borderTop:'1px solid rgba(181,85,106,0.10)', display:'flex', height:64, maxWidth:640 }}>
         {NAV_TABS.map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)} style={{
+          <button key={t.key} onClick={() => { setTab(t.key); setView('hub'); }} style={{
             flex:1, position:'relative', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:3,
             background:'none', border:'none', cursor:'pointer', fontFamily:"'Noto Sans KR',sans-serif",
             transition:'all 0.15s',

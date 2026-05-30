@@ -1297,8 +1297,6 @@ app.post('/api/couple/emotion-translate', async (c) => {
 
   const COST = 1
   const isMaster = isMasterAccount(user.email)
-  if (!isMaster && user.credits < COST)
-    return c.json({ success: false, error: `크레딧 부족 (보유: ${user.credits}, 필요: ${COST})`, needsCharge: true }, 402)
 
   const { situation, message } = await c.req.json() as { situation?: string; message: string }
   if (!message?.trim()) return c.json({ success: false, error: '메시지를 입력해주세요' }, 400)
@@ -1333,8 +1331,11 @@ app.post('/api/couple/emotion-translate', async (c) => {
     if (!res.ok) return c.json({ success: false, error: 'AI 오류' }, 500)
     const json = await res.json() as { content: Array<{ text: string }> }
     const result = json.content?.[0]?.text || ''
-    // AI 성공 후 차감 (실패 시 차감 없음)
-    if (!isMaster) await DB.prepare('UPDATE users SET credits = credits - ? WHERE id = ?').bind(COST, userId).run()
+    // AI 성공 후 차감 — spendCredits()로 WHERE credits >= ? 원자적 처리
+    if (!isMaster) {
+      const cr = await spendCredits(DB, userId, COST, 'emotion-translate')
+      if (!cr.ok) return c.json({ success: false, error: '크레딧 부족', needsCharge: true }, 402)
+    }
     return c.json({ success: true, result })
   } catch (e) {
     return c.json({ success: false, error: 'AI 연결 오류' }, 500)
@@ -1353,10 +1354,8 @@ app.post('/api/couple/fight-mediate', async (c) => {
 
   const COST = 2
   const isMaster = isMasterAccount(user.email)
-  if (!isMaster && user.credits < COST)
-    return c.json({ success: false, error: `크레딧 부족 (보유: ${user.credits}, 필요: ${COST})`, needsCharge: true }, 402)
 
-  const { situation, myFeel, partnerFeel } = await c.req.json() as { situation: string; myFeel: string; partnerFeel: string }
+  const { situation, myFeel, partnerFeel } = await c.req.json() as { situation: string; myFeel?: string; partnerFeel?: string }
   if (!situation?.trim()) return c.json({ success: false, error: '상황을 입력해주세요' }, 400)
 
   const apiKey = await getAnthropicKey(c.env)
@@ -1391,7 +1390,10 @@ app.post('/api/couple/fight-mediate', async (c) => {
     if (!res.ok) return c.json({ success: false, error: 'AI 오류' }, 500)
     const json = await res.json() as { content: Array<{ text: string }> }
     const result = json.content?.[0]?.text || ''
-    if (!isMaster) await DB.prepare('UPDATE users SET credits = credits - ? WHERE id = ?').bind(COST, userId).run()
+    if (!isMaster) {
+      const cr = await spendCredits(DB, userId, COST, 'fight-mediate')
+      if (!cr.ok) return c.json({ success: false, error: '크레딧 부족', needsCharge: true }, 402)
+    }
     return c.json({ success: true, result })
   } catch (e) {
     return c.json({ success: false, error: 'AI 연결 오류' }, 500)
@@ -1410,14 +1412,13 @@ app.post('/api/couple/kakao-analyze', async (c) => {
 
   const COST = 3
   const isMaster = isMasterAccount(user.email)
-  if (!isMaster && user.credits < COST)
-    return c.json({ success: false, error: `크레딧 부족 (보유: ${user.credits}, 필요: ${COST})`, needsCharge: true }, 402)
 
   const { stats, sample } = await c.req.json() as {
     stats: { names: string[]; counts: Record<string, number>; chars: Record<string, number>; total: number; days: number }
     sample: string
   }
   if (!stats?.names?.length) return c.json({ success: false, error: '대화 데이터가 없습니다' }, 400)
+  if (!sample?.trim()) return c.json({ success: false, error: '대화 샘플이 없습니다' }, 400)
 
   const apiKey = await getAnthropicKey(c.env)
   if (!apiKey) return c.json({ success: false, error: 'AI 서비스 미설정' }, 500)
@@ -1453,7 +1454,10 @@ app.post('/api/couple/kakao-analyze', async (c) => {
     if (!res.ok) return c.json({ success: false, error: 'AI 오류' }, 500)
     const json = await res.json() as { content: Array<{ text: string }> }
     const result = json.content?.[0]?.text || ''
-    if (!isMaster) await DB.prepare('UPDATE users SET credits = credits - ? WHERE id = ?').bind(COST, userId).run()
+    if (!isMaster) {
+      const cr = await spendCredits(DB, userId, COST, 'kakao-analyze')
+      if (!cr.ok) return c.json({ success: false, error: '크레딧 부족', needsCharge: true }, 402)
+    }
     return c.json({ success: true, result })
   } catch (e) {
     return c.json({ success: false, error: 'AI 연결 오류' }, 500)
