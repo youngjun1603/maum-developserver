@@ -2370,6 +2370,7 @@ function KakaoAnalysisView({ credits, isMaster, onBack }) {
     if (!file.name.endsWith('.txt')) { setError(tl('카카오톡 내보내기 .txt 파일만 가능합니다', 'Only KakaoTalk .txt export files are supported')); return; }
     setFileName(file.name); setError(''); setStats(null); setResult('');
     const reader = new FileReader();
+    reader.onerror = () => setError(tl('파일을 읽을 수 없습니다. 다시 시도해주세요.', 'Could not read the file. Please try again.'));
     reader.onload = (ev) => {
       const text = ev.target.result;
       const parsed = parseKakao(text);

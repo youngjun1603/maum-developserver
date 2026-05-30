@@ -1303,7 +1303,7 @@ app.post('/api/couple/emotion-translate', async (c) => {
   const { situation, message } = await c.req.json() as { situation?: string; message: string }
   if (!message?.trim()) return c.json({ success: false, error: '메시지를 입력해주세요' }, 400)
 
-  const apiKey = await getAnthropicKey(DB, c.env)
+  const apiKey = await getAnthropicKey(c.env)
   if (!apiKey) return c.json({ success: false, error: 'AI 서비스 미설정' }, 500)
 
   const prompt = `당신은 연인 사이의 말 뒤에 숨겨진 감정을 분석하는 시스템입니다.
@@ -1319,7 +1319,7 @@ app.post('/api/couple/emotion-translate', async (c) => {
     : `상대방이 한 말: "${message}"`
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
@@ -1333,6 +1333,7 @@ app.post('/api/couple/emotion-translate', async (c) => {
     if (!res.ok) return c.json({ success: false, error: 'AI 오류' }, 500)
     const json = await res.json() as { content: Array<{ text: string }> }
     const result = json.content?.[0]?.text || ''
+    // AI 성공 후 차감 (실패 시 차감 없음)
     if (!isMaster) await DB.prepare('UPDATE users SET credits = credits - ? WHERE id = ?').bind(COST, userId).run()
     return c.json({ success: true, result })
   } catch (e) {
@@ -1358,7 +1359,7 @@ app.post('/api/couple/fight-mediate', async (c) => {
   const { situation, myFeel, partnerFeel } = await c.req.json() as { situation: string; myFeel: string; partnerFeel: string }
   if (!situation?.trim()) return c.json({ success: false, error: '상황을 입력해주세요' }, 400)
 
-  const apiKey = await getAnthropicKey(DB, c.env)
+  const apiKey = await getAnthropicKey(c.env)
   if (!apiKey) return c.json({ success: false, error: 'AI 서비스 미설정' }, 500)
 
   const prompt = `당신은 커플 사이의 갈등을 중립적으로 중재하는 시스템입니다.
@@ -1376,7 +1377,7 @@ app.post('/api/couple/fight-mediate', async (c) => {
   if (partnerFeel?.trim()) parts.push(`상대방이 느낀 감정(추정): ${partnerFeel}`)
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
@@ -1418,7 +1419,7 @@ app.post('/api/couple/kakao-analyze', async (c) => {
   }
   if (!stats?.names?.length) return c.json({ success: false, error: '대화 데이터가 없습니다' }, 400)
 
-  const apiKey = await getAnthropicKey(DB, c.env)
+  const apiKey = await getAnthropicKey(c.env)
   if (!apiKey) return c.json({ success: false, error: 'AI 서비스 미설정' }, 500)
 
   const prompt = `당신은 커플의 카카오톡 대화 통계를 바탕으로 따뜻하고 통찰 있는 리포트를 작성하는 시스템입니다.
@@ -1438,7 +1439,7 @@ app.post('/api/couple/kakao-analyze', async (c) => {
   const userMsg = `분석 기간: ${stats.days}일, 총 메시지: ${stats.total}개\n참여자별 통계: ${statsText}\n\n대화 샘플(최근 30개):\n${sample}`
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({

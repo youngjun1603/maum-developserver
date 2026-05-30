@@ -2007,6 +2007,7 @@ function KakaoAnalysisView({ credits: credits2, isMaster, onBack }) {
     setStats(null);
     setResult("");
     const reader = new FileReader();
+    reader.onerror = () => setError(tl("\uD30C\uC77C\uC744 \uC77D\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.", "Could not read the file. Please try again."));
     reader.onload = (ev) => {
       const text = ev.target.result;
       const parsed = parseKakao(text);

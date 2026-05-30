@@ -2570,6 +2570,10 @@ app.post('/api/payment/toss/checkout', async (c) => {
 app.get('/api/payment/toss/success', async (c) => {
   const { DB } = c.env
   const { paymentKey, orderId, amount, chargeId } = c.req.query() as Record<string, string>
+  if (!paymentKey || !orderId || !chargeId) return c.redirect('/?payment=fail&msg=파라미터오류')
+  const amountNum = parseInt(amount)
+  const chargeIdNum = parseInt(chargeId)
+  if (isNaN(amountNum) || amountNum <= 0 || isNaN(chargeIdNum)) return c.redirect('/?payment=fail&msg=파라미터오류')
 
   const tossKey = c.env.TOSS_SECRET_KEY
   if (!tossKey) return c.redirect('/?payment=fail&msg=서버오류')
@@ -2583,7 +2587,7 @@ app.get('/api/payment/toss/success', async (c) => {
         'Authorization': 'Basic ' + btoa(tossKey + ':'),
         'Idempotency-Key': orderId,
       },
-      body: JSON.stringify({ orderId, amount: parseInt(amount) }),
+      body: JSON.stringify({ orderId, amount: amountNum }),
     })
 
     if (!confirmRes.ok) {
@@ -2597,12 +2601,12 @@ app.get('/api/payment/toss/success', async (c) => {
     if (!existing) {
       const charge = await DB.prepare(
         'SELECT user_id, credits, package_key FROM credit_charges WHERE id=? AND status=?'
-      ).bind(parseInt(chargeId), 'pending').first<{ user_id: number; credits: number; package_key: string }>()
+      ).bind(chargeIdNum, 'pending').first<{ user_id: number; credits: number; package_key: string }>()
 
       if (charge) {
         await DB.prepare(
           'UPDATE credit_charges SET status=?,pg_tid=?,completed_at=CURRENT_TIMESTAMP WHERE id=?'
-        ).bind('completed', paymentKey, parseInt(chargeId)).run()
+        ).bind('completed', paymentKey, chargeIdNum).run()
 
         const newBalance = await gainCredits(DB, charge.user_id, charge.credits, 'charge', paymentKey)
         console.log('[Toss] 크레딧 지급:', charge.user_id, '+', charge.credits, '→', newBalance)
