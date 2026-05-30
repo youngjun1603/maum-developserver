@@ -403,7 +403,7 @@ function PsychologicalTestSystem() {
   const [moodTrend, setMoodTrend] = useState([]);
   const [dailyCtxCard, setDailyCtxCard] = useState(null); // { greeting, chatContext } — AI 인사말 카드
   const [myPageTab, setMyPageTab]     = useState('credits'); // 'credits' | 'history' | 'settings' | 'appointments'
-  const [autoOpenExternal, setAutoOpenExternal] = useState(false);
+  const [showExternalModal, setShowExternalModal] = useState(false);
   const [changePwMsg, setChangePwMsg] = useState({ type: '', text: '' });
   const [pushStatus, setPushStatus]   = useState('unknown'); // 'unknown'|'unsupported'|'denied'|'subscribed'|'idle'
   const [devToolsOpen, setDevToolsOpen] = useState(false);  // 개발자도구 감지
@@ -2807,7 +2807,9 @@ function PsychologicalTestSystem() {
         lang={lang}
         onLangToggle={updateLang}
       />
-      <LandingPage setView={setView} isLoggedIn={isLoggedIn} lang={lang} setMyPageTab={setMyPageTab} loadTestHistory={loadTestHistory} setAutoOpenExternal={setAutoOpenExternal} />
+      <LandingPage setView={setView} isLoggedIn={isLoggedIn} lang={lang} setMyPageTab={setMyPageTab} loadTestHistory={loadTestHistory} setAutoOpenExternal={setShowExternalModal} />
+      {/* 랜딩 뷰에서도 외부검사 모달 호출 가능 (hideTrigger: 버튼 없이 모달만) */}
+      {isLoggedIn && <ExternalResultSection onSaved={loadTestHistory} hideTrigger externalShow={showExternalModal} setExternalShow={setShowExternalModal} />}
     </>
   );
 
@@ -4268,7 +4270,7 @@ function PsychologicalTestSystem() {
         {/* 검사 이력 */}
         {myPageTab === 'history' && (
           <div>
-            <ExternalResultSection onSaved={loadTestHistory} autoOpen={autoOpenExternal} onAutoOpenDone={() => setAutoOpenExternal(false)} />
+            <ExternalResultSection onSaved={loadTestHistory} externalShow={showExternalModal} setExternalShow={setShowExternalModal} />
             {testHistory.length === 0 && <p className="text-gray-400 text-sm text-center py-4">{t("검사 이력이 없습니다","No assessment history")}</p>}
             {/* 점수가 있는 검사의 트렌드 요약 */}
             {(() => {
@@ -7063,12 +7065,13 @@ function PsychologicalTestSystem() {
   }
 
   // 외부 검사 결과 입력 + PDF AI 분석 (별도 컴포넌트 — hooks 규칙 준수)
-  function ExternalResultSection({ onSaved, autoOpen, onAutoOpenDone }) {
-    const [showModal, setShowModal] = React.useState(false);
+  // hideTrigger=true: 트리거 버튼 숨김 (최상위 렌더링 시 사용)
+  // externalShow/setExternalShow: 외부에서 모달 상태 제어 시 사용
+  function ExternalResultSection({ onSaved, hideTrigger, externalShow, setExternalShow }) {
+    const [_showModal, _setShowModal] = React.useState(false);
+    const showModal = externalShow !== undefined ? externalShow : _showModal;
+    const setShowModal = (v) => { _setShowModal(v); if (setExternalShow) setExternalShow(v); };
     const [tab, setTab] = React.useState('manual'); // 'manual' | 'pdf'
-    React.useEffect(() => {
-      if (autoOpen) { setShowModal(true); if (onAutoOpenDone) onAutoOpenDone(); }
-    }, [autoOpen]);
     // manual tab
     const [extType, setExtType] = React.useState('PHQ9');
     const [extScore, setExtScore] = React.useState('');
@@ -7210,12 +7213,14 @@ function PsychologicalTestSystem() {
 
     return (
       <>
-        <div className="flex justify-end mb-3">
-          <button onClick={() => setShowModal(true)}
-            className="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 font-semibold">
-            {t('📥 외부 검사 결과 입력 · AI 해석','📥 Enter External Results · AI Analysis')}
-          </button>
-        </div>
+        {!hideTrigger && (
+          <div className="flex justify-end mb-3">
+            <button onClick={() => setShowModal(true)}
+              className="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 font-semibold">
+              {t('📥 외부 검사 결과 입력 · AI 해석','📥 Enter External Results · AI Analysis')}
+            </button>
+          </div>
+        )}
         {showModal && (
           <div className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
             <div className="bg-white rounded-t-3xl sm:rounded-2xl w-full sm:max-w-md max-h-[92vh] overflow-y-auto">

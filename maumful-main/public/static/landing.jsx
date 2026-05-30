@@ -1045,10 +1045,8 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
               <button
                 onClick={() => {
                   if (isLoggedIn) {
-                    if (setMyPageTab) setMyPageTab('history');
-                    if (loadTestHistory) loadTestHistory();
+                    // 페이지 이동 없이 모달 바로 오픈
                     if (setAutoOpenExternal) setAutoOpenExternal(true);
-                    setView('memberDashboard');
                   } else {
                     setView('memberLogin');
                   }

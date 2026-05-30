@@ -1164,10 +1164,7 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
     {
       onClick: () => {
         if (isLoggedIn) {
-          if (setMyPageTab) setMyPageTab("history");
-          if (loadTestHistory) loadTestHistory();
           if (setAutoOpenExternal) setAutoOpenExternal(true);
-          setView("memberDashboard");
         } else {
           setView("memberLogin");
         }
