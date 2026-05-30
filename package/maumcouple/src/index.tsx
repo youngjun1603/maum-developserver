@@ -1285,6 +1285,180 @@ app.post('/api/couple/invite-email', async (c) => {
   }
 })
 
+// ── 감정 번역기 ────────────────────────────────────────────
+app.post('/api/couple/emotion-translate', async (c) => {
+  const { DB } = c.env
+  const userId = await getCoupleUserId(c.req.raw, c.env)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+
+  const user = await DB.prepare('SELECT email, credits FROM users WHERE id=?')
+    .bind(userId).first<{ email: string; credits: number }>()
+  if (!user) return c.json({ success: false, error: '사용자 없음' }, 404)
+
+  const COST = 1
+  const isMaster = isMasterAccount(user.email)
+  if (!isMaster && user.credits < COST)
+    return c.json({ success: false, error: `크레딧 부족 (보유: ${user.credits}, 필요: ${COST})`, needsCharge: true }, 402)
+
+  const { situation, message } = await c.req.json() as { situation?: string; message: string }
+  if (!message?.trim()) return c.json({ success: false, error: '메시지를 입력해주세요' }, 400)
+
+  const apiKey = await getAnthropicKey(DB, c.env)
+  if (!apiKey) return c.json({ success: false, error: 'AI 서비스 미설정' }, 500)
+
+  const prompt = `당신은 연인 사이의 말 뒤에 숨겨진 감정을 분석하는 시스템입니다.
+입력된 말만 근거로 분석하며, 추측·과장 없이 3가지 항목을 출력합니다.
+
+[출력 형식 — 반드시 아래 형식, 다른 내용 추가 금지]
+**진짜 감정**: (1문장)
+**진짜 원하는 것**: (1문장)
+**추천 반응**: (2문장 이내, 따뜻하고 구체적으로)
+`
+  const userMsg = situation
+    ? `상황: ${situation}\n\n상대방이 한 말: "${message}"`
+    : `상대방이 한 말: "${message}"`
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 400,
+        temperature: 0,
+        system: prompt,
+        messages: [{ role: 'user', content: userMsg }],
+      }),
+    })
+    if (!res.ok) return c.json({ success: false, error: 'AI 오류' }, 500)
+    const json = await res.json() as { content: Array<{ text: string }> }
+    const result = json.content?.[0]?.text || ''
+    if (!isMaster) await DB.prepare('UPDATE users SET credits = credits - ? WHERE id = ?').bind(COST, userId).run()
+    return c.json({ success: true, result })
+  } catch (e) {
+    return c.json({ success: false, error: 'AI 연결 오류' }, 500)
+  }
+})
+
+// ── 싸움 중재 AI ────────────────────────────────────────────
+app.post('/api/couple/fight-mediate', async (c) => {
+  const { DB } = c.env
+  const userId = await getCoupleUserId(c.req.raw, c.env)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+
+  const user = await DB.prepare('SELECT email, credits FROM users WHERE id=?')
+    .bind(userId).first<{ email: string; credits: number }>()
+  if (!user) return c.json({ success: false, error: '사용자 없음' }, 404)
+
+  const COST = 2
+  const isMaster = isMasterAccount(user.email)
+  if (!isMaster && user.credits < COST)
+    return c.json({ success: false, error: `크레딧 부족 (보유: ${user.credits}, 필요: ${COST})`, needsCharge: true }, 402)
+
+  const { situation, myFeel, partnerFeel } = await c.req.json() as { situation: string; myFeel: string; partnerFeel: string }
+  if (!situation?.trim()) return c.json({ success: false, error: '상황을 입력해주세요' }, 400)
+
+  const apiKey = await getAnthropicKey(DB, c.env)
+  if (!apiKey) return c.json({ success: false, error: 'AI 서비스 미설정' }, 500)
+
+  const prompt = `당신은 커플 사이의 갈등을 중립적으로 중재하는 시스템입니다.
+어느 한쪽 편을 들지 않으며, 두 사람의 감정이 모두 타당함을 전제합니다.
+입력된 내용만 근거로 분석하며, 아래 형식만 출력합니다.
+
+[출력 형식 — 반드시 이 순서, 이 제목]
+**A 입장에서 보면**: (이 사람이 왜 그렇게 느꼈는지 1~2문장, 공감적으로)
+**B 입장에서 보면**: (이 사람이 왜 그렇게 느꼈는지 1~2문장, 공감적으로)
+**두 사람의 공통점**: (둘 다 원하는 것을 1문장으로)
+**화해 시작 문구**: (A가 먼저 건넬 수 있는 말 1문장, B가 먼저 건넬 수 있는 말 1문장)
+`
+  const parts = [`싸운 상황: ${situation}`]
+  if (myFeel?.trim()) parts.push(`내가 느낀 감정: ${myFeel}`)
+  if (partnerFeel?.trim()) parts.push(`상대방이 느낀 감정(추정): ${partnerFeel}`)
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 600,
+        temperature: 0,
+        system: prompt,
+        messages: [{ role: 'user', content: parts.join('\n') }],
+      }),
+    })
+    if (!res.ok) return c.json({ success: false, error: 'AI 오류' }, 500)
+    const json = await res.json() as { content: Array<{ text: string }> }
+    const result = json.content?.[0]?.text || ''
+    if (!isMaster) await DB.prepare('UPDATE users SET credits = credits - ? WHERE id = ?').bind(COST, userId).run()
+    return c.json({ success: true, result })
+  } catch (e) {
+    return c.json({ success: false, error: 'AI 연결 오류' }, 500)
+  }
+})
+
+// ── 카톡 대화 분석 ─────────────────────────────────────────
+app.post('/api/couple/kakao-analyze', async (c) => {
+  const { DB } = c.env
+  const userId = await getCoupleUserId(c.req.raw, c.env)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+
+  const user = await DB.prepare('SELECT email, credits FROM users WHERE id=?')
+    .bind(userId).first<{ email: string; credits: number }>()
+  if (!user) return c.json({ success: false, error: '사용자 없음' }, 404)
+
+  const COST = 3
+  const isMaster = isMasterAccount(user.email)
+  if (!isMaster && user.credits < COST)
+    return c.json({ success: false, error: `크레딧 부족 (보유: ${user.credits}, 필요: ${COST})`, needsCharge: true }, 402)
+
+  const { stats, sample } = await c.req.json() as {
+    stats: { names: string[]; counts: Record<string, number>; chars: Record<string, number>; total: number; days: number }
+    sample: string
+  }
+  if (!stats?.names?.length) return c.json({ success: false, error: '대화 데이터가 없습니다' }, 400)
+
+  const apiKey = await getAnthropicKey(DB, c.env)
+  if (!apiKey) return c.json({ success: false, error: 'AI 서비스 미설정' }, 500)
+
+  const prompt = `당신은 커플의 카카오톡 대화 통계를 바탕으로 따뜻하고 통찰 있는 리포트를 작성하는 시스템입니다.
+수치에 과도한 의미 부여를 하지 않으며, 두 사람을 비교·평가하지 않습니다.
+아래 형식만 출력합니다.
+
+[출력 형식]
+**대화 스타일**: (두 사람의 대화 패턴을 2~3문장으로, 통계 수치 인용)
+**눈에 띄는 점**: (특징적인 부분 1가지, 1~2문장)
+**함께 성장하는 포인트**: (관계에 도움이 될 제안 1가지, 긍정적으로)
+`
+
+  const statsText = stats.names.map(n =>
+    `${n}: 메시지 ${stats.counts[n] || 0}개, 글자수 ${(stats.chars[n] || 0).toLocaleString()}자`
+  ).join(' / ')
+
+  const userMsg = `분석 기간: ${stats.days}일, 총 메시지: ${stats.total}개\n참여자별 통계: ${statsText}\n\n대화 샘플(최근 30개):\n${sample}`
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 500,
+        temperature: 0,
+        system: prompt,
+        messages: [{ role: 'user', content: userMsg }],
+      }),
+    })
+    if (!res.ok) return c.json({ success: false, error: 'AI 오류' }, 500)
+    const json = await res.json() as { content: Array<{ text: string }> }
+    const result = json.content?.[0]?.text || ''
+    if (!isMaster) await DB.prepare('UPDATE users SET credits = credits - ? WHERE id = ?').bind(COST, userId).run()
+    return c.json({ success: true, result })
+  } catch (e) {
+    return c.json({ success: false, error: 'AI 연결 오류' }, 500)
+  }
+})
+
 app.get('/api/couple/admin/stats', async (c) => {
   const { DB } = c.env
   const userId = await getCoupleUserId(c.req.raw, c.env)

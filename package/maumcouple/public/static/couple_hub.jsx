@@ -2159,6 +2159,332 @@ function DateCourseView({ credits, isMaster, onBack }) {
   );
 }
 
+// ── EmotionTranslateView — 감정 번역기 ──────────────────────
+function EmotionTranslateView({ credits, isMaster, onBack }) {
+  const [situation, setSituation] = useState('');
+  const [message, setMessage]     = useState('');
+  const [result, setResult]       = useState('');
+  const [loading, setLoading]     = useState(false);
+  const [error, setError]         = useState('');
+  const COST = 1;
+
+  const handleTranslate = async () => {
+    if (!message.trim()) { setError(tl('말을 입력해주세요', 'Please enter a message')); return; }
+    setLoading(true); setError(''); setResult('');
+    try {
+      const res = await api.post('/api/couple/emotion-translate', { situation, message });
+      if (!res.success) { setError(res.error || tl('분석 실패', 'Analysis failed')); }
+      else setResult(res.result);
+    } catch { setError(tl('오류가 발생했습니다', 'An error occurred')); }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <div style={{ minHeight: '100vh', background: C.cream, fontFamily: "'Noto Sans KR',sans-serif" }}>
+      <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 0 80px' }}>
+        {/* 헤더 */}
+        <div style={{ background: `linear-gradient(135deg, ${C.rose}, ${C.roseL})`, padding: '20px 20px 24px', color: 'white' }}>
+          <button onClick={onBack} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, color: 'white', padding: '6px 12px', cursor: 'pointer', fontSize: 13, marginBottom: 12 }}>← {tl('돌아가기','Back')}</button>
+          <div style={{ fontSize: 28, marginBottom: 4 }}>💬</div>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>{tl('감정 번역기','Emotion Translator')}</h2>
+          <p style={{ margin: '6px 0 0', fontSize: 13, opacity: 0.85 }}>{tl('"그냥 됐어"의 진짜 의미가 궁금할 때','"What did they really mean?" — find out here')}</p>
+          <div style={{ marginTop: 10, fontSize: 11, background: 'rgba(255,255,255,0.15)', borderRadius: 8, padding: '5px 10px', display: 'inline-block' }}>
+            {isMaster ? tl('무료', 'Free') : `${COST}cr / ${tl('회','use')}`}
+          </div>
+        </div>
+
+        <div style={{ padding: '20px 16px' }}>
+          {/* 상황 입력 */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 6 }}>
+              {tl('상황 설명 (선택)','Context (optional)')}
+            </label>
+            <input value={situation} onChange={e => setSituation(e.target.value)}
+              placeholder={tl('예: 데이트 약속을 취소했을 때', 'e.g. After cancelling a date plan')}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: `1px solid ${C.roseL}55`, fontSize: 13, fontFamily: "'Noto Sans KR',sans-serif", boxSizing: 'border-box', outline: 'none' }} />
+          </div>
+
+          {/* 말 입력 */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 6 }}>
+              {tl('상대방이 한 말','What they said')} <span style={{ color: C.rose }}>*</span>
+            </label>
+            <textarea value={message} onChange={e => setMessage(e.target.value)}
+              placeholder={tl('예: 그냥 됐어. 나 혼자 할게.', 'e.g. "Never mind. I\'ll do it alone."')}
+              rows={3}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: `1px solid ${C.roseL}55`, fontSize: 13, fontFamily: "'Noto Sans KR',sans-serif", resize: 'none', boxSizing: 'border-box', outline: 'none' }} />
+          </div>
+
+          {error && <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#DC2626', marginBottom: 12 }}>{error}</div>}
+
+          <button onClick={handleTranslate} disabled={loading || !message.trim()}
+            style={{ width: '100%', padding: 14, borderRadius: 12, border: 'none', cursor: loading || !message.trim() ? 'default' : 'pointer',
+              background: loading || !message.trim() ? '#e0e0e0' : `linear-gradient(135deg, ${C.rose}, ${C.roseL})`,
+              color: 'white', fontSize: 15, fontWeight: 700, fontFamily: "'Noto Sans KR',sans-serif" }}>
+            {loading ? tl('분석 중...', 'Analyzing...') : tl(`💬 번역하기${isMaster ? '' : ` (${COST}cr)`}`, `💬 Translate${isMaster ? '' : ` (${COST}cr)`}`)}
+          </button>
+
+          {/* 결과 */}
+          {result && (
+            <div style={{ marginTop: 20, background: 'white', borderRadius: 16, padding: '18px 16px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: `1px solid ${C.roseL}33` }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.rose, marginBottom: 10 }}>💡 {tl('번역 결과','Translation Result')}</div>
+              <div style={{ fontSize: 13, color: C.dark, lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{result}</div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── FightMediateView — 싸움 중재 AI ─────────────────────────
+function FightMediateView({ credits, isMaster, onBack }) {
+  const [situation, setSituation] = useState('');
+  const [myFeel, setMyFeel]       = useState('');
+  const [partnerFeel, setPartnerFeel] = useState('');
+  const [result, setResult]       = useState('');
+  const [loading, setLoading]     = useState(false);
+  const [error, setError]         = useState('');
+  const COST = 2;
+
+  const handleMediate = async () => {
+    if (!situation.trim()) { setError(tl('상황을 입력해주세요', 'Please describe the situation')); return; }
+    setLoading(true); setError(''); setResult('');
+    try {
+      const res = await api.post('/api/couple/fight-mediate', { situation, myFeel, partnerFeel });
+      if (!res.success) { setError(res.error || tl('중재 실패', 'Mediation failed')); }
+      else setResult(res.result);
+    } catch { setError(tl('오류가 발생했습니다', 'An error occurred')); }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <div style={{ minHeight: '100vh', background: C.cream, fontFamily: "'Noto Sans KR',sans-serif" }}>
+      <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 0 80px' }}>
+        {/* 헤더 */}
+        <div style={{ background: `linear-gradient(135deg, #7A6EA8, #A89ED4)`, padding: '20px 20px 24px', color: 'white' }}>
+          <button onClick={onBack} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, color: 'white', padding: '6px 12px', cursor: 'pointer', fontSize: 13, marginBottom: 12 }}>← {tl('돌아가기','Back')}</button>
+          <div style={{ fontSize: 28, marginBottom: 4 }}>🕊️</div>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>{tl('싸움 중재 AI','Fight Mediator')}</h2>
+          <p style={{ margin: '6px 0 0', fontSize: 13, opacity: 0.85 }}>{tl('두 사람 모두 맞을 수 있어요. 중립적으로 정리해드릴게요.','Both sides can be right. Let\'s sort it out together.')}</p>
+          <div style={{ marginTop: 10, fontSize: 11, background: 'rgba(255,255,255,0.15)', borderRadius: 8, padding: '5px 10px', display: 'inline-block' }}>
+            {isMaster ? tl('무료', 'Free') : `${COST}cr / ${tl('회','use')}`}
+          </div>
+        </div>
+
+        <div style={{ padding: '20px 16px' }}>
+          <div style={{ background: '#F0EEF8', borderRadius: 12, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: C.lavender }}>
+            💜 {tl('AI는 어느 쪽 편도 들지 않습니다. 두 분 모두 이해받을 수 있도록 도와드립니다.', 'AI stays neutral — it helps both of you feel understood.')}
+          </div>
+
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 6 }}>
+              {tl('어떤 일이 있었나요?','What happened?')} <span style={{ color: C.rose }}>*</span>
+            </label>
+            <textarea value={situation} onChange={e => setSituation(e.target.value)}
+              placeholder={tl('예: 내가 약속 시간에 30분 늦었고, 상대방이 화를 냈어요.', 'e.g. I was 30 minutes late and my partner got upset.')}
+              rows={4}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: `1px solid ${C.lavL}55`, fontSize: 13, fontFamily: "'Noto Sans KR',sans-serif", resize: 'none', boxSizing: 'border-box', outline: 'none' }} />
+          </div>
+
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 6 }}>
+              {tl('내가 느낀 감정 (선택)','My feelings (optional)')}
+            </label>
+            <input value={myFeel} onChange={e => setMyFeel(e.target.value)}
+              placeholder={tl('예: 억울하고 답답했어요', 'e.g. I felt misunderstood and frustrated')}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: `1px solid ${C.lavL}55`, fontSize: 13, fontFamily: "'Noto Sans KR',sans-serif", boxSizing: 'border-box', outline: 'none' }} />
+          </div>
+
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 6 }}>
+              {tl('상대방 감정 (선택, 추정해도 괜찮아요)','Partner\'s feelings (optional, guessing is ok)')}
+            </label>
+            <input value={partnerFeel} onChange={e => setPartnerFeel(e.target.value)}
+              placeholder={tl('예: 기다리면서 서운했던 것 같아요', 'e.g. I think they felt hurt waiting for me')}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: `1px solid ${C.lavL}55`, fontSize: 13, fontFamily: "'Noto Sans KR',sans-serif", boxSizing: 'border-box', outline: 'none' }} />
+          </div>
+
+          {error && <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#DC2626', marginBottom: 12 }}>{error}</div>}
+
+          <button onClick={handleMediate} disabled={loading || !situation.trim()}
+            style={{ width: '100%', padding: 14, borderRadius: 12, border: 'none', cursor: loading || !situation.trim() ? 'default' : 'pointer',
+              background: loading || !situation.trim() ? '#e0e0e0' : 'linear-gradient(135deg, #7A6EA8, #A89ED4)',
+              color: 'white', fontSize: 15, fontWeight: 700, fontFamily: "'Noto Sans KR',sans-serif" }}>
+            {loading ? tl('중재 중...', 'Mediating...') : tl(`🕊️ 중재 시작${isMaster ? '' : ` (${COST}cr)`}`, `🕊️ Start Mediation${isMaster ? '' : ` (${COST}cr)`}`)}
+          </button>
+
+          {result && (
+            <div style={{ marginTop: 20, background: 'white', borderRadius: 16, padding: '18px 16px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: `1px solid ${C.lavL}33` }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.lavender, marginBottom: 10 }}>🕊️ {tl('중재 결과','Mediation Result')}</div>
+              <div style={{ fontSize: 13, color: C.dark, lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{result}</div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── KakaoAnalysisView — 카톡 대화 분석 ───────────────────────
+function KakaoAnalysisView({ credits, isMaster, onBack }) {
+  const [stats, setStats]   = useState(null);
+  const [sample, setSample] = useState('');
+  const [result, setResult] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError]   = useState('');
+  const [fileName, setFileName] = useState('');
+  const COST = 3;
+
+  // 카카오톡 내보내기 txt 파싱
+  const parseKakao = (text) => {
+    const lines = text.split('\n');
+    const counts = {}, chars = {};
+    const sampleLines = [];
+    // 패턴: "YYYY년 MM월 DD일" 또는 "[이름] [오전/오후 HH:MM] 내용"
+    const msgRegex = /^\[(.+?)\] \[(?:오전|오후|AM|PM) \d{1,2}:\d{2}\] (.+)/;
+    let days = 0;
+    const daySet = new Set();
+
+    for (const line of lines) {
+      const dateMatch = line.match(/(\d{4})\.\s*\d{1,2}\.\s*\d{1,2}/);
+      if (dateMatch) { daySet.add(dateMatch[0]); continue; }
+      const m = line.match(msgRegex);
+      if (m) {
+        const name = m[1].trim(), content = m[2].trim();
+        if (!counts[name]) { counts[name] = 0; chars[name] = 0; }
+        counts[name]++;
+        chars[name] += content.length;
+        if (sampleLines.length < 30) sampleLines.push(`${name}: ${content}`);
+      }
+    }
+
+    const names = Object.keys(counts);
+    const total = Object.values(counts).reduce((a, b) => a + b, 0);
+    return { names, counts, chars, total, days: daySet.size || 1 };
+  };
+
+  const handleFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.name.endsWith('.txt')) { setError(tl('카카오톡 내보내기 .txt 파일만 가능합니다', 'Only KakaoTalk .txt export files are supported')); return; }
+    setFileName(file.name); setError(''); setStats(null); setResult('');
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target.result;
+      const parsed = parseKakao(text);
+      if (!parsed.names.length) { setError(tl('대화 내용을 찾을 수 없습니다. 카카오톡 내보내기 형식(.txt)인지 확인해주세요.', 'No messages found. Please check the file is a KakaoTalk export.')); return; }
+      // 샘플: 중간 30개 메시지
+      const lines = text.split('\n');
+      const msgLines = lines.filter(l => /^\[.+\] \[(?:오전|오후|AM|PM)/.test(l));
+      const mid = Math.floor(msgLines.length / 2);
+      const s = msgLines.slice(Math.max(0, mid - 15), mid + 15).map(l => {
+        const m = l.match(/^\[(.+?)\] \[.+?\] (.+)/);
+        return m ? `${m[1]}: ${m[2]}` : '';
+      }).filter(Boolean).join('\n');
+      setSample(s);
+      setStats(parsed);
+    };
+    reader.readAsText(file, 'UTF-8');
+  };
+
+  const handleAnalyze = async () => {
+    if (!stats) return;
+    setLoading(true); setError(''); setResult('');
+    try {
+      const res = await api.post('/api/couple/kakao-analyze', { stats, sample });
+      if (!res.success) { setError(res.error || tl('분석 실패', 'Analysis failed')); }
+      else setResult(res.result);
+    } catch { setError(tl('오류가 발생했습니다', 'An error occurred')); }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <div style={{ minHeight: '100vh', background: C.cream, fontFamily: "'Noto Sans KR',sans-serif" }}>
+      <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 0 80px' }}>
+        {/* 헤더 */}
+        <div style={{ background: 'linear-gradient(135deg, #2E8B57, #4A9A5A)', padding: '20px 20px 24px', color: 'white' }}>
+          <button onClick={onBack} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, color: 'white', padding: '6px 12px', cursor: 'pointer', fontSize: 13, marginBottom: 12 }}>← {tl('돌아가기','Back')}</button>
+          <div style={{ fontSize: 28, marginBottom: 4 }}>💬</div>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>{tl('카톡 대화 분석','KakaoTalk Analysis')}</h2>
+          <p style={{ margin: '6px 0 0', fontSize: 13, opacity: 0.85 }}>{tl('우리 대화 패턴을 AI가 분석해드려요','AI analyzes your conversation patterns')}</p>
+          <div style={{ marginTop: 10, fontSize: 11, background: 'rgba(255,255,255,0.15)', borderRadius: 8, padding: '5px 10px', display: 'inline-block' }}>
+            {isMaster ? tl('무료', 'Free') : `${COST}cr / ${tl('회','use')}`}
+          </div>
+        </div>
+
+        <div style={{ padding: '20px 16px' }}>
+          {/* 사용법 안내 */}
+          <div style={{ background: '#EAF5EC', borderRadius: 12, padding: '12px 14px', marginBottom: 16, fontSize: 12, color: '#2E8B57', lineHeight: 1.8 }}>
+            <div style={{ fontWeight: 700, marginBottom: 4 }}>📱 {tl('파일 내보내기 방법','How to export')}</div>
+            {tl(
+              '카카오톡 대화방 → 오른쪽 상단 ≡ → 대화 내보내기 → .txt 파일 저장',
+              'KakaoTalk chat room → ≡ top right → Export chat → Save .txt file'
+            )}
+          </div>
+
+          {/* 파일 업로드 */}
+          <label style={{ display: 'block', cursor: 'pointer' }}>
+            <div style={{ border: `2px dashed #4A9A5A55`, borderRadius: 14, padding: '24px 16px', textAlign: 'center',
+              background: stats ? '#EAF5EC' : 'white', transition: 'all 0.2s' }}>
+              <div style={{ fontSize: 28, marginBottom: 8 }}>{stats ? '✅' : '📂'}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: stats ? '#2E8B57' : C.muted }}>
+                {stats ? fileName : tl('여기를 눌러 .txt 파일을 업로드하세요', 'Tap to upload a .txt file')}
+              </div>
+              {stats && (
+                <div style={{ marginTop: 8, fontSize: 12, color: C.muted }}>
+                  {tl(`총 ${stats.total.toLocaleString()}개 메시지 · ${stats.days}일치`, `${stats.total.toLocaleString()} messages · ${stats.days} days`)}
+                </div>
+              )}
+            </div>
+            <input type="file" accept=".txt" onChange={handleFile} style={{ display: 'none' }} />
+          </label>
+
+          {/* 통계 미리보기 */}
+          {stats && stats.names.length > 0 && (
+            <div style={{ marginTop: 14, background: 'white', borderRadius: 14, padding: '14px 16px', boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, marginBottom: 10 }}>{tl('대화 통계','Chat Stats')}</div>
+              {stats.names.map(name => {
+                const total = Object.values(stats.counts).reduce((a, b) => a + b, 0);
+                const pct = Math.round((stats.counts[name] / total) * 100);
+                return (
+                  <div key={name} style={{ marginBottom: 8 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 3 }}>
+                      <span style={{ fontWeight: 600 }}>{name}</span>
+                      <span style={{ color: C.muted }}>{stats.counts[name].toLocaleString()}개 ({pct}%)</span>
+                    </div>
+                    <div style={{ height: 6, background: '#F0F0F0', borderRadius: 4 }}>
+                      <div style={{ height: '100%', width: `${pct}%`, background: `linear-gradient(90deg, #2E8B57, #4A9A5A)`, borderRadius: 4 }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {error && <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#DC2626', marginTop: 12 }}>{error}</div>}
+
+          {stats && (
+            <button onClick={handleAnalyze} disabled={loading}
+              style={{ width: '100%', padding: 14, borderRadius: 12, border: 'none', cursor: loading ? 'default' : 'pointer', marginTop: 14,
+                background: loading ? '#e0e0e0' : 'linear-gradient(135deg, #2E8B57, #4A9A5A)',
+                color: 'white', fontSize: 15, fontWeight: 700, fontFamily: "'Noto Sans KR',sans-serif" }}>
+              {loading ? tl('분석 중...', 'Analyzing...') : tl(`🔍 AI 분석 시작${isMaster ? '' : ` (${COST}cr)`}`, `🔍 Analyze${isMaster ? '' : ` (${COST}cr)`}`)}
+            </button>
+          )}
+
+          {result && (
+            <div style={{ marginTop: 20, background: 'white', borderRadius: 16, padding: '18px 16px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid #4A9A5A33' }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#2E8B57', marginBottom: 10 }}>📊 {tl('분석 결과','Analysis Result')}</div>
+              <div style={{ fontSize: 13, color: C.dark, lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{result}</div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── SoloAnalysisView ──────────────────────────────────────
 function SoloAnalysisView({ testResults, userName, credits, isMaster, onBack }) {
   const [report, setReport]   = useState('');
@@ -2925,7 +3251,7 @@ function CoupleHubApp() {
   const [loading, setLoading]     = useState(true);
   const [data, setData]           = useState(null);
   const [error, setError]         = useState('');
-  const [view, setView]           = useState('hub');  // 'hub' | 'report' | 'miniTest' | 'soloAnalysis' | 'checkin' | 'dateCourse'
+  const [view, setView]           = useState('hub');  // 'hub' | 'report' | 'miniTest' | 'soloAnalysis' | 'checkin' | 'dateCourse' | 'emotionTranslate' | 'fightMediate' | 'kakaoAnalysis'
   const [sessionData, setSession] = useState(null);
   const [partnerName, setPartner] = useState(tl('파트너', 'Partner'));
   const [myRole, setMyRole]       = useState('host');
@@ -3120,6 +3446,21 @@ useEffect(() => {
     );
   }
 
+  // 감정 번역기
+  if (view === 'emotionTranslate') {
+    return <EmotionTranslateView credits={credits} isMaster={isMaster} onBack={() => setView('hub')} />;
+  }
+
+  // 싸움 중재 AI
+  if (view === 'fightMediate') {
+    return <FightMediateView credits={credits} isMaster={isMaster} onBack={() => setView('hub')} />;
+  }
+
+  // 카톡 대화 분석
+  if (view === 'kakaoAnalysis') {
+    return <KakaoAnalysisView credits={credits} isMaster={isMaster} onBack={() => setView('hub')} />;
+  }
+
   // 커플 스타일 퀴즈
   if (view === 'quiz') {
     return <CoupleQuizView onBack={() => setView('hub')} />;
@@ -3299,6 +3640,27 @@ useEffect(() => {
                   background: 'linear-gradient(135deg, #eef2ff, #e0e7ff)', color: '#4f46e5', fontWeight: 700, fontSize: 11,
                   fontFamily: "'Noto Sans KR', sans-serif", lineHeight: 1.4, textAlign: 'center',
                 }}>{tl('🗂️ 관계 타임라인', '🗂️ Relationship Timeline')}<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>{tl('무료', 'Free')}</span></button>
+              </div>
+              {/* 관계 도구 섹션 */}
+              <div style={{ marginTop: 14, fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: 1, marginBottom: 6 }}>
+                {tl('— 관계 도구 —', '— Relationship Tools —')}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                <button onClick={() => setView('emotionTranslate')} style={{
+                  padding: '10px 6px', borderRadius: 12, border: `1px solid ${C.roseL}55`, cursor: 'pointer',
+                  background: `linear-gradient(135deg, ${C.rosePale}, #FFF0F5)`, color: C.rose, fontWeight: 700, fontSize: 11,
+                  fontFamily: "'Noto Sans KR', sans-serif", lineHeight: 1.4, textAlign: 'center',
+                }}>💬 {tl('감정 번역기', 'Emotion Translator')}<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>1cr</span></button>
+                <button onClick={() => setView('fightMediate')} style={{
+                  padding: '10px 6px', borderRadius: 12, border: `1px solid ${C.lavL}55`, cursor: 'pointer',
+                  background: `linear-gradient(135deg, ${C.lavPale}, #EEF0FF)`, color: C.lavender, fontWeight: 700, fontSize: 11,
+                  fontFamily: "'Noto Sans KR', sans-serif", lineHeight: 1.4, textAlign: 'center',
+                }}>🕊️ {tl('싸움 중재', 'Fight Mediator')}<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>2cr</span></button>
+                <button onClick={() => setView('kakaoAnalysis')} style={{
+                  padding: '10px 6px', borderRadius: 12, border: '1px solid #4A9A5A33', cursor: 'pointer',
+                  background: 'linear-gradient(135deg, #EAF5EC, #F0FBF2)', color: '#2E8B57', fontWeight: 700, fontSize: 11,
+                  fontFamily: "'Noto Sans KR', sans-serif", lineHeight: 1.4, textAlign: 'center',
+                }}>📊 {tl('카톡 분석', 'KakaoTalk')}<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>3cr</span></button>
               </div>
               {/* BIG5 비교 — 내 BIG5 + 파트너 BIG5 있을 때 강조 표시 */}
               {(() => {
