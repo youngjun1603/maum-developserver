@@ -2289,7 +2289,7 @@ function PsychologicalTestSystem() {
   function isAiChatExhausted() {
     if (!isLoggedIn) return guestAiTotal >= AI_GUEST_TOTAL;
     if (credits <= 0) return aiChatUsed >= AI_LIMIT_FREE;
-    return aiChatUsed >= AI_LIMIT_PAID;
+    return false; // 크레딧 보유 시 무제한 — 횟수 기준 소진 없음
   }
 
   async function sendChatMessage(testType) {
@@ -2628,7 +2628,7 @@ function PsychologicalTestSystem() {
 
   // ── 상담 연결 CTA (결과 화면 하단 공통) ──────────────────────
   function ExpertCTA({ testType, score, level, onContinueAI }) {
-    const limit = !isLoggedIn ? AI_GUEST_TOTAL : (credits > 0 ? AI_LIMIT_PAID : AI_LIMIT_FREE);
+    const limit = !isLoggedIn ? AI_GUEST_TOTAL : (credits > 0 ? null : AI_LIMIT_FREE); // null = 무제한
     const usedCount = !isLoggedIn ? guestAiTotal : aiChatUsed;
     return (
       <div className="rounded-2xl border-2 border-teal-100 bg-gradient-to-br from-teal-50 to-green-50 p-5 mt-4">
@@ -2649,8 +2649,8 @@ function PsychologicalTestSystem() {
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   : 'bg-white border border-teal-200 text-teal-700 hover:bg-teal-50'}`}>
               {isAiChatExhausted()
-                ? t(`💬 AI 상담 ${usedCount}/${limit}회 완료`,`💬 AI sessions used ${usedCount}/${limit}`)
-                : t(`💬 AI와 더 이야기하기 (${usedCount}/${limit}회)`,`💬 Talk more with AI (${usedCount}/${limit})`)}
+                ? t(`💬 AI 상담 ${usedCount}/${limit ?? '∞'}회 완료`,`💬 AI sessions used ${usedCount}/${limit ?? '∞'}`)
+                : t(`💬 AI와 더 이야기하기 (${limit == null ? t('무제한','unlimited') : `${usedCount}/${limit}회`})`,`💬 Talk more with AI (${limit == null ? 'unlimited' : `${usedCount}/${limit}`})`)}
             </button>
           )}
           <button
@@ -5870,7 +5870,9 @@ function PsychologicalTestSystem() {
             )}
           </div>
           <span className="text-xs text-gray-400">
-            {t(`오늘 ${aiChatUsed}/${isLoggedIn && credits > 0 ? AI_LIMIT_PAID : AI_LIMIT_FREE}회 사용`,`Today: ${aiChatUsed}/${isLoggedIn && credits > 0 ? AI_LIMIT_PAID : AI_LIMIT_FREE} used`)}
+            {isLoggedIn && credits > 0
+              ? t(`오늘 ${aiChatUsed}회 사용 (무제한)`, `Today: ${aiChatUsed} used (unlimited)`)
+              : t(`오늘 ${aiChatUsed}/${AI_LIMIT_FREE}회 사용`, `Today: ${aiChatUsed}/${AI_LIMIT_FREE} used`)}
           </span>
         </div>
 
@@ -7763,8 +7765,8 @@ function PsychologicalTestSystem() {
 
     // B2C: 크레딧 기반 제한 (크레딧 없으면 무료 플랜)
     const isFree = !isLoggedIn || credits <= 0;
-    const limit = isFree ? AI_LIMIT_FREE : AI_LIMIT_PAID;
-    const remainingFree = Math.max(0, limit - aiChatUsed);
+    const limit = isFree ? AI_LIMIT_FREE : null; // null = 크레딧 보유 시 무제한
+    const remainingFree = limit != null ? Math.max(0, limit - aiChatUsed) : Infinity;
 
     // ── 유료 플랜 업그레이드 유도 (5회 초과) ──────────────
     if (error === "UPGRADE_REQUIRED") {
