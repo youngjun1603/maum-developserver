@@ -2806,7 +2806,7 @@ function PsychologicalTestSystem() {
         lang={lang}
         onLangToggle={updateLang}
       />
-      <LandingPage setView={setView} isLoggedIn={isLoggedIn} lang={lang} />
+      <LandingPage setView={setView} isLoggedIn={isLoggedIn} lang={lang} setMyPageTab={setMyPageTab} loadTestHistory={loadTestHistory} />
     </>
   );
 

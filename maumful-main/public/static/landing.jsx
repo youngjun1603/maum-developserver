@@ -442,7 +442,7 @@ function MfSnsFooter({ tl }) {
 
 // LandingPage — 홈 메인 페이지
 // ============================================================
-function LandingPage({ setView, isLoggedIn, lang }) {
+function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory }) {
   const tl = (ko, en) => lang === 'en' ? en : ko;
   const { useState: useS, useEffect: useE, useRef } = React;
   const [activeTestIdx, setActiveTestIdx] = useS(0);
@@ -1043,7 +1043,15 @@ function LandingPage({ setView, isLoggedIn, lang }) {
             </div>
             <div style={{ textAlign: 'center', flexShrink: 0 }} className="pdf-banner-btn-wrap">
               <button
-                onClick={() => setView(isLoggedIn ? 'memberDashboard' : 'testsIntro')}
+                onClick={() => {
+                  if (isLoggedIn) {
+                    if (setMyPageTab) setMyPageTab('history');
+                    if (loadTestHistory) loadTestHistory();
+                    setView('memberDashboard');
+                  } else {
+                    setView('memberLogin');
+                  }
+                }}
                 style={{
                   background: '#F4A261', border: 'none', borderRadius: 12,
                   padding: '14px 28px', fontSize: 15, fontWeight: 700,

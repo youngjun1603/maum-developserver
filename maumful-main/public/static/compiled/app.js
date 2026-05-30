@@ -2681,7 +2681,7 @@ Visit Maumful and take the same test again to compare your progress.`));
       lang,
       onLangToggle: updateLang
     }
-  ), /* @__PURE__ */ React.createElement(LandingPage, { setView, isLoggedIn, lang }));
+  ), /* @__PURE__ */ React.createElement(LandingPage, { setView, isLoggedIn, lang, setMyPageTab, loadTestHistory }));
   if (view === "testsIntro") return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(
     GlobalNav,
     {

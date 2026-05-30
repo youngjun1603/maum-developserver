@@ -602,7 +602,7 @@ function MfSnsFooter({ tl }) {
   ];
   return /* @__PURE__ */ React.createElement("div", { style: { padding: "24px 0 8px", borderTop: "1px solid rgba(255,255,255,0.06)" } }, /* @__PURE__ */ React.createElement("p", { style: { fontSize: 10, fontWeight: 600, letterSpacing: "1.5px", textTransform: "uppercase", color: "rgba(255,255,255,0.28)", marginBottom: 14, textAlign: "center", fontFamily: "'Noto Sans KR',sans-serif" } }, tl("\uC774 \uC11C\uBE44\uC2A4\uB97C \uACF5\uC720\uD574 \uBCF4\uC138\uC694", "Share This Service")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center" } }, btns.map((b) => /* @__PURE__ */ React.createElement("button", { key: b.id, onClick: b.fn, title: b.lbl, style: { background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 5 } }, /* @__PURE__ */ React.createElement("span", { style: { width: 42, height: 42, borderRadius: 11, background: b.bg, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.2)" } }, b.ico), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 9, color: "rgba(255,255,255,0.35)", fontFamily: "'Noto Sans KR',sans-serif", whiteSpace: "nowrap" } }, b.lbl)))));
 }
-function LandingPage({ setView, isLoggedIn, lang }) {
+function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory }) {
   const tl = (ko, en) => lang === "en" ? en : ko;
   const { useState: useS, useEffect: useE, useRef } = React;
   const [activeTestIdx, setActiveTestIdx] = useS(0);
@@ -1162,7 +1162,15 @@ function LandingPage({ setView, isLoggedIn, lang }) {
   } }, chip)))), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", flexShrink: 0 }, className: "pdf-banner-btn-wrap" }, /* @__PURE__ */ React.createElement(
     "button",
     {
-      onClick: () => setView(isLoggedIn ? "memberDashboard" : "testsIntro"),
+      onClick: () => {
+        if (isLoggedIn) {
+          if (setMyPageTab) setMyPageTab("history");
+          if (loadTestHistory) loadTestHistory();
+          setView("memberDashboard");
+        } else {
+          setView("memberLogin");
+        }
+      },
       style: {
         background: "#F4A261",
         border: "none",
