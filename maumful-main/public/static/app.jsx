@@ -2810,6 +2810,7 @@ function PsychologicalTestSystem() {
       <LandingPage setView={setView} isLoggedIn={isLoggedIn} lang={lang} setMyPageTab={setMyPageTab} loadTestHistory={loadTestHistory} setAutoOpenExternal={setShowExternalModal} />
       {/* 랜딩 뷰에서도 외부검사 모달 호출 가능 (hideTrigger: 버튼 없이 모달만) */}
       {isLoggedIn && <ExternalResultSection onSaved={loadTestHistory} hideTrigger externalShow={showExternalModal} setExternalShow={setShowExternalModal} />}
+      {isMaster && <MasterDebugPanel />}
     </>
   );
 
@@ -7066,6 +7067,81 @@ function PsychologicalTestSystem() {
     }
   }
 
+  // ── 마스터 전용 에러 로그 뷰어 ─────────────────────────
+  function MasterDebugPanel() {
+    const [open, setOpen] = React.useState(false);
+    const [logs, setLogs] = React.useState([]);
+    const [serverLogs, setServerLogs] = React.useState([]);
+    const [loading, setLoading] = React.useState(false);
+    const [activeTab, setActiveTab] = React.useState('local');
+
+    const loadLocal = () => setLogs([...(window.__ERR_LOG || [])]);
+    const loadServer = async () => {
+      setLoading(true);
+      try { const res = await api.get('/api/debug/client-errors'); setServerLogs(res.errors || []); }
+      catch { setServerLogs([]); }
+      finally { setLoading(false); }
+    };
+    const onOpen = () => { loadLocal(); setOpen(true); };
+
+    const errCount = (window.__ERR_LOG || []).length;
+
+    if (!open) return (
+      <button onClick={onOpen} title="Debug Log" style={{
+        position:'fixed', bottom:80, right:16, zIndex:9999,
+        width:40, height:40, borderRadius:'50%', border:'none',
+        background: errCount > 0 ? '#DC2626' : '#6B7280',
+        color:'white', fontSize:18, cursor:'pointer',
+        boxShadow:'0 2px 8px rgba(0,0,0,0.3)',
+        display:'flex', alignItems:'center', justifyContent:'center',
+      }}>🐛</button>
+    );
+
+    const display = activeTab === 'local' ? logs : serverLogs;
+
+    return (
+      <div style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,0.75)', display:'flex', alignItems:'flex-end', justifyContent:'flex-end', padding:16 }}
+        onClick={e => { if (e.target === e.currentTarget) setOpen(false); }}>
+        <div style={{ width:'100%', maxWidth:520, maxHeight:'85vh', background:'#1E1E1E', borderRadius:16, overflow:'hidden', display:'flex', flexDirection:'column', color:'white', fontFamily:'monospace' }}>
+          {/* 헤더 */}
+          <div style={{ padding:'12px 16px', background:'#2D2D2D', display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom:'1px solid #444' }}>
+            <span style={{ fontSize:14, fontWeight:700 }}>🐛 Error Log <span style={{ fontSize:11, color:'#888' }}>master only</span></span>
+            <div style={{ display:'flex', gap:6 }}>
+              <button onClick={() => { loadLocal(); if (activeTab === 'server') loadServer(); }} style={{ background:'#3D3D3D', border:'none', color:'#CCC', padding:'4px 10px', borderRadius:6, fontSize:11, cursor:'pointer' }}>↺</button>
+              <button onClick={() => { window.__ERR_LOG = []; setLogs([]); }} style={{ background:'#3D3D3D', border:'none', color:'#F87171', padding:'4px 10px', borderRadius:6, fontSize:11, cursor:'pointer' }}>지우기</button>
+              <button onClick={() => setOpen(false)} style={{ background:'#3D3D3D', border:'none', color:'#CCC', padding:'4px 10px', borderRadius:6, fontSize:11, cursor:'pointer' }}>✕</button>
+            </div>
+          </div>
+          {/* 탭 */}
+          <div style={{ display:'flex', background:'#2D2D2D', borderBottom:'1px solid #444' }}>
+            {[['local','로컬 (메모리)'],['server','서버 (KV 7일)']].map(([k,l]) => (
+              <button key={k} onClick={() => { setActiveTab(k); if (k === 'server' && !serverLogs.length) loadServer(); }}
+                style={{ flex:1, padding:'8px', border:'none', background: activeTab===k ? '#1E1E1E' : 'transparent', color: activeTab===k ? '#60A5FA' : '#888', fontSize:12, cursor:'pointer', borderBottom: activeTab===k ? '2px solid #60A5FA' : '2px solid transparent' }}>
+                {l} ({k==='local' ? logs.length : serverLogs.length})
+              </button>
+            ))}
+          </div>
+          {/* 로그 */}
+          <div style={{ flex:1, overflowY:'auto', padding:8 }}>
+            {loading && <div style={{ textAlign:'center', color:'#888', padding:20, fontSize:12 }}>로딩 중...</div>}
+            {!loading && display.length === 0 && <div style={{ textAlign:'center', color:'#4ADE80', padding:20, fontSize:12 }}>✓ 에러 없음</div>}
+            {display.map((e, i) => (
+              <div key={i} style={{ background:'#2D2D2D', borderRadius:8, padding:'8px 10px', marginBottom:6, borderLeft:`3px solid ${e.type==='error'?'#F87171':'#FB923C'}` }}>
+                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+                  <span style={{ fontSize:10, color: e.type==='error'?'#F87171':'#FB923C', fontWeight:700 }}>{(e.type||'').toUpperCase()}</span>
+                  <span style={{ fontSize:10, color:'#666' }}>{(e.t||e.time||'').slice(11,19)}</span>
+                </div>
+                <div style={{ fontSize:12, color:'#E5E7EB', wordBreak:'break-all', marginBottom:2 }}>{e.msg||e.message}</div>
+                {(e.src||e.source) && <div style={{ fontSize:10, color:'#666' }}>{e.src||e.source}{e.line?`:${e.line}`:''}</div>}
+                {e.stack && <details><summary style={{ fontSize:10, color:'#888', cursor:'pointer' }}>스택 ▸</summary><pre style={{ fontSize:10, color:'#9CA3AF', whiteSpace:'pre-wrap', margin:'4px 0 0', maxHeight:100, overflow:'auto' }}>{e.stack}</pre></details>}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // 외부 검사 결과 입력 + PDF AI 분석 (별도 컴포넌트 — hooks 규칙 준수)
   // hideTrigger=true: 트리거 버튼 숨김 (최상위 렌더링 시 사용)
   // externalShow/setExternalShow: 외부에서 모달 상태 제어 시 사용
@@ -10776,7 +10852,97 @@ function SessionList({ sessions, onView }) {
 }
 
 
+// ── 마스터 전용 에러 뷰어 래퍼 (모든 뷰 위에 z-index:9999 overlay) ──
+function AppWithDebug() {
+  return (
+    <>
+      <PsychologicalTestSystem />
+      <MasterDebugOverlay />
+    </>
+  );
+}
+
+// PsychologicalTestSystem 외부에서 isMaster 여부를 판단해 오버레이 표시
+function MasterDebugOverlay() {
+  const [open, setOpen] = React.useState(false);
+  const [logs, setLogs] = React.useState([]);
+  const [serverLogs, setServerLogs] = React.useState([]);
+  const [loading, setLoading] = React.useState(false);
+  const [activeTab, setActiveTab] = React.useState('local');
+
+  // access_token이 있고 마스터 이메일인지 확인
+  const tok = localStorage.getItem('access_token');
+  const user = (() => { try { return JSON.parse(localStorage.getItem('current_user') || 'null'); } catch { return null; } })();
+  const MASTER_EMAILS = ['limyj007@gmail.com'];
+  const isMasterUser = !!(user?.email && MASTER_EMAILS.includes(user.email.toLowerCase()));
+  if (!isMasterUser) return null;
+
+  const loadLocal = () => setLogs([...(window.__ERR_LOG || [])]);
+  const loadServer = async () => {
+    setLoading(true);
+    try {
+      const r = await fetch('/api/debug/client-errors', { headers: { 'Authorization': `Bearer ${tok}` } });
+      const d = await r.json();
+      setServerLogs(d.errors || []);
+    } catch { setServerLogs([]); }
+    finally { setLoading(false); }
+  };
+  const onOpen = () => { loadLocal(); setOpen(true); };
+
+  const errCount = (window.__ERR_LOG || []).length;
+  if (!open) return (
+    <button onClick={onOpen} title="Error Log" style={{
+      position:'fixed', bottom:80, right:16, zIndex:9999,
+      width:42, height:42, borderRadius:'50%', border:'none',
+      background: errCount > 0 ? '#DC2626' : '#6B7280',
+      color:'white', fontSize:20, cursor:'pointer',
+      boxShadow:'0 2px 10px rgba(0,0,0,0.4)',
+      display:'flex', alignItems:'center', justifyContent:'center',
+    }}>🐛</button>
+  );
+
+  const display = activeTab === 'local' ? logs : serverLogs;
+  return (
+    <div style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,0.75)', display:'flex', alignItems:'flex-end', justifyContent:'flex-end', padding:16 }}
+      onClick={e => { if (e.target === e.currentTarget) setOpen(false); }}>
+      <div style={{ width:'100%', maxWidth:520, maxHeight:'85vh', background:'#1E1E1E', borderRadius:16, overflow:'hidden', display:'flex', flexDirection:'column', color:'white', fontFamily:'monospace' }}>
+        <div style={{ padding:'12px 16px', background:'#2D2D2D', display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom:'1px solid #444' }}>
+          <span style={{ fontSize:14, fontWeight:700 }}>🐛 Error Log <span style={{ fontSize:11, color:'#888' }}>master only</span></span>
+          <div style={{ display:'flex', gap:6 }}>
+            <button onClick={() => { loadLocal(); if (activeTab==='server') loadServer(); }} style={{ background:'#3D3D3D', border:'none', color:'#CCC', padding:'4px 10px', borderRadius:6, fontSize:11, cursor:'pointer' }}>↺</button>
+            <button onClick={() => { window.__ERR_LOG = []; setLogs([]); }} style={{ background:'#3D3D3D', border:'none', color:'#F87171', padding:'4px 10px', borderRadius:6, fontSize:11, cursor:'pointer' }}>지우기</button>
+            <button onClick={() => setOpen(false)} style={{ background:'#3D3D3D', border:'none', color:'#CCC', padding:'4px 10px', borderRadius:6, fontSize:11, cursor:'pointer' }}>✕</button>
+          </div>
+        </div>
+        <div style={{ display:'flex', background:'#2D2D2D', borderBottom:'1px solid #444' }}>
+          {[['local','로컬 (메모리)'],['server','서버 KV']].map(([k,l]) => (
+            <button key={k} onClick={() => { setActiveTab(k); if (k==='server' && !serverLogs.length) loadServer(); }}
+              style={{ flex:1, padding:'8px', border:'none', background: activeTab===k ? '#1E1E1E' : 'transparent', color: activeTab===k ? '#60A5FA' : '#888', fontSize:12, cursor:'pointer', borderBottom: activeTab===k ? '2px solid #60A5FA' : '2px solid transparent' }}>
+              {l} ({k==='local' ? logs.length : serverLogs.length})
+            </button>
+          ))}
+        </div>
+        <div style={{ flex:1, overflowY:'auto', padding:8 }}>
+          {loading && <div style={{ textAlign:'center', color:'#888', padding:20, fontSize:12 }}>로딩 중...</div>}
+          {!loading && display.length === 0 && <div style={{ textAlign:'center', color:'#4ADE80', padding:20, fontSize:12 }}>✓ 에러 없음</div>}
+          {display.map((e, i) => (
+            <div key={i} style={{ background:'#2D2D2D', borderRadius:8, padding:'8px 10px', marginBottom:6, borderLeft:`3px solid ${(e.type||'')===('error')?'#F87171':'#FB923C'}` }}>
+              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+                <span style={{ fontSize:10, color:(e.type||'')==='error'?'#F87171':'#FB923C', fontWeight:700 }}>{(e.type||'').toUpperCase()}</span>
+                <span style={{ fontSize:10, color:'#666' }}>{(e.t||e.time||'').slice(11,19)}</span>
+              </div>
+              <div style={{ fontSize:12, color:'#E5E7EB', wordBreak:'break-all', marginBottom:2 }}>{e.msg||e.message}</div>
+              {(e.src||e.source) && <div style={{ fontSize:10, color:'#666' }}>{e.src||e.source}{e.line?`:${e.line}`:''}</div>}
+              {e.stack && <details><summary style={{ fontSize:10, color:'#888', cursor:'pointer' }}>스택 ▸</summary><pre style={{ fontSize:10, color:'#9CA3AF', whiteSpace:'pre-wrap', margin:'4px 0 0', maxHeight:100, overflow:'auto' }}>{e.stack}</pre></details>}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Render
 const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(<PsychologicalTestSystem />);
+root.render(<AppWithDebug />);
 

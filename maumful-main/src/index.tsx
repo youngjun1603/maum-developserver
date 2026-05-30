@@ -2976,6 +2976,38 @@ function adminGuard(c: Parameters<typeof requireAdmin>[0]): string | null {
   return requireAdmin(c)
 }
 
+// ── 클라이언트 에러 로그 수집 ────────────────────────────
+app.post('/api/debug/client-error', async (c) => {
+  const { KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ ok: false }, 401)
+
+  let body: Record<string, unknown>
+  try { body = await c.req.json() } catch { return c.json({ ok: false }, 400) }
+
+  const key = `client_err:${userId}:${Date.now()}`
+  await KV.put(key, JSON.stringify({ userId, ...body }), { expirationTtl: 86400 * 7 })
+  return c.json({ ok: true })
+})
+
+// ── 클라이언트 에러 로그 조회 (마스터 전용) ──────────────
+app.get('/api/debug/client-errors', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+
+  const user = await DB.prepare('SELECT email FROM users WHERE id=?').bind(userId).first<{ email: string }>()
+  if (!isMasterAccount(user?.email)) return c.json({ error: 'forbidden' }, 403)
+
+  const { prefix } = c.req.query() as { prefix?: string }
+  const listResult = await KV.list({ prefix: prefix || 'client_err:', limit: 200 })
+  const errors = (await Promise.all(
+    listResult.keys.map(k => KV.get(k.name, 'json').catch(() => null))
+  )).filter(Boolean).reverse()
+
+  return c.json({ errors, total: errors.length })
+})
+
 // GET /api/admin/stats — 핵심 KPI 요약
 app.get('/api/admin/stats', async (c) => {
   const { DB } = c.env
@@ -3511,6 +3543,40 @@ app.get('/', (c) => {
   <script src="/static/compiled/counseling_admin.js?v=${v}"></script>
   <script src="/static/compiled/app.js?v=${v}"></script>
   <script>
+    // ── 전역 에러 캡처 (화면보호 환경 대비) ──────────────
+    window.__ERR_LOG = [];
+    function __captureErr(type, msg, src, line, col, err) {
+      var entry = {
+        t: new Date().toISOString(),
+        type: type,
+        msg: String(msg).slice(0, 500),
+        src: (src || '').replace(location.origin, ''),
+        line: line, col: col,
+        stack: err && err.stack ? String(err.stack).slice(0, 1000) : null,
+        ua: navigator.userAgent.slice(0, 100)
+      };
+      window.__ERR_LOG.unshift(entry);
+      if (window.__ERR_LOG.length > 100) window.__ERR_LOG.pop();
+      // 백엔드 전송 (토큰 있을 때만, fire-and-forget)
+      try {
+        var tok = localStorage.getItem('access_token');
+        if (tok) {
+          fetch('/api/debug/client-error', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
+            body: JSON.stringify(entry)
+          }).catch(function(){});
+        }
+      } catch(e) {}
+    }
+    window.onerror = function(msg, src, line, col, err) {
+      __captureErr('error', msg, src, line, col, err);
+      return false;
+    };
+    window.addEventListener('unhandledrejection', function(e) {
+      var reason = e.reason;
+      __captureErr('promise', reason && reason.message ? reason.message : String(reason), '', 0, 0, reason instanceof Error ? reason : null);
+    });
     // Service Worker 등록 (PWA)
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {});

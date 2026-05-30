@@ -2682,7 +2682,7 @@ Visit Maumful and take the same test again to compare your progress.`));
       lang,
       onLangToggle: updateLang
     }
-  ), /* @__PURE__ */ React.createElement(LandingPage, { setView, isLoggedIn, lang, setMyPageTab, loadTestHistory, setAutoOpenExternal: setShowExternalModal }), isLoggedIn && /* @__PURE__ */ React.createElement(ExternalResultSection, { onSaved: loadTestHistory, hideTrigger: true, externalShow: showExternalModal, setExternalShow: setShowExternalModal }));
+  ), /* @__PURE__ */ React.createElement(LandingPage, { setView, isLoggedIn, lang, setMyPageTab, loadTestHistory, setAutoOpenExternal: setShowExternalModal }), isLoggedIn && /* @__PURE__ */ React.createElement(ExternalResultSection, { onSaved: loadTestHistory, hideTrigger: true, externalShow: showExternalModal, setExternalShow: setShowExternalModal }), isMaster && /* @__PURE__ */ React.createElement(MasterDebugPanel, null));
   if (view === "testsIntro") return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(
     GlobalNav,
     {
@@ -5934,6 +5934,79 @@ AI \uBD84\uC11D \uAE30\uB2A5\uC774 \uC911\uB2E8\uB429\uB2C8\uB2E4.`)) return;
       setAiLoading((p) => ({ ...p, [key]: false }));
     }
   }
+  function MasterDebugPanel() {
+    const [open, setOpen] = React.useState(false);
+    const [logs, setLogs] = React.useState([]);
+    const [serverLogs, setServerLogs] = React.useState([]);
+    const [loading, setLoading] = React.useState(false);
+    const [activeTab, setActiveTab] = React.useState("local");
+    const loadLocal = () => setLogs([...window.__ERR_LOG || []]);
+    const loadServer = async () => {
+      setLoading(true);
+      try {
+        const res = await api.get("/api/debug/client-errors");
+        setServerLogs(res.errors || []);
+      } catch {
+        setServerLogs([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    const onOpen = () => {
+      loadLocal();
+      setOpen(true);
+    };
+    const errCount = (window.__ERR_LOG || []).length;
+    if (!open) return /* @__PURE__ */ React.createElement("button", { onClick: onOpen, title: "Debug Log", style: {
+      position: "fixed",
+      bottom: 80,
+      right: 16,
+      zIndex: 9999,
+      width: 40,
+      height: 40,
+      borderRadius: "50%",
+      border: "none",
+      background: errCount > 0 ? "#DC2626" : "#6B7280",
+      color: "white",
+      fontSize: 18,
+      cursor: "pointer",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center"
+    } }, "\u{1F41B}");
+    const display = activeTab === "local" ? logs : serverLogs;
+    return /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        style: { position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "flex-end", justifyContent: "flex-end", padding: 16 },
+        onClick: (e) => {
+          if (e.target === e.currentTarget) setOpen(false);
+        }
+      },
+      /* @__PURE__ */ React.createElement("div", { style: { width: "100%", maxWidth: 520, maxHeight: "85vh", background: "#1E1E1E", borderRadius: 16, overflow: "hidden", display: "flex", flexDirection: "column", color: "white", fontFamily: "monospace" } }, /* @__PURE__ */ React.createElement("div", { style: { padding: "12px 16px", background: "#2D2D2D", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #444" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, fontWeight: 700 } }, "\u{1F41B} Error Log ", /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: "#888" } }, "master only")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6 } }, /* @__PURE__ */ React.createElement("button", { onClick: () => {
+        loadLocal();
+        if (activeTab === "server") loadServer();
+      }, style: { background: "#3D3D3D", border: "none", color: "#CCC", padding: "4px 10px", borderRadius: 6, fontSize: 11, cursor: "pointer" } }, "\u21BA"), /* @__PURE__ */ React.createElement("button", { onClick: () => {
+        window.__ERR_LOG = [];
+        setLogs([]);
+      }, style: { background: "#3D3D3D", border: "none", color: "#F87171", padding: "4px 10px", borderRadius: 6, fontSize: 11, cursor: "pointer" } }, "\uC9C0\uC6B0\uAE30"), /* @__PURE__ */ React.createElement("button", { onClick: () => setOpen(false), style: { background: "#3D3D3D", border: "none", color: "#CCC", padding: "4px 10px", borderRadius: 6, fontSize: 11, cursor: "pointer" } }, "\u2715"))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", background: "#2D2D2D", borderBottom: "1px solid #444" } }, [["local", "\uB85C\uCEEC (\uBA54\uBAA8\uB9AC)"], ["server", "\uC11C\uBC84 (KV 7\uC77C)"]].map(([k, l]) => /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          key: k,
+          onClick: () => {
+            setActiveTab(k);
+            if (k === "server" && !serverLogs.length) loadServer();
+          },
+          style: { flex: 1, padding: "8px", border: "none", background: activeTab === k ? "#1E1E1E" : "transparent", color: activeTab === k ? "#60A5FA" : "#888", fontSize: 12, cursor: "pointer", borderBottom: activeTab === k ? "2px solid #60A5FA" : "2px solid transparent" }
+        },
+        l,
+        " (",
+        k === "local" ? logs.length : serverLogs.length,
+        ")"
+      ))), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: 8 } }, loading && /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", color: "#888", padding: 20, fontSize: 12 } }, "\uB85C\uB529 \uC911..."), !loading && display.length === 0 && /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", color: "#4ADE80", padding: 20, fontSize: 12 } }, "\u2713 \uC5D0\uB7EC \uC5C6\uC74C"), display.map((e, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: { background: "#2D2D2D", borderRadius: 8, padding: "8px 10px", marginBottom: 6, borderLeft: `3px solid ${e.type === "error" ? "#F87171" : "#FB923C"}` } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", marginBottom: 4 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, color: e.type === "error" ? "#F87171" : "#FB923C", fontWeight: 700 } }, (e.type || "").toUpperCase()), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, color: "#666" } }, (e.t || e.time || "").slice(11, 19))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "#E5E7EB", wordBreak: "break-all", marginBottom: 2 } }, e.msg || e.message), (e.src || e.source) && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: "#666" } }, e.src || e.source, e.line ? `:${e.line}` : ""), e.stack && /* @__PURE__ */ React.createElement("details", null, /* @__PURE__ */ React.createElement("summary", { style: { fontSize: 10, color: "#888", cursor: "pointer" } }, "\uC2A4\uD0DD \u25B8"), /* @__PURE__ */ React.createElement("pre", { style: { fontSize: 10, color: "#9CA3AF", whiteSpace: "pre-wrap", margin: "4px 0 0", maxHeight: 100, overflow: "auto" } }, e.stack))))))
+    );
+  }
   function ExternalResultSection({ onSaved, hideTrigger, externalShow, setExternalShow }) {
     var _a2;
     const [_showModal, _setShowModal] = React.useState(false);
@@ -8019,5 +8092,93 @@ function SessionList({ sessions, onView }) {
     )) : /* @__PURE__ */ React.createElement("span", { className: "text-xs text-red-600 font-semibold px-2 py-1" }, "\uC0AD\uC81C\uB428"))));
   })))));
 }
+function AppWithDebug() {
+  return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(PsychologicalTestSystem, null), /* @__PURE__ */ React.createElement(MasterDebugOverlay, null));
+}
+function MasterDebugOverlay() {
+  const [open, setOpen] = React.useState(false);
+  const [logs, setLogs] = React.useState([]);
+  const [serverLogs, setServerLogs] = React.useState([]);
+  const [loading, setLoading] = React.useState(false);
+  const [activeTab, setActiveTab] = React.useState("local");
+  const tok = localStorage.getItem("access_token");
+  const user = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("current_user") || "null");
+    } catch {
+      return null;
+    }
+  })();
+  const MASTER_EMAILS = ["limyj007@gmail.com"];
+  const isMasterUser = !!((user == null ? void 0 : user.email) && MASTER_EMAILS.includes(user.email.toLowerCase()));
+  if (!isMasterUser) return null;
+  const loadLocal = () => setLogs([...window.__ERR_LOG || []]);
+  const loadServer = async () => {
+    setLoading(true);
+    try {
+      const r = await fetch("/api/debug/client-errors", { headers: { "Authorization": `Bearer ${tok}` } });
+      const d = await r.json();
+      setServerLogs(d.errors || []);
+    } catch {
+      setServerLogs([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+  const onOpen = () => {
+    loadLocal();
+    setOpen(true);
+  };
+  const errCount = (window.__ERR_LOG || []).length;
+  if (!open) return /* @__PURE__ */ React.createElement("button", { onClick: onOpen, title: "Error Log", style: {
+    position: "fixed",
+    bottom: 80,
+    right: 16,
+    zIndex: 9999,
+    width: 42,
+    height: 42,
+    borderRadius: "50%",
+    border: "none",
+    background: errCount > 0 ? "#DC2626" : "#6B7280",
+    color: "white",
+    fontSize: 20,
+    cursor: "pointer",
+    boxShadow: "0 2px 10px rgba(0,0,0,0.4)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center"
+  } }, "\u{1F41B}");
+  const display = activeTab === "local" ? logs : serverLogs;
+  return /* @__PURE__ */ React.createElement(
+    "div",
+    {
+      style: { position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "flex-end", justifyContent: "flex-end", padding: 16 },
+      onClick: (e) => {
+        if (e.target === e.currentTarget) setOpen(false);
+      }
+    },
+    /* @__PURE__ */ React.createElement("div", { style: { width: "100%", maxWidth: 520, maxHeight: "85vh", background: "#1E1E1E", borderRadius: 16, overflow: "hidden", display: "flex", flexDirection: "column", color: "white", fontFamily: "monospace" } }, /* @__PURE__ */ React.createElement("div", { style: { padding: "12px 16px", background: "#2D2D2D", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #444" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, fontWeight: 700 } }, "\u{1F41B} Error Log ", /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: "#888" } }, "master only")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6 } }, /* @__PURE__ */ React.createElement("button", { onClick: () => {
+      loadLocal();
+      if (activeTab === "server") loadServer();
+    }, style: { background: "#3D3D3D", border: "none", color: "#CCC", padding: "4px 10px", borderRadius: 6, fontSize: 11, cursor: "pointer" } }, "\u21BA"), /* @__PURE__ */ React.createElement("button", { onClick: () => {
+      window.__ERR_LOG = [];
+      setLogs([]);
+    }, style: { background: "#3D3D3D", border: "none", color: "#F87171", padding: "4px 10px", borderRadius: 6, fontSize: 11, cursor: "pointer" } }, "\uC9C0\uC6B0\uAE30"), /* @__PURE__ */ React.createElement("button", { onClick: () => setOpen(false), style: { background: "#3D3D3D", border: "none", color: "#CCC", padding: "4px 10px", borderRadius: 6, fontSize: 11, cursor: "pointer" } }, "\u2715"))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", background: "#2D2D2D", borderBottom: "1px solid #444" } }, [["local", "\uB85C\uCEEC (\uBA54\uBAA8\uB9AC)"], ["server", "\uC11C\uBC84 KV"]].map(([k, l]) => /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        key: k,
+        onClick: () => {
+          setActiveTab(k);
+          if (k === "server" && !serverLogs.length) loadServer();
+        },
+        style: { flex: 1, padding: "8px", border: "none", background: activeTab === k ? "#1E1E1E" : "transparent", color: activeTab === k ? "#60A5FA" : "#888", fontSize: 12, cursor: "pointer", borderBottom: activeTab === k ? "2px solid #60A5FA" : "2px solid transparent" }
+      },
+      l,
+      " (",
+      k === "local" ? logs.length : serverLogs.length,
+      ")"
+    ))), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: 8 } }, loading && /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", color: "#888", padding: 20, fontSize: 12 } }, "\uB85C\uB529 \uC911..."), !loading && display.length === 0 && /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", color: "#4ADE80", padding: 20, fontSize: 12 } }, "\u2713 \uC5D0\uB7EC \uC5C6\uC74C"), display.map((e, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: { background: "#2D2D2D", borderRadius: 8, padding: "8px 10px", marginBottom: 6, borderLeft: `3px solid ${(e.type || "") === "error" ? "#F87171" : "#FB923C"}` } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", marginBottom: 4 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, color: (e.type || "") === "error" ? "#F87171" : "#FB923C", fontWeight: 700 } }, (e.type || "").toUpperCase()), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, color: "#666" } }, (e.t || e.time || "").slice(11, 19))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "#E5E7EB", wordBreak: "break-all", marginBottom: 2 } }, e.msg || e.message), (e.src || e.source) && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: "#666" } }, e.src || e.source, e.line ? `:${e.line}` : ""), e.stack && /* @__PURE__ */ React.createElement("details", null, /* @__PURE__ */ React.createElement("summary", { style: { fontSize: 10, color: "#888", cursor: "pointer" } }, "\uC2A4\uD0DD \u25B8"), /* @__PURE__ */ React.createElement("pre", { style: { fontSize: 10, color: "#9CA3AF", whiteSpace: "pre-wrap", margin: "4px 0 0", maxHeight: 100, overflow: "auto" } }, e.stack))))))
+  );
+}
 const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(/* @__PURE__ */ React.createElement(PsychologicalTestSystem, null));
+root.render(/* @__PURE__ */ React.createElement(AppWithDebug, null));
