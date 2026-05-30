@@ -910,7 +910,7 @@ app.post('/api/couple/checkin', async (c) => {
 })
 
 // ── POST /api/couple/date-course ──────────────────────────
-// AI 데이트 코스 추천 (3cr)
+// AI 데이트 코스 추천 (1cr)
 app.post('/api/couple/date-course', async (c) => {
   const { DB } = c.env
   const userId = await getCoupleUserId(c.req.raw, c.env)
@@ -928,7 +928,7 @@ app.post('/api/couple/date-course', async (c) => {
   }
 
   const isMaster = isMasterAccount(user.email)
-  const COST = 3
+  const COST = 1
   if (!isMaster && user.credits < COST) {
     return c.json({ success: false, error: `크레딧 부족 (보유: ${user.credits}, 필요: ${COST})`, needsCharge: true }, 402)
   }

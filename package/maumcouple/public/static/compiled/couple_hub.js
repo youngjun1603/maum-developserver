@@ -3025,7 +3025,7 @@ function CoupleHubApp() {
         { icon: "\u{1F54A}\uFE0F", label: tl("\uC2F8\uC6C0 \uC911\uC7AC AI", "Fight Mediator"), desc: tl("\uC591\uCABD \uC785\uC7A5 \uC815\uB9AC + \uD654\uD574 \uBB38\uAD6C", "Neutral mediation & reconciliation tips"), cost: "2cr", view: "fightMediate" },
         { icon: "\u{1F91D}", label: tl("AI \uAD00\uACC4 \uCF54\uCE58", "AI Relationship Coach"), desc: tl("\uACE0\uBBFC \uC0C1\uB2F4 \xB7 \uAD00\uACC4 \uC870\uC5B8", "Talk through your worries"), cost: null, view: "coach" },
         { icon: "\u{1F52E}", label: tl("\uC774\uC0C1\uD615 \uC131\uD5A5 \uBD84\uC11D", "Ideal Type Analysis"), desc: tl("\uB0B4 \uAC80\uC0AC \uACB0\uACFC \uAE30\uBC18 AI \uBD84\uC11D", "AI analysis from your test results"), cost: isMaster ? null : "5cr", view: "soloAnalysis" },
-        { icon: "\u{1F5FA}\uFE0F", label: tl("\uB370\uC774\uD2B8 \uCF54\uC2A4 \uCD94\uCC9C", "Date Idea Planner"), desc: tl("\uC9C0\uC5ED\xB7\uBD84\uC704\uAE30\xB7\uC608\uC0B0 \uB9DE\uCDA4 \uCF54\uC2A4", "Personalized date recommendations"), cost: "3cr", view: "dateCourse" },
+        { icon: "\u{1F5FA}\uFE0F", label: tl("\uB370\uC774\uD2B8 \uCF54\uC2A4 \uCD94\uCC9C", "Date Idea Planner"), desc: tl("\uC9C0\uC5ED\xB7\uBD84\uC704\uAE30\xB7\uC608\uC0B0 \uB9DE\uCDA4 \uCF54\uC2A4", "Personalized date recommendations"), cost: "1cr", view: "dateCourse" },
         { icon: "\u{1F4CA}", label: tl("\uCE74\uD1A1 \uB300\uD654 \uBD84\uC11D", "KakaoTalk Analysis"), desc: tl("\uB300\uD654 \uD328\uD134 AI \uB9AC\uD3EC\uD2B8", ".txt \uD30C\uC77C \uC5C5\uB85C\uB4DC \u2192 \uB300\uD654 \uD328\uD134 \uB9AC\uD3EC\uD2B8"), cost: "3cr", view: "kakaoAnalysis" }
       ]
     },
@@ -3061,7 +3061,7 @@ function CoupleHubApp() {
     { icon: "\u{1F4AC}", label: tl("\uAC10\uC815 \uBC88\uC5ED\uAE30", "Emotion Translator"), desc: tl("\uB9D0 \uB4A4\uC758 \uC9C4\uC2EC", "Hidden feelings"), cost: "1cr", view: "emotionTranslate", from: "#FFAFCC", to: "#FFD6E7" },
     { icon: "\u{1F54A}\uFE0F", label: tl("\uC2F8\uC6C0 \uC911\uC7AC", "Fight Mediator"), desc: tl("\uC911\uB9BD\uC801 \uC911\uC7AC", "Neutral mediation"), cost: "2cr", view: "fightMediate", from: "#BDB2FF", to: "#D8CFFF" },
     { icon: "\u{1F91D}", label: tl("AI \uCF54\uCE58", "AI Coach"), desc: tl("\uAD00\uACC4 \uC870\uC5B8", "Relationship tips"), cost: null, view: "coach", from: "#FFD6A5", to: "#FFE9CC" },
-    { icon: "\u{1F5FA}\uFE0F", label: tl("\uB370\uC774\uD2B8 \uCF54\uC2A4", "Date Ideas"), desc: tl("\uB9DE\uCDA4 \uCF54\uC2A4 \uCD94\uCC9C", "Personalized plans"), cost: "3cr", view: "dateCourse", from: "#FFADAD", to: "#FFD0D0" },
+    { icon: "\u{1F5FA}\uFE0F", label: tl("\uB370\uC774\uD2B8 \uCF54\uC2A4", "Date Ideas"), desc: tl("\uB9DE\uCDA4 \uCF54\uC2A4 \uCD94\uCC9C", "Personalized plans"), cost: "1cr", view: "dateCourse", from: "#FFADAD", to: "#FFD0D0" },
     { icon: "\u{1F4CA}", label: tl("\uCE74\uD1A1 \uBD84\uC11D", "Kakao Analysis"), desc: tl("\uB300\uD654 \uD328\uD134 \uB9AC\uD3EC\uD2B8", "Chat pattern report"), cost: "3cr", view: "kakaoAnalysis", from: "#CAFFBF", to: "#D9F7CF" }
   ].map((t) => /* @__PURE__ */ React.createElement(
     "button",

@@ -3559,7 +3559,7 @@ useEffect(() => {
         { icon:'🕊️', label:tl('싸움 중재 AI','Fight Mediator'),       desc:tl('양쪽 입장 정리 + 화해 문구','Neutral mediation & reconciliation tips'), cost:'2cr', view:'fightMediate' },
         { icon:'🤝', label:tl('AI 관계 코치','AI Relationship Coach'), desc:tl('고민 상담 · 관계 조언','Talk through your worries'), cost:null, view:'coach' },
         { icon:'🔮', label:tl('이상형 성향 분석','Ideal Type Analysis'),desc:tl('내 검사 결과 기반 AI 분석','AI analysis from your test results'), cost:isMaster ? null : '5cr', view:'soloAnalysis' },
-        { icon:'🗺️', label:tl('데이트 코스 추천','Date Idea Planner'), desc:tl('지역·분위기·예산 맞춤 코스','Personalized date recommendations'), cost:'3cr', view:'dateCourse' },
+        { icon:'🗺️', label:tl('데이트 코스 추천','Date Idea Planner'), desc:tl('지역·분위기·예산 맞춤 코스','Personalized date recommendations'), cost:'1cr', view:'dateCourse' },
         { icon:'📊', label:tl('카톡 대화 분석','KakaoTalk Analysis'),  desc:tl('대화 패턴 AI 리포트','.txt 파일 업로드 → 대화 패턴 리포트'), cost:'3cr', view:'kakaoAnalysis' },
       ],
     },
@@ -3640,7 +3640,7 @@ useEffect(() => {
                 { icon:'💬', label:tl('감정 번역기','Emotion Translator'), desc:tl('말 뒤의 진심','Hidden feelings'), cost:'1cr', view:'emotionTranslate', from:'#FFAFCC', to:'#FFD6E7' },
                 { icon:'🕊️', label:tl('싸움 중재','Fight Mediator'),       desc:tl('중립적 중재','Neutral mediation'), cost:'2cr', view:'fightMediate',     from:'#BDB2FF', to:'#D8CFFF' },
                 { icon:'🤝', label:tl('AI 코치','AI Coach'),                desc:tl('관계 조언','Relationship tips'), cost:null,  view:'coach',            from:'#FFD6A5', to:'#FFE9CC' },
-                { icon:'🗺️', label:tl('데이트 코스','Date Ideas'),          desc:tl('맞춤 코스 추천','Personalized plans'), cost:'3cr', view:'dateCourse',  from:'#FFADAD', to:'#FFD0D0' },
+                { icon:'🗺️', label:tl('데이트 코스','Date Ideas'),          desc:tl('맞춤 코스 추천','Personalized plans'), cost:'1cr', view:'dateCourse',  from:'#FFADAD', to:'#FFD0D0' },
                 { icon:'📊', label:tl('카톡 분석','Kakao Analysis'),        desc:tl('대화 패턴 리포트','Chat pattern report'), cost:'3cr', view:'kakaoAnalysis', from:'#CAFFBF', to:'#D9F7CF' },
               ].map(t => (
                 <button key={t.view} onClick={() => setView(t.view)} style={{
