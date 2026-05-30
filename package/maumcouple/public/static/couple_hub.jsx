@@ -3450,17 +3450,17 @@ useEffect(() => {
 
   // 감정 번역기
   if (view === 'emotionTranslate') {
-    return <EmotionTranslateView credits={credits} isMaster={isMaster} onBack={() => setView('hub')} />;
+    return <EmotionTranslateView credits={data?.user?.credits ?? 0} isMaster={data?.isMaster} onBack={() => setView('hub')} />;
   }
 
   // 싸움 중재 AI
   if (view === 'fightMediate') {
-    return <FightMediateView credits={credits} isMaster={isMaster} onBack={() => setView('hub')} />;
+    return <FightMediateView credits={data?.user?.credits ?? 0} isMaster={data?.isMaster} onBack={() => setView('hub')} />;
   }
 
   // 카톡 대화 분석
   if (view === 'kakaoAnalysis') {
-    return <KakaoAnalysisView credits={credits} isMaster={isMaster} onBack={() => setView('hub')} />;
+    return <KakaoAnalysisView credits={data?.user?.credits ?? 0} isMaster={data?.isMaster} onBack={() => setView('hub')} />;
   }
 
   // 커플 스타일 퀴즈
@@ -3852,10 +3852,10 @@ useEffect(() => {
       </div>
 
       {/* ── 바텀 내비게이션 ── */}
-      <div style={{ position:'fixed', bottom:0, left:0, right:0, zIndex:100, background:'rgba(253,252,247,0.95)', backdropFilter:'blur(20px)', borderTop:'1px solid rgba(181,85,106,0.10)', display:'flex', height:64, maxWidth:640, margin:'0 auto' }}>
+      <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', zIndex:100, background:'rgba(253,252,247,0.95)', backdropFilter:'blur(20px)', borderTop:'1px solid rgba(181,85,106,0.10)', display:'flex', height:64, maxWidth:640 }}>
         {NAV_TABS.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)} style={{
-            flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:3,
+            flex:1, position:'relative', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:3,
             background:'none', border:'none', cursor:'pointer', fontFamily:"'Noto Sans KR',sans-serif",
             transition:'all 0.15s',
           }}>

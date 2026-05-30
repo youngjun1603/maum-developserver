@@ -949,7 +949,7 @@ ${COUPLE_URL}`;
     fontFamily: "'Noto Sans KR', sans-serif"
   } }, "\u2190 ", tl("\uD648\uC73C\uB85C \uB3CC\uC544\uAC00\uAE30", "Back to Home")))));
 }
-function RelationshipCoachView({ userName, credits: credits2, isMaster, onBack }) {
+function RelationshipCoachView({ userName, credits, isMaster, onBack }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -1008,7 +1008,7 @@ function RelationshipCoachView({ userName, credits: credits2, isMaster, onBack }
       setLoading(false);
     }
   }
-  const canAfford = isMaster || usedToday < FREE_LIMIT || credits2 >= PAID_COST;
+  const canAfford = isMaster || usedToday < FREE_LIMIT || credits >= PAID_COST;
   const freeLeft = Math.max(0, FREE_LIMIT - usedToday);
   return /* @__PURE__ */ React.createElement("div", { style: { minHeight: "100vh", background: `linear-gradient(160deg, ${C.rosePale}, ${C.cream})`, display: "flex", flexDirection: "column" } }, /* @__PURE__ */ React.createElement("nav", { style: {
     position: "sticky",
@@ -1654,7 +1654,7 @@ const DATE_MOODS = COUPLE_LANG === "en" ? [
 ];
 const DATE_DURATIONS = COUPLE_LANG === "en" ? ["Half Day (3~4 hrs)", "Full Day (6~8 hrs)", "Overnight (2 Days)"] : ["\uBC18\uB098\uC808 (3~4\uC2DC\uAC04)", "\uD558\uB8E8 (6~8\uC2DC\uAC04)", "1\uBC15 2\uC77C"];
 const DATE_BUDGETS = COUPLE_LANG === "en" ? ["Budget (Under \u20A950K)", "Regular (\u20A950K~150K)", "Special (\u20A9150K+)"] : ["\uC54C\uB730 (5\uB9CC\uC6D0 \uC774\uD558)", "\uBCF4\uD1B5 (5~15\uB9CC\uC6D0)", "\uD2B9\uBCC4 (15\uB9CC\uC6D0 \uC774\uC0C1)"];
-function DateCourseView({ credits: credits2, isMaster, onBack }) {
+function DateCourseView({ credits, isMaster, onBack }) {
   const [region, setRegion] = useState("");
   const [mood, setMood] = useState("");
   const [duration, setDuration] = useState("");
@@ -1663,7 +1663,7 @@ function DateCourseView({ credits: credits2, isMaster, onBack }) {
   const [course, setCourse] = useState("");
   const [error, setError] = useState("");
   const COST = 3;
-  const canAfford = isMaster || credits2 >= COST;
+  const canAfford = isMaster || credits >= COST;
   const allSelected = region && mood && duration && budget;
   async function generate() {
     setLoading(true);
@@ -1759,7 +1759,7 @@ ${COUPLE_URL}`;
     fontFamily: "'Noto Sans KR', sans-serif",
     lineHeight: 1.4,
     textAlign: "center"
-  } }, b)))), !canAfford && /* @__PURE__ */ React.createElement("div", { style: { padding: "12px", borderRadius: 12, background: "#FFF0F0", border: "1px solid #FFD0D0", fontSize: 12, color: "#D05555", marginBottom: 12 } }, "\u{1F4B8} ", tl(`\uD06C\uB808\uB527\uC774 \uBD80\uC871\uD569\uB2C8\uB2E4. (\uD544\uC694: ${COST}cr / \uBCF4\uC720: ${credits2}cr)`, `Insufficient credits. (Required: ${COST}cr / Balance: ${credits2}cr)`)), /* @__PURE__ */ React.createElement(
+  } }, b)))), !canAfford && /* @__PURE__ */ React.createElement("div", { style: { padding: "12px", borderRadius: 12, background: "#FFF0F0", border: "1px solid #FFD0D0", fontSize: 12, color: "#D05555", marginBottom: 12 } }, "\u{1F4B8} ", tl(`\uD06C\uB808\uB527\uC774 \uBD80\uC871\uD569\uB2C8\uB2E4. (\uD544\uC694: ${COST}cr / \uBCF4\uC720: ${credits}cr)`, `Insufficient credits. (Required: ${COST}cr / Balance: ${credits}cr)`)), /* @__PURE__ */ React.createElement(
     "button",
     {
       onClick: generate,
@@ -1821,7 +1821,7 @@ ${COUPLE_URL}`;
     fontFamily: "'Noto Sans KR', sans-serif"
   } }, "\u2190 ", tl("\uD648\uC73C\uB85C", "Home")))));
 }
-function EmotionTranslateView({ credits: credits2, isMaster, onBack }) {
+function EmotionTranslateView({ credits, isMaster, onBack }) {
   const [situation, setSituation] = useState("");
   const [message, setMessage] = useState("");
   const [result, setResult] = useState("");
@@ -1885,7 +1885,7 @@ function EmotionTranslateView({ credits: credits2, isMaster, onBack }) {
     loading ? tl("\uBD84\uC11D \uC911...", "Analyzing...") : tl(`\u{1F4AC} \uBC88\uC5ED\uD558\uAE30${isMaster ? "" : ` (${COST}cr)`}`, `\u{1F4AC} Translate${isMaster ? "" : ` (${COST}cr)`}`)
   ), result && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 20, background: "white", borderRadius: 16, padding: "18px 16px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", border: `1px solid ${C.roseL}33` } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.rose, marginBottom: 10 } }, "\u{1F4A1} ", tl("\uBC88\uC5ED \uACB0\uACFC", "Translation Result")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: C.dark, lineHeight: 1.8, whiteSpace: "pre-wrap" } }, result)))));
 }
-function FightMediateView({ credits: credits2, isMaster, onBack }) {
+function FightMediateView({ credits, isMaster, onBack }) {
   const [situation, setSituation] = useState("");
   const [myFeel, setMyFeel] = useState("");
   const [partnerFeel, setPartnerFeel] = useState("");
@@ -1958,7 +1958,7 @@ function FightMediateView({ credits: credits2, isMaster, onBack }) {
     loading ? tl("\uC911\uC7AC \uC911...", "Mediating...") : tl(`\u{1F54A}\uFE0F \uC911\uC7AC \uC2DC\uC791${isMaster ? "" : ` (${COST}cr)`}`, `\u{1F54A}\uFE0F Start Mediation${isMaster ? "" : ` (${COST}cr)`}`)
   ), result && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 20, background: "white", borderRadius: 16, padding: "18px 16px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", border: `1px solid ${C.lavL}33` } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.lavender, marginBottom: 10 } }, "\u{1F54A}\uFE0F ", tl("\uC911\uC7AC \uACB0\uACFC", "Mediation Result")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: C.dark, lineHeight: 1.8, whiteSpace: "pre-wrap" } }, result)))));
 }
-function KakaoAnalysisView({ credits: credits2, isMaster, onBack }) {
+function KakaoAnalysisView({ credits, isMaster, onBack }) {
   const [stats, setStats] = useState(null);
   const [sample, setSample] = useState("");
   const [result, setResult] = useState("");
@@ -2079,12 +2079,12 @@ function KakaoAnalysisView({ credits: credits2, isMaster, onBack }) {
     loading ? tl("\uBD84\uC11D \uC911...", "Analyzing...") : tl(`\u{1F50D} AI \uBD84\uC11D \uC2DC\uC791${isMaster ? "" : ` (${COST}cr)`}`, `\u{1F50D} Analyze${isMaster ? "" : ` (${COST}cr)`}`)
   ), result && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 20, background: "white", borderRadius: 16, padding: "18px 16px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", border: "1px solid #4A9A5A33" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: "#2E8B57", marginBottom: 10 } }, "\u{1F4CA} ", tl("\uBD84\uC11D \uACB0\uACFC", "Analysis Result")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: C.dark, lineHeight: 1.8, whiteSpace: "pre-wrap" } }, result)))));
 }
-function SoloAnalysisView({ testResults, userName, credits: credits2, isMaster, onBack }) {
+function SoloAnalysisView({ testResults, userName, credits, isMaster, onBack }) {
   const [report, setReport] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const COST = 5;
-  const canAfford = isMaster || credits2 >= COST;
+  const canAfford = isMaster || credits >= COST;
   const hasData = !!(testResults?.big5 || testResults?.lost || testResults?.dsi);
   async function generateSoloReport() {
     setLoading(true);
@@ -2151,7 +2151,7 @@ ${COUPLE_URL}`;
     color: "#D05555",
     marginBottom: 24,
     textAlign: "left"
-  } }, "\u{1F4B8} ", tl(`\uD06C\uB808\uB527\uC774 \uBD80\uC871\uD569\uB2C8\uB2E4. (\uD544\uC694: ${COST}cr / \uBCF4\uC720: ${credits2}cr)`, `Insufficient credits. (Required: ${COST}cr / Balance: ${credits2}cr)`)), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10, textAlign: "left", marginBottom: 28 } }, [
+  } }, "\u{1F4B8} ", tl(`\uD06C\uB808\uB527\uC774 \uBD80\uC871\uD569\uB2C8\uB2E4. (\uD544\uC694: ${COST}cr / \uBCF4\uC720: ${credits}cr)`, `Insufficient credits. (Required: ${COST}cr / Balance: ${credits}cr)`)), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10, textAlign: "left", marginBottom: 28 } }, [
     { emoji: "\u{1F4AA}", title: tl("\uB098\uC758 \uC5F0\uC560 \uAC15\uC810", "My Love Strengths"), desc: tl("\uB0B4\uAC00 \uAD00\uACC4\uC5D0\uC11C \uC798\uD558\uB294 \uAC83\uACFC \uB9E4\uB825 \uD3EC\uC778\uD2B8", "What I do well in relationships and my attractive points") },
     { emoji: "\u{1F491}", title: tl("\uC798 \uB9DE\uB294 \uD30C\uD2B8\uB108 \uC720\uD615", "Best Partner Type"), desc: tl("\uB098\uC640 \uAD81\uD569\uC774 \uC88B\uC740 \uC131\uACA9\xB7\uD589\uB3D9 \uC720\uD615", "Personality and behavior types that match well with me") },
     { emoji: "\u{1F331}", title: tl("\uD568\uAED8 \uC131\uC7A5\uD560 \uD3EC\uC778\uD2B8", "Growth Points"), desc: tl("\uB354 \uC88B\uC740 \uAD00\uACC4\uB97C \uC704\uD55C \uAC1C\uC778 \uC131\uC7A5 \uBC29\uD5A5", "Personal growth direction for a better relationship") }
@@ -2931,13 +2931,13 @@ function CoupleHubApp() {
     );
   }
   if (view === "emotionTranslate") {
-    return /* @__PURE__ */ React.createElement(EmotionTranslateView, { credits, isMaster, onBack: () => setView("hub") });
+    return /* @__PURE__ */ React.createElement(EmotionTranslateView, { credits: data?.user?.credits ?? 0, isMaster: data?.isMaster, onBack: () => setView("hub") });
   }
   if (view === "fightMediate") {
-    return /* @__PURE__ */ React.createElement(FightMediateView, { credits, isMaster, onBack: () => setView("hub") });
+    return /* @__PURE__ */ React.createElement(FightMediateView, { credits: data?.user?.credits ?? 0, isMaster: data?.isMaster, onBack: () => setView("hub") });
   }
   if (view === "kakaoAnalysis") {
-    return /* @__PURE__ */ React.createElement(KakaoAnalysisView, { credits, isMaster, onBack: () => setView("hub") });
+    return /* @__PURE__ */ React.createElement(KakaoAnalysisView, { credits: data?.user?.credits ?? 0, isMaster: data?.isMaster, onBack: () => setView("hub") });
   }
   if (view === "quiz") {
     return /* @__PURE__ */ React.createElement(CoupleQuizView, { onBack: () => setView("hub") });
@@ -3148,8 +3148,9 @@ function CoupleHubApp() {
   })(), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } }, recentReports.map((r) => /* @__PURE__ */ React.createElement("button", { key: r.id, onClick: () => {
     setSession(r);
     setView("report");
-  }, style: { display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.roseL}33`, background: C.rosePale, cursor: "pointer", textAlign: "left", fontFamily: "'Noto Sans KR',sans-serif" } }, /* @__PURE__ */ React.createElement("div", { style: { width: 44, height: 44, borderRadius: 100, background: `linear-gradient(135deg, ${scoreColor(r.compatibility_score || 0)}, ${C.roseL})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: "white", flexShrink: 0 } }, r.compatibility_score || "?"), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 600, color: C.dark } }, r.test_type, " ", tl("\uBD84\uC11D", "Analysis"), " \xB7 ", scoreLabel(r.compatibility_score || 0)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 2 } }, fmtDate(r.created_at))), /* @__PURE__ */ React.createElement("span", { style: { color: "#D0D0D0", fontSize: 16 } }, "\u203A"))))) : /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: "60px 20px" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 40, marginBottom: 12 } }, "\u{1F4CB}"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 700, color: C.dark, marginBottom: 6 } }, tl("\uC544\uC9C1 \uBD84\uC11D \uAE30\uB85D\uC774 \uC5C6\uC5B4\uC694", "No analysis records yet")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: C.muted, marginBottom: 20 } }, tl("\uD30C\uD2B8\uB108 \uD0ED\uC5D0\uC11C \uCEE4\uD50C \uBD84\uC11D\uC744 \uC2DC\uC791\uD574\uBCF4\uC138\uC694", "Start a couple analysis from the Partner tab")), /* @__PURE__ */ React.createElement("button", { onClick: () => setTab("partner"), style: { padding: "12px 24px", borderRadius: 12, border: "none", background: C.rose, color: "white", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "'Noto Sans KR',sans-serif" } }, tl("\uD30C\uD2B8\uB108 \uD0ED\uC73C\uB85C \u2192", "Go to Partner tab \u2192"))))), /* @__PURE__ */ React.createElement("div", { style: { position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100, background: "rgba(253,252,247,0.95)", backdropFilter: "blur(20px)", borderTop: "1px solid rgba(181,85,106,0.10)", display: "flex", height: 64, maxWidth: 640, margin: "0 auto" } }, NAV_TABS.map((t) => /* @__PURE__ */ React.createElement("button", { key: t.key, onClick: () => setTab(t.key), style: {
+  }, style: { display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.roseL}33`, background: C.rosePale, cursor: "pointer", textAlign: "left", fontFamily: "'Noto Sans KR',sans-serif" } }, /* @__PURE__ */ React.createElement("div", { style: { width: 44, height: 44, borderRadius: 100, background: `linear-gradient(135deg, ${scoreColor(r.compatibility_score || 0)}, ${C.roseL})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: "white", flexShrink: 0 } }, r.compatibility_score || "?"), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 600, color: C.dark } }, r.test_type, " ", tl("\uBD84\uC11D", "Analysis"), " \xB7 ", scoreLabel(r.compatibility_score || 0)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 2 } }, fmtDate(r.created_at))), /* @__PURE__ */ React.createElement("span", { style: { color: "#D0D0D0", fontSize: 16 } }, "\u203A"))))) : /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: "60px 20px" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 40, marginBottom: 12 } }, "\u{1F4CB}"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 700, color: C.dark, marginBottom: 6 } }, tl("\uC544\uC9C1 \uBD84\uC11D \uAE30\uB85D\uC774 \uC5C6\uC5B4\uC694", "No analysis records yet")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: C.muted, marginBottom: 20 } }, tl("\uD30C\uD2B8\uB108 \uD0ED\uC5D0\uC11C \uCEE4\uD50C \uBD84\uC11D\uC744 \uC2DC\uC791\uD574\uBCF4\uC138\uC694", "Start a couple analysis from the Partner tab")), /* @__PURE__ */ React.createElement("button", { onClick: () => setTab("partner"), style: { padding: "12px 24px", borderRadius: 12, border: "none", background: C.rose, color: "white", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "'Noto Sans KR',sans-serif" } }, tl("\uD30C\uD2B8\uB108 \uD0ED\uC73C\uB85C \u2192", "Go to Partner tab \u2192"))))), /* @__PURE__ */ React.createElement("div", { style: { position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", zIndex: 100, background: "rgba(253,252,247,0.95)", backdropFilter: "blur(20px)", borderTop: "1px solid rgba(181,85,106,0.10)", display: "flex", height: 64, maxWidth: 640 } }, NAV_TABS.map((t) => /* @__PURE__ */ React.createElement("button", { key: t.key, onClick: () => setTab(t.key), style: {
     flex: 1,
+    position: "relative",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",

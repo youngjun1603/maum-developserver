@@ -2634,8 +2634,11 @@ app.get('/api/payment/toss/fail', async (c) => {
   const { DB } = c.env
   const { code, message, chargeId } = c.req.query() as Record<string, string>
   if (chargeId) {
-    await DB.prepare('UPDATE credit_charges SET status=? WHERE id=? AND status=?')
-      .bind('failed', parseInt(chargeId), 'pending').run()
+    const cid = parseInt(chargeId)
+    if (!isNaN(cid)) {
+      await DB.prepare('UPDATE credit_charges SET status=? WHERE id=? AND status=?')
+        .bind('failed', cid, 'pending').run()
+    }
   }
   console.error('[Toss] 결제 실패:', code, message)
   return c.redirect(`/?payment=fail&msg=${encodeURIComponent(message || '결제취소')}`)
@@ -3766,6 +3769,10 @@ app.post('/api/counseling/appointments/prepare', async (c) => {
 app.get('/api/counseling/appointments/toss/success', async (c) => {
   const { DB } = c.env
   const { paymentKey, orderId, amount, appointmentId } = c.req.query() as Record<string, string>
+  if (!paymentKey || !orderId || !appointmentId) return c.redirect('/?counseling=fail&msg=파라미터오류')
+  const amountNum = parseInt(amount)
+  const apptId = parseInt(appointmentId)
+  if (isNaN(amountNum) || amountNum <= 0 || isNaN(apptId)) return c.redirect('/?counseling=fail&msg=파라미터오류')
 
   const tossKey = c.env.TOSS_SECRET_KEY
   if (!tossKey) return c.redirect('/?counseling=fail&msg=서버오류')
@@ -3774,19 +3781,19 @@ app.get('/api/counseling/appointments/toss/success', async (c) => {
     const confirmRes = await fetch('https://api.tosspayments.com/v1/payments/confirm', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Basic ' + btoa(tossKey + ':') },
-      body: JSON.stringify({ paymentKey, orderId, amount: parseInt(amount) }),
+      body: JSON.stringify({ paymentKey, orderId, amount: amountNum }),
     })
     if (!confirmRes.ok) {
       const err = await confirmRes.json() as { message: string }
       await DB.prepare("UPDATE appointments SET status='cancelled' WHERE id=? AND status='pending'")
-        .bind(parseInt(appointmentId)).run()
+        .bind(apptId).run()
       return c.redirect(`/?counseling=fail&msg=${encodeURIComponent(err.message || '결제실패')}`)
     }
 
     // 예약 확정 처리
     const appt = await DB.prepare(
       'SELECT ap.*,co.name as counselor_name,co.session_minutes,ce.name as center_name FROM appointments ap JOIN counselors co ON ap.counselor_id=co.id JOIN counseling_centers ce ON ap.center_id=ce.id WHERE ap.id=?'
-    ).bind(parseInt(appointmentId)).first<{
+    ).bind(apptId).first<{
       user_id: number; counselor_name: string; center_name: string
       scheduled_at: string; duration_min: number; session_type: string
       fee_amount: number; video_room_url: string | null; session_minutes: number
@@ -3824,8 +3831,11 @@ app.get('/api/counseling/appointments/toss/fail', async (c) => {
   const { DB } = c.env
   const { appointmentId } = c.req.query() as Record<string, string>
   if (appointmentId) {
-    await DB.prepare("UPDATE appointments SET status='cancelled' WHERE id=? AND status='pending'")
-      .bind(parseInt(appointmentId)).run()
+    const aid = parseInt(appointmentId)
+    if (!isNaN(aid)) {
+      await DB.prepare("UPDATE appointments SET status='cancelled' WHERE id=? AND status='pending'")
+        .bind(aid).run()
+    }
   }
   return c.redirect('/?counseling=fail')
 })
