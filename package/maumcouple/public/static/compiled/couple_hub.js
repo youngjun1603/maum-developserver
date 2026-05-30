@@ -2753,6 +2753,7 @@ function CoupleHubApp() {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [view, setView] = useState("hub");
+  const [tab, setTab] = useState("home");
   const [sessionData, setSession] = useState(null);
   const [partnerName, setPartner] = useState(tl("\uD30C\uD2B8\uB108", "Partner"));
   const [myRole, setMyRole] = useState("host");
@@ -3004,455 +3005,162 @@ function CoupleHubApp() {
   const hasLost = !!testResults?.lost;
   const hasDsiTest = !!testResults?.dsi;
   const hasAny = hasBig5 || hasLost || hasDsiTest;
+  const dDay = (() => {
+    const saved = localStorage.getItem("couple_first_date");
+    if (!saved) return null;
+    const diff = Math.floor((Date.now() - new Date(saved).getTime()) / 864e5);
+    return diff >= 0 ? diff + 1 : null;
+  })();
+  const NAV_TABS = [
+    { key: "home", icon: "\u{1F3E0}", label: tl("\uD648", "Home") },
+    { key: "tools", icon: "\u{1F527}", label: tl("\uB3C4\uAD6C", "Tools") },
+    { key: "partner", icon: "\u{1F495}", label: tl("\uD30C\uD2B8\uB108", "Partner") },
+    { key: "records", icon: "\u{1F4CB}", label: tl("\uAE30\uB85D", "Records") }
+  ];
+  const TOOL_CATEGORIES = [
+    {
+      title: tl("\u{1F916} AI \uB3C4\uAD6C", "\u{1F916} AI Tools"),
+      items: [
+        { icon: "\u{1F4AC}", label: tl("\uAC10\uC815 \uBC88\uC5ED\uAE30", "Emotion Translator"), desc: tl('"\uADF8\uB0E5 \uB410\uC5B4"\uC758 \uC9C4\uC9DC \uC758\uBBF8', '"Never mind" \u2014 what did they mean?'), cost: "1cr", view: "emotionTranslate" },
+        { icon: "\u{1F54A}\uFE0F", label: tl("\uC2F8\uC6C0 \uC911\uC7AC AI", "Fight Mediator"), desc: tl("\uC591\uCABD \uC785\uC7A5 \uC815\uB9AC + \uD654\uD574 \uBB38\uAD6C", "Neutral mediation & reconciliation tips"), cost: "2cr", view: "fightMediate" },
+        { icon: "\u{1F91D}", label: tl("AI \uAD00\uACC4 \uCF54\uCE58", "AI Relationship Coach"), desc: tl("\uACE0\uBBFC \uC0C1\uB2F4 \xB7 \uAD00\uACC4 \uC870\uC5B8", "Talk through your worries"), cost: tl("3\uD68C \uBB34\uB8CC", "3 free"), view: "coach" },
+        { icon: "\u{1F52E}", label: tl("\uC774\uC0C1\uD615 \uC131\uD5A5 \uBD84\uC11D", "Ideal Type Analysis"), desc: tl("\uB0B4 \uAC80\uC0AC \uACB0\uACFC \uAE30\uBC18 AI \uBD84\uC11D", "AI analysis from your test results"), cost: "5cr", view: "soloAnalysis" },
+        { icon: "\u{1F5FA}\uFE0F", label: tl("\uB370\uC774\uD2B8 \uCF54\uC2A4 \uCD94\uCC9C", "Date Idea Planner"), desc: tl("\uC9C0\uC5ED\xB7\uBD84\uC704\uAE30\xB7\uC608\uC0B0 \uB9DE\uCDA4 \uCF54\uC2A4", "Personalized date recommendations"), cost: "3cr", view: "dateCourse" },
+        { icon: "\u{1F4CA}", label: tl("\uCE74\uD1A1 \uB300\uD654 \uBD84\uC11D", "KakaoTalk Analysis"), desc: tl("\uB300\uD654 \uD328\uD134 AI \uB9AC\uD3EC\uD2B8", ".txt \uD30C\uC77C \uC5C5\uB85C\uB4DC \u2192 \uB300\uD654 \uD328\uD134 \uB9AC\uD3EC\uD2B8"), cost: "3cr", view: "kakaoAnalysis" }
+      ]
+    },
+    {
+      title: tl("\u{1F9EA} \uC2EC\uB9AC \uD14C\uC2A4\uD2B8", "\u{1F9EA} Psych Tests"),
+      items: [
+        { icon: "\u{1F49D}", label: tl("\uC5F0\uC560 \uC720\uD615 \uD14C\uC2A4\uD2B8", "Love Type Test"), desc: tl("S\xB7R\xB7P\xB7F 4\uAC00\uC9C0 \uC720\uD615 \uC911 \uB098\uB294?", "Which love type are you? S\xB7R\xB7P\xB7F"), cost: tl("\uBB34\uB8CC", "Free"), view: "miniTest" },
+        { icon: "\u{1F49B}", label: tl("\uCEE4\uD50C \uC2A4\uD0C0\uC77C \uD034\uC988", "Couple Style Quiz"), desc: tl("10\uBB38\uD56D\uC73C\uB85C \uBCF4\uB294 \uCEE4\uD50C \uD638\uD658\uC131", "10-question couple compatibility"), cost: tl("\uBB34\uB8CC", "Free"), view: "quiz" }
+      ]
+    },
+    {
+      title: tl("\u{1F4C5} \uAD00\uACC4 \uAD00\uB9AC", "\u{1F4C5} Relationship"),
+      items: [
+        { icon: "\u{1F331}", label: tl("\uAD00\uACC4 \uC131\uC7A5 \uCCB4\uD06C\uC778", "Relationship Check-in"), desc: tl("\uC6D4 1\uD68C \uAD00\uACC4 \uAC74\uAC15\uB3C4 \uCCB4\uD06C", "Monthly relationship health check"), cost: tl("\uBB34\uB8CC", "Free"), view: "checkin" },
+        { icon: "\u{1F5D3}\uFE0F", label: tl("\uAE30\uB150\uC77C \uACC4\uC0B0\uAE30", "Anniversary Calculator"), desc: tl("D+N\uC77C \xB7 \uAE30\uB150\uC77C \uC54C\uB9BC", "D+N day counter & anniversary tracker"), cost: tl("\uBB34\uB8CC", "Free"), view: "anniversary" },
+        { icon: "\u{1F5C2}\uFE0F", label: tl("\uAD00\uACC4 \uD0C0\uC784\uB77C\uC778", "Relationship Timeline"), desc: tl("\uD568\uAED8\uD55C \uC21C\uAC04\uB4E4\uC758 \uAE30\uB85D", "A visual record of your journey"), cost: tl("\uBB34\uB8CC", "Free"), view: "timeline" }
+      ]
+    }
+  ];
   return /* @__PURE__ */ React.createElement("div", { style: { minHeight: "100vh", background: `linear-gradient(160deg, ${C.rosePale} 0%, ${C.cream} 40%, ${C.lavPale} 100%)` } }, /* @__PURE__ */ React.createElement("nav", { style: {
     position: "sticky",
     top: 0,
     zIndex: 100,
-    background: "rgba(253,252,247,0.88)",
+    background: "rgba(253,252,247,0.92)",
     backdropFilter: "blur(16px)",
-    borderBottom: "1px solid rgba(181,85,106,0.12)",
+    borderBottom: "1px solid rgba(181,85,106,0.10)",
     padding: "0 20px",
-    height: 56,
+    height: 52,
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between"
-  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 20 } }, SERVICE_ICON), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16, fontWeight: 700, color: C.dark, fontFamily: "'Noto Serif KR', serif" } }, SERVICE_NAME)), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, /* @__PURE__ */ React.createElement("div", { style: {
-    fontSize: 12,
-    fontWeight: 600,
-    color: C.rose,
-    background: C.rosePale,
-    padding: "4px 12px",
-    borderRadius: 100,
-    border: `1px solid ${C.roseL}44`
-  } }, "\u2726 ", user?.credits ?? 0, " ", tl("\uD06C\uB808\uB527", "credits")), /* @__PURE__ */ React.createElement("a", { href: MAUMFUL_URL, style: {
-    fontSize: 12,
-    color: C.muted,
-    textDecoration: "none",
-    padding: "5px 12px",
-    borderRadius: 8,
-    border: "1px solid rgba(0,0,0,0.08)",
-    background: "rgba(255,255,255,0.6)"
-  } }, BACK_LABEL))), /* @__PURE__ */ React.createElement("div", { style: { maxWidth: 640, margin: "0 auto", padding: "24px 20px 40px" } }, (() => {
-    const myBig5Data = testResults?.big5?.data;
-    const myPersonality = getPersonalityLabel(myBig5Data);
-    return /* @__PURE__ */ React.createElement("div", { style: {
-      borderRadius: 20,
-      padding: "20px",
-      marginBottom: 20,
-      background: "white",
-      boxShadow: "0 4px 16px rgba(0,0,0,0.06)"
-    } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 18, fontWeight: 700, color: C.dark } }, tl(`\uC548\uB155\uD558\uC138\uC694, ${displayName(user)}\uB2D8 \u{1F44B}`, `Hello, ${displayName(user)} \u{1F44B}`), isMaster && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, background: C.rose, color: "white", borderRadius: 6, padding: "2px 8px", fontWeight: 700, marginLeft: 6 } }, "MASTER")), myPersonality && /* @__PURE__ */ React.createElement("span", { style: {
-      fontSize: 11,
-      fontWeight: 700,
-      padding: "4px 10px",
-      borderRadius: 100,
-      background: C.rosePale,
-      color: C.rose,
-      border: `1px solid ${C.roseL}44`,
-      whiteSpace: "nowrap"
-    } }, myPersonality.emoji, " ", myPersonality.name)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: C.muted, lineHeight: 1.6, marginBottom: 14 } }, tl("\uC2EC\uB9AC\uAC80\uC0AC \uACB0\uACFC\uB85C \uD30C\uD2B8\uB108\uC640\uC758 \uAD00\uACC4 \uD328\uD134\uC744 \uD568\uAED8 \uD0D0\uC0C9\uD574\uBCF4\uC138\uC694.", "Explore your relationship patterns together using psychological test results.")), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setView("miniTest"), style: {
-      padding: "10px 8px",
-      borderRadius: 12,
-      border: `1px solid ${C.roseL}33`,
-      cursor: "pointer",
-      background: C.rosePale,
-      color: C.rose,
-      fontWeight: 700,
-      fontSize: 12,
-      fontFamily: "'Noto Sans KR', sans-serif",
-      lineHeight: 1.4,
-      textAlign: "center"
-    } }, tl("\u{1F49D} \uC5F0\uC560 \uC720\uD615 \uD14C\uC2A4\uD2B8", "\u{1F49D} Love Type Test"), /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, fontWeight: 400, color: C.muted } }, tl("\uBB34\uB8CC", "Free"))), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("dateCourse"), style: {
-      padding: "10px 8px",
-      borderRadius: 12,
-      border: `1px solid ${C.roseL}33`,
-      cursor: "pointer",
-      background: `linear-gradient(135deg, ${C.rosePale}, ${C.lavPale})`,
-      color: C.rose,
-      fontWeight: 700,
-      fontSize: 12,
-      fontFamily: "'Noto Sans KR', sans-serif",
-      lineHeight: 1.4,
-      textAlign: "center"
-    } }, tl("\u{1F5FA}\uFE0F \uB370\uC774\uD2B8 \uCF54\uC2A4 \uCD94\uCC9C", "\u{1F5FA}\uFE0F Date Idea Planner"), /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, fontWeight: 400, color: C.muted } }, "3cr")), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("checkin"), style: {
-      padding: "10px 8px",
-      borderRadius: 12,
-      border: "1px solid #4A9A5A33",
-      cursor: "pointer",
-      background: "#EAF5EC",
-      color: "#4A9A5A",
-      fontWeight: 700,
-      fontSize: 12,
-      fontFamily: "'Noto Sans KR', sans-serif",
-      lineHeight: 1.4,
-      textAlign: "center"
-    } }, tl("\u{1F331} \uAD00\uACC4 \uC131\uC7A5 \uCCB4\uD06C\uC778", "\u{1F331} Relationship Check-in"), /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, fontWeight: 400, color: C.muted } }, tl("\uBB34\uB8CC \xB7 \uC6D4 1\uD68C", "Free \xB7 Monthly"))), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("soloAnalysis"), style: {
-      padding: "10px 8px",
-      borderRadius: 12,
-      border: `1px solid ${C.lavL}33`,
-      cursor: "pointer",
-      background: C.lavPale,
-      color: C.lavender,
-      fontWeight: 700,
-      fontSize: 12,
-      fontFamily: "'Noto Sans KR', sans-serif",
-      lineHeight: 1.4,
-      textAlign: "center"
-    } }, tl("\u{1F52E} \uC774\uC0C1\uD615 \uC131\uD5A5 \uBD84\uC11D", "\u{1F52E} Ideal Type Analysis"), /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, fontWeight: 400, color: C.muted } }, "5cr"))), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setView("coach"), style: {
-      padding: "10px 6px",
-      borderRadius: 12,
-      border: `1px solid ${C.amberL}55`,
-      cursor: "pointer",
-      background: `linear-gradient(135deg, #FFF8EE, #FEF3E2)`,
-      color: C.amber,
-      fontWeight: 700,
-      fontSize: 11,
-      fontFamily: "'Noto Sans KR', sans-serif",
-      lineHeight: 1.4,
-      textAlign: "center"
-    } }, tl("\u{1F91D} AI \uAD00\uACC4 \uCF54\uCE58", "\u{1F91D} AI Relationship Coach"), /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, fontWeight: 400, color: C.muted } }, tl("3\uD68C \uBB34\uB8CC", "3 free"))), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("quiz"), style: {
-      padding: "10px 6px",
-      borderRadius: 12,
-      border: `1px solid ${C.amberL}55`,
-      cursor: "pointer",
-      background: `linear-gradient(135deg, #FFFBF0, #FEF9E5)`,
-      color: C.amber,
-      fontWeight: 700,
-      fontSize: 11,
-      fontFamily: "'Noto Sans KR', sans-serif",
-      lineHeight: 1.4,
-      textAlign: "center"
-    } }, tl("\u{1F49B} \uCEE4\uD50C \uC2A4\uD0C0\uC77C \uD034\uC988", "\u{1F49B} Couple Style Quiz"), /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, fontWeight: 400, color: C.muted } }, tl("\uBB34\uB8CC", "Free"))), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("anniversary"), style: {
-      padding: "10px 6px",
-      borderRadius: 12,
-      border: `1px solid ${C.roseL}55`,
-      cursor: "pointer",
-      background: `linear-gradient(135deg, ${C.rosePale}, #FFF5F8)`,
-      color: C.rose,
-      fontWeight: 700,
-      fontSize: 11,
-      fontFamily: "'Noto Sans KR', sans-serif",
-      lineHeight: 1.4,
-      textAlign: "center"
-    } }, tl("\u{1F5D3}\uFE0F \uAE30\uB150\uC77C \uACC4\uC0B0\uAE30", "\u{1F5D3}\uFE0F Anniversary Calculator"), /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, fontWeight: 400, color: C.muted } }, tl("\uBB34\uB8CC", "Free"))), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("timeline"), style: {
-      padding: "10px 6px",
-      borderRadius: 12,
-      border: "1px solid #e0e7ff55",
-      cursor: "pointer",
-      background: "linear-gradient(135deg, #eef2ff, #e0e7ff)",
-      color: "#4f46e5",
-      fontWeight: 700,
-      fontSize: 11,
-      fontFamily: "'Noto Sans KR', sans-serif",
-      lineHeight: 1.4,
-      textAlign: "center"
-    } }, tl("\u{1F5C2}\uFE0F \uAD00\uACC4 \uD0C0\uC784\uB77C\uC778", "\u{1F5C2}\uFE0F Relationship Timeline"), /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, fontWeight: 400, color: C.muted } }, tl("\uBB34\uB8CC", "Free")))), /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: 1, marginBottom: 6 } }, tl("\u2014 \uAD00\uACC4 \uB3C4\uAD6C \u2014", "\u2014 Relationship Tools \u2014")), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setView("emotionTranslate"), style: {
-      padding: "10px 6px",
-      borderRadius: 12,
-      border: `1px solid ${C.roseL}55`,
-      cursor: "pointer",
-      background: `linear-gradient(135deg, ${C.rosePale}, #FFF0F5)`,
-      color: C.rose,
-      fontWeight: 700,
-      fontSize: 11,
-      fontFamily: "'Noto Sans KR', sans-serif",
-      lineHeight: 1.4,
-      textAlign: "center"
-    } }, "\u{1F4AC} ", tl("\uAC10\uC815 \uBC88\uC5ED\uAE30", "Emotion Translator"), /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, fontWeight: 400, color: C.muted } }, "1cr")), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("fightMediate"), style: {
-      padding: "10px 6px",
-      borderRadius: 12,
-      border: `1px solid ${C.lavL}55`,
-      cursor: "pointer",
-      background: `linear-gradient(135deg, ${C.lavPale}, #EEF0FF)`,
-      color: C.lavender,
-      fontWeight: 700,
-      fontSize: 11,
-      fontFamily: "'Noto Sans KR', sans-serif",
-      lineHeight: 1.4,
-      textAlign: "center"
-    } }, "\u{1F54A}\uFE0F ", tl("\uC2F8\uC6C0 \uC911\uC7AC", "Fight Mediator"), /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, fontWeight: 400, color: C.muted } }, "2cr")), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("kakaoAnalysis"), style: {
-      padding: "10px 6px",
-      borderRadius: 12,
-      border: "1px solid #4A9A5A33",
-      cursor: "pointer",
-      background: "linear-gradient(135deg, #EAF5EC, #F0FBF2)",
-      color: "#2E8B57",
-      fontWeight: 700,
-      fontSize: 11,
-      fontFamily: "'Noto Sans KR', sans-serif",
-      lineHeight: 1.4,
-      textAlign: "center"
-    } }, "\u{1F4CA} ", tl("\uCE74\uD1A1 \uBD84\uC11D", "KakaoTalk"), /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, fontWeight: 400, color: C.muted } }, "3cr"))), (() => {
-      let hasPartnerBig5 = false;
-      try {
-        const raw = myRole === "host" ? sessionData?.guest_result_json : sessionData?.host_result_json;
-        if (raw) hasPartnerBig5 = !!JSON.parse(raw).big5;
-      } catch {
-      }
-      const canCompare = !!testResults?.big5 && hasPartnerBig5;
-      return /* @__PURE__ */ React.createElement("button", { onClick: () => {
-        if (!testResults?.big5) {
-          alert(tl(`${MAIN_SERVICE_NAME}\uC5D0\uC11C BIG5 \uAC80\uC0AC\uB97C \uBA3C\uC800 \uC644\uB8CC\uD574 \uC8FC\uC138\uC694.`, `Please complete the BIG5 test on ${MAIN_SERVICE_NAME} first.`));
-          return;
-        }
-        if (!hasPartnerBig5) {
-          alert(tl("\uD30C\uD2B8\uB108\uB3C4 BIG5 \uAC80\uC0AC\uB97C \uC644\uB8CC\uD574\uC57C \uBE44\uAD50\uD560 \uC218 \uC788\uC5B4\uC694.", "Your partner also needs to complete the BIG5 test to compare."));
-          return;
-        }
-        setView("big5Compare");
-      }, style: {
-        width: "100%",
-        padding: "11px",
-        borderRadius: 12,
-        cursor: "pointer",
-        border: canCompare ? `1.5px solid ${C.rose}55` : "1px solid #e0e0e0",
-        background: canCompare ? `linear-gradient(135deg, ${C.rosePale}, ${C.lavPale})` : "#f8f8f8",
-        color: canCompare ? C.rose : C.muted,
-        fontWeight: 700,
-        fontSize: 12,
-        fontFamily: "'Noto Sans KR', sans-serif",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 6,
-        marginTop: 8
-      } }, "\u{1F9EC} ", tl("BIG5 \uCEE4\uD50C \uBE44\uAD50", "BIG5 Couple Comparison"), canCompare ? /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, fontWeight: 400 } }, tl("\uACB0\uACFC \uC900\uBE44 \uC644\uB8CC \u2713", "Results ready \u2713")) : /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, fontWeight: 400 } }, tl("\uD30C\uD2B8\uB108 \uACB0\uACFC \uD544\uC694", "Partner results needed")));
-    })());
-  })(), /* @__PURE__ */ React.createElement("div", { style: {
-    borderRadius: 20,
-    padding: "20px",
-    marginBottom: 20,
-    background: "white",
-    boxShadow: "0 4px 16px rgba(0,0,0,0.06)"
-  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: C.dark, marginBottom: 14 } }, "\u{1F4CB} ", tl("\uB0B4 \uAC80\uC0AC \uACB0\uACFC", "My Test Results")), /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: C.rose, marginBottom: 6 } }, "\u{1F491} ", tl("\uCEE4\uD50C \uD0D0\uC0C9", "Couple Exploration")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, /* @__PURE__ */ React.createElement(TestResultBadge, { type: "BIG5", result: testResults?.big5, date: testResults?.big5?.performed_at }), /* @__PURE__ */ React.createElement(TestResultBadge, { type: "LOST", result: testResults?.lost, date: testResults?.lost?.performed_at }))), /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 16 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: "#5A8A7A", marginBottom: 6 } }, "\u{1F468}\u200D\u{1F469}\u200D\u{1F467} ", tl("\uAD00\uACC4 \uC2EC\uCE35 \uBD84\uC11D", "Deep Relationship Analysis")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, /* @__PURE__ */ React.createElement(TestResultBadge, { type: "DSI", result: testResults?.dsi, date: testResults?.dsi?.performed_at }))), !hasAny ? /* @__PURE__ */ React.createElement("div", { style: {
-    padding: "16px",
-    borderRadius: 14,
-    background: "#FFF8F0",
-    border: "1px solid #FFD8A0",
-    fontSize: 13,
-    color: "#A07040"
-  } }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 700, marginBottom: 8 } }, "\u{1F4A1} ", tl("\uAC80\uC0AC\uB97C \uBA3C\uC800 \uC644\uB8CC\uD574\uC8FC\uC138\uC694", "Please complete a test first")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: C.rose, marginBottom: 2 } }, "\u{1F491} ", tl("\uCEE4\uD50C \uD0D0\uC0C9", "Couple Exploration")), [
-    { key: "BIG5", emoji: "\u{1F9EC}", label: tl("BIG5 \uC131\uACA9\uAC80\uC0AC", "BIG5 Personality Test"), desc: tl("\uC131\uACA9 5\uC694\uC778 \u2014 \uCEE4\uD50C \uAD81\uD569 \uD575\uC2EC", "Big Five factors \u2014 core compatibility") },
-    { key: "LOST", emoji: "\u2699\uFE0F", label: tl("LOST \uD589\uB3D9\uC720\uD615", "LOST Behavior Type"), desc: tl("\uC758\uC0AC\uACB0\uC815\xB7\uC5D0\uB108\uC9C0 \uC2A4\uD0C0\uC77C \uBE44\uAD50", "Decision-making & energy style comparison") }
-  ].map((ti) => /* @__PURE__ */ React.createElement("a", { key: ti.key, href: `${MAUMFUL_URL}?start=${ti.key}`, style: {
+  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 18 } }, SERVICE_ICON), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 15, fontWeight: 700, color: C.dark, fontFamily: "'Noto Serif KR', serif" } }, SERVICE_NAME)), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: C.rose, background: C.rosePale, padding: "4px 12px", borderRadius: 100, border: `1px solid ${C.roseL}44` } }, "\u2726 ", user?.credits ?? 0), /* @__PURE__ */ React.createElement("a", { href: MAUMFUL_URL, style: { fontSize: 12, color: C.muted, textDecoration: "none", padding: "4px 10px", borderRadius: 8, border: "1px solid rgba(0,0,0,0.08)", background: "rgba(255,255,255,0.6)" } }, BACK_LABEL))), /* @__PURE__ */ React.createElement("div", { style: { maxWidth: 640, margin: "0 auto", padding: "20px 16px 100px" } }, tab === "home" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { borderRadius: 20, padding: "18px 20px", marginBottom: 16, background: `linear-gradient(135deg, ${C.rose}, ${C.roseL})`, color: "white", boxShadow: `0 8px 24px ${C.rose}44` } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, opacity: 0.85, marginBottom: 2 } }, tl(`\uC548\uB155\uD558\uC138\uC694, ${displayName(user)}\uB2D8 \u{1F44B}`, `Hello, ${displayName(user)} \u{1F44B}`)), dDay ? /* @__PURE__ */ React.createElement("div", { style: { fontSize: 28, fontWeight: 800, letterSpacing: -1 } }, "D+", dDay.toLocaleString()) : /* @__PURE__ */ React.createElement("div", { style: { fontSize: 16, fontWeight: 700, marginTop: 4 } }, tl("\uCC98\uC74C \uB9CC\uB09C \uB0A0\uC744 \uAE30\uB85D\uD574\uBCF4\uC138\uC694", "Record your first meeting date")), dDay && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, opacity: 0.8, marginTop: 2 } }, tl("\uD568\uAED8\uD55C \uB0A0\uB4E4 \u{1F495}", "Days together \u{1F495}"))), !dDay && /* @__PURE__ */ React.createElement("button", { onClick: () => setView("anniversary"), style: { background: "rgba(255,255,255,0.25)", border: "none", borderRadius: 10, padding: "8px 14px", color: "white", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Noto Sans KR',sans-serif" } }, tl("\uAE30\uB85D\uD558\uAE30 \u2192", "Set date \u2192")))), /* @__PURE__ */ React.createElement(DailyQuestionCard, null), /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 20 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 10 } }, tl("\uC624\uB298 \uBC14\uB85C \uC368\uBCF4\uC138\uC694", "Try these today")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, overflowX: "auto", paddingBottom: 4, scrollbarWidth: "none" } }, [
+    { icon: "\u{1F4AC}", label: tl("\uAC10\uC815\n\uBC88\uC5ED\uAE30", "Emotion\nTranslator"), cost: "1cr", view: "emotionTranslate", color: C.rose, bg: C.rosePale },
+    { icon: "\u{1F54A}\uFE0F", label: tl("\uC2F8\uC6C0\n\uC911\uC7AC", "Fight\nMediator"), cost: "2cr", view: "fightMediate", color: C.lavender, bg: C.lavPale },
+    { icon: "\u{1F91D}", label: tl("AI\n\uCF54\uCE58", "AI\nCoach"), cost: tl("\uBB34\uB8CC", "Free"), view: "coach", color: C.amber, bg: "#FFF8EE" },
+    { icon: "\u{1F5FA}\uFE0F", label: tl("\uB370\uC774\uD2B8\n\uCF54\uC2A4", "Date\nIdeas"), cost: "3cr", view: "dateCourse", color: C.rose, bg: "#FFF0F5" },
+    { icon: "\u{1F4CA}", label: tl("\uCE74\uD1A1\n\uBD84\uC11D", "KakaoTalk\nAnalysis"), cost: "3cr", view: "kakaoAnalysis", color: "#2E8B57", bg: "#EAF5EC" }
+  ].map((t) => /* @__PURE__ */ React.createElement("button", { key: t.view, onClick: () => setView(t.view), style: {
+    flexShrink: 0,
+    width: 76,
+    padding: "12px 8px",
+    borderRadius: 16,
+    border: `1px solid ${t.color}22`,
+    background: t.bg,
+    cursor: "pointer",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 6,
+    fontFamily: "'Noto Sans KR',sans-serif"
+  } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 22 } }, t.icon), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, fontWeight: 700, color: t.color, lineHeight: 1.3, whiteSpace: "pre-line", textAlign: "center" } }, t.label), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 9, color: C.muted, fontWeight: 600 } }, t.cost))))), /* @__PURE__ */ React.createElement(PartnerMomentsSection, null)), tab === "tools" && /* @__PURE__ */ React.createElement(React.Fragment, null, TOOL_CATEGORIES.map((cat) => /* @__PURE__ */ React.createElement("div", { key: cat.title, style: { marginBottom: 20 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 10 } }, cat.title), /* @__PURE__ */ React.createElement("div", { style: { background: "white", borderRadius: 16, overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.05)" } }, cat.items.map((item, idx) => /* @__PURE__ */ React.createElement("button", { key: item.view, onClick: () => setView(item.view), style: {
+    width: "100%",
     display: "flex",
     alignItems: "center",
-    gap: 10,
-    padding: "10px 12px",
-    borderRadius: 10,
+    gap: 14,
+    padding: "14px 16px",
     background: "white",
-    border: "1px solid #FFD8A0",
-    textDecoration: "none",
-    color: C.dark
-  } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 20 } }, ti.emoji), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700 } }, ti.label), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, ti.desc)), /* @__PURE__ */ React.createElement("span", { style: { color: C.rose, fontSize: 12, fontWeight: 700 } }, tl("\uC2DC\uC791 \u2192", "Start \u2192")))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: "#5A8A7A", marginTop: 8, marginBottom: 2 } }, "\u{1F468}\u200D\u{1F469}\u200D\u{1F467} ", tl("\uAD00\uACC4 \uC2EC\uCE35 \uBD84\uC11D", "Deep Relationship Analysis")), [
-    { key: "DSI", emoji: "\u{1FA9E}", label: tl("SDRI \uC790\uC544\uBD84\uD654", "SDRI Self-Differentiation"), desc: tl("\uBD80\uBD80\xB7\uAC00\uC871 \uAD00\uACC4 \uC5B4\uB824\uC6C0 \u2014 Bowen \uC774\uB860 \uAE30\uBC18", "Couples & family relationship issues \u2014 based on Bowen theory") }
-  ].map((ti) => /* @__PURE__ */ React.createElement("a", { key: ti.key, href: `${MAUMFUL_URL}?start=${ti.key}`, style: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    padding: "10px 12px",
-    borderRadius: 10,
-    background: "white",
-    border: "1px solid #B8D8D0",
-    textDecoration: "none",
-    color: C.dark
-  } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 20 } }, ti.emoji), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700 } }, ti.label), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, ti.desc)), /* @__PURE__ */ React.createElement("span", { style: { color: "#5A8A7A", fontSize: 12, fontWeight: 700 } }, tl("\uC2DC\uC791 \u2192", "Start \u2192"))))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, tl(`${MAIN_SERVICE_NAME}\uC5D0\uC11C \uD558\uB098 \uC774\uC0C1 \uC644\uB8CC\uD558\uBA74 \uBC14\uB85C \uCEE4\uD50C \uBD84\uC11D\uC774 \uAC00\uB2A5\uD574\uC694.`, `Complete at least one test on ${MAIN_SERVICE_NAME} to start couple analysis.`))) : /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 8 } }, tl("\u2713 \uCEE4\uD50C \uBD84\uC11D\uC5D0 \uC0AC\uC6A9\uD560 \uCD5C\uC2E0 \uACB0\uACFC\uAC00 \uC900\uBE44\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4.", "\u2713 Latest results are ready for couple analysis."), testResults?.dsi && /* @__PURE__ */ React.createElement("span", { style: { marginLeft: 6, color: "#5A8A7A", fontWeight: 600 } }, tl("\uC790\uC544\uBD84\uD654 \uD3EC\uD568 \u2726", "Self-Diff. included \u2726"))), ["BIG5", "LOST", "DSI"].some((t) => !{ BIG5: testResults?.big5, LOST: testResults?.lost, DSI: testResults?.dsi }[t]) && /* @__PURE__ */ React.createElement("div", { style: {
-    padding: "10px 14px",
-    borderRadius: 12,
-    background: "#FFFBF0",
-    border: "1px solid #FFE8A0",
-    fontSize: 12,
-    color: "#9A7030"
-  } }, "\u{1F4A1} ", ["BIG5", "LOST", "DSI"].filter((t) => !{ BIG5: testResults?.big5, LOST: testResults?.lost, DSI: testResults?.dsi }[t]).map((t, i, arr) => /* @__PURE__ */ React.createElement(React.Fragment, { key: t }, /* @__PURE__ */ React.createElement("a", { href: `${MAUMFUL_URL}?start=${t}`, style: { color: C.rose, fontWeight: 700, textDecoration: "none" } }, t), i < arr.length - 1 && " + ")), " ", tl("\uAC80\uC0AC\uB3C4 \uC644\uB8CC\uD558\uBA74 \uB354 \uC815\uBC00\uD55C \uBD84\uC11D\uC774 \uAC00\uB2A5\uD574\uC694 \u2192", "test(s) will enable more precise analysis \u2192")))), hasActive ? /* @__PURE__ */ React.createElement(
-    SessionWaitingView,
-    {
-      session: sessionData,
-      myRole,
-      onRefresh: refreshSession,
-      onReport: () => setView("report"),
-      onCancel: handleCancelSession
+    border: "none",
+    cursor: "pointer",
+    borderBottom: idx < cat.items.length - 1 ? "1px solid #F3F4F6" : "none",
+    fontFamily: "'Noto Sans KR',sans-serif",
+    textAlign: "left"
+  } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 22, flexShrink: 0 } }, item.icon), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.dark } }, item.label), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, item.desc)), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, flexShrink: 0 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, fontWeight: 700, color: C.rose, background: C.rosePale, padding: "3px 8px", borderRadius: 100 } }, item.cost), /* @__PURE__ */ React.createElement("span", { style: { color: "#D0D0D0", fontSize: 16 } }, "\u203A")))))))), tab === "partner" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { borderRadius: 20, padding: "20px", marginBottom: 16, background: "white", boxShadow: "0 2px 12px rgba(0,0,0,0.05)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: C.dark, marginBottom: 14 } }, "\u{1F4CB} ", tl("\uB0B4 \uAC80\uC0AC \uACB0\uACFC", "My Test Results")), /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: C.rose, marginBottom: 6 } }, "\u{1F491} ", tl("\uCEE4\uD50C \uD0D0\uC0C9", "Couple Exploration")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, /* @__PURE__ */ React.createElement(TestResultBadge, { type: "BIG5", result: testResults?.big5, date: testResults?.big5?.performed_at }), /* @__PURE__ */ React.createElement(TestResultBadge, { type: "LOST", result: testResults?.lost, date: testResults?.lost?.performed_at }))), /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 8 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: "#5A8A7A", marginBottom: 6 } }, "\u{1F468}\u200D\u{1F469}\u200D\u{1F467} ", tl("\uAD00\uACC4 \uC2EC\uCE35 \uBD84\uC11D", "Deep Analysis")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, /* @__PURE__ */ React.createElement(TestResultBadge, { type: "DSI", result: testResults?.dsi, date: testResults?.dsi?.performed_at }))), !hasAny && /* @__PURE__ */ React.createElement("div", { style: { padding: "12px 14px", borderRadius: 12, background: "#FFF8F0", border: "1px solid #FFD8A0", fontSize: 12, color: "#A07040", marginTop: 8 } }, "\u{1F4A1} ", tl(`${MAIN_SERVICE_NAME}\uC5D0\uC11C BIG5, LOST, SDRI \uC911 \uD558\uB098 \uC774\uC0C1\uC744 \uC644\uB8CC\uD574\uC8FC\uC138\uC694.`, `Complete BIG5, LOST, or SDRI on ${MAIN_SERVICE_NAME} first.`)), hasAny && (() => {
+    const missing = ["BIG5", "LOST", "DSI"].filter((t) => !{ BIG5: testResults?.big5, LOST: testResults?.lost, DSI: testResults?.dsi }[t]);
+    return missing.length > 0 ? /* @__PURE__ */ React.createElement("div", { style: { padding: "10px 12px", borderRadius: 10, background: "#FFFBF0", border: "1px solid #FFE8A0", fontSize: 11, color: "#9A7030", marginTop: 8 } }, "\u{1F4A1} ", missing.map((t, i) => /* @__PURE__ */ React.createElement(React.Fragment, { key: t }, /* @__PURE__ */ React.createElement("a", { href: `${MAUMFUL_URL}?start=${t}`, style: { color: C.rose, fontWeight: 700, textDecoration: "none" } }, t), i < missing.length - 1 && " + ")), " ", tl("\uCD94\uAC00 \uC2DC \uB354 \uC815\uBC00\uD55C \uBD84\uC11D \u2192", "for more precise analysis \u2192")) : null;
+  })()), (() => {
+    let hasPartnerBig5 = false;
+    try {
+      const raw = myRole === "host" ? sessionData?.guest_result_json : sessionData?.host_result_json;
+      if (raw) hasPartnerBig5 = !!JSON.parse(raw).big5;
+    } catch {
     }
-  ) : /* @__PURE__ */ React.createElement("div", { style: {
-    borderRadius: 20,
-    padding: "20px",
-    marginBottom: 20,
-    background: "white",
-    boxShadow: "0 4px 16px rgba(0,0,0,0.06)"
-  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: C.dark, marginBottom: 6 } }, "\u{1F491} ", tl("\uCEE4\uD50C \uBD84\uC11D \uC2DC\uC791\uD558\uAE30", "Start Couple Analysis")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: C.muted, marginBottom: 16, lineHeight: 1.6 } }, tl("\uAC80\uC0AC \uC870\uD569\uC744 \uC120\uD0DD\uD574 \uC138\uC158\uC744 \uB9CC\uB4E4\uAC70\uB098, \uD30C\uD2B8\uB108\uAC00 \uBCF4\uB0B8 \uCF54\uB4DC\uB85C \uCC38\uC5EC\uD558\uC138\uC694.", "Choose a test combination to create a session, or join with a code from your partner.")), hasAny && (() => {
+    const canCompare = !!testResults?.big5 && hasPartnerBig5;
+    return /* @__PURE__ */ React.createElement("button", { onClick: () => {
+      if (!testResults?.big5) {
+        alert(tl(`${MAIN_SERVICE_NAME}\uC5D0\uC11C BIG5 \uAC80\uC0AC\uB97C \uBA3C\uC800 \uC644\uB8CC\uD574 \uC8FC\uC138\uC694.`, `Please complete BIG5 on ${MAIN_SERVICE_NAME} first.`));
+        return;
+      }
+      if (!hasPartnerBig5) {
+        alert(tl("\uD30C\uD2B8\uB108\uB3C4 BIG5 \uAC80\uC0AC\uB97C \uC644\uB8CC\uD574\uC57C \uD569\uB2C8\uB2E4.", "Partner also needs to complete BIG5."));
+        return;
+      }
+      setView("big5Compare");
+    }, style: {
+      width: "100%",
+      padding: "14px 16px",
+      borderRadius: 16,
+      cursor: "pointer",
+      marginBottom: 16,
+      border: canCompare ? `1.5px solid ${C.rose}55` : "1px solid #E0E0E0",
+      background: canCompare ? `linear-gradient(135deg, ${C.rosePale}, ${C.lavPale})` : "#F8F8F8",
+      color: canCompare ? C.rose : C.muted,
+      fontWeight: 700,
+      fontSize: 13,
+      fontFamily: "'Noto Sans KR',sans-serif",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between"
+    } }, /* @__PURE__ */ React.createElement("span", null, "\u{1F9EC} ", tl("BIG5 \uCEE4\uD50C \uBE44\uAD50", "BIG5 Couple Comparison")), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, fontWeight: 400 } }, canCompare ? tl("\uACB0\uACFC \uC900\uBE44 \uC644\uB8CC \u2713", "Ready \u2713") : tl("\uD30C\uD2B8\uB108 \uACB0\uACFC \uD544\uC694", "Partner results needed")));
+  })(), hasActive ? /* @__PURE__ */ React.createElement(SessionWaitingView, { session: sessionData, myRole, onRefresh: refreshSession, onReport: () => setView("report"), onCancel: handleCancelSession }) : /* @__PURE__ */ React.createElement("div", { style: { borderRadius: 20, padding: "20px", background: "white", boxShadow: "0 2px 12px rgba(0,0,0,0.05)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: C.dark, marginBottom: 6 } }, "\u{1F491} ", tl("\uCEE4\uD50C \uBD84\uC11D \uC2DC\uC791\uD558\uAE30", "Start Couple Analysis")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: C.muted, marginBottom: 16, lineHeight: 1.6 } }, tl("\uAC80\uC0AC \uC870\uD569\uC744 \uC120\uD0DD\uD574 \uC138\uC158\uC744 \uB9CC\uB4E4\uAC70\uB098, \uD30C\uD2B8\uB108\uAC00 \uBCF4\uB0B8 \uCF54\uB4DC\uB85C \uCC38\uC5EC\uD558\uC138\uC694.", "Choose a test combination or join with your partner's code.")), hasAny && (() => {
     const coupleOptions = [
-      ...testResults?.big5 && testResults?.lost ? [
-        {
-          key: "BIG5+LOST",
-          label: "BIG5 + LOST",
-          badge: tl("\uCD94\uCC9C", "Recommended"),
-          cost: COST_TWO,
-          desc: tl("\uC131\uACA9\xB7\uD589\uB3D9\uC720\uD615 \uBE44\uAD50 \u2014 \uCEE4\uD50C \uC5B4\uC6B8\uB9BC \uD575\uC2EC", "Personality & behavior type comparison \u2014 compatibility core"),
-          color: C.rose
-        }
-      ] : [],
-      ...testResults?.big5 && !testResults?.lost ? [
-        {
-          key: "BIG5",
-          label: tl("BIG5\uB9CC", "BIG5 only"),
-          badge: null,
-          cost: COST_ONE,
-          desc: tl("\uC131\uACA9 5\uC694\uC778 \uBE44\uAD50", "Big Five personality comparison"),
-          color: C.rose
-        }
-      ] : [],
-      ...!testResults?.big5 && testResults?.lost ? [
-        {
-          key: "LOST",
-          label: tl("LOST\uB9CC", "LOST only"),
-          badge: null,
-          cost: COST_ONE,
-          desc: tl("\uC758\uC0AC\uACB0\uC815\xB7\uC5D0\uB108\uC9C0 \uC2A4\uD0C0\uC77C \uBE44\uAD50", "Decision-making & energy style comparison"),
-          color: C.lavender
-        }
-      ] : []
+      ...testResults?.big5 && testResults?.lost ? [{ key: "BIG5+LOST", label: "BIG5 + LOST", badge: tl("\uCD94\uCC9C", "Recommended"), cost: COST_TWO, desc: tl("\uC131\uACA9\xB7\uD589\uB3D9\uC720\uD615 \uBE44\uAD50", "Personality & behavior comparison"), color: C.rose }] : [],
+      ...testResults?.big5 && !testResults?.lost ? [{ key: "BIG5", label: "BIG5", badge: null, cost: COST_ONE, desc: tl("\uC131\uACA9 5\uC694\uC778 \uBE44\uAD50", "Big Five comparison"), color: C.rose }] : [],
+      ...!testResults?.big5 && testResults?.lost ? [{ key: "LOST", label: "LOST", badge: null, cost: COST_ONE, desc: tl("\uD589\uB3D9\uC720\uD615 \uBE44\uAD50", "Behavior type comparison"), color: C.lavender }] : []
     ];
     const deepOptions = !testResults?.dsi ? [] : [
-      ...testResults?.big5 && testResults?.lost ? [
-        {
-          key: "BIG5+LOST+DSI",
-          label: tl("BIG5 + LOST + \uC790\uC544\uBD84\uD654", "BIG5 + LOST + Self-Diff."),
-          badge: tl("\uCD94\uCC9C", "Recommended"),
-          cost: COST_FULL,
-          desc: tl("\uC131\uACA9\xB7\uD589\uB3D9\uC720\uD615\xB7\uC790\uC544\uBD84\uD654 \uD1B5\uD569 \uBD84\uC11D (\uBD80\uBD80\uC0C1\uB2F4 \uCD5C\uC801)", "Integrated analysis of personality, behavior type & self-differentiation (best for couples)"),
-          color: "#5A8A7A"
-        }
-      ] : [],
-      ...testResults?.big5 && !testResults?.lost ? [
-        {
-          key: "BIG5+DSI",
-          label: tl("BIG5 + \uC790\uC544\uBD84\uD654", "BIG5 + Self-Diff."),
-          badge: tl("\uCD94\uCC9C", "Recommended"),
-          cost: COST_TWO,
-          desc: tl("\uC131\uACA9 \uD2B9\uC131\uACFC \uBD84\uD654 \uC218\uC900 \uBE44\uAD50", "Personality traits and differentiation level comparison"),
-          color: "#5A8A7A"
-        }
-      ] : [],
-      ...!testResults?.big5 && testResults?.lost ? [
-        {
-          key: "LOST+DSI",
-          label: tl("LOST + \uC790\uC544\uBD84\uD654", "LOST + Self-Diff."),
-          badge: tl("\uCD94\uCC9C", "Recommended"),
-          cost: COST_TWO,
-          desc: tl("\uD589\uB3D9\uC720\uD615\uACFC \uBD84\uD654 \uC218\uC900 \uBE44\uAD50", "Behavior type and differentiation level comparison"),
-          color: "#5A8A7A"
-        }
-      ] : [],
-      ...!testResults?.big5 && !testResults?.lost ? [
-        {
-          key: "DSI",
-          label: tl("SDRI \uC790\uC544\uBD84\uD654\uB9CC", "SDRI Self-Diff. only"),
-          badge: null,
-          cost: COST_ONE,
-          desc: tl("\uAD00\uACC4 \uBD84\uD654 \uC218\uC900 \uC9D1\uC911 \uBD84\uC11D", "Focused analysis on relationship differentiation level"),
-          color: "#5A8A7A"
-        }
-      ] : []
+      ...testResults?.big5 && testResults?.lost ? [{ key: "BIG5+LOST+DSI", label: tl("BIG5 + LOST + \uC790\uC544\uBD84\uD654", "BIG5 + LOST + Self-Diff."), badge: tl("\uCD94\uCC9C", "Recommended"), cost: COST_FULL, desc: tl("\uC131\uACA9\xB7\uD589\uB3D9\xB7\uC790\uC544\uBD84\uD654 \uD1B5\uD569 (\uBD80\uBD80\uC0C1\uB2F4 \uCD5C\uC801)", "Full integrated analysis (couples/marriage)"), color: "#5A8A7A" }] : [],
+      ...testResults?.big5 && !testResults?.lost ? [{ key: "BIG5+DSI", label: tl("BIG5 + \uC790\uC544\uBD84\uD654", "BIG5 + Self-Diff."), badge: tl("\uCD94\uCC9C", "Recommended"), cost: COST_TWO, desc: tl("\uC131\uACA9\xB7\uBD84\uD654 \uC218\uC900 \uBE44\uAD50", "Personality & differentiation comparison"), color: "#5A8A7A" }] : [],
+      ...!testResults?.big5 && testResults?.lost ? [{ key: "LOST+DSI", label: tl("LOST + \uC790\uC544\uBD84\uD654", "LOST + Self-Diff."), badge: tl("\uCD94\uCC9C", "Recommended"), cost: COST_TWO, desc: tl("\uD589\uB3D9\uC720\uD615\xB7\uBD84\uD654 \uC218\uC900 \uBE44\uAD50", "Behavior & differentiation comparison"), color: "#5A8A7A" }] : [],
+      ...!testResults?.big5 && !testResults?.lost ? [{ key: "DSI", label: tl("\uC790\uC544\uBD84\uD654", "Self-Diff."), badge: null, cost: COST_ONE, desc: tl("\uAD00\uACC4 \uBD84\uD654 \uC218\uC900 \uBD84\uC11D", "Relationship differentiation analysis"), color: "#5A8A7A" }] : []
     ];
-    const renderOptions = (opts) => /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, opts.map((opt) => /* @__PURE__ */ React.createElement(
-      "button",
-      {
-        key: opt.key,
-        onClick: () => handleCreateSession(opt.key),
-        disabled: creating,
-        style: {
-          padding: "12px 16px",
-          borderRadius: 12,
-          border: `1.5px solid ${opt.color}33`,
-          background: opt.badge ? `linear-gradient(135deg, ${opt.color}12, ${opt.color}06)` : "white",
-          cursor: "pointer",
-          textAlign: "left",
-          opacity: creating ? 0.7 : 1
-        }
-      },
-      /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, fontWeight: 700, color: C.dark } }, opt.label), opt.badge && /* @__PURE__ */ React.createElement("span", { style: {
-        marginLeft: 6,
-        fontSize: 10,
-        fontWeight: 700,
-        padding: "2px 7px",
-        borderRadius: 100,
-        background: opt.color,
-        color: "white"
-      } }, opt.badge), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 2 } }, opt.desc)), /* @__PURE__ */ React.createElement("span", { style: {
-        fontSize: 12,
-        fontWeight: 700,
-        color: opt.color,
-        whiteSpace: "nowrap",
-        marginLeft: 12
-      } }, isMaster ? tl("\uBB34\uB8CC", "Free") : `${opt.cost}cr`))
-    )));
-    return /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 16 } }, coupleOptions.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 16 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: C.rose, marginBottom: 2 } }, "\u{1F491} ", tl("\uCEE4\uD50C \uD0D0\uC0C9", "Couple Exploration")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginBottom: 8 } }, tl("\uC131\uACA9\xB7\uD589\uB3D9\uC720\uD615\uC73C\uB85C \uC11C\uB85C\uB97C \uC54C\uC544\uAC00\uB294 \uAC00\uBCBC\uC6B4 \uBD84\uC11D", "A light analysis to understand each other through personality & behavior type")), renderOptions(coupleOptions)), deepOptions.length > 0 && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: "#5A8A7A", marginBottom: 2 } }, "\u{1F468}\u200D\u{1F469}\u200D\u{1F467} ", tl("\uAD00\uACC4 \uC2EC\uCE35 \uBD84\uC11D", "Deep Relationship Analysis")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginBottom: 8 } }, tl("\uC790\uC544\uBD84\uD654 \uAE30\uBC18 \xB7 \uBD80\uBD80\xB7\uAC00\uC871 \uAD00\uACC4 \uC5B4\uB824\uC6C0 \uD0D0\uC0C9", "Self-differentiation based \xB7 Exploring couples & family relationship difficulties")), renderOptions(deepOptions)));
-  })(), !hasAny && /* @__PURE__ */ React.createElement("div", { style: {
-    padding: "12px 16px",
-    borderRadius: 12,
-    background: "#FFF8F0",
-    border: "1px solid #FFD8A0",
-    fontSize: 13,
-    color: "#A07040",
-    marginBottom: 16
-  } }, "\u{1F4A1} ", tl(`${MAIN_SERVICE_NAME}\uC5D0\uC11C BIG5, LOST, SDRI \uAC80\uC0AC \uC911 \uD558\uB098 \uC774\uC0C1\uC744 \uC644\uB8CC\uD574\uC57C \uC138\uC158\uC744 \uB9CC\uB4E4 \uC218 \uC788\uC5B4\uC694.`, `You need to complete at least one of BIG5, LOST, or SDRI tests on ${MAIN_SERVICE_NAME} to create a session.`)), /* @__PURE__ */ React.createElement("div", { style: {
-    padding: "16px",
-    borderRadius: 14,
-    background: C.lavPale,
-    border: `1px solid ${C.lavL}33`
-  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 600, color: C.lavender, marginBottom: 10 } }, "\u{1F4E8} ", tl("\uD30C\uD2B8\uB108 \uCF54\uB4DC\uB85C \uCC38\uC5EC\uD558\uAE30", "Join with Partner Code")), /* @__PURE__ */ React.createElement(CodeInput, { onJoin: handleJoin, loading: joining }))), /* @__PURE__ */ React.createElement(DailyQuestionCard, null), /* @__PURE__ */ React.createElement(PartnerMomentsSection, null), recentReports?.length > 0 && /* @__PURE__ */ React.createElement("div", { style: {
-    borderRadius: 20,
-    padding: "20px",
-    background: "white",
-    boxShadow: "0 4px 16px rgba(0,0,0,0.06)",
-    marginBottom: 20
-  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: C.dark, marginBottom: 6 } }, "\u{1F4DC} ", tl("\uC774\uC804 \uBD84\uC11D \uB9AC\uD3EC\uD2B8", "Previous Analysis Reports")), recentReports.length >= 2 && (() => {
+    const renderOpts = (opts) => /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, opts.map((opt) => /* @__PURE__ */ React.createElement("button", { key: opt.key, onClick: () => handleCreateSession(opt.key), disabled: creating, style: { padding: "12px 14px", borderRadius: 12, border: `1.5px solid ${opt.color}33`, background: opt.badge ? `${opt.color}08` : "white", cursor: "pointer", textAlign: "left", opacity: creating ? 0.7 : 1, fontFamily: "'Noto Sans KR',sans-serif" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, fontWeight: 700, color: C.dark } }, opt.label), opt.badge && /* @__PURE__ */ React.createElement("span", { style: { marginLeft: 6, fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 100, background: opt.color, color: "white" } }, opt.badge), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 2 } }, opt.desc)), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: opt.color, flexShrink: 0, marginLeft: 12 } }, isMaster ? tl("\uBB34\uB8CC", "Free") : `${opt.cost}cr`)))));
+    return /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 16 } }, coupleOptions.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: C.rose, marginBottom: 6 } }, "\u{1F491} ", tl("\uCEE4\uD50C \uD0D0\uC0C9", "Couple Exploration")), renderOpts(coupleOptions)), deepOptions.length > 0 && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: "#5A8A7A", marginBottom: 6 } }, "\u{1F468}\u200D\u{1F469}\u200D\u{1F467} ", tl("\uAD00\uACC4 \uC2EC\uCE35 \uBD84\uC11D", "Deep Analysis")), renderOpts(deepOptions)));
+  })(), !hasAny && /* @__PURE__ */ React.createElement("div", { style: { padding: "12px 14px", borderRadius: 12, background: "#FFF8F0", border: "1px solid #FFD8A0", fontSize: 12, color: "#A07040", marginBottom: 16 } }, "\u{1F4A1} ", tl(`${MAIN_SERVICE_NAME}\uC5D0\uC11C BIG5, LOST, SDRI \uC911 \uD558\uB098 \uC774\uC0C1\uC744 \uC644\uB8CC\uD574\uC8FC\uC138\uC694.`, `Complete at least one of BIG5, LOST, or SDRI on ${MAIN_SERVICE_NAME}.`)), /* @__PURE__ */ React.createElement("div", { style: { padding: "14px", borderRadius: 14, background: C.lavPale, border: `1px solid ${C.lavL}33` } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 600, color: C.lavender, marginBottom: 10 } }, "\u{1F4E8} ", tl("\uD30C\uD2B8\uB108 \uCF54\uB4DC\uB85C \uCC38\uC5EC\uD558\uAE30", "Join with Partner Code")), /* @__PURE__ */ React.createElement(CodeInput, { onJoin: handleJoin, loading: joining })))), tab === "records" && /* @__PURE__ */ React.createElement(React.Fragment, null, recentReports?.length > 0 ? /* @__PURE__ */ React.createElement("div", { style: { borderRadius: 20, padding: "20px", background: "white", boxShadow: "0 2px 12px rgba(0,0,0,0.05)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: C.dark, marginBottom: 10 } }, "\u{1F4DC} ", tl("\uBD84\uC11D \uB9AC\uD3EC\uD2B8 \uAE30\uB85D", "Analysis Reports")), recentReports.length >= 2 && (() => {
     const scores = [...recentReports].reverse().map((r) => r.compatibility_score || 0);
     const latest = scores[scores.length - 1];
     const prev = scores[scores.length - 2];
     const diff = latest - prev;
-    return /* @__PURE__ */ React.createElement("div", { style: {
-      padding: "12px 14px",
-      borderRadius: 12,
-      marginBottom: 14,
-      background: diff >= 0 ? "#EAF5EC" : "#FEF0EC",
-      border: `1px solid ${diff >= 0 ? "#4A9A5A" : "#D4634A"}22`,
-      display: "flex",
-      alignItems: "center",
-      gap: 12
-    } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 24 } }, diff >= 0 ? "\u{1F4C8}" : "\u{1F4C9}"), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: diff >= 0 ? "#4A9A5A" : "#D4634A" } }, tl("\uAD81\uD569 \uC810\uC218", "Compatibility Score"), " ", diff >= 0 ? `+${diff}` : `${diff}`, tl("\uC810", ""), " ", tl("\uBCC0\uD654", "change")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, diff >= 0 ? tl("\uD568\uAED8 \uC131\uC7A5\uD558\uACE0 \uC788\uC5B4\uC694! \u{1F331}", "Growing together! \u{1F331}") : tl("\uB354 \uAE4A\uC774 \uC774\uD574\uD558\uB294 \uACFC\uC815\uC774\uC5D0\uC694. \u{1F4AA}", "It's a journey of deeper understanding. \u{1F4AA}"))), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, display: "flex", gap: 3, alignItems: "flex-end", height: 32 } }, scores.map((s, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: {
-      flex: 1,
-      borderRadius: 4,
-      height: `${Math.max(20, s)}%`,
-      background: i === scores.length - 1 ? diff >= 0 ? "#4A9A5A" : "#D4634A" : C.roseL + "66",
-      minHeight: 6,
-      maxHeight: 32
-    } }))));
+    return /* @__PURE__ */ React.createElement("div", { style: { padding: "12px 14px", borderRadius: 12, marginBottom: 14, background: diff >= 0 ? "#EAF5EC" : "#FEF0EC", border: `1px solid ${diff >= 0 ? "#4A9A5A" : "#D4634A"}22`, display: "flex", alignItems: "center", gap: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 24 } }, diff >= 0 ? "\u{1F4C8}" : "\u{1F4C9}"), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: diff >= 0 ? "#4A9A5A" : "#D4634A" } }, tl("\uAD81\uD569 \uC810\uC218", "Compatibility"), " ", diff >= 0 ? `+${diff}` : diff, tl("\uC810", ""), " ", tl("\uBCC0\uD654", "change")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, diff >= 0 ? tl("\uD568\uAED8 \uC131\uC7A5\uD558\uACE0 \uC788\uC5B4\uC694 \u{1F331}", "Growing together \u{1F331}") : tl("\uB354 \uAE4A\uC774 \uC774\uD574\uD558\uB294 \uACFC\uC815\uC774\uC5D0\uC694 \u{1F4AA}", "Deepening understanding \u{1F4AA}"))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 3, alignItems: "flex-end", height: 32, flex: 0.4 } }, scores.map((s, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: { flex: 1, borderRadius: 4, height: `${Math.max(20, s)}%`, background: i === scores.length - 1 ? diff >= 0 ? "#4A9A5A" : "#D4634A" : C.roseL + "66", minHeight: 6, maxHeight: 32 } }))));
   })(), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } }, recentReports.map((r) => /* @__PURE__ */ React.createElement("button", { key: r.id, onClick: () => {
     setSession(r);
     setView("report");
-  }, style: {
+  }, style: { display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.roseL}33`, background: C.rosePale, cursor: "pointer", textAlign: "left", fontFamily: "'Noto Sans KR',sans-serif" } }, /* @__PURE__ */ React.createElement("div", { style: { width: 44, height: 44, borderRadius: 100, background: `linear-gradient(135deg, ${scoreColor(r.compatibility_score || 0)}, ${C.roseL})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: "white", flexShrink: 0 } }, r.compatibility_score || "?"), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 600, color: C.dark } }, r.test_type, " ", tl("\uBD84\uC11D", "Analysis"), " \xB7 ", scoreLabel(r.compatibility_score || 0)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 2 } }, fmtDate(r.created_at))), /* @__PURE__ */ React.createElement("span", { style: { color: "#D0D0D0", fontSize: 16 } }, "\u203A"))))) : /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: "60px 20px" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 40, marginBottom: 12 } }, "\u{1F4CB}"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 700, color: C.dark, marginBottom: 6 } }, tl("\uC544\uC9C1 \uBD84\uC11D \uAE30\uB85D\uC774 \uC5C6\uC5B4\uC694", "No analysis records yet")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: C.muted, marginBottom: 20 } }, tl("\uD30C\uD2B8\uB108 \uD0ED\uC5D0\uC11C \uCEE4\uD50C \uBD84\uC11D\uC744 \uC2DC\uC791\uD574\uBCF4\uC138\uC694", "Start a couple analysis from the Partner tab")), /* @__PURE__ */ React.createElement("button", { onClick: () => setTab("partner"), style: { padding: "12px 24px", borderRadius: 12, border: "none", background: C.rose, color: "white", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "'Noto Sans KR',sans-serif" } }, tl("\uD30C\uD2B8\uB108 \uD0ED\uC73C\uB85C \u2192", "Go to Partner tab \u2192"))))), /* @__PURE__ */ React.createElement("div", { style: { position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100, background: "rgba(253,252,247,0.95)", backdropFilter: "blur(20px)", borderTop: "1px solid rgba(181,85,106,0.10)", display: "flex", height: 64, maxWidth: 640, margin: "0 auto" } }, NAV_TABS.map((t) => /* @__PURE__ */ React.createElement("button", { key: t.key, onClick: () => setTab(t.key), style: {
+    flex: 1,
     display: "flex",
-    alignItems: "center",
-    gap: 12,
-    padding: "12px 16px",
-    borderRadius: 12,
-    border: `1px solid ${C.roseL}33`,
-    background: C.rosePale,
-    cursor: "pointer",
-    textAlign: "left"
-  } }, /* @__PURE__ */ React.createElement("div", { style: {
-    width: 44,
-    height: 44,
-    borderRadius: 100,
-    background: `linear-gradient(135deg, ${scoreColor(r.compatibility_score || 0)}, ${C.roseL})`,
-    display: "flex",
+    flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: 14,
-    fontWeight: 800,
-    color: "white",
-    flexShrink: 0
-  } }, r.compatibility_score || "?"), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 600, color: C.dark } }, r.test_type, " ", tl("\uBD84\uC11D", "Analysis"), " \xB7 ", scoreLabel(r.compatibility_score || 0)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 2 } }, fmtDate(r.created_at))), /* @__PURE__ */ React.createElement("span", { style: { color: C.muted, fontSize: 16 } }, "\u203A")))))), creditModal && /* @__PURE__ */ React.createElement("div", { style: {
+    gap: 3,
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    fontFamily: "'Noto Sans KR',sans-serif",
+    transition: "all 0.15s"
+  } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 20, opacity: tab === t.key ? 1 : 0.45, transform: tab === t.key ? "scale(1.15)" : "scale(1)", transition: "all 0.15s" } }, t.icon), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, fontWeight: 700, color: tab === t.key ? C.rose : C.muted, transition: "color 0.15s" } }, t.label), tab === t.key && /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", bottom: 0, width: 28, height: 2.5, background: C.rose, borderRadius: 2 } })))), creditModal && /* @__PURE__ */ React.createElement("div", { style: {
     position: "fixed",
     inset: 0,
     zIndex: 1e3,

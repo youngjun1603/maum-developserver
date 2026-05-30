@@ -3253,6 +3253,7 @@ function CoupleHubApp() {
   const [data, setData]           = useState(null);
   const [error, setError]         = useState('');
   const [view, setView]           = useState('hub');  // 'hub' | 'report' | 'miniTest' | 'soloAnalysis' | 'checkin' | 'dateCourse' | 'emotionTranslate' | 'fightMediate' | 'kakaoAnalysis'
+  const [tab, setTab]             = useState('home'); // 'home' | 'tools' | 'partner' | 'records'
   const [sessionData, setSession] = useState(null);
   const [partnerName, setPartner] = useState(tl('파트너', 'Partner'));
   const [myRole, setMyRole]       = useState('host');
@@ -3533,480 +3534,336 @@ useEffect(() => {
   const hasDsiTest = !!testResults?.dsi;
   const hasAny    = hasBig5 || hasLost || hasDsiTest; // BUG-7 FIX: DSI 포함
 
+  // ── D+day 계산 (홈탭 표시용) ────────────────────────────
+  const dDay = (() => {
+    const saved = localStorage.getItem('couple_first_date');
+    if (!saved) return null;
+    const diff = Math.floor((Date.now() - new Date(saved).getTime()) / 86400000);
+    return diff >= 0 ? diff + 1 : null;
+  })();
+
+  // ── 바텀 탭 메뉴 정의 ─────────────────────────────────
+  const NAV_TABS = [
+    { key: 'home',    icon: '🏠', label: tl('홈', 'Home') },
+    { key: 'tools',   icon: '🔧', label: tl('도구', 'Tools') },
+    { key: 'partner', icon: '💕', label: tl('파트너', 'Partner') },
+    { key: 'records', icon: '📋', label: tl('기록', 'Records') },
+  ];
+
+  // ── 도구 목록 정의 ───────────────────────────────────
+  const TOOL_CATEGORIES = [
+    {
+      title: tl('🤖 AI 도구', '🤖 AI Tools'),
+      items: [
+        { icon:'💬', label:tl('감정 번역기','Emotion Translator'),   desc:tl('"그냥 됐어"의 진짜 의미','"Never mind" — what did they mean?'), cost:'1cr', view:'emotionTranslate' },
+        { icon:'🕊️', label:tl('싸움 중재 AI','Fight Mediator'),       desc:tl('양쪽 입장 정리 + 화해 문구','Neutral mediation & reconciliation tips'), cost:'2cr', view:'fightMediate' },
+        { icon:'🤝', label:tl('AI 관계 코치','AI Relationship Coach'), desc:tl('고민 상담 · 관계 조언','Talk through your worries'), cost:tl('3회 무료','3 free'), view:'coach' },
+        { icon:'🔮', label:tl('이상형 성향 분석','Ideal Type Analysis'),desc:tl('내 검사 결과 기반 AI 분석','AI analysis from your test results'), cost:'5cr', view:'soloAnalysis' },
+        { icon:'🗺️', label:tl('데이트 코스 추천','Date Idea Planner'), desc:tl('지역·분위기·예산 맞춤 코스','Personalized date recommendations'), cost:'3cr', view:'dateCourse' },
+        { icon:'📊', label:tl('카톡 대화 분석','KakaoTalk Analysis'),  desc:tl('대화 패턴 AI 리포트','.txt 파일 업로드 → 대화 패턴 리포트'), cost:'3cr', view:'kakaoAnalysis' },
+      ],
+    },
+    {
+      title: tl('🧪 심리 테스트', '🧪 Psych Tests'),
+      items: [
+        { icon:'💝', label:tl('연애 유형 테스트','Love Type Test'),    desc:tl('S·R·P·F 4가지 유형 중 나는?','Which love type are you? S·R·P·F'), cost:tl('무료','Free'), view:'miniTest' },
+        { icon:'💛', label:tl('커플 스타일 퀴즈','Couple Style Quiz'), desc:tl('10문항으로 보는 커플 호환성','10-question couple compatibility'), cost:tl('무료','Free'), view:'quiz' },
+      ],
+    },
+    {
+      title: tl('📅 관계 관리', '📅 Relationship'),
+      items: [
+        { icon:'🌱', label:tl('관계 성장 체크인','Relationship Check-in'), desc:tl('월 1회 관계 건강도 체크','Monthly relationship health check'), cost:tl('무료','Free'), view:'checkin' },
+        { icon:'🗓️', label:tl('기념일 계산기','Anniversary Calculator'),   desc:tl('D+N일 · 기념일 알림','D+N day counter & anniversary tracker'), cost:tl('무료','Free'), view:'anniversary' },
+        { icon:'🗂️', label:tl('관계 타임라인','Relationship Timeline'),    desc:tl('함께한 순간들의 기록','A visual record of your journey'), cost:tl('무료','Free'), view:'timeline' },
+      ],
+    },
+  ];
+
   return (
     <div style={{ minHeight: '100vh', background: `linear-gradient(160deg, ${C.rosePale} 0%, ${C.cream} 40%, ${C.lavPale} 100%)` }}>
 
-      {/* ── 네비게이션 ── */}
+      {/* ── 상단 네비게이션 ── */}
       <nav style={{
         position: 'sticky', top: 0, zIndex: 100,
-        background: 'rgba(253,252,247,0.88)', backdropFilter: 'blur(16px)',
-        borderBottom: '1px solid rgba(181,85,106,0.12)',
-        padding: '0 20px', height: 56,
+        background: 'rgba(253,252,247,0.92)', backdropFilter: 'blur(16px)',
+        borderBottom: '1px solid rgba(181,85,106,0.10)',
+        padding: '0 20px', height: 52,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 20 }}>{SERVICE_ICON}</span>
-          <span style={{ fontSize: 16, fontWeight: 700, color: C.dark, fontFamily: "'Noto Serif KR', serif" }}>
-            {SERVICE_NAME}
-          </span>
+          <span style={{ fontSize: 18 }}>{SERVICE_ICON}</span>
+          <span style={{ fontSize: 15, fontWeight: 700, color: C.dark, fontFamily: "'Noto Serif KR', serif" }}>{SERVICE_NAME}</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{
-            fontSize: 12, fontWeight: 600, color: C.rose,
-            background: C.rosePale, padding: '4px 12px', borderRadius: 100,
-            border: `1px solid ${C.roseL}44`,
-          }}>
-            ✦ {user?.credits ?? 0} {tl('크레딧', 'credits')}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: C.rose, background: C.rosePale, padding: '4px 12px', borderRadius: 100, border: `1px solid ${C.roseL}44` }}>
+            ✦ {user?.credits ?? 0}
           </div>
-          <a href={MAUMFUL_URL} style={{
-            fontSize: 12, color: C.muted, textDecoration: 'none',
-            padding: '5px 12px', borderRadius: 8,
-            border: '1px solid rgba(0,0,0,0.08)',
-            background: 'rgba(255,255,255,0.6)',
-          }}>{BACK_LABEL}</a>
+          <a href={MAUMFUL_URL} style={{ fontSize: 12, color: C.muted, textDecoration: 'none', padding: '4px 10px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.08)', background: 'rgba(255,255,255,0.6)' }}>{BACK_LABEL}</a>
         </div>
       </nav>
 
-      <div style={{ maxWidth: 640, margin: '0 auto', padding: '24px 20px 40px' }}>
+      {/* ── 탭 콘텐츠 ── */}
+      <div style={{ maxWidth: 640, margin: '0 auto', padding: '20px 16px 100px' }}>
 
-        {/* ── 인사 카드 ── */}
-        {(() => {
-          const myBig5Data = testResults?.big5?.data;
-          const myPersonality = getPersonalityLabel(myBig5Data);
-          return (
-            <div style={{
-              borderRadius: 20, padding: '20px', marginBottom: 20,
-              background: 'white', boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                <div style={{ fontSize: 18, fontWeight: 700, color: C.dark }}>
-                  {tl(`안녕하세요, ${displayName(user)}님 👋`, `Hello, ${displayName(user)} 👋`)}
-                  {isMaster && <span style={{ fontSize: 11, background: C.rose, color: 'white', borderRadius: 6, padding: '2px 8px', fontWeight: 700, marginLeft: 6 }}>MASTER</span>}
-                </div>
-                {myPersonality && (
-                  <span style={{
-                    fontSize: 11, fontWeight: 700, padding: '4px 10px',
-                    borderRadius: 100, background: C.rosePale, color: C.rose,
-                    border: `1px solid ${C.roseL}44`, whiteSpace: 'nowrap',
-                  }}>
-                    {myPersonality.emoji} {myPersonality.name}
-                  </span>
+        {/* ══════════════ 홈 탭 ══════════════ */}
+        {tab === 'home' && (<>
+
+          {/* 인사 + D-day 카드 */}
+          <div style={{ borderRadius: 20, padding: '18px 20px', marginBottom: 16, background: `linear-gradient(135deg, ${C.rose}, ${C.roseL})`, color: 'white', boxShadow: `0 8px 24px ${C.rose}44` }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <div style={{ fontSize: 13, opacity: 0.85, marginBottom: 2 }}>{tl(`안녕하세요, ${displayName(user)}님 👋`, `Hello, ${displayName(user)} 👋`)}</div>
+                {dDay ? (
+                  <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: -1 }}>D+{dDay.toLocaleString()}</div>
+                ) : (
+                  <div style={{ fontSize: 16, fontWeight: 700, marginTop: 4 }}>{tl('처음 만난 날을 기록해보세요', 'Record your first meeting date')}</div>
                 )}
+                {dDay && <div style={{ fontSize: 11, opacity: 0.8, marginTop: 2 }}>{tl('함께한 날들 💕', 'Days together 💕')}</div>}
               </div>
-              <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.6, marginBottom: 14 }}>
-                {tl('심리검사 결과로 파트너와의 관계 패턴을 함께 탐색해보세요.', 'Explore your relationship patterns together using psychological test results.')}
-              </div>
-              {/* 빠른 액션 버튼 — 2×2 그리드 */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <button onClick={() => setView('miniTest')} style={{
-                  padding: '10px 8px', borderRadius: 12, border: `1px solid ${C.roseL}33`, cursor: 'pointer',
-                  background: C.rosePale, color: C.rose, fontWeight: 700, fontSize: 12,
-                  fontFamily: "'Noto Sans KR', sans-serif", lineHeight: 1.4, textAlign: 'center',
-                }}>{tl('💝 연애 유형 테스트', '💝 Love Type Test')}<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>{tl('무료', 'Free')}</span></button>
-                <button onClick={() => setView('dateCourse')} style={{
-                  padding: '10px 8px', borderRadius: 12, border: `1px solid ${C.roseL}33`, cursor: 'pointer',
-                  background: `linear-gradient(135deg, ${C.rosePale}, ${C.lavPale})`, color: C.rose, fontWeight: 700, fontSize: 12,
-                  fontFamily: "'Noto Sans KR', sans-serif", lineHeight: 1.4, textAlign: 'center',
-                }}>{tl('🗺️ 데이트 코스 추천', '🗺️ Date Idea Planner')}<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>3cr</span></button>
-                <button onClick={() => setView('checkin')} style={{
-                  padding: '10px 8px', borderRadius: 12, border: '1px solid #4A9A5A33', cursor: 'pointer',
-                  background: '#EAF5EC', color: '#4A9A5A', fontWeight: 700, fontSize: 12,
-                  fontFamily: "'Noto Sans KR', sans-serif", lineHeight: 1.4, textAlign: 'center',
-                }}>{tl('🌱 관계 성장 체크인', '🌱 Relationship Check-in')}<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>{tl('무료 · 월 1회', 'Free · Monthly')}</span></button>
-                <button onClick={() => setView('soloAnalysis')} style={{
-                  padding: '10px 8px', borderRadius: 12, border: `1px solid ${C.lavL}33`, cursor: 'pointer',
-                  background: C.lavPale, color: C.lavender, fontWeight: 700, fontSize: 12,
-                  fontFamily: "'Noto Sans KR', sans-serif", lineHeight: 1.4, textAlign: 'center',
-                }}>{tl('🔮 이상형 성향 분석', '🔮 Ideal Type Analysis')}<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>5cr</span></button>
-              </div>
-              {/* 3단계 기능 버튼 행 */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
-                <button onClick={() => setView('coach')} style={{
-                  padding: '10px 6px', borderRadius: 12, border: `1px solid ${C.amberL}55`, cursor: 'pointer',
-                  background: `linear-gradient(135deg, #FFF8EE, #FEF3E2)`, color: C.amber, fontWeight: 700, fontSize: 11,
-                  fontFamily: "'Noto Sans KR', sans-serif", lineHeight: 1.4, textAlign: 'center',
-                }}>{tl('🤝 AI 관계 코치', '🤝 AI Relationship Coach')}<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>{tl('3회 무료', '3 free')}</span></button>
-                <button onClick={() => setView('quiz')} style={{
-                  padding: '10px 6px', borderRadius: 12, border: `1px solid ${C.amberL}55`, cursor: 'pointer',
-                  background: `linear-gradient(135deg, #FFFBF0, #FEF9E5)`, color: C.amber, fontWeight: 700, fontSize: 11,
-                  fontFamily: "'Noto Sans KR', sans-serif", lineHeight: 1.4, textAlign: 'center',
-                }}>{tl('💛 커플 스타일 퀴즈', '💛 Couple Style Quiz')}<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>{tl('무료', 'Free')}</span></button>
-                <button onClick={() => setView('anniversary')} style={{
-                  padding: '10px 6px', borderRadius: 12, border: `1px solid ${C.roseL}55`, cursor: 'pointer',
-                  background: `linear-gradient(135deg, ${C.rosePale}, #FFF5F8)`, color: C.rose, fontWeight: 700, fontSize: 11,
-                  fontFamily: "'Noto Sans KR', sans-serif", lineHeight: 1.4, textAlign: 'center',
-                }}>{tl('🗓️ 기념일 계산기', '🗓️ Anniversary Calculator')}<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>{tl('무료', 'Free')}</span></button>
-                <button onClick={() => setView('timeline')} style={{
-                  padding: '10px 6px', borderRadius: 12, border: '1px solid #e0e7ff55', cursor: 'pointer',
-                  background: 'linear-gradient(135deg, #eef2ff, #e0e7ff)', color: '#4f46e5', fontWeight: 700, fontSize: 11,
-                  fontFamily: "'Noto Sans KR', sans-serif", lineHeight: 1.4, textAlign: 'center',
-                }}>{tl('🗂️ 관계 타임라인', '🗂️ Relationship Timeline')}<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>{tl('무료', 'Free')}</span></button>
-              </div>
-              {/* 관계 도구 섹션 */}
-              <div style={{ marginTop: 14, fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: 1, marginBottom: 6 }}>
-                {tl('— 관계 도구 —', '— Relationship Tools —')}
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-                <button onClick={() => setView('emotionTranslate')} style={{
-                  padding: '10px 6px', borderRadius: 12, border: `1px solid ${C.roseL}55`, cursor: 'pointer',
-                  background: `linear-gradient(135deg, ${C.rosePale}, #FFF0F5)`, color: C.rose, fontWeight: 700, fontSize: 11,
-                  fontFamily: "'Noto Sans KR', sans-serif", lineHeight: 1.4, textAlign: 'center',
-                }}>💬 {tl('감정 번역기', 'Emotion Translator')}<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>1cr</span></button>
-                <button onClick={() => setView('fightMediate')} style={{
-                  padding: '10px 6px', borderRadius: 12, border: `1px solid ${C.lavL}55`, cursor: 'pointer',
-                  background: `linear-gradient(135deg, ${C.lavPale}, #EEF0FF)`, color: C.lavender, fontWeight: 700, fontSize: 11,
-                  fontFamily: "'Noto Sans KR', sans-serif", lineHeight: 1.4, textAlign: 'center',
-                }}>🕊️ {tl('싸움 중재', 'Fight Mediator')}<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>2cr</span></button>
-                <button onClick={() => setView('kakaoAnalysis')} style={{
-                  padding: '10px 6px', borderRadius: 12, border: '1px solid #4A9A5A33', cursor: 'pointer',
-                  background: 'linear-gradient(135deg, #EAF5EC, #F0FBF2)', color: '#2E8B57', fontWeight: 700, fontSize: 11,
-                  fontFamily: "'Noto Sans KR', sans-serif", lineHeight: 1.4, textAlign: 'center',
-                }}>📊 {tl('카톡 분석', 'KakaoTalk')}<br/><span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>3cr</span></button>
-              </div>
-              {/* BIG5 비교 — 내 BIG5 + 파트너 BIG5 있을 때 강조 표시 */}
-              {(() => {
-                let hasPartnerBig5 = false;
-                try {
-                  const raw = myRole === 'host' ? sessionData?.guest_result_json : sessionData?.host_result_json;
-                  if (raw) hasPartnerBig5 = !!JSON.parse(raw).big5;
-                } catch {}
-                const canCompare = !!(testResults?.big5) && hasPartnerBig5;
-                return (
-                  <button onClick={() => {
-                    if (!testResults?.big5) { alert(tl(`${MAIN_SERVICE_NAME}에서 BIG5 검사를 먼저 완료해 주세요.`, `Please complete the BIG5 test on ${MAIN_SERVICE_NAME} first.`)); return; }
-                    if (!hasPartnerBig5) { alert(tl('파트너도 BIG5 검사를 완료해야 비교할 수 있어요.', 'Your partner also needs to complete the BIG5 test to compare.')); return; }
-                    setView('big5Compare');
-                  }} style={{
-                    width: '100%', padding: '11px', borderRadius: 12, cursor: 'pointer',
-                    border: canCompare ? `1.5px solid ${C.rose}55` : '1px solid #e0e0e0',
-                    background: canCompare
-                      ? `linear-gradient(135deg, ${C.rosePale}, ${C.lavPale})`
-                      : '#f8f8f8',
-                    color: canCompare ? C.rose : C.muted,
-                    fontWeight: 700, fontSize: 12,
-                    fontFamily: "'Noto Sans KR', sans-serif",
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                    marginTop: 8,
-                  }}>
-                    🧬 {tl('BIG5 커플 비교', 'BIG5 Couple Comparison')}
-                    {canCompare
-                      ? <span style={{ fontSize: 10, fontWeight: 400 }}>{tl('결과 준비 완료 ✓', 'Results ready ✓')}</span>
-                      : <span style={{ fontSize: 10, fontWeight: 400 }}>{tl('파트너 결과 필요', 'Partner results needed')}</span>
-                    }
-                  </button>
-                );
-              })()}
-            </div>
-          );
-        })()}
-
-        {/* ── 검사 결과 현황 ── */}
-        <div style={{
-          borderRadius: 20, padding: '20px', marginBottom: 20,
-          background: 'white', boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
-        }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: C.dark, marginBottom: 14 }}>
-            📋 {tl('내 검사 결과', 'My Test Results')}
-          </div>
-          {/* 커플 탐색 그룹 */}
-          <div style={{ marginBottom: 10 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.rose, marginBottom: 6 }}>💑 {tl('커플 탐색', 'Couple Exploration')}</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <TestResultBadge type="BIG5" result={testResults?.big5} date={testResults?.big5?.performed_at}/>
-              <TestResultBadge type="LOST" result={testResults?.lost} date={testResults?.lost?.performed_at}/>
-            </div>
-          </div>
-          {/* 관계 심층 분석 그룹 */}
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#5A8A7A', marginBottom: 6 }}>👨‍👩‍👧 {tl('관계 심층 분석', 'Deep Relationship Analysis')}</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <TestResultBadge type="DSI"  result={testResults?.dsi}  date={testResults?.dsi?.performed_at}/>
-            </div>
-          </div>
-          {!hasAny ? (
-            <div style={{
-              padding: '16px', borderRadius: 14, background: '#FFF8F0',
-              border: '1px solid #FFD8A0', fontSize: 13, color: '#A07040',
-            }}>
-              <div style={{ fontWeight: 700, marginBottom: 8 }}>💡 {tl('검사를 먼저 완료해주세요', 'Please complete a test first')}</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: C.rose, marginBottom: 2 }}>💑 {tl('커플 탐색', 'Couple Exploration')}</div>
-                {[
-                  { key: 'BIG5', emoji: '🧬', label: tl('BIG5 성격검사', 'BIG5 Personality Test'), desc: tl('성격 5요인 — 커플 궁합 핵심', 'Big Five factors — core compatibility') },
-                  { key: 'LOST', emoji: '⚙️', label: tl('LOST 행동유형', 'LOST Behavior Type'), desc: tl('의사결정·에너지 스타일 비교', 'Decision-making & energy style comparison') },
-                ].map(ti => (
-                  <a key={ti.key} href={`${MAUMFUL_URL}?start=${ti.key}`} style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    padding: '10px 12px', borderRadius: 10,
-                    background: 'white', border: '1px solid #FFD8A0',
-                    textDecoration: 'none', color: C.dark,
-                  }}>
-                    <span style={{ fontSize: 20 }}>{ti.emoji}</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700 }}>{ti.label}</div>
-                      <div style={{ fontSize: 11, color: C.muted }}>{ti.desc}</div>
-                    </div>
-                    <span style={{ color: C.rose, fontSize: 12, fontWeight: 700 }}>{tl('시작 →', 'Start →')}</span>
-                  </a>
-                ))}
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#5A8A7A', marginTop: 8, marginBottom: 2 }}>👨‍👩‍👧 {tl('관계 심층 분석', 'Deep Relationship Analysis')}</div>
-                {[
-                  { key: 'DSI', emoji: '🪞', label: tl('SDRI 자아분화', 'SDRI Self-Differentiation'), desc: tl('부부·가족 관계 어려움 — Bowen 이론 기반', 'Couples & family relationship issues — based on Bowen theory') },
-                ].map(ti => (
-                  <a key={ti.key} href={`${MAUMFUL_URL}?start=${ti.key}`} style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    padding: '10px 12px', borderRadius: 10,
-                    background: 'white', border: '1px solid #B8D8D0',
-                    textDecoration: 'none', color: C.dark,
-                  }}>
-                    <span style={{ fontSize: 20 }}>{ti.emoji}</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700 }}>{ti.label}</div>
-                      <div style={{ fontSize: 11, color: C.muted }}>{ti.desc}</div>
-                    </div>
-                    <span style={{ color: '#5A8A7A', fontSize: 12, fontWeight: 700 }}>{tl('시작 →', 'Start →')}</span>
-                  </a>
-                ))}
-              </div>
-              <div style={{ fontSize: 11, color: C.muted }}>{tl(`${MAIN_SERVICE_NAME}에서 하나 이상 완료하면 바로 커플 분석이 가능해요.`, `Complete at least one test on ${MAIN_SERVICE_NAME} to start couple analysis.`)}</div>
-            </div>
-          ) : (
-            <div>
-              <div style={{ fontSize: 12, color: C.muted, marginBottom: 8 }}>
-                {tl('✓ 커플 분석에 사용할 최신 결과가 준비되어 있습니다.', '✓ Latest results are ready for couple analysis.')}
-                {testResults?.dsi && <span style={{ marginLeft: 6, color: '#5A8A7A', fontWeight: 600 }}>{tl('자아분화 포함 ✦', 'Self-Diff. included ✦')}</span>}
-              </div>
-              {/* 미완료 검사 빠른 이동 */}
-              {(['BIG5','LOST','DSI'].some(t => !{BIG5:testResults?.big5,LOST:testResults?.lost,DSI:testResults?.dsi}[t])) && (
-                <div style={{
-                  padding: '10px 14px', borderRadius: 12,
-                  background: '#FFFBF0', border: '1px solid #FFE8A0',
-                  fontSize: 12, color: '#9A7030',
-                }}>
-                  💡 {['BIG5','LOST','DSI'].filter(t => !{BIG5:testResults?.big5,LOST:testResults?.lost,DSI:testResults?.dsi}[t]).map((t, i, arr) => (
-                    <React.Fragment key={t}>
-                      <a href={`${MAUMFUL_URL}?start=${t}`} style={{ color: C.rose, fontWeight: 700, textDecoration: 'none' }}>{t}</a>
-                      {i < arr.length - 1 && ' + '}
-                    </React.Fragment>
-                  ))} {tl('검사도 완료하면 더 정밀한 분석이 가능해요 →', 'test(s) will enable more precise analysis →')}
-                </div>
+              {!dDay && (
+                <button onClick={() => setView('anniversary')} style={{ background: 'rgba(255,255,255,0.25)', border: 'none', borderRadius: 10, padding: '8px 14px', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Noto Sans KR',sans-serif" }}>
+                  {tl('기록하기 →', 'Set date →')}
+                </button>
               )}
             </div>
-          )}
-        </div>
-
-        {/* ── 활성 세션 / 세션 시작 ── */}
-        {hasActive ? (
-          <SessionWaitingView
-            session={sessionData}
-            myRole={myRole}
-            onRefresh={refreshSession}
-            onReport={() => setView('report')}
-            onCancel={handleCancelSession}
-          />
-        ) : (
-          <div style={{
-            borderRadius: 20, padding: '20px', marginBottom: 20,
-            background: 'white', boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
-          }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: C.dark, marginBottom: 6 }}>
-              💑 {tl('커플 분석 시작하기', 'Start Couple Analysis')}
-            </div>
-            <div style={{ fontSize: 13, color: C.muted, marginBottom: 16, lineHeight: 1.6 }}>
-              {tl('검사 조합을 선택해 세션을 만들거나, 파트너가 보낸 코드로 참여하세요.', 'Choose a test combination to create a session, or join with a code from your partner.')}
-            </div>
-
-            {/* 검사 조합 선택 */}
-            {hasAny && (() => {
-              const coupleOptions = [
-                ...(testResults?.big5 && testResults?.lost ? [
-                  { key: 'BIG5+LOST', label: 'BIG5 + LOST', badge: tl('추천', 'Recommended'), cost: COST_TWO,
-                    desc: tl('성격·행동유형 비교 — 커플 어울림 핵심', 'Personality & behavior type comparison — compatibility core'), color: C.rose }
-                ] : []),
-                ...(testResults?.big5 && !testResults?.lost ? [
-                  { key: 'BIG5', label: tl('BIG5만', 'BIG5 only'), badge: null, cost: COST_ONE,
-                    desc: tl('성격 5요인 비교', 'Big Five personality comparison'), color: C.rose }
-                ] : []),
-                ...(!testResults?.big5 && testResults?.lost ? [
-                  { key: 'LOST', label: tl('LOST만', 'LOST only'), badge: null, cost: COST_ONE,
-                    desc: tl('의사결정·에너지 스타일 비교', 'Decision-making & energy style comparison'), color: C.lavender }
-                ] : []),
-              ];
-              const deepOptions = !testResults?.dsi ? [] : [
-                ...(testResults?.big5 && testResults?.lost ? [
-                  { key: 'BIG5+LOST+DSI', label: tl('BIG5 + LOST + 자아분화', 'BIG5 + LOST + Self-Diff.'), badge: tl('추천', 'Recommended'), cost: COST_FULL,
-                    desc: tl('성격·행동유형·자아분화 통합 분석 (부부상담 최적)', 'Integrated analysis of personality, behavior type & self-differentiation (best for couples)'), color: '#5A8A7A' }
-                ] : []),
-                ...(testResults?.big5 && !testResults?.lost ? [
-                  { key: 'BIG5+DSI', label: tl('BIG5 + 자아분화', 'BIG5 + Self-Diff.'), badge: tl('추천', 'Recommended'), cost: COST_TWO,
-                    desc: tl('성격 특성과 분화 수준 비교', 'Personality traits and differentiation level comparison'), color: '#5A8A7A' }
-                ] : []),
-                ...(!testResults?.big5 && testResults?.lost ? [
-                  { key: 'LOST+DSI', label: tl('LOST + 자아분화', 'LOST + Self-Diff.'), badge: tl('추천', 'Recommended'), cost: COST_TWO,
-                    desc: tl('행동유형과 분화 수준 비교', 'Behavior type and differentiation level comparison'), color: '#5A8A7A' }
-                ] : []),
-                ...(!testResults?.big5 && !testResults?.lost ? [
-                  { key: 'DSI', label: tl('SDRI 자아분화만', 'SDRI Self-Diff. only'), badge: null, cost: COST_ONE,
-                    desc: tl('관계 분화 수준 집중 분석', 'Focused analysis on relationship differentiation level'), color: '#5A8A7A' }
-                ] : []),
-              ];
-
-              const renderOptions = (opts) => (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {opts.map(opt => (
-                    <button key={opt.key}
-                      onClick={() => handleCreateSession(opt.key)}
-                      disabled={creating}
-                      style={{
-                        padding: '12px 16px', borderRadius: 12, border: `1.5px solid ${opt.color}33`,
-                        background: opt.badge ? `linear-gradient(135deg, ${opt.color}12, ${opt.color}06)` : 'white',
-                        cursor: 'pointer', textAlign: 'left', opacity: creating ? 0.7 : 1,
-                      }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div>
-                          <span style={{ fontSize: 13, fontWeight: 700, color: C.dark }}>{opt.label}</span>
-                          {opt.badge && (
-                            <span style={{
-                              marginLeft: 6, fontSize: 10, fontWeight: 700,
-                              padding: '2px 7px', borderRadius: 100,
-                              background: opt.color, color: 'white',
-                            }}>{opt.badge}</span>
-                          )}
-                          <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{opt.desc}</div>
-                        </div>
-                        <span style={{
-                          fontSize: 12, fontWeight: 700, color: opt.color,
-                          whiteSpace: 'nowrap', marginLeft: 12,
-                        }}>{isMaster ? tl('무료', 'Free') : `${opt.cost}cr`}</span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              );
-
-              return (
-                <div style={{ marginBottom: 16 }}>
-                  {coupleOptions.length > 0 && (
-                    <div style={{ marginBottom: 16 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: C.rose, marginBottom: 2 }}>💑 {tl('커플 탐색', 'Couple Exploration')}</div>
-                      <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>{tl('성격·행동유형으로 서로를 알아가는 가벼운 분석', 'A light analysis to understand each other through personality & behavior type')}</div>
-                      {renderOptions(coupleOptions)}
-                    </div>
-                  )}
-                  {deepOptions.length > 0 && (
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: '#5A8A7A', marginBottom: 2 }}>👨‍👩‍👧 {tl('관계 심층 분석', 'Deep Relationship Analysis')}</div>
-                      <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>{tl('자아분화 기반 · 부부·가족 관계 어려움 탐색', 'Self-differentiation based · Exploring couples & family relationship difficulties')}</div>
-                      {renderOptions(deepOptions)}
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-
-            {!hasAny && (
-              <div style={{
-                padding: '12px 16px', borderRadius: 12, background: '#FFF8F0',
-                border: '1px solid #FFD8A0', fontSize: 13, color: '#A07040', marginBottom: 16,
-              }}>
-                💡 {tl(`${MAIN_SERVICE_NAME}에서 BIG5, LOST, SDRI 검사 중 하나 이상을 완료해야 세션을 만들 수 있어요.`, `You need to complete at least one of BIG5, LOST, or SDRI tests on ${MAIN_SERVICE_NAME} to create a session.`)}
-              </div>
-            )}
-
-            {/* 코드로 참여 */}
-            <div style={{
-              padding: '16px', borderRadius: 14,
-              background: C.lavPale, border: `1px solid ${C.lavL}33`,
-            }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: C.lavender, marginBottom: 10 }}>
-                📨 {tl('파트너 코드로 참여하기', 'Join with Partner Code')}
-              </div>
-              <CodeInput onJoin={handleJoin} loading={joining}/>
-            </div>
           </div>
-        )}
 
-        {/* ── 오늘의 커플 대화 질문 ── */}
-        <DailyQuestionCard />
+          {/* 오늘의 질문 — 메인 콘텐츠 */}
+          <DailyQuestionCard />
 
-        {/* ── 파트너 마음 일기 ── */}
-        <PartnerMomentsSection />
-
-        {/* ── 이전 리포트 + 점수 히스토리 ── */}
-        {recentReports?.length > 0 && (
-          <div style={{
-            borderRadius: 20, padding: '20px',
-            background: 'white', boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
-            marginBottom: 20,
-          }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: C.dark, marginBottom: 6 }}>
-              📜 {tl('이전 분석 리포트', 'Previous Analysis Reports')}
-            </div>
-            {/* 점수 변화 히스토리 (2개 이상 시 표시) */}
-            {recentReports.length >= 2 && (() => {
-              const scores = [...recentReports].reverse().map(r => r.compatibility_score || 0);
-              const latest = scores[scores.length - 1];
-              const prev   = scores[scores.length - 2];
-              const diff   = latest - prev;
-              return (
-                <div style={{
-                  padding: '12px 14px', borderRadius: 12, marginBottom: 14,
-                  background: diff >= 0 ? '#EAF5EC' : '#FEF0EC',
-                  border: `1px solid ${diff >= 0 ? '#4A9A5A' : '#D4634A'}22`,
-                  display: 'flex', alignItems: 'center', gap: 12,
+          {/* 빠른 도구 — 가로 스크롤 */}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 10 }}>{tl('오늘 바로 써보세요', 'Try these today')}</div>
+            <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4, scrollbarWidth: 'none' }}>
+              {[
+                { icon:'💬', label:tl('감정\n번역기','Emotion\nTranslator'), cost:'1cr', view:'emotionTranslate', color:C.rose,    bg:C.rosePale },
+                { icon:'🕊️', label:tl('싸움\n중재','Fight\nMediator'),     cost:'2cr', view:'fightMediate',     color:C.lavender, bg:C.lavPale },
+                { icon:'🤝', label:tl('AI\n코치','AI\nCoach'),              cost:tl('무료','Free'), view:'coach', color:C.amber,    bg:'#FFF8EE' },
+                { icon:'🗺️', label:tl('데이트\n코스','Date\nIdeas'),        cost:'3cr', view:'dateCourse',       color:C.rose,    bg:'#FFF0F5' },
+                { icon:'📊', label:tl('카톡\n분석','KakaoTalk\nAnalysis'), cost:'3cr', view:'kakaoAnalysis',    color:'#2E8B57',  bg:'#EAF5EC' },
+              ].map(t => (
+                <button key={t.view} onClick={() => setView(t.view)} style={{
+                  flexShrink: 0, width: 76, padding: '12px 8px', borderRadius: 16,
+                  border: `1px solid ${t.color}22`, background: t.bg, cursor: 'pointer',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                  fontFamily: "'Noto Sans KR',sans-serif",
                 }}>
-                  <div style={{ fontSize: 24 }}>{diff >= 0 ? '📈' : '📉'}</div>
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: diff >= 0 ? '#4A9A5A' : '#D4634A' }}>
-                      {tl('궁합 점수', 'Compatibility Score')} {diff >= 0 ? `+${diff}` : `${diff}`}{tl('점', '')} {tl('변화', 'change')}
-                    </div>
-                    <div style={{ fontSize: 11, color: C.muted }}>
-                      {diff >= 0 ? tl('함께 성장하고 있어요! 🌱', 'Growing together! 🌱') : tl('더 깊이 이해하는 과정이에요. 💪', 'It\'s a journey of deeper understanding. 💪')}
-                    </div>
-                  </div>
-                  {/* 미니 바 차트 */}
-                  <div style={{ flex: 1, display: 'flex', gap: 3, alignItems: 'flex-end', height: 32 }}>
-                    {scores.map((s, i) => (
-                      <div key={i} style={{
-                        flex: 1, borderRadius: 4,
-                        height: `${Math.max(20, s)}%`,
-                        background: i === scores.length - 1
-                          ? (diff >= 0 ? '#4A9A5A' : '#D4634A')
-                          : C.roseL + '66',
-                        minHeight: 6, maxHeight: 32,
-                      }}/>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {recentReports.map(r => (
-                <button key={r.id} onClick={() => { setSession(r); setView('report'); }} style={{
-                  display: 'flex', alignItems: 'center', gap: 12,
-                  padding: '12px 16px', borderRadius: 12, border: `1px solid ${C.roseL}33`,
-                  background: C.rosePale, cursor: 'pointer', textAlign: 'left',
-                }}>
-                  <div style={{
-                    width: 44, height: 44, borderRadius: 100,
-                    background: `linear-gradient(135deg, ${scoreColor(r.compatibility_score||0)}, ${C.roseL})`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 14, fontWeight: 800, color: 'white', flexShrink: 0,
-                  }}>{r.compatibility_score || '?'}</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: C.dark }}>
-                      {r.test_type} {tl('분석', 'Analysis')} · {scoreLabel(r.compatibility_score || 0)}
-                    </div>
-                    <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>
-                      {fmtDate(r.created_at)}
-                    </div>
-                  </div>
-                  <span style={{ color: C.muted, fontSize: 16 }}>›</span>
+                  <span style={{ fontSize: 22 }}>{t.icon}</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: t.color, lineHeight: 1.3, whiteSpace: 'pre-line', textAlign: 'center' }}>{t.label}</span>
+                  <span style={{ fontSize: 9, color: C.muted, fontWeight: 600 }}>{t.cost}</span>
                 </button>
               ))}
             </div>
           </div>
-        )}
+
+          {/* 파트너 마음 일기 */}
+          <PartnerMomentsSection />
+
+        </>)}
+
+        {/* ══════════════ 도구 탭 ══════════════ */}
+        {tab === 'tools' && (<>
+          {TOOL_CATEGORIES.map(cat => (
+            <div key={cat.title} style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 10 }}>{cat.title}</div>
+              <div style={{ background: 'white', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}>
+                {cat.items.map((item, idx) => (
+                  <button key={item.view} onClick={() => setView(item.view)} style={{
+                    width: '100%', display: 'flex', alignItems: 'center', gap: 14,
+                    padding: '14px 16px', background: 'white', border: 'none', cursor: 'pointer',
+                    borderBottom: idx < cat.items.length - 1 ? '1px solid #F3F4F6' : 'none',
+                    fontFamily: "'Noto Sans KR',sans-serif", textAlign: 'left',
+                  }}>
+                    <span style={{ fontSize: 22, flexShrink: 0 }}>{item.icon}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: C.dark }}>{item.label}</div>
+                      <div style={{ fontSize: 11, color: C.muted, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.desc}</div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: C.rose, background: C.rosePale, padding: '3px 8px', borderRadius: 100 }}>{item.cost}</span>
+                      <span style={{ color: '#D0D0D0', fontSize: 16 }}>›</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </>)}
+
+        {/* ══════════════ 파트너 탭 ══════════════ */}
+        {tab === 'partner' && (<>
+
+          {/* 내 검사 결과 현황 */}
+          <div style={{ borderRadius: 20, padding: '20px', marginBottom: 16, background: 'white', boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: C.dark, marginBottom: 14 }}>📋 {tl('내 검사 결과', 'My Test Results')}</div>
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: C.rose, marginBottom: 6 }}>💑 {tl('커플 탐색', 'Couple Exploration')}</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <TestResultBadge type="BIG5" result={testResults?.big5} date={testResults?.big5?.performed_at}/>
+                <TestResultBadge type="LOST" result={testResults?.lost} date={testResults?.lost?.performed_at}/>
+              </div>
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#5A8A7A', marginBottom: 6 }}>👨‍👩‍👧 {tl('관계 심층 분석', 'Deep Analysis')}</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <TestResultBadge type="DSI" result={testResults?.dsi} date={testResults?.dsi?.performed_at}/>
+              </div>
+            </div>
+            {!hasAny && (
+              <div style={{ padding: '12px 14px', borderRadius: 12, background: '#FFF8F0', border: '1px solid #FFD8A0', fontSize: 12, color: '#A07040', marginTop: 8 }}>
+                💡 {tl(`${MAIN_SERVICE_NAME}에서 BIG5, LOST, SDRI 중 하나 이상을 완료해주세요.`, `Complete BIG5, LOST, or SDRI on ${MAIN_SERVICE_NAME} first.`)}
+              </div>
+            )}
+            {hasAny && (() => {
+              const missing = ['BIG5','LOST','DSI'].filter(t => !{BIG5:testResults?.big5,LOST:testResults?.lost,DSI:testResults?.dsi}[t]);
+              return missing.length > 0 ? (
+                <div style={{ padding: '10px 12px', borderRadius: 10, background: '#FFFBF0', border: '1px solid #FFE8A0', fontSize: 11, color: '#9A7030', marginTop: 8 }}>
+                  💡 {missing.map((t, i) => <React.Fragment key={t}><a href={`${MAUMFUL_URL}?start=${t}`} style={{ color: C.rose, fontWeight: 700, textDecoration: 'none' }}>{t}</a>{i < missing.length - 1 && ' + '}</React.Fragment>)} {tl('추가 시 더 정밀한 분석 →', 'for more precise analysis →')}
+                </div>
+              ) : null;
+            })()}
+          </div>
+
+          {/* BIG5 비교 버튼 */}
+          {(() => {
+            let hasPartnerBig5 = false;
+            try {
+              const raw = myRole === 'host' ? sessionData?.guest_result_json : sessionData?.host_result_json;
+              if (raw) hasPartnerBig5 = !!JSON.parse(raw).big5;
+            } catch {}
+            const canCompare = !!(testResults?.big5) && hasPartnerBig5;
+            return (
+              <button onClick={() => {
+                if (!testResults?.big5) { alert(tl(`${MAIN_SERVICE_NAME}에서 BIG5 검사를 먼저 완료해 주세요.`, `Please complete BIG5 on ${MAIN_SERVICE_NAME} first.`)); return; }
+                if (!hasPartnerBig5) { alert(tl('파트너도 BIG5 검사를 완료해야 합니다.', 'Partner also needs to complete BIG5.')); return; }
+                setView('big5Compare');
+              }} style={{
+                width: '100%', padding: '14px 16px', borderRadius: 16, cursor: 'pointer', marginBottom: 16,
+                border: canCompare ? `1.5px solid ${C.rose}55` : '1px solid #E0E0E0',
+                background: canCompare ? `linear-gradient(135deg, ${C.rosePale}, ${C.lavPale})` : '#F8F8F8',
+                color: canCompare ? C.rose : C.muted, fontWeight: 700, fontSize: 13,
+                fontFamily: "'Noto Sans KR',sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              }}>
+                <span>🧬 {tl('BIG5 커플 비교', 'BIG5 Couple Comparison')}</span>
+                <span style={{ fontSize: 11, fontWeight: 400 }}>{canCompare ? tl('결과 준비 완료 ✓','Ready ✓') : tl('파트너 결과 필요','Partner results needed')}</span>
+              </button>
+            );
+          })()}
+
+          {/* 커플 세션 */}
+          {hasActive ? (
+            <SessionWaitingView session={sessionData} myRole={myRole} onRefresh={refreshSession} onReport={() => setView('report')} onCancel={handleCancelSession} />
+          ) : (
+            <div style={{ borderRadius: 20, padding: '20px', background: 'white', boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: C.dark, marginBottom: 6 }}>💑 {tl('커플 분석 시작하기', 'Start Couple Analysis')}</div>
+              <div style={{ fontSize: 13, color: C.muted, marginBottom: 16, lineHeight: 1.6 }}>{tl('검사 조합을 선택해 세션을 만들거나, 파트너가 보낸 코드로 참여하세요.', 'Choose a test combination or join with your partner\'s code.')}</div>
+              {hasAny && (() => {
+                const coupleOptions = [
+                  ...(testResults?.big5 && testResults?.lost ? [{ key:'BIG5+LOST', label:'BIG5 + LOST', badge:tl('추천','Recommended'), cost:COST_TWO, desc:tl('성격·행동유형 비교','Personality & behavior comparison'), color:C.rose }] : []),
+                  ...(testResults?.big5 && !testResults?.lost ? [{ key:'BIG5', label:'BIG5', badge:null, cost:COST_ONE, desc:tl('성격 5요인 비교','Big Five comparison'), color:C.rose }] : []),
+                  ...(!testResults?.big5 && testResults?.lost ? [{ key:'LOST', label:'LOST', badge:null, cost:COST_ONE, desc:tl('행동유형 비교','Behavior type comparison'), color:C.lavender }] : []),
+                ];
+                const deepOptions = !testResults?.dsi ? [] : [
+                  ...(testResults?.big5 && testResults?.lost ? [{ key:'BIG5+LOST+DSI', label:tl('BIG5 + LOST + 자아분화','BIG5 + LOST + Self-Diff.'), badge:tl('추천','Recommended'), cost:COST_FULL, desc:tl('성격·행동·자아분화 통합 (부부상담 최적)','Full integrated analysis (couples/marriage)'), color:'#5A8A7A' }] : []),
+                  ...(testResults?.big5 && !testResults?.lost ? [{ key:'BIG5+DSI', label:tl('BIG5 + 자아분화','BIG5 + Self-Diff.'), badge:tl('추천','Recommended'), cost:COST_TWO, desc:tl('성격·분화 수준 비교','Personality & differentiation comparison'), color:'#5A8A7A' }] : []),
+                  ...(!testResults?.big5 && testResults?.lost ? [{ key:'LOST+DSI', label:tl('LOST + 자아분화','LOST + Self-Diff.'), badge:tl('추천','Recommended'), cost:COST_TWO, desc:tl('행동유형·분화 수준 비교','Behavior & differentiation comparison'), color:'#5A8A7A' }] : []),
+                  ...(!testResults?.big5 && !testResults?.lost ? [{ key:'DSI', label:tl('자아분화','Self-Diff.'), badge:null, cost:COST_ONE, desc:tl('관계 분화 수준 분석','Relationship differentiation analysis'), color:'#5A8A7A' }] : []),
+                ];
+                const renderOpts = (opts) => (
+                  <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                    {opts.map(opt => (
+                      <button key={opt.key} onClick={() => handleCreateSession(opt.key)} disabled={creating} style={{ padding:'12px 14px', borderRadius:12, border:`1.5px solid ${opt.color}33`, background:opt.badge?`${opt.color}08`:'white', cursor:'pointer', textAlign:'left', opacity:creating?0.7:1, fontFamily:"'Noto Sans KR',sans-serif" }}>
+                        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                          <div>
+                            <span style={{ fontSize:13, fontWeight:700, color:C.dark }}>{opt.label}</span>
+                            {opt.badge && <span style={{ marginLeft:6, fontSize:10, fontWeight:700, padding:'2px 7px', borderRadius:100, background:opt.color, color:'white' }}>{opt.badge}</span>}
+                            <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>{opt.desc}</div>
+                          </div>
+                          <span style={{ fontSize:12, fontWeight:700, color:opt.color, flexShrink:0, marginLeft:12 }}>{isMaster?tl('무료','Free'):`${opt.cost}cr`}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                );
+                return (
+                  <div style={{ marginBottom:16 }}>
+                    {coupleOptions.length > 0 && <div style={{ marginBottom:14 }}><div style={{ fontSize:12, fontWeight:700, color:C.rose, marginBottom:6 }}>💑 {tl('커플 탐색','Couple Exploration')}</div>{renderOpts(coupleOptions)}</div>}
+                    {deepOptions.length > 0 && <div><div style={{ fontSize:12, fontWeight:700, color:'#5A8A7A', marginBottom:6 }}>👨‍👩‍👧 {tl('관계 심층 분석','Deep Analysis')}</div>{renderOpts(deepOptions)}</div>}
+                  </div>
+                );
+              })()}
+              {!hasAny && <div style={{ padding:'12px 14px', borderRadius:12, background:'#FFF8F0', border:'1px solid #FFD8A0', fontSize:12, color:'#A07040', marginBottom:16 }}>💡 {tl(`${MAIN_SERVICE_NAME}에서 BIG5, LOST, SDRI 중 하나 이상을 완료해주세요.`,`Complete at least one of BIG5, LOST, or SDRI on ${MAIN_SERVICE_NAME}.`)}</div>}
+              <div style={{ padding:'14px', borderRadius:14, background:C.lavPale, border:`1px solid ${C.lavL}33` }}>
+                <div style={{ fontSize:13, fontWeight:600, color:C.lavender, marginBottom:10 }}>📨 {tl('파트너 코드로 참여하기','Join with Partner Code')}</div>
+                <CodeInput onJoin={handleJoin} loading={joining}/>
+              </div>
+            </div>
+          )}
+
+        </>)}
+
+        {/* ══════════════ 기록 탭 ══════════════ */}
+        {tab === 'records' && (<>
+          {recentReports?.length > 0 ? (
+            <div style={{ borderRadius: 20, padding: '20px', background: 'white', boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: C.dark, marginBottom: 10 }}>📜 {tl('분석 리포트 기록', 'Analysis Reports')}</div>
+              {recentReports.length >= 2 && (() => {
+                const scores = [...recentReports].reverse().map(r => r.compatibility_score || 0);
+                const latest = scores[scores.length - 1];
+                const prev   = scores[scores.length - 2];
+                const diff   = latest - prev;
+                return (
+                  <div style={{ padding:'12px 14px', borderRadius:12, marginBottom:14, background:diff>=0?'#EAF5EC':'#FEF0EC', border:`1px solid ${diff>=0?'#4A9A5A':'#D4634A'}22`, display:'flex', alignItems:'center', gap:12 }}>
+                    <div style={{ fontSize:24 }}>{diff>=0?'📈':'📉'}</div>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:12, fontWeight:700, color:diff>=0?'#4A9A5A':'#D4634A' }}>{tl('궁합 점수','Compatibility')} {diff>=0?`+${diff}`:diff}{tl('점','')} {tl('변화','change')}</div>
+                      <div style={{ fontSize:11, color:C.muted }}>{diff>=0?tl('함께 성장하고 있어요 🌱','Growing together 🌱'):tl('더 깊이 이해하는 과정이에요 💪','Deepening understanding 💪')}</div>
+                    </div>
+                    <div style={{ display:'flex', gap:3, alignItems:'flex-end', height:32, flex:0.4 }}>
+                      {scores.map((s, i) => <div key={i} style={{ flex:1, borderRadius:4, height:`${Math.max(20,s)}%`, background:i===scores.length-1?(diff>=0?'#4A9A5A':'#D4634A'):C.roseL+'66', minHeight:6, maxHeight:32 }}/>)}
+                    </div>
+                  </div>
+                );
+              })()}
+              <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                {recentReports.map(r => (
+                  <button key={r.id} onClick={() => { setSession(r); setView('report'); }} style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 14px', borderRadius:12, border:`1px solid ${C.roseL}33`, background:C.rosePale, cursor:'pointer', textAlign:'left', fontFamily:"'Noto Sans KR',sans-serif" }}>
+                    <div style={{ width:44, height:44, borderRadius:100, background:`linear-gradient(135deg, ${scoreColor(r.compatibility_score||0)}, ${C.roseL})`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, fontWeight:800, color:'white', flexShrink:0 }}>{r.compatibility_score||'?'}</div>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:13, fontWeight:600, color:C.dark }}>{r.test_type} {tl('분석','Analysis')} · {scoreLabel(r.compatibility_score||0)}</div>
+                      <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>{fmtDate(r.created_at)}</div>
+                    </div>
+                    <span style={{ color:'#D0D0D0', fontSize:16 }}>›</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div style={{ textAlign:'center', padding:'60px 20px' }}>
+              <div style={{ fontSize:40, marginBottom:12 }}>📋</div>
+              <div style={{ fontSize:15, fontWeight:700, color:C.dark, marginBottom:6 }}>{tl('아직 분석 기록이 없어요','No analysis records yet')}</div>
+              <div style={{ fontSize:13, color:C.muted, marginBottom:20 }}>{tl('파트너 탭에서 커플 분석을 시작해보세요','Start a couple analysis from the Partner tab')}</div>
+              <button onClick={() => setTab('partner')} style={{ padding:'12px 24px', borderRadius:12, border:'none', background:C.rose, color:'white', fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:"'Noto Sans KR',sans-serif" }}>{tl('파트너 탭으로 →','Go to Partner tab →')}</button>
+            </div>
+          )}
+        </>)}
+
+      </div>
+
+      {/* ── 바텀 내비게이션 ── */}
+      <div style={{ position:'fixed', bottom:0, left:0, right:0, zIndex:100, background:'rgba(253,252,247,0.95)', backdropFilter:'blur(20px)', borderTop:'1px solid rgba(181,85,106,0.10)', display:'flex', height:64, maxWidth:640, margin:'0 auto' }}>
+        {NAV_TABS.map(t => (
+          <button key={t.key} onClick={() => setTab(t.key)} style={{
+            flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:3,
+            background:'none', border:'none', cursor:'pointer', fontFamily:"'Noto Sans KR',sans-serif",
+            transition:'all 0.15s',
+          }}>
+            <span style={{ fontSize:20, opacity: tab === t.key ? 1 : 0.45, transform: tab === t.key ? 'scale(1.15)' : 'scale(1)', transition:'all 0.15s' }}>{t.icon}</span>
+            <span style={{ fontSize:10, fontWeight:700, color: tab === t.key ? C.rose : C.muted, transition:'color 0.15s' }}>{t.label}</span>
+            {tab === t.key && <div style={{ position:'absolute', bottom:0, width:28, height:2.5, background:C.rose, borderRadius:2 }}/>}
+          </button>
+        ))}
       </div>
 
       {/* ── 크레딧 부족 모달 ── */}
