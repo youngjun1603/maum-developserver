@@ -403,6 +403,7 @@ function PsychologicalTestSystem() {
   const [moodTrend, setMoodTrend] = useState([]);
   const [dailyCtxCard, setDailyCtxCard] = useState(null); // { greeting, chatContext } — AI 인사말 카드
   const [myPageTab, setMyPageTab]     = useState('credits'); // 'credits' | 'history' | 'settings' | 'appointments'
+  const [autoOpenExternal, setAutoOpenExternal] = useState(false);
   const [changePwMsg, setChangePwMsg] = useState({ type: '', text: '' });
   const [pushStatus, setPushStatus]   = useState('unknown'); // 'unknown'|'unsupported'|'denied'|'subscribed'|'idle'
   const [devToolsOpen, setDevToolsOpen] = useState(false);  // 개발자도구 감지
@@ -2806,7 +2807,7 @@ function PsychologicalTestSystem() {
         lang={lang}
         onLangToggle={updateLang}
       />
-      <LandingPage setView={setView} isLoggedIn={isLoggedIn} lang={lang} setMyPageTab={setMyPageTab} loadTestHistory={loadTestHistory} />
+      <LandingPage setView={setView} isLoggedIn={isLoggedIn} lang={lang} setMyPageTab={setMyPageTab} loadTestHistory={loadTestHistory} setAutoOpenExternal={setAutoOpenExternal} />
     </>
   );
 
@@ -4267,7 +4268,7 @@ function PsychologicalTestSystem() {
         {/* 검사 이력 */}
         {myPageTab === 'history' && (
           <div>
-            <ExternalResultSection onSaved={loadTestHistory} />
+            <ExternalResultSection onSaved={loadTestHistory} autoOpen={autoOpenExternal} onAutoOpenDone={() => setAutoOpenExternal(false)} />
             {testHistory.length === 0 && <p className="text-gray-400 text-sm text-center py-4">{t("검사 이력이 없습니다","No assessment history")}</p>}
             {/* 점수가 있는 검사의 트렌드 요약 */}
             {(() => {
@@ -7062,9 +7063,12 @@ function PsychologicalTestSystem() {
   }
 
   // 외부 검사 결과 입력 + PDF AI 분석 (별도 컴포넌트 — hooks 규칙 준수)
-  function ExternalResultSection({ onSaved }) {
+  function ExternalResultSection({ onSaved, autoOpen, onAutoOpenDone }) {
     const [showModal, setShowModal] = React.useState(false);
     const [tab, setTab] = React.useState('manual'); // 'manual' | 'pdf'
+    React.useEffect(() => {
+      if (autoOpen) { setShowModal(true); if (onAutoOpenDone) onAutoOpenDone(); }
+    }, [autoOpen]);
     // manual tab
     const [extType, setExtType] = React.useState('PHQ9');
     const [extScore, setExtScore] = React.useState('');

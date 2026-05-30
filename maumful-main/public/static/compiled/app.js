@@ -498,6 +498,7 @@ function PsychologicalTestSystem() {
   const [moodTrend, setMoodTrend] = useState([]);
   const [dailyCtxCard, setDailyCtxCard] = useState(null);
   const [myPageTab, setMyPageTab] = useState("credits");
+  const [autoOpenExternal, setAutoOpenExternal] = useState(false);
   const [changePwMsg, setChangePwMsg] = useState({ type: "", text: "" });
   const [pushStatus, setPushStatus] = useState("unknown");
   const [devToolsOpen, setDevToolsOpen] = useState(false);
@@ -2681,7 +2682,7 @@ Visit Maumful and take the same test again to compare your progress.`));
       lang,
       onLangToggle: updateLang
     }
-  ), /* @__PURE__ */ React.createElement(LandingPage, { setView, isLoggedIn, lang, setMyPageTab, loadTestHistory }));
+  ), /* @__PURE__ */ React.createElement(LandingPage, { setView, isLoggedIn, lang, setMyPageTab, loadTestHistory, setAutoOpenExternal }));
   if (view === "testsIntro") return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(
     GlobalNav,
     {
@@ -3598,7 +3599,7 @@ Visit Maumful and take the same test again to compare your progress.`));
       "+ ",
       t("\uD06C\uB808\uB527 \uCDA9\uC804\uD558\uAE30", "Top up credits")
     ))));
-  })(), myPageTab === "history" && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(ExternalResultSection, { onSaved: loadTestHistory }), testHistory.length === 0 && /* @__PURE__ */ React.createElement("p", { className: "text-gray-400 text-sm text-center py-4" }, t("\uAC80\uC0AC \uC774\uB825\uC774 \uC5C6\uC2B5\uB2C8\uB2E4", "No assessment history")), (() => {
+  })(), myPageTab === "history" && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(ExternalResultSection, { onSaved: loadTestHistory, autoOpen: autoOpenExternal, onAutoOpenDone: () => setAutoOpenExternal(false) }), testHistory.length === 0 && /* @__PURE__ */ React.createElement("p", { className: "text-gray-400 text-sm text-center py-4" }, t("\uAC80\uC0AC \uC774\uB825\uC774 \uC5C6\uC2B5\uB2C8\uB2E4", "No assessment history")), (() => {
     const scored = ["PHQ9", "GAD7", "BURNOUT", "DSI"];
     const scoreMax = { PHQ9: 27, GAD7: 21, BURNOUT: 240, DSI: 125 };
     const scoreColor = (type, score) => {
@@ -5933,10 +5934,16 @@ AI \uBD84\uC11D \uAE30\uB2A5\uC774 \uC911\uB2E8\uB429\uB2C8\uB2E4.`)) return;
       setAiLoading((p) => ({ ...p, [key]: false }));
     }
   }
-  function ExternalResultSection({ onSaved }) {
+  function ExternalResultSection({ onSaved, autoOpen, onAutoOpenDone }) {
     var _a2;
     const [showModal, setShowModal] = React.useState(false);
     const [tab, setTab] = React.useState("manual");
+    React.useEffect(() => {
+      if (autoOpen) {
+        setShowModal(true);
+        if (onAutoOpenDone) onAutoOpenDone();
+      }
+    }, [autoOpen]);
     const [extType, setExtType] = React.useState("PHQ9");
     const [extScore, setExtScore] = React.useState("");
     const [extDate, setExtDate] = React.useState((/* @__PURE__ */ new Date()).toISOString().slice(0, 10));

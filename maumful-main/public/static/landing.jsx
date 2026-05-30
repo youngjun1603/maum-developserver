@@ -442,7 +442,7 @@ function MfSnsFooter({ tl }) {
 
 // LandingPage — 홈 메인 페이지
 // ============================================================
-function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory }) {
+function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory, setAutoOpenExternal }) {
   const tl = (ko, en) => lang === 'en' ? en : ko;
   const { useState: useS, useEffect: useE, useRef } = React;
   const [activeTestIdx, setActiveTestIdx] = useS(0);
@@ -1047,6 +1047,7 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory 
                   if (isLoggedIn) {
                     if (setMyPageTab) setMyPageTab('history');
                     if (loadTestHistory) loadTestHistory();
+                    if (setAutoOpenExternal) setAutoOpenExternal(true);
                     setView('memberDashboard');
                   } else {
                     setView('memberLogin');
