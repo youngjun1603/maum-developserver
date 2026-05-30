@@ -3632,26 +3632,41 @@ useEffect(() => {
           {/* 오늘의 질문 — 메인 콘텐츠 */}
           <DailyQuestionCard />
 
-          {/* 빠른 도구 — 가로 스크롤 */}
+          {/* 빠른 도구 — 가로 스크롤 카드 */}
           <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 10 }}>{tl('오늘 바로 써보세요', 'Try these today')}</div>
-            <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4, scrollbarWidth: 'none' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 12 }}>{tl('오늘 바로 써보세요', 'Try these today')}</div>
+            <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8, paddingLeft: 2, paddingRight: 2, scrollbarWidth: 'none' }}>
               {[
-                { icon:'💬', label:tl('감정\n번역기','Emotion\nTranslator'), cost:'1cr', view:'emotionTranslate', color:C.rose,    bg:C.rosePale },
-                { icon:'🕊️', label:tl('싸움\n중재','Fight\nMediator'),     cost:'2cr', view:'fightMediate',     color:C.lavender, bg:C.lavPale },
-                { icon:'🤝', label:tl('AI\n코치','AI\nCoach'),              cost:null, view:'coach', color:C.amber,    bg:'#FFF8EE' },
-                { icon:'🗺️', label:tl('데이트\n코스','Date\nIdeas'),        cost:'3cr', view:'dateCourse',       color:C.rose,    bg:'#FFF0F5' },
-                { icon:'📊', label:tl('카톡\n분석','KakaoTalk\nAnalysis'), cost:'3cr', view:'kakaoAnalysis',    color:'#2E8B57',  bg:'#EAF5EC' },
+                { icon:'💬', label:tl('감정 번역기','Emotion Translator'), desc:tl('말 뒤의 진심','Hidden feelings'), cost:'1cr', view:'emotionTranslate', from:'#FFAFCC', to:'#FFD6E7' },
+                { icon:'🕊️', label:tl('싸움 중재','Fight Mediator'),       desc:tl('중립적 중재','Neutral mediation'), cost:'2cr', view:'fightMediate',     from:'#BDB2FF', to:'#D8CFFF' },
+                { icon:'🤝', label:tl('AI 코치','AI Coach'),                desc:tl('관계 조언','Relationship tips'), cost:null,  view:'coach',            from:'#FFD6A5', to:'#FFE9CC' },
+                { icon:'🗺️', label:tl('데이트 코스','Date Ideas'),          desc:tl('맞춤 코스 추천','Personalized plans'), cost:'3cr', view:'dateCourse',  from:'#FFADAD', to:'#FFD0D0' },
+                { icon:'📊', label:tl('카톡 분석','Kakao Analysis'),        desc:tl('대화 패턴 리포트','Chat pattern report'), cost:'3cr', view:'kakaoAnalysis', from:'#CAFFBF', to:'#D9F7CF' },
               ].map(t => (
                 <button key={t.view} onClick={() => setView(t.view)} style={{
-                  flexShrink: 0, width: 76, padding: '12px 8px', borderRadius: 16,
-                  border: `1px solid ${t.color}22`, background: t.bg, cursor: 'pointer',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                  fontFamily: "'Noto Sans KR',sans-serif",
-                }}>
-                  <span style={{ fontSize: 22 }}>{t.icon}</span>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: t.color, lineHeight: 1.3, whiteSpace: 'pre-line', textAlign: 'center' }}>{t.label}</span>
-                  {t.cost && <span style={{ fontSize: 9, color: C.muted, fontWeight: 600 }}>{t.cost}</span>}
+                  flexShrink: 0, width: 110, borderRadius: 18,
+                  border: 'none', cursor: 'pointer', padding: 0, overflow: 'hidden',
+                  background: 'white', boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+                  fontFamily: "'Noto Sans KR',sans-serif", textAlign: 'left',
+                  transition: 'transform 0.15s, box-shadow 0.15s',
+                }}
+                onMouseDown={e => e.currentTarget.style.transform = 'scale(0.96)'}
+                onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+                onTouchStart={e => e.currentTarget.style.transform = 'scale(0.96)'}
+                onTouchEnd={e => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                  {/* 컬러 상단 */}
+                  <div style={{ background: `linear-gradient(135deg, ${t.from}, ${t.to})`, padding: '16px 12px 12px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ fontSize: 30 }}>{t.icon}</span>
+                    {t.cost && (
+                      <span style={{ position: 'absolute', top: 8, right: 8, fontSize: 10, fontWeight: 800, color: 'white', background: 'rgba(0,0,0,0.18)', backdropFilter: 'blur(4px)', padding: '2px 7px', borderRadius: 100, letterSpacing: 0.3 }}>{t.cost}</span>
+                    )}
+                  </div>
+                  {/* 흰 하단 */}
+                  <div style={{ padding: '10px 10px 12px' }}>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: C.dark, marginBottom: 2, lineHeight: 1.3 }}>{t.label}</div>
+                    <div style={{ fontSize: 10, color: C.muted, lineHeight: 1.4 }}>{t.desc}</div>
+                  </div>
                 </button>
               ))}
             </div>
