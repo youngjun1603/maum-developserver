@@ -10881,7 +10881,8 @@ function MasterDebugOverlay() {
   const loadServer = async () => {
     setLoading(true);
     try {
-      const r = await fetch('/api/debug/client-errors', { headers: { 'Authorization': `Bearer ${tok}` } });
+      const freshTok = localStorage.getItem('access_token'); // 호출 시점 토큰 재조회 (stale 방지)
+      const r = await fetch('/api/debug/client-errors', { headers: { 'Authorization': `Bearer ${freshTok}` } });
       const d = await r.json();
       setServerLogs(d.errors || []);
     } catch { setServerLogs([]); }

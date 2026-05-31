@@ -8116,7 +8116,8 @@ function MasterDebugOverlay() {
   const loadServer = async () => {
     setLoading(true);
     try {
-      const r = await fetch("/api/debug/client-errors", { headers: { "Authorization": `Bearer ${tok}` } });
+      const freshTok = localStorage.getItem("access_token");
+      const r = await fetch("/api/debug/client-errors", { headers: { "Authorization": `Bearer ${freshTok}` } });
       const d = await r.json();
       setServerLogs(d.errors || []);
     } catch {
