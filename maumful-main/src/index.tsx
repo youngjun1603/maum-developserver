@@ -3536,7 +3536,22 @@ app.get('/', (c) => {
   <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${gaId}',{anonymize_ip:true});</script>` : ''}
 </head>
 <body>
-  <div id="root"></div>
+  <div id="root">
+    <!-- SEO 폴백: JS 미실행 크롤러용 핵심 콘텐츠 (React 마운트 시 대체됨) -->
+    <noscript>
+      <h1>마음풀 — 온라인 심리검사 & AI 마음 상담</h1>
+      <p>PHQ-9·GAD-7·Big5 등 8종 심리검사를 무료로 시작하세요. AI 상담으로 내 마음을 더 깊이 이해하고, 제휴 상담사와 직접 연결됩니다.</p>
+      <h2>주요 서비스</h2>
+      <ul>
+        <li>심리검사 — PHQ-9 우울 자가점검, GAD-7 불안 검사, DASS-21, Big5 성격검사, 번아웃 검사</li>
+        <li>AI 마음 상담 — 검사 결과와 연동된 맞춤 대화로 마음을 돌봅니다</li>
+        <li>전문 상담사 연결 — 화상·전화·대면 1:1 상담</li>
+        <li>마음 게임 — 마음의 정원, 감정꽃 찾기 등 치유 게임</li>
+        <li>마음커플 — BIG5 궁합 분석, AI 커플 리포트, 관계 건강도 체크인</li>
+      </ul>
+      <p>가입 즉시 20 크레딧 무료 지급. 위기 상황 시 자살예방상담전화 109 · 정신건강위기상담전화 1577-0199.</p>
+    </noscript>
+  </div>
   <!-- esbuild 사전 컴파일 JS (Babel standalone 불필요) -->
   <script src="/static/compiled/landing.js?v=${v}"></script>
   <script src="/static/compiled/counseling.js?v=${v}"></script>
