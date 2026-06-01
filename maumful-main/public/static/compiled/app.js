@@ -4058,6 +4058,9 @@ Visit Maumful and take the same test again to compare your progress.`));
       ), t(
         /* @__PURE__ */ React.createElement("li", null, "\uBBF8\uC0AC\uC6A9 \uD06C\uB808\uB527\uC740 \uAD6C\uB9E4\uC77C\uB85C\uBD80\uD130 ", /* @__PURE__ */ React.createElement("strong", null, "7\uC77C \uC774\uB0B4"), " \uC804\uC561 \uD658\uBD88 \uAC00\uB2A5\uD569\uB2C8\uB2E4."),
         /* @__PURE__ */ React.createElement("li", null, "Unused credits are fully refundable within ", /* @__PURE__ */ React.createElement("strong", null, "7 days"), " of purchase.")
+      ), t(
+        /* @__PURE__ */ React.createElement("li", null, "\uCDA9\uC804\uD55C \uD06C\uB808\uB527\uC740 \uCDA9\uC804\uC77C\uB85C\uBD80\uD130 ", /* @__PURE__ */ React.createElement("strong", null, "1\uB144\uAC04 \uC720\uD6A8"), "\uD569\uB2C8\uB2E4."),
+        /* @__PURE__ */ React.createElement("li", null, "Charged credits are valid for ", /* @__PURE__ */ React.createElement("strong", null, "1 year"), " from the date of purchase.")
       ), isKorea && t(
         /* @__PURE__ */ React.createElement("li", null, "\uACB0\uC81C \uC2DC \uC774\uBA54\uC77C\xB7\uACB0\uC81C\uAE08\uC561\uC774 ", /* @__PURE__ */ React.createElement("strong", null, "\uD1A0\uC2A4\uD398\uC774\uBA3C\uCE20(\uC8FC)"), "\uC5D0 \uC81C\uACF5\uB429\uB2C8\uB2E4. (\uACB0\uC81C \uCC98\uB9AC \uBAA9\uC801)"),
         /* @__PURE__ */ React.createElement("li", null, "Your email and payment amount will be shared with ", /* @__PURE__ */ React.createElement("strong", null, "TossPayments"), " for processing.")

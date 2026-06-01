@@ -4886,6 +4886,9 @@ function PsychologicalTestSystem() {
                      <li>Refunds are restricted once <strong>any credit is used</strong>. (Korean E-commerce Act §17②⑤)</li>)}
                   {t(<li>미사용 크레딧은 구매일로부터 <strong>7일 이내</strong> 전액 환불 가능합니다.</li>,
                      <li>Unused credits are fully refundable within <strong>7 days</strong> of purchase.</li>)}
+                  {/* TODO: PG 정식 승인 후 삭제 — 한시적 유효기간 안내 문구 */}
+                  {t(<li>충전한 크레딧은 충전일로부터 <strong>1년간 유효</strong>합니다.</li>,
+                     <li>Charged credits are valid for <strong>1 year</strong> from the date of purchase.</li>)}
                   {isKorea && t(<li>결제 시 이메일·결제금액이 <strong>토스페이먼츠(주)</strong>에 제공됩니다. (결제 처리 목적)</li>,
                                 <li>Your email and payment amount will be shared with <strong>TossPayments</strong> for processing.</li>)}
                   <li>{t("환불 문의:","Refund inquiries:")} support@maumful.com</li>
