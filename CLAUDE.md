@@ -117,6 +117,19 @@ npm run deploy:cts       # lightoflife-couple (wrangler.lightoflife.toml) 배포
 - 검사 문항 배열에 영어 필드 추가 방식: `{ content:'한국어', en:'English', scale:'척도', scaleEn:'Scale' }`
 - `CounselingPage`는 `lang` prop을 `app.jsx`에서 받아야 함 (기본값 없음)
 
+### CTS 영어 서비스 ✅ 완료 (jesusmaum.com)
+
+마음풀과 동일 `t(ko,en)` 패턴으로 CTS 전체 영어화 완료. EN 토글로 전 동선 전환.
+
+- **헬퍼(파일별 — 전역 스코프 충돌 방지):**
+  - `app.jsx`: 컴포넌트 스코프 `const t`, `lang = langOverride || currentUser?.locale || 'ko'`, 토글 `updateLang()`→`localStorage.cts_lang`
+  - `landing.jsx`: 컴포넌트별 `const tl` 로컬 정의 (lang prop)
+  - `counseling.jsx`: **모듈 레벨 `const ctsTl`** (고유명 — 전역 충돌 회피). `SESSION_TYPES`는 `get label()` getter로 동적 전환
+- **검사 문항 8종(~250문항):** 각 항목에 `en` 필드(+SRCI는 `promptEn`), 렌더는 `t(q.content, q.en || q.content)` 폴백
+- **⚠️ 채점 키 보존:** `scale`·`factor`·`axis`·`dir`·`rev`·`domain`은 calc 그룹핑 키 → 한글값 절대 변경 금지(`en`/`scaleEn`은 추가 필드만)
+- **결과 레벨:** calc의 `level` 한글값 유지(`levelConfig[level]` 조회 키), 표시만 `tLevel(ko)` 매핑(LEVEL_EN + `||ko` 폴백)
+- **⚠️ 섀도잉 함정:** `.map(t => ...)` 파라미터 `t`가 번역 헬퍼 `t`를 가림 → 내부 `t('..','..')` 호출 시 런타임 크래시. map 파라미터를 `tt`/`s`로 rename할 것
+
 ---
 
 ## 주요 기능 구현 현황
