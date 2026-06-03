@@ -1,5 +1,5 @@
 const GC = {
-  sage: "#4A7C59",
+  sage: "#6B21A8",
   sageL: "#7BA88A",
   sagePale: "#EAF2EC",
   cream: "#FDFCF7",
@@ -111,7 +111,7 @@ const BREATH_METHODS = [
     desc: t("\uC9D1\uC911\xB7\uC2A4\uD2B8\uB808\uC2A4 \uD574\uC18C", "Focus & stress relief"),
     phases: [
       { id: "inhale", label: t("\uB4E4\uC774\uB9C8\uC2DC\uAE30", "Inhale"), color: "#5A8AC0", dur: 4 },
-      { id: "hold_in", label: t("\uCC38  \uAE30", "Hold"), color: "#4A7C59", dur: 4 },
+      { id: "hold_in", label: t("\uCC38  \uAE30", "Hold"), color: "#6B21A8", dur: 4 },
       { id: "exhale", label: t("\uB0B4  \uC26C\uAE30", "Exhale"), color: "#9BA8B0", dur: 4 },
       { id: "hold_out", label: t("\uCC38  \uAE30", "Hold"), color: "#6B8FA8", dur: 4 }
     ]
@@ -123,7 +123,7 @@ const BREATH_METHODS = [
     desc: t("\uC218\uBA74\xB7\uAE4A\uC740 \uC774\uC644", "Sleep & deep relaxation"),
     phases: [
       { id: "inhale", label: t("\uB4E4\uC774\uB9C8\uC2DC\uAE30", "Inhale"), color: "#5A8AC0", dur: 4 },
-      { id: "hold_in", label: t("\uCC38  \uAE30", "Hold"), color: "#4A7C59", dur: 7 },
+      { id: "hold_in", label: t("\uCC38  \uAE30", "Hold"), color: "#6B21A8", dur: 7 },
       { id: "exhale", label: t("\uB0B4  \uC26C\uAE30", "Exhale"), color: "#9BA8B0", dur: 8 }
     ]
   },
@@ -134,7 +134,7 @@ const BREATH_METHODS = [
     desc: t("\uBD88\uC548\xB7\uACF5\uD669 \uC2DC \uBE60\uB978 \uC9C4\uC815", "Fast relief for anxiety & panic"),
     phases: [
       { id: "inhale", label: t("\uB4E4\uC774\uB9C8\uC2DC\uAE30", "Inhale"), color: "#5A8AC0", dur: 2 },
-      { id: "hold_in", label: t("\uCC38  \uAE30", "Hold"), color: "#4A7C59", dur: 1 },
+      { id: "hold_in", label: t("\uCC38  \uAE30", "Hold"), color: "#6B21A8", dur: 1 },
       { id: "exhale", label: t("\uB0B4  \uC26C\uAE30", "Exhale"), color: "#9BA8B0", dur: 4 }
     ]
   }

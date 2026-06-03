@@ -8,7 +8,7 @@ const GV = {
   night:'#0D1B2A', nightM:'#1A2E42', nightL:'#254B6A',
   star:'#FFE08A', starL:'#FFF5C8',
   rose:'#C97B8A', rosePale:'#FCF0F2',
-  sage:'#4A7C59', sagePale:'#EAF2EC',
+  sage:'#6B21A8', sagePale:'#EAF2EC',
   cream:'#FDFCF7', muted:'#8A8A78', dark:'#2C2C20',
   dusty:'#6B8FA8', dustyL:'#A8C4D4',
   amber:'#D4954A',

@@ -238,7 +238,7 @@ function TestBadgeRow({ completedTests = [] }) {
         <div style={{ marginTop:10, fontSize:12, color:C.muted, lineHeight:1.6 }}>
           {t('심리검사를 완료하면 게임이 더 풍성해져요.', 'Complete psych tests to enrich your game experience.')}{' '}
           <a href={PHYWEB_URL} style={{ color:C.sage, fontWeight:600, textDecoration:'none' }}>
-            The Light of Life에서 검사하기 →
+            {t('The Light of Life에서 검사하기 →', 'Take a test on The Light of Life →')}
           </a>
         </div>
       )}
@@ -362,7 +362,7 @@ function GameCard({ game, onPlay, enterDelay = 0 }) {
           position:'absolute', top:12, right:12,
           background:C.sand, color:C.amber,
           fontSize:10, fontWeight:700, padding:'3px 9px', borderRadius:100,
-        }}>Lv.{game.unlockLevel} 해금</div>
+        }}>Lv.{game.unlockLevel} {t('해금', 'Unlock')}</div>
       )}
 
       {/* 이모지 */}
@@ -395,13 +395,13 @@ function GameCard({ game, onPlay, enterDelay = 0 }) {
       {/* 크레딧 비용 */}
       <div style={{ fontSize:11, fontWeight:600, marginBottom:4,
         color: game.creditCost > 0 ? '#D4954A' : '#6B21A8' }}>
-        {game.creditCost > 0 ? `🌿 ${game.creditCost} 크레딧` : t('무료', 'Free')}
+        {game.creditCost > 0 ? t(`🌿 ${game.creditCost} 크레딧`, `🌿 ${game.creditCost} cr`) : t('무료', 'Free')}
       </div>
 
       {/* 필요 검사 */}
       {game.requiredTests.length > 0 && (
         <div style={{ fontSize:11, color:C.dusty, marginBottom:12 }}>
-          {game.requiredTests.map(t => TEST_META_HUB[t]?.label || t).join(' · ')} 연동
+          {game.requiredTests.map(rt => TEST_META_HUB[rt]?.label || rt).join(' · ')} {t('연동', 'linked')}
         </div>
       )}
 
@@ -429,7 +429,7 @@ function GameCard({ game, onPlay, enterDelay = 0 }) {
           boxShadow: !locked ? `0 4px 12px ${C.sage}40` : 'none',
         }}
       >
-        {comingSoon ? t('곧 출시됩니다', 'Coming Soon') : locked ? '🔒 잠금 해제 필요' : t('시작하기 →', 'Start →')}
+        {comingSoon ? t('곧 출시됩니다', 'Coming Soon') : locked ? t('🔒 잠금 해제 필요', '🔒 Unlock required') : t('시작하기 →', 'Start →')}
       </button>
     </div>
   );
@@ -446,7 +446,7 @@ function StreakCalendar({ recentPlayDates = [], streakDays = 0, streakRecover = 
     const d = new Date();
     d.setDate(d.getDate() - i);
     const iso = d.toISOString().slice(0, 10);
-    const dow = [t('일', 'd'),'월','화','수','목','금','토'][d.getDay()];
+    const dow = [t('일','Su'),t('월','Mo'),t('화','Tu'),t('수','We'),t('목','Th'),t('금','Fr'),t('토','Sa')][d.getDay()];
     days.push({ iso, dow, played: recentPlayDates.includes(iso) });
   }
 
@@ -471,11 +471,11 @@ function StreakCalendar({ recentPlayDates = [], streakDays = 0, streakRecover = 
     <div style={{ padding:'16px 20px', background:'rgba(255,255,255,0.7)', borderRadius:16, backdropFilter:'blur(8px)' }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
         <div style={{ fontSize:13, fontWeight:700, color:C.dark, display:'flex', alignItems:'center', gap:6 }}>
-          📅 최근 7일 출석
+          📅 {t('최근 7일 출석', 'Last 7 Days')}
         </div>
         {streakDays > 0 && (
           <div style={{ fontSize:12, fontWeight:700, color:C.amber, display:'flex', alignItems:'center', gap:4 }}>
-            {fireEmoji} {streakDays}일 연속
+            {fireEmoji} {t(`${streakDays}일 연속`, `${streakDays}-day streak`)}
           </div>
         )}
       </div>
@@ -500,8 +500,8 @@ function StreakCalendar({ recentPlayDates = [], streakDays = 0, streakRecover = 
       {nextMilestone && (
         <div style={{ marginBottom: streakRecover > 0 && streakDays === 0 ? 10 : 0 }}>
           <div style={{ display:'flex', justifyContent:'space-between', fontSize:10, color:C.muted, marginBottom:4 }}>
-            <span>다음 목표: {nextMilestone}일 연속 🏅</span>
-            <span>{streakDays} / {nextMilestone}일</span>
+            <span>{t('다음 목표:', 'Next goal:')} {t(`${nextMilestone}일 연속`, `${nextMilestone}-day streak`)} 🏅</span>
+            <span>{streakDays} / {nextMilestone}{t('일', 'd')}</span>
           </div>
           <div style={{ height:5, borderRadius:10, background:'rgba(0,0,0,0.07)', overflow:'hidden' }}>
             <div style={{
@@ -522,14 +522,14 @@ function StreakCalendar({ recentPlayDates = [], streakDays = 0, streakRecover = 
           color:'white', fontSize:12, fontWeight:700, cursor: recovering ? 'not-allowed' : 'pointer',
           fontFamily:"'Noto Sans KR',sans-serif",
         }}>
-          {recovering ? t('복구 중...', 'Restoring...') : `🛡️ 복구권 사용하여 스트릭 복원 (${streakRecover}개 보유)`}
+          {recovering ? t('복구 중...', 'Restoring...') : t(`🛡️ 복구권 사용하여 스트릭 복원 (${streakRecover}개 보유)`, `🛡️ Restore streak with a recovery pass (${streakRecover} left)`)}
         </button>
       )}
 
       {/* 복구권 보유 안내 (streak>0 상태) */}
       {streakRecover > 0 && streakDays > 0 && (
         <div style={{ marginTop:8, fontSize:10, color:C.amber, fontWeight:600, textAlign:'right' }}>
-          🛡️ 복구권 {streakRecover}개 보유 (연속 끊길 때 자동 사용 가능)
+          🛡️ {t(`복구권 ${streakRecover}개 보유 (연속 끊길 때 자동 사용 가능)`, `${streakRecover} recovery pass(es) — auto-used when a streak breaks`)}
         </div>
       )}
     </div>
@@ -564,7 +564,7 @@ function DailyTip({ hubData }) {
     }}>
       <div style={{ fontSize:12, color:C.muted, animation:'pulse 1.5s infinite',
         fontFamily:"'Noto Sans KR',sans-serif" }}>
-        🤖 오늘의 코치 메시지를 불러오는 중...
+        🤖 {t('오늘의 코치 메시지를 불러오는 중...', "Loading today's coach message...")}
       </div>
     </div>
   );
@@ -578,7 +578,7 @@ function DailyTip({ hubData }) {
       border:`1px solid ${C.sage}25`, backdropFilter:'blur(8px)',
     }}>
       <div style={{ fontSize:10, fontWeight:700, color:C.sage, marginBottom:5, letterSpacing:'0.5px' }}>
-        🤖 오늘의 코치 메시지
+        🤖 {t('오늘의 코치 메시지', "Today's Coach Message")}
       </div>
       <div style={{ fontSize:13, color:C.dark, lineHeight:1.65, fontWeight:500,
         fontFamily:"'Noto Sans KR',sans-serif" }}>
@@ -639,7 +639,7 @@ function Leaderboard({ currentUserEmail }) {
               </div>
               <div style={{ fontSize:11, color:C.muted }}>
                 Lv.{entry.garden_level} {levelInfo.name}
-                {(entry.streak_days || 0) > 1 && ` · 🔥 ${entry.streak_days}일`}
+                {(entry.streak_days || 0) > 1 && t(` · 🔥 ${entry.streak_days}일`, ` · 🔥 ${entry.streak_days}d`)}
               </div>
             </div>
             <div style={{ textAlign:'right', flexShrink:0 }}>
@@ -721,10 +721,8 @@ function LoginGate() {
         {t('마음의 정원', 'Mind Garden')}
       </h1>
       <p style={{ fontSize:15, color:C.muted, lineHeight:1.8, marginBottom:32, maxWidth:300 }}>
-        The Light of Life에서 로그인하면<br/>
-        별도 로그인 없이 바로 이용할 수 있어요.<br/>
-        심리검사 결과와 연결하여<br/>
-        나만의 정원을 가꾸세요 🌿
+        {t(<>The Light of Life에서 로그인하면<br/>별도 로그인 없이 바로 이용할 수 있어요.<br/>심리검사 결과와 연결하여<br/>나만의 정원을 가꾸세요 🌿</>,
+           <>Log in to The Light of Life<br/>and use it instantly — no separate login.<br/>Connect your test results<br/>and tend your own garden 🌿</>)}
       </p>
       <a href={PHYWEB_URL} style={{
         display:'inline-block', padding:'14px 36px',
@@ -734,7 +732,7 @@ function LoginGate() {
         boxShadow:`0 8px 24px ${C.sage}44`,
         fontFamily:"'Noto Sans KR', sans-serif",
       }}>
-        The Light of Life 로그인하고 시작하기 →
+        {t('The Light of Life 로그인하고 시작하기 →', 'Log in to The Light of Life →')}
       </a>
     </div>
   );
@@ -775,7 +773,7 @@ const CAMPAIGN_DEF = [
     colorLight: '#EAF2EC',
     desc: t('나의 감정을 알아채고 마음을 돌보는 첫 여정을 시작해요', 'Begin your first journey to notice your emotions and care for your mind.'),
     steps: [
-      { game:'mood',      module:'checkin',         name:'감정 수채화 — 오늘 감정 기록하기',    emoji:'🎨' },
+      { game:'mood',      module:'checkin',         name:t('감정 수채화 — 오늘 감정 기록하기', 'Altar of Thanks — Record today\'s emotion'),    emoji:'🎨' },
       { game:'garden',    module:'breathing',        name:t('마음의 정원 — 호흡 훈련 완료하기', 'Mind Garden — Complete breathing training'),    emoji:'💧' },
       { game:'gratitude', module:'gratitude_write',  name:t('별빛 감사 일기 — 감사 일기 쓰기', 'Starlight Gratitude — Write a gratitude journal'),    emoji:'⭐' },
     ],
@@ -890,7 +888,7 @@ function CampaignSection({ onPlay }) {
               background:`linear-gradient(135deg, ${C.amber}, ${C.amberL})`,
               color:'white', borderRadius:100, padding:'2px 9px',
             }}>
-              {rewardedCount} / {CAMPAIGN_DEF.length} 완료
+              {rewardedCount} / {CAMPAIGN_DEF.length} {t('완료', 'done')}
             </span>
           )}
         </div>
@@ -924,7 +922,7 @@ function CampaignSection({ onPlay }) {
                   {t('챕터 보상 수령 완료!', 'Chapter reward claimed!')}
                 </div>
                 <div style={{ fontSize:12, color:C.muted }}>
-                  +{claimResult.credits} 크레딧이 지급됐어요
+                  {t(`+${claimResult.credits} 크레딧이 지급됐어요`, `+${claimResult.credits} credits awarded`)}
                 </div>
               </div>
               <button onClick={() => setClaimResult(null)} style={{
@@ -1058,7 +1056,7 @@ function CampaignSection({ onPlay }) {
                         }}>
                           <div>
                             <div style={{ fontSize:11, fontWeight:700, color: rewarded ? ch.color : canClaim ? C.amber : C.muted }}>
-                              {rewarded ? `✅ ${ch.rewardBadge} ${ch.rewardName} 획득!` : `🎁 챕터 완료 보상: +${ch.rewardCredits} 크레딧 · ${ch.rewardBadge} ${ch.rewardName}`}
+                              {rewarded ? t(`✅ ${ch.rewardBadge} ${ch.rewardName} 획득!`, `✅ Earned ${ch.rewardBadge} ${ch.rewardName}!`) : t(`🎁 챕터 완료 보상: +${ch.rewardCredits} 크레딧 · ${ch.rewardBadge} ${ch.rewardName}`, `🎁 Chapter reward: +${ch.rewardCredits} cr · ${ch.rewardBadge} ${ch.rewardName}`)}
                             </div>
                             {rewarded && (
                               <div style={{ fontSize:10, color:C.muted, marginTop:2 }}>{t('보상이 지급됐어요', 'Reward has been sent.')}</div>
@@ -1077,7 +1075,7 @@ function CampaignSection({ onPlay }) {
                                 flexShrink:0,
                                 boxShadow:`0 4px 12px ${C.amber}44`,
                               }}>
-                              {claiming === ch.id ? '...' : '보상 받기 🎁'}
+                              {claiming === ch.id ? '...' : t('보상 받기 🎁', 'Claim 🎁')}
                             </button>
                           )}
                         </div>
@@ -1160,8 +1158,8 @@ function GameStatsSection() {
               {/* 요약 카드 */}
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:16, paddingTop:16 }}>
                 {[
-                  { label:t('이번 주 플레이', 'This Week'), value:`${week.playCount||0}회`, sub:`+${week.expGained||0} EXP`, color:C.sage },
-                  { label:t('이번 달 플레이', 'This Month'), value:`${month.playCount||0}회`, sub:`+${month.expGained||0} EXP`, color:C.amber },
+                  { label:t('이번 주 플레이', 'This Week'), value:t(`${week.playCount||0}회`, `${week.playCount||0}x`), sub:`+${week.expGained||0} EXP`, color:C.sage },
+                  { label:t('이번 달 플레이', 'This Month'), value:t(`${month.playCount||0}회`, `${month.playCount||0}x`), sub:`+${month.expGained||0} EXP`, color:C.amber },
                 ].map(c => (
                   <div key={c.label} style={{
                     background:'white', borderRadius:14, padding:'14px 16px',
@@ -1184,7 +1182,7 @@ function GameStatsSection() {
               <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                 {perGame.map(g => {
                   const meta = STATS_GAME_META[g.game_id] || { name:g.game_id, emoji:'🎮' };
-                  const lastDate = g.last_played ? new Date(g.last_played).toLocaleDateString('ko-KR',{month:'short',day:'numeric'}) : '-';
+                  const lastDate = g.last_played ? new Date(g.last_played).toLocaleDateString(GAME_LANG === 'en' ? 'en-US' : 'ko-KR',{month:'short',day:'numeric'}) : '-';
                   return (
                     <div key={g.game_id} style={{
                       display:'flex', alignItems:'center', justifyContent:'space-between',
@@ -1194,13 +1192,13 @@ function GameStatsSection() {
                         <span style={{ fontSize:20 }}>{meta.emoji}</span>
                         <div>
                           <div style={{ fontSize:13, fontWeight:600, color:C.dark }}>{meta.name}</div>
-                          <div style={{ fontSize:11, color:C.muted }}>마지막: {lastDate}</div>
+                          <div style={{ fontSize:11, color:C.muted }}>{t('마지막:', 'Last:')} {lastDate}</div>
                         </div>
                       </div>
                       <div style={{ textAlign:'right' }}>
-                        <div style={{ fontSize:15, fontWeight:700, color:C.sage }}>{(g.play_count||0)}회</div>
+                        <div style={{ fontSize:15, fontWeight:700, color:C.sage }}>{(g.play_count||0)}{t('회', 'x')}</div>
                         {(g.best_score||0) > 0 && (
-                          <div style={{ fontSize:11, color:C.amber }}>{t('베스트', 'Best')} {g.best_score}점</div>
+                          <div style={{ fontSize:11, color:C.amber }}>{t('베스트', 'Best')} {g.best_score}{t('점', 'pts')}</div>
                         )}
                       </div>
                     </div>
@@ -1292,7 +1290,7 @@ function AchievementPanel({ earned = [], isMaster = false }) {
           fontSize:12, color:C.muted, fontWeight:600,
           fontFamily:"'Noto Sans KR',sans-serif", padding:'2px 0',
         }}>
-          {expanded ? t('접기 ▲', 'Collapse ▲') : `+${sorted.length - 6}개 더보기 ▼`}
+          {expanded ? t('접기 ▲', 'Collapse ▲') : t(`+${sorted.length - 6}개 더보기 ▼`, `+${sorted.length - 6} more ▼`)}
         </button>
       )}
     </div>
@@ -1350,9 +1348,9 @@ const HISTORY_GAME_META = {
   gratitude:{ name:t('감사 일기', 'Gratitude Journal'),  emoji:'🌟', color:'#F59E0B' },
   burnout:  { name:t('번아웃 회복', 'BURNOUT Recovery'),emoji:'⚡', color:'#F97316' },
   focus:    { name:t('집중력 훈련', 'Focus Training'),emoji:'🎯', color:'#0EA5E9' },
-  worry:    { name:t('걱정 풍선', 'Worry Balloon'),  emoji:'🎈', color:'#8B5CF6' },
-  tree:     { name:t('마음 나무', 'Mind Tree'),  emoji:'🌲', color:'#16A34A' },
-  qt:       { name:'QT 묵상',    emoji:'✝️', color:'#7C3AED' },
+  worry:    { name:t('기도 풍선', 'Prayer Balloons'),  emoji:'🎈', color:'#8B5CF6' },
+  tree:     { name:t('믿음의 나무', 'Tree of Faith'),  emoji:'🌲', color:'#16A34A' },
+  qt:       { name:t('QT 묵상', 'QT Devotion'),    emoji:'✝️', color:'#7C3AED' },
 };
 function GameHistorySection() {
   const [sessions, setSessions] = React.useState(null);
@@ -1390,7 +1388,7 @@ function GameHistorySection() {
                 const date = new Date(s.created_at);
                 const dateStr = date.toLocaleDateString('ko-KR', { month:'short', day:'numeric' });
                 const timeStr = date.toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit' });
-                const dur = s.duration_sec > 0 ? (s.duration_sec >= 60 ? `${Math.floor(s.duration_sec/60)}분` : `${s.duration_sec}초`) : null;
+                const dur = s.duration_sec > 0 ? (s.duration_sec >= 60 ? t(`${Math.floor(s.duration_sec/60)}분`, `${Math.floor(s.duration_sec/60)}m`) : t(`${s.duration_sec}초`, `${s.duration_sec}s`)) : null;
                 return (
                   <div key={i} style={{ display:'flex', alignItems:'center', gap:12, background:'white', borderRadius:12, padding:'10px 14px', borderLeft:`3px solid ${meta.color}` }}>
                     <span style={{ fontSize:20, flexShrink:0 }}>{meta.emoji}</span>
@@ -1399,7 +1397,7 @@ function GameHistorySection() {
                       <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>{dateStr} {timeStr}{dur ? ` · ${dur}` : ''}</div>
                     </div>
                     <div style={{ textAlign:'right', flexShrink:0 }}>
-                      {s.score > 0 && <div style={{ fontSize:14, fontWeight:700, color:meta.color }}>{s.score}점</div>}
+                      {s.score > 0 && <div style={{ fontSize:14, fontWeight:700, color:meta.color }}>{s.score}{t('점', 'pts')}</div>}
                       <div style={{ fontSize:11, color:C.muted }}>+{s.exp_gained || 0} EXP</div>
                     </div>
                   </div>
@@ -1470,7 +1468,7 @@ function BurnoutTrendSection({ userTestScores }) {
             fontSize:11, fontWeight:700,
             background: level.bg, color: level.color,
             borderRadius:100, padding:'2px 8px',
-          }}>{t('현재', 'Current')} {burnoutScore}점 · {level.label}</span>
+          }}>{t('현재', 'Current')} {burnoutScore}{t('점', 'pts')} · {level.label}</span>
         </div>
         <button onClick={handleToggle} style={{
           background:'none', border:'none', cursor:'pointer',
@@ -1528,7 +1526,7 @@ function BurnoutTrendSection({ userTestScores }) {
                     marginTop:8, fontSize:12, fontWeight:600, textAlign:'center',
                     color: diff <= 0 ? '#9333EA' : '#EF4444',
                   }}>
-                    {diff <= 0 ? `✅ 지난 회 대비 ${Math.abs(diff)}점 개선됐어요!` : `⚠️ 지난 회 대비 ${diff}점 높아졌어요. 쉬어가세요.`}
+                    {diff <= 0 ? t(`✅ 지난 회 대비 ${Math.abs(diff)}점 개선됐어요!`, `✅ Improved by ${Math.abs(diff)} pts vs last time!`) : t(`⚠️ 지난 회 대비 ${diff}점 높아졌어요. 쉬어가세요.`, `⚠️ Up ${diff} pts vs last time. Take a rest.`)}
                   </div>
                 );
               })()}
@@ -1540,7 +1538,7 @@ function BurnoutTrendSection({ userTestScores }) {
               <div key={l.label} style={{
                 fontSize:10, padding:'3px 8px', borderRadius:100,
                 background:l.bg, color:l.color, fontWeight:600,
-              }}>{l.label} ~{l.max}점</div>
+              }}>{l.label} ~{l.max}{t('점', 'pts')}</div>
             ))}
           </div>
         </div>
@@ -1574,9 +1572,9 @@ function AIDiarySection() {
 
   function share() {
     if (!diary) return;
-    const text = `📔 오늘의 마음 일기\n${diary}\n\n치유 게임에서 기록했어요 🌿 https://game.maumful.com`;
+    const text = t(`📔 오늘의 마음 일기\n${diary}\n\n치유 게임에서 기록했어요 🌿 https://jesusmaum.com`, `📔 Today's Mind Diary\n${diary}\n\nRecorded on The Light of Life 🌿 https://jesusmaum.com`);
     if (navigator.share) { navigator.share({ title: t('마음 일기', 'Mind Diary'), text }).catch(() => {}); }
-    else { navigator.clipboard?.writeText(text).then(() => alert('복사됐어요!')); }
+    else { navigator.clipboard?.writeText(text).then(() => alert(t('복사됐어요!', 'Copied!'))); }
   }
 
   if (!checked && !diary) {
@@ -1600,7 +1598,7 @@ function AIDiarySection() {
   if (noData) return null;
   if (!diary) return null;
 
-  const todayStr = new Date().toLocaleDateString('ko-KR', { month:'long', day:'numeric', weekday:'short' });
+  const todayStr = new Date().toLocaleDateString(GAME_LANG === 'en' ? 'en-US' : 'ko-KR', { month:'long', day:'numeric', weekday:'short' });
   return (
     <div style={{background:'linear-gradient(135deg,#f0fdf4,#dcfce7)',borderRadius:16,padding:'16px 18px',marginBottom:12,border:'1px solid #bbf7d0'}}>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
@@ -1628,7 +1626,7 @@ const MOOD_EMOJI_MAP = {
   happy:'😊', calm:'😌', tired:'😴', anxious:'😰', sad:'😢',
   angry:'😤', hopeful:'🌟', bored:'😑',
 };
-const DAY_LABELS = [t('일', 'd'),'월','화','수','목','금','토'];
+const DAY_LABELS = [t('일','Su'),t('월','Mo'),t('화','Tu'),t('수','We'),t('목','Th'),t('금','Fr'),t('토','Sa')];
 
 function WeekMoodSummaryCard() {
   const [entries, setEntries] = useState(null);
@@ -1676,9 +1674,9 @@ function WeekMoodSummaryCard() {
         display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12,
       }}>
         <div style={{ fontSize:13, fontWeight:700, color:C.dark, display:'flex', alignItems:'center', gap:6 }}>
-          {dominantEmoji} 이번 주 감정 흐름
+          {dominantEmoji} {t('이번 주 감정 흐름', "This Week's Mood Flow")}
         </div>
-        <div style={{ fontSize:11, color:C.muted }}>{entries.length}일 기록</div>
+        <div style={{ fontSize:11, color:C.muted }}>{t(`${entries.length}일 기록`, `${entries.length} days`)}</div>
       </div>
 
       {/* 7일 도트 차트 */}
@@ -1710,11 +1708,11 @@ function WeekMoodSummaryCard() {
 
       {dominant && (
         <div style={{ fontSize:12, color:C.muted, marginTop:10, textAlign:'center' }}>
-          이번 주 주요 감정:{' '}
+          {t('이번 주 주요 감정:', 'Main emotion this week:')}{' '}
           <span style={{ color:C.dark, fontWeight:600 }}>
             {dominantEmoji} {dominant[0] === 'happy' ? t('행복', 'Happy') : dominant[0] === 'calm' ? t('평온', 'Calm') : dominant[0] === 'tired' ? t('피곤', 'Tired') : dominant[0] === 'anxious' ? t('불안', 'Anxious') : dominant[0] === 'sad' ? t('슬픔', 'Sad') : dominant[0]}
           </span>{' '}
-          ({dominant[1]}일)
+          ({t(`${dominant[1]}일`, `${dominant[1]} days`)})
         </div>
       )}
     </div>
@@ -1763,7 +1761,7 @@ function EmotionWeeklyReport() {
               fontSize:11, fontWeight:600,
               background:C.sagePale, color:C.sage,
               borderRadius:100, padding:'2px 8px',
-            }}>{entries.length}일 기록</span>
+            }}>{t(`${entries.length}일 기록`, `${entries.length} days`)}</span>
           )}
         </div>
         <div style={{ display:'flex', gap:6 }}>
@@ -1772,11 +1770,11 @@ function EmotionWeeklyReport() {
               const topEmotion = entries.length > 0
                 ? (EMOTION_DISPLAY[entries[entries.length-1]?.emotion] || { emoji:'😶', label:entries[entries.length-1]?.emotion })
                 : null;
-              const text = `🌿 이번 주 마음의 정원\n${topEmotion ? topEmotion.emoji + ' ' + topEmotion.label + ' ' : ''}${entries.length}일 감정 기록\n\n${reportData.report.slice(0,80)}...\n\n#The Light of Life #치유 게임 #감정기록`;
+              const text = t(`🌿 이번 주 마음의 정원\n${topEmotion ? topEmotion.emoji + ' ' + topEmotion.label + ' ' : ''}${entries.length}일 감정 기록\n\n${reportData.report.slice(0,80)}...\n\n#The Light of Life #치유게임 #감정기록`, `🌿 This Week's Mind Garden\n${topEmotion ? topEmotion.emoji + ' ' + topEmotion.label + ' ' : ''}${entries.length} days of emotion records\n\n${reportData.report.slice(0,80)}...\n\n#TheLightOfLife #HealingGames #MoodLog`);
               if (navigator.share) {
                 navigator.share({ title:t('이번 주 감정 흐름', 'This Week\'s Mood Flow'), text }).catch(()=>{});
               } else {
-                navigator.clipboard?.writeText(text).then(()=>alert('복사됐어요!')).catch(()=>{});
+                navigator.clipboard?.writeText(text).then(()=>alert(t('복사됐어요!', 'Copied!'))).catch(()=>{});
               }
             }} style={{
               background:'none', border:'none', cursor:'pointer',
@@ -1813,7 +1811,7 @@ function EmotionWeeklyReport() {
                       display:'flex', alignItems:'center', justifyContent:'center', fontSize:18,
                     }}>{em.emoji}</div>
                     <div style={{ fontSize:9, color:C.muted, textAlign:'center' }}>
-                      {new Date(e.date + 'T00:00:00').toLocaleDateString('ko-KR', { month:'numeric', day:'numeric' })}
+                      {new Date(e.date + 'T00:00:00').toLocaleDateString(GAME_LANG === 'en' ? 'en-US' : 'ko-KR', { month:'numeric', day:'numeric' })}
                     </div>
                     {/* 강도 점 */}
                     <div style={{
@@ -1834,7 +1832,7 @@ function EmotionWeeklyReport() {
             border:`1px solid ${C.sage}22`,
           }}>
             <div style={{ fontSize:10, fontWeight:700, color:C.sage, marginBottom:6, letterSpacing:'0.5px' }}>
-              🤖 AI 감정 패턴 분석
+              🤖 {t('AI 감정 패턴 분석', 'AI Emotion Pattern Analysis')}
             </div>
             <div style={{ fontSize:13, color:C.dark, lineHeight:1.75,
               fontFamily:"'Noto Sans KR',sans-serif" }}>
@@ -1842,7 +1840,7 @@ function EmotionWeeklyReport() {
             </div>
             {reportData.cached && (
               <div style={{ fontSize:10, color:C.muted, marginTop:6 }}>
-                이번 주 분석 · 매주 월요일 갱신
+                {t('이번 주 분석 · 매주 월요일 갱신', "This week's analysis · updated every Monday")}
               </div>
             )}
           </div>
@@ -1880,11 +1878,11 @@ function TodayRecommendCard({ hubData, onPlay }) {
   const gad7 = userTestScores.GAD7;
 
   if (phq9 !== undefined && phq9 >= 15) {
-    rec = { gameId:'garden', reason:`PHQ-9 ${phq9}점 — 지금 호흡 훈련이 마음을 안정시켜줘요`, color:C.dusty };
+    rec = { gameId:'garden', reason:t(`PHQ-9 ${phq9}점 — 지금 호흡 훈련이 마음을 안정시켜줘요`, `PHQ-9 ${phq9} — breath prayer can steady your heart now`), color:C.dusty };
   } else if (gad7 !== undefined && gad7 >= 10) {
-    rec = { gameId:'worry', reason:`GAD-7 ${gad7}점 — 불안한 생각을 풍선에 담아 내려놓아요 🫧`, color:'#7B9ED9' };
+    rec = { gameId:'worry', reason:t(`GAD-7 ${gad7}점 — 불안한 생각을 풍선에 담아 내려놓아요 🫧`, `GAD-7 ${gad7} — place anxious thoughts in a balloon and lift them up 🫧`), color:'#7B9ED9' };
   } else if (burnout !== undefined && burnout >= 60 && level >= 2) {
-    rec = { gameId:'burnout', reason:`번아웃 지수 ${burnout}점 — 오늘 회복 미션을 시작해보세요`, color:C.amber };
+    rec = { gameId:'burnout', reason:t(`번아웃 지수 ${burnout}점 — 오늘 회복 미션을 시작해보세요`, `Burnout ${burnout} — start a recovery mission today`), color:C.amber };
   } else if (!recentIds.includes('mood')) {
     rec = { gameId:'mood', reason:t('오늘 감정 기록을 아직 안 했어요 ✍️', 'You haven\'t recorded your emotions today ✍️'), color:C.sage };
   } else if (phq9 !== undefined && phq9 >= 5) {
@@ -1909,7 +1907,7 @@ function TodayRecommendCard({ hubData, onPlay }) {
       border:`1px solid ${rec.color}28`,
     }}>
       <div style={{ fontSize:10, fontWeight:700, color:rec.color, marginBottom:10, letterSpacing:'0.5px' }}>
-        ✨ 오늘의 추천
+        ✨ {t('오늘의 추천', "Today's Pick")}
       </div>
       <div style={{ display:'flex', alignItems:'center', gap:14 }}>
         <div style={{
@@ -2024,7 +2022,7 @@ function DailyQuestCard({ todaySessions = [], level = 1, userId = 0, streakRecov
         )}
         {bonusDone && (
           <span style={{ fontSize:11, color:C.sage, fontWeight:700 }}>
-            ✓ 보너스 획득!{streakRecover > 0 && ` 🛡️${streakRecover}`}
+            {t('✓ 보너스 획득!', '✓ Bonus earned!')}{streakRecover > 0 && ` 🛡️${streakRecover}`}
           </span>
         )}
       </div>
@@ -2079,7 +2077,7 @@ function OnboardingOverlay({ onDone }) {
     {
       emoji: '🌿',
       title: t('마음의 정원에 오신 것을 환영해요', 'Welcome to Mind Garden'),
-      body: 'The Light of Life의 심리검사 결과와 연동하여 나만의 치유 공간을 가꾸는 게임 플랫폼이에요. 게임을 즐기며 마음을 돌보세요.',
+      body: t('The Light of Life의 심리검사 결과와 연동하여 나만의 치유 공간을 가꾸는 게임 플랫폼이에요. 게임을 즐기며 마음을 돌보세요.', 'A game platform that links with your psychological test results on The Light of Life to cultivate your own healing space. Enjoy the games and care for your heart.'),
     },
     {
       emoji: '🌱',
@@ -2269,7 +2267,7 @@ function GameHubApp() {
         alert(res.error || t('크레딧 차감 실패. 다시 시도해주세요.', 'Credit deduction failed. Please try again.'));
       }
     } catch {
-      alert('네트워크 오류. 다시 시도해주세요.');
+      alert(t('네트워크 오류. 다시 시도해주세요.', 'Network error. Please try again.'));
     }
     setSpendLoading(false);
   }, [creditModal]);
@@ -2331,7 +2329,7 @@ function GameHubApp() {
     <div style={{ display:'flex', flexDirection:'column', height:'100vh', overflow:'hidden' }}>
       {typeof QTGame !== 'undefined'
         ? <QTGame onExit={handleGameExit}/>
-        : <div style={{padding:32,textAlign:'center',color:'#6B21A8'}}>QT 게임을 불러오는 중...</div>
+        : <div style={{padding:32,textAlign:'center',color:'#6B21A8'}}>{t('QT 게임을 불러오는 중...', 'Loading QT game...')}</div>
       }
     </div>
   );
@@ -2348,7 +2346,7 @@ function GameHubApp() {
         padding:'10px 24px', background:C.sage, color:'white',
         borderRadius:10, fontSize:14, fontWeight:600,
         textDecoration:'none', fontFamily:"'Noto Sans KR', sans-serif",
-      }}>The Light of Life으로 돌아가기</a>
+      }}>{t('The Light of Life으로 돌아가기', 'Back to The Light of Life')}</a>
     </div>
   );
 
@@ -2423,7 +2421,7 @@ function GameHubApp() {
                 fontSize:11, fontWeight:700, color:C.amber,
                 display:'flex', alignItems:'center', gap:5,
               }}>
-                🔥 {gameStatus.streak_days}일 연속
+                🔥 {t(`${gameStatus.streak_days}일 연속`, `${gameStatus.streak_days}-day streak`)}
               </div>
             )}
           </div>
@@ -2568,11 +2566,11 @@ function GameHubApp() {
             }}>
               <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6, fontSize:13 }}>
                 <span style={{ color:'#8A8A78' }}>{t('현재 크레딧', 'Current Credits')}</span>
-                <span style={{ fontWeight:700, color:'#2C2C20' }}>{creditModal.balance} 크레딧</span>
+                <span style={{ fontWeight:700, color:'#2C2C20' }}>{t(`${creditModal.balance} 크레딧`, `${creditModal.balance} cr`)}</span>
               </div>
               <div style={{ display:'flex', justifyContent:'space-between', fontSize:13 }}>
                 <span style={{ color:'#8A8A78' }}>{t('차감 예정', 'To be deducted')}</span>
-                <span style={{ fontWeight:700, color:'#D4954A' }}>- {creditModal.cost} 크레딧</span>
+                <span style={{ fontWeight:700, color:'#D4954A' }}>- {t(`${creditModal.cost} 크레딧`, `${creditModal.cost} cr`)}</span>
               </div>
               <div style={{ height:1, background:'rgba(0,0,0,0.08)', margin:'10px 0' }}/>
               <div style={{ display:'flex', justifyContent:'space-between', fontSize:14 }}>
@@ -2581,7 +2579,7 @@ function GameHubApp() {
                   fontWeight:700,
                   color: creditModal.balance >= creditModal.cost ? '#6B21A8' : '#C05050',
                 }}>
-                  {Math.max(0, creditModal.balance - creditModal.cost)} 크레딧
+                  {t(`${Math.max(0, creditModal.balance - creditModal.cost)} 크레딧`, `${Math.max(0, creditModal.balance - creditModal.cost)} cr`)}
                 </span>
               </div>
             </div>
@@ -2593,7 +2591,7 @@ function GameHubApp() {
                 borderRadius:10, padding:'10px 14px', marginBottom:14,
                 fontSize:12, color:'#C05050', lineHeight:1.6,
               }}>
-                크레딧이 부족해요. The Light of Life에서 크레딧을 충전한 후 다시 시도해주세요.
+                {t('크레딧이 부족해요. The Light of Life에서 크레딧을 충전한 후 다시 시도해주세요.', 'Not enough credits. Please recharge on The Light of Life and try again.')}
               </div>
             )}
 
@@ -2628,7 +2626,7 @@ function GameHubApp() {
                     border:'none', borderRadius:12, fontSize:13,
                     fontWeight:700, cursor: spendLoading ? 'not-allowed' : 'pointer',
                   }}>
-                  {spendLoading ? t('처리 중...', 'Processing...') : `${creditModal.cost} 크레딧으로 시작`}
+                  {spendLoading ? t('처리 중...', 'Processing...') : t(`${creditModal.cost} 크레딧으로 시작`, `Start for ${creditModal.cost} cr`)}
                 </button>
               )}
             </div>

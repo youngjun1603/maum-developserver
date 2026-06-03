@@ -1,5 +1,5 @@
 const FC = {
-  sage: "#4A7C59",
+  sage: "#6B21A8",
   sageL: "#7BA88A",
   sagePale: "#EAF2EC",
   cream: "#FDFCF7",

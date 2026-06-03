@@ -50,7 +50,18 @@ const WB_COLORS = [
   { from: "#A0D8B5", to: "#6FC08A", border: "#3A9A6A40", shine: "#3A9A6A", text: "#1A5A3A" },
   { from: "#A0CCEE", to: "#6AAAD8", border: "#3A88C040", shine: "#3A88C0", text: "#1A4A7A" }
 ];
-const EXAMPLE_WORRIES = [
+const EXAMPLE_WORRIES = GAME_LANG === "en" ? [
+  "I have way too much to do lately",
+  "I'm not sure if this decision is right",
+  "Things feel awkward in my relationship",
+  "I feel anxious about the future",
+  "I'm worried whether I'm doing well",
+  "My body keeps feeling tired",
+  "I'm afraid I'll forget something important",
+  "My heart feels empty",
+  "I feel like I am all alone",
+  "I'm scared and anxious about tomorrow"
+] : [
   "\uC694\uC998 \uC77C\uC774 \uB108\uBB34 \uB9CE\uC544\uC694",
   "\uC774 \uACB0\uC815\uC774 \uB9DE\uB294 \uAC74\uC9C0 \uBAA8\uB974\uACA0\uC5B4\uC694",
   "\uAD00\uACC4\uAC00 \uC5B4\uC0C9\uD574\uC9C4 \uAC83 \uAC19\uC544\uC694",
@@ -155,7 +166,7 @@ const WorryGame = ({ onExit }) => {
   } }, /* @__PURE__ */ React.createElement(
     WBHeader,
     {
-      title: "\u{1FAE7} \uAE30\uB3C4 \uD48D\uC120",
+      title: t("\u{1FAE7} \uAE30\uB3C4 \uD48D\uC120", "\u{1FAE7} Prayer Balloons"),
       right: /* @__PURE__ */ React.createElement("button", { onClick: () => onExit(null), style: {
         fontFamily: "'Noto Sans KR',sans-serif",
         background: "rgba(0,0,0,0.06)",
@@ -181,7 +192,10 @@ const WorryGame = ({ onExit }) => {
     color: "#2C3E50",
     fontFamily: "'Noto Serif KR',serif",
     marginBottom: 10
-  } }, "\uB9C8\uC74C\uC758 \uC9D0\uC744 \uC8FC\uB2D8\uAED8 \uC62C\uB824\uB4DC\uB824\uC694"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, color: "#5A6A7A", lineHeight: 1.75 } }, "\uC9C0\uAE08 \uB9C8\uC74C\uC744 \uBB34\uAC81\uAC8C \uD558\uB294 \uAC71\uC815\uB4E4\uC744", /* @__PURE__ */ React.createElement("br", null), "\uD48D\uC120\uC5D0 \uB2F4\uACE0 \uD558\uB098\uC529 \uD130\uB728\uB824 \uBCF4\uC138\uC694.", /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { style: { color: "#8A9AB0" } }, "\uC8FC\uB2D8\uAED8 \uB9E1\uAE30\uB294 \uAC83\uC774 \uB9C8\uC74C\uC744 \uAC00\uBCCD\uAC8C \uD574\uC694. (\uBCA7\uC804 5:7)"))), /* @__PURE__ */ React.createElement("div", { style: {
+  } }, t("\uB9C8\uC74C\uC758 \uC9D0\uC744 \uC8FC\uB2D8\uAED8 \uC62C\uB824\uB4DC\uB824\uC694", "Lift your burdens to the Lord")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, color: "#5A6A7A", lineHeight: 1.75 } }, t(
+    /* @__PURE__ */ React.createElement(React.Fragment, null, "\uC9C0\uAE08 \uB9C8\uC74C\uC744 \uBB34\uAC81\uAC8C \uD558\uB294 \uAC71\uC815\uB4E4\uC744", /* @__PURE__ */ React.createElement("br", null), "\uD48D\uC120\uC5D0 \uB2F4\uACE0 \uD558\uB098\uC529 \uD130\uB728\uB824 \uBCF4\uC138\uC694.", /* @__PURE__ */ React.createElement("br", null)),
+    /* @__PURE__ */ React.createElement(React.Fragment, null, "Place the worries weighing on your heart", /* @__PURE__ */ React.createElement("br", null), "into balloons and pop them one by one.", /* @__PURE__ */ React.createElement("br", null))
+  ), /* @__PURE__ */ React.createElement("span", { style: { color: "#8A9AB0" } }, t("\uC8FC\uB2D8\uAED8 \uB9E1\uAE30\uB294 \uAC83\uC774 \uB9C8\uC74C\uC744 \uAC00\uBCCD\uAC8C \uD574\uC694. (\uBCA7\uC804 5:7)", "Entrusting them to the Lord lightens your heart. (1 Pet 5:7)")))), /* @__PURE__ */ React.createElement("div", { style: {
     background: "rgba(255,255,255,0.75)",
     borderRadius: 16,
     padding: "14px 20px",
@@ -189,8 +203,8 @@ const WorryGame = ({ onExit }) => {
     maxWidth: 300,
     boxShadow: "0 4px 16px rgba(0,0,0,0.06)"
   } }, [
-    { emoji: "\u270D\uFE0F", text: "\uC9C0\uAE08 \uB9C8\uC74C\uC758 \uC9D0 1~3\uAC00\uC9C0\uB97C \uC801\uC5B4\uC694" },
-    { emoji: "\u{1FAE7}", text: "\uAC71\uC815\uB4E4\uC744 \uD48D\uC120\uC5D0 \uB2F4\uC544 \uC8FC\uB2D8\uAED8 \uC62C\uB824\uB4DC\uB9BD\uB2C8\uB2E4" },
+    { emoji: "\u270D\uFE0F", text: t("\uC9C0\uAE08 \uB9C8\uC74C\uC758 \uC9D0 1~3\uAC00\uC9C0\uB97C \uC801\uC5B4\uC694", "Write down 1\u20133 burdens on your heart") },
+    { emoji: "\u{1FAE7}", text: t("\uAC71\uC815\uB4E4\uC744 \uD48D\uC120\uC5D0 \uB2F4\uC544 \uC8FC\uB2D8\uAED8 \uC62C\uB824\uB4DC\uB9BD\uB2C8\uB2E4", "Place worries in balloons and lift them to the Lord") },
     { emoji: "\u{1F4A5}", text: t("\uD074\uB9AD\uD574\uC11C \uD558\uB098\uC529 \uD130\uB728\uB824\uC694", "Click to pop them one by one") }
   ].map((s, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: {
     display: "flex",
@@ -232,7 +246,7 @@ const WorryGame = ({ onExit }) => {
         padding: "4px 0"
       } }, t("\u2190 \uB3CC\uC544\uAC00\uAE30", "\u2190 Back"))
     }
-  ), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "20px 24px 0" } }, /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", marginBottom: 22 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 16, fontWeight: 600, color: "#2C3E50", fontFamily: "'Noto Serif KR',serif" } }, t("\uC9C0\uAE08 \uB9C8\uC74C\uC744 \uBB34\uAC81\uAC8C \uD558\uB294 \uAC83\uB4E4\uC740?", "What's weighing on your mind right now?")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "#8A9AB0", marginTop: 5 } }, "\uC544\uC8FC \uC791\uC740 \uB9C8\uC74C\uC758 \uC9D0\uB3C4 \uAD1C\uCC2E\uC544\uC694 \xB7 \uCD5C\uC18C 1\uAC1C \uC774\uC0C1")), inputs.map((val, i) => {
+  ), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "20px 24px 0" } }, /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", marginBottom: 22 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 16, fontWeight: 600, color: "#2C3E50", fontFamily: "'Noto Serif KR',serif" } }, t("\uC9C0\uAE08 \uB9C8\uC74C\uC744 \uBB34\uAC81\uAC8C \uD558\uB294 \uAC83\uB4E4\uC740?", "What's weighing on your mind right now?")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "#8A9AB0", marginTop: 5 } }, t("\uC544\uC8FC \uC791\uC740 \uB9C8\uC74C\uC758 \uC9D0\uB3C4 \uAD1C\uCC2E\uC544\uC694 \xB7 \uCD5C\uC18C 1\uAC1C \uC774\uC0C1", "Even the smallest burden is fine \xB7 at least 1"))), inputs.map((val, i) => {
     const c = WB_COLORS[i];
     return /* @__PURE__ */ React.createElement("div", { key: i, style: { marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 5 } }, /* @__PURE__ */ React.createElement("div", { style: {
       width: 22,
@@ -256,7 +270,7 @@ const WorryGame = ({ onExit }) => {
           next[i] = e.target.value;
           setInputs(next);
         },
-        placeholder: i === 0 ? "\uC9C0\uAE08 \uB9C8\uC74C\uC744 \uBB34\uAC81\uAC8C \uD558\uB294 \uAC83..." : "\uB610 \uB2E4\uB978 \uB9C8\uC74C\uC758 \uC9D0\uC774 \uC788\uB2E4\uBA74...",
+        placeholder: i === 0 ? t("\uC9C0\uAE08 \uB9C8\uC74C\uC744 \uBB34\uAC81\uAC8C \uD558\uB294 \uAC83...", "What's weighing on your heart...") : t("\uB610 \uB2E4\uB978 \uB9C8\uC74C\uC758 \uC9D0\uC774 \uC788\uB2E4\uBA74...", "If there is another burden..."),
         maxLength: 35,
         style: {
           fontFamily: "'Noto Sans KR',sans-serif",
@@ -320,7 +334,7 @@ const WorryGame = ({ onExit }) => {
     } }, /* @__PURE__ */ React.createElement(
       WBHeader,
       {
-        title: saving ? t("\uC800\uC7A5 \uC911...", "Saving...") : `${poppedCount === totalCount ? "\u{1F389}" : "\u{1FAE7}"} ${poppedCount}/${totalCount} \uD130\uB728\uB838\uC5B4\uC694`,
+        title: saving ? t("\uC800\uC7A5 \uC911...", "Saving...") : t(`${poppedCount === totalCount ? "\u{1F389}" : "\u{1FAE7}"} ${poppedCount}/${totalCount} \uD130\uB728\uB838\uC5B4\uC694`, `${poppedCount === totalCount ? "\u{1F389}" : "\u{1FAE7}"} ${poppedCount}/${totalCount} popped`),
         left: !saving && /* @__PURE__ */ React.createElement("button", { onClick: () => setScreen("input"), style: {
           fontFamily: "'Noto Sans KR',sans-serif",
           background: "none",
@@ -356,7 +370,7 @@ const WorryGame = ({ onExit }) => {
       justifyContent: "center",
       background: "rgba(255,255,255,0.5)",
       backdropFilter: "blur(4px)"
-    } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "#5A6A7A", animation: "pulse 1.5s infinite" } }, "\uC8FC\uB2D8\uAED8 \uB9E1\uAE30\uB294 \uC911... \u{1F308}")), bubbles.map((b) => {
+    } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "#5A6A7A", animation: "pulse 1.5s infinite" } }, t("\uC8FC\uB2D8\uAED8 \uB9E1\uAE30\uB294 \uC911... \u{1F308}", "Entrusting to the Lord... \u{1F308}"))), bubbles.map((b) => {
       const c = WB_COLORS[b.colorIdx];
       const isPopped = poppedIds.has(b.id);
       const sz = b.size;
@@ -424,7 +438,7 @@ const WorryGame = ({ onExit }) => {
   } }, /* @__PURE__ */ React.createElement(
     WBHeader,
     {
-      title: "\u{1FAE7} \uAE30\uB3C4 \uD48D\uC120",
+      title: t("\u{1FAE7} \uAE30\uB3C4 \uD48D\uC120", "\u{1FAE7} Prayer Balloons"),
       right: /* @__PURE__ */ React.createElement("button", { onClick: () => onExit(doneData || null), style: {
         fontFamily: "'Noto Sans KR',sans-serif",
         background: "rgba(0,0,0,0.06)",
@@ -450,7 +464,10 @@ const WorryGame = ({ onExit }) => {
     fontWeight: 700,
     color: "#2C3E50",
     fontFamily: "'Noto Serif KR',serif"
-  } }, "\uC8FC\uB2D8\uAED8 \uC62C\uB824\uB4DC\uB838\uC5B4\uC694!!"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, color: "#5A6A7A", marginTop: 8, lineHeight: 1.75 } }, bubbles.length, "\uAC1C\uC758 \uC9D0\uC744 \uD48D\uC120\uC5D0 \uB2F4\uC544", /* @__PURE__ */ React.createElement("br", null), "\uBAA8\uB450 \uC8FC\uB2D8\uAED8 \uC62C\uB824\uB4DC\uB838\uC5B4\uC694 \u{1F64F}")), doneData && /* @__PURE__ */ React.createElement("div", { style: {
+  } }, t("\uC8FC\uB2D8\uAED8 \uC62C\uB824\uB4DC\uB838\uC5B4\uC694!!", "Lifted up to the Lord!!")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, color: "#5A6A7A", marginTop: 8, lineHeight: 1.75 } }, t(
+    /* @__PURE__ */ React.createElement(React.Fragment, null, bubbles.length, "\uAC1C\uC758 \uC9D0\uC744 \uD48D\uC120\uC5D0 \uB2F4\uC544", /* @__PURE__ */ React.createElement("br", null), "\uBAA8\uB450 \uC8FC\uB2D8\uAED8 \uC62C\uB824\uB4DC\uB838\uC5B4\uC694 \u{1F64F}"),
+    /* @__PURE__ */ React.createElement(React.Fragment, null, "You placed ", bubbles.length, " burden(s) into balloons", /* @__PURE__ */ React.createElement("br", null), "and lifted them all to the Lord \u{1F64F}")
+  ))), doneData && /* @__PURE__ */ React.createElement("div", { style: {
     background: "white",
     borderRadius: 16,
     padding: "14px 24px",
@@ -492,7 +509,10 @@ const WorryGame = ({ onExit }) => {
     maxWidth: 260,
     lineHeight: 1.75,
     animation: "wbFadeUp 0.5s ease 0.5s both"
-  } }, "\uAC71\uC815\uC740 \uC0DD\uAC01\uC77C \uBFD0\uC774\uC5D0\uC694.", /* @__PURE__ */ React.createElement("br", null), "\uC9C0\uAE08 \uC774 \uC21C\uAC04 \uB2F9\uC2E0\uC740 \uAD1C\uCC2E\uC544\uC694 \u{1F499}"), /* @__PURE__ */ React.createElement("div", { style: {
+  } }, t(
+    /* @__PURE__ */ React.createElement(React.Fragment, null, "\uAC71\uC815\uC740 \uC0DD\uAC01\uC77C \uBFD0\uC774\uC5D0\uC694.", /* @__PURE__ */ React.createElement("br", null), "\uC9C0\uAE08 \uC774 \uC21C\uAC04 \uB2F9\uC2E0\uC740 \uAD1C\uCC2E\uC544\uC694 \u{1F499}"),
+    /* @__PURE__ */ React.createElement(React.Fragment, null, "Worries are only thoughts.", /* @__PURE__ */ React.createElement("br", null), "In this very moment, you are okay \u{1F499}")
+  )), /* @__PURE__ */ React.createElement("div", { style: {
     display: "flex",
     gap: 10,
     width: "100%",

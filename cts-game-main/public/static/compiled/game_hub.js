@@ -110,7 +110,7 @@ function TestBadgeRow({ completedTests = [] }) {
       border: `1px solid ${done ? C.sage + "44" : "transparent"}`,
       opacity: done ? 1 : 0.5
     } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13 } }, meta.emoji), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, fontWeight: done ? 600 : 400, color: done ? C.sage : C.muted } }, meta.label), done && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, color: C.sage } }, "\u2713"));
-  })), completedTests.length === 0 && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 10, fontSize: 12, color: C.muted, lineHeight: 1.6 } }, t("\uC2EC\uB9AC\uAC80\uC0AC\uB97C \uC644\uB8CC\uD558\uBA74 \uAC8C\uC784\uC774 \uB354 \uD48D\uC131\uD574\uC838\uC694.", "Complete psych tests to enrich your game experience."), " ", /* @__PURE__ */ React.createElement("a", { href: PHYWEB_URL, style: { color: C.sage, fontWeight: 600, textDecoration: "none" } }, "The Light of Life\uC5D0\uC11C \uAC80\uC0AC\uD558\uAE30 \u2192")));
+  })), completedTests.length === 0 && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 10, fontSize: 12, color: C.muted, lineHeight: 1.6 } }, t("\uC2EC\uB9AC\uAC80\uC0AC\uB97C \uC644\uB8CC\uD558\uBA74 \uAC8C\uC784\uC774 \uB354 \uD48D\uC131\uD574\uC838\uC694.", "Complete psych tests to enrich your game experience."), " ", /* @__PURE__ */ React.createElement("a", { href: PHYWEB_URL, style: { color: C.sage, fontWeight: 600, textDecoration: "none" } }, t("The Light of Life\uC5D0\uC11C \uAC80\uC0AC\uD558\uAE30 \u2192", "Take a test on The Light of Life \u2192"))));
 }
 function GameCardSkeleton() {
   return /* @__PURE__ */ React.createElement("div", { style: {
@@ -193,7 +193,7 @@ function GameCard({ game, onPlay, enterDelay = 0 }) {
       fontWeight: 700,
       padding: "3px 9px",
       borderRadius: 100
-    } }, "Lv.", game.unlockLevel, " \uD574\uAE08"),
+    } }, "Lv.", game.unlockLevel, " ", t("\uD574\uAE08", "Unlock")),
     /* @__PURE__ */ React.createElement("div", { style: {
       fontSize: 42,
       marginBottom: 12,
@@ -216,8 +216,8 @@ function GameCard({ game, onPlay, enterDelay = 0 }) {
       fontWeight: 600,
       marginBottom: 4,
       color: game.creditCost > 0 ? "#D4954A" : "#6B21A8"
-    } }, game.creditCost > 0 ? `\u{1F33F} ${game.creditCost} \uD06C\uB808\uB527` : t("\uBB34\uB8CC", "Free")),
-    game.requiredTests.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.dusty, marginBottom: 12 } }, game.requiredTests.map((t2) => TEST_META_HUB[t2]?.label || t2).join(" \xB7 "), " \uC5F0\uB3D9"),
+    } }, game.creditCost > 0 ? t(`\u{1F33F} ${game.creditCost} \uD06C\uB808\uB527`, `\u{1F33F} ${game.creditCost} cr`) : t("\uBB34\uB8CC", "Free")),
+    game.requiredTests.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.dusty, marginBottom: 12 } }, game.requiredTests.map((rt) => TEST_META_HUB[rt]?.label || rt).join(" \xB7 "), " ", t("\uC5F0\uB3D9", "linked")),
     game.modules?.length > 0 && !comingSoon && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 5, marginBottom: 14 } }, game.modules.map((m) => /* @__PURE__ */ React.createElement("div", { key: m.id, style: { display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: C.muted } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14 } }, m.emoji), /* @__PURE__ */ React.createElement("span", null, m.name)))),
     /* @__PURE__ */ React.createElement(
       "button",
@@ -236,7 +236,7 @@ function GameCard({ game, onPlay, enterDelay = 0 }) {
           boxShadow: !locked ? `0 4px 12px ${C.sage}40` : "none"
         }
       },
-      comingSoon ? t("\uACE7 \uCD9C\uC2DC\uB429\uB2C8\uB2E4", "Coming Soon") : locked ? "\u{1F512} \uC7A0\uAE08 \uD574\uC81C \uD544\uC694" : t("\uC2DC\uC791\uD558\uAE30 \u2192", "Start \u2192")
+      comingSoon ? t("\uACE7 \uCD9C\uC2DC\uB429\uB2C8\uB2E4", "Coming Soon") : locked ? t("\u{1F512} \uC7A0\uAE08 \uD574\uC81C \uD544\uC694", "\u{1F512} Unlock required") : t("\uC2DC\uC791\uD558\uAE30 \u2192", "Start \u2192")
     )
   );
 }
@@ -247,7 +247,7 @@ function StreakCalendar({ recentPlayDates = [], streakDays = 0, streakRecover = 
     const d = /* @__PURE__ */ new Date();
     d.setDate(d.getDate() - i);
     const iso = d.toISOString().slice(0, 10);
-    const dow = [t("\uC77C", "d"), "\uC6D4", "\uD654", "\uC218", "\uBAA9", "\uAE08", "\uD1A0"][d.getDay()];
+    const dow = [t("\uC77C", "Su"), t("\uC6D4", "Mo"), t("\uD654", "Tu"), t("\uC218", "We"), t("\uBAA9", "Th"), t("\uAE08", "Fr"), t("\uD1A0", "Sa")][d.getDay()];
     days.push({ iso, dow, played: recentPlayDates.includes(iso) });
   }
   const MILESTONES = [3, 7, 14, 30, 60, 90];
@@ -262,7 +262,7 @@ function StreakCalendar({ recentPlayDates = [], streakDays = 0, streakRecover = 
     setRecovering(false);
     if (r.success) onRecover?.();
   };
-  return /* @__PURE__ */ React.createElement("div", { style: { padding: "16px 20px", background: "rgba(255,255,255,0.7)", borderRadius: 16, backdropFilter: "blur(8px)" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.dark, display: "flex", alignItems: "center", gap: 6 } }, "\u{1F4C5} \uCD5C\uADFC 7\uC77C \uCD9C\uC11D"), streakDays > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: C.amber, display: "flex", alignItems: "center", gap: 4 } }, fireEmoji, " ", streakDays, "\uC77C \uC5F0\uC18D")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, justifyContent: "space-between", marginBottom: 12 } }, days.map(({ iso, dow, played }) => /* @__PURE__ */ React.createElement("div", { key: iso, style: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: C.muted, fontWeight: 500 } }, dow), /* @__PURE__ */ React.createElement("div", { style: {
+  return /* @__PURE__ */ React.createElement("div", { style: { padding: "16px 20px", background: "rgba(255,255,255,0.7)", borderRadius: 16, backdropFilter: "blur(8px)" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.dark, display: "flex", alignItems: "center", gap: 6 } }, "\u{1F4C5} ", t("\uCD5C\uADFC 7\uC77C \uCD9C\uC11D", "Last 7 Days")), streakDays > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: C.amber, display: "flex", alignItems: "center", gap: 4 } }, fireEmoji, " ", t(`${streakDays}\uC77C \uC5F0\uC18D`, `${streakDays}-day streak`))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, justifyContent: "space-between", marginBottom: 12 } }, days.map(({ iso, dow, played }) => /* @__PURE__ */ React.createElement("div", { key: iso, style: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: C.muted, fontWeight: 500 } }, dow), /* @__PURE__ */ React.createElement("div", { style: {
     width: "100%",
     aspectRatio: "1",
     borderRadius: 8,
@@ -273,7 +273,7 @@ function StreakCalendar({ recentPlayDates = [], streakDays = 0, streakRecover = 
     fontSize: 13,
     boxShadow: played ? `0 2px 8px ${C.sage}40` : "none",
     transition: "all 0.3s"
-  } }, played ? "\u{1F33F}" : "")))), nextMilestone && /* @__PURE__ */ React.createElement("div", { style: { marginBottom: streakRecover > 0 && streakDays === 0 ? 10 : 0 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 10, color: C.muted, marginBottom: 4 } }, /* @__PURE__ */ React.createElement("span", null, "\uB2E4\uC74C \uBAA9\uD45C: ", nextMilestone, "\uC77C \uC5F0\uC18D \u{1F3C5}"), /* @__PURE__ */ React.createElement("span", null, streakDays, " / ", nextMilestone, "\uC77C")), /* @__PURE__ */ React.createElement("div", { style: { height: 5, borderRadius: 10, background: "rgba(0,0,0,0.07)", overflow: "hidden" } }, /* @__PURE__ */ React.createElement("div", { style: {
+  } }, played ? "\u{1F33F}" : "")))), nextMilestone && /* @__PURE__ */ React.createElement("div", { style: { marginBottom: streakRecover > 0 && streakDays === 0 ? 10 : 0 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 10, color: C.muted, marginBottom: 4 } }, /* @__PURE__ */ React.createElement("span", null, t("\uB2E4\uC74C \uBAA9\uD45C:", "Next goal:"), " ", t(`${nextMilestone}\uC77C \uC5F0\uC18D`, `${nextMilestone}-day streak`), " \u{1F3C5}"), /* @__PURE__ */ React.createElement("span", null, streakDays, " / ", nextMilestone, t("\uC77C", "d"))), /* @__PURE__ */ React.createElement("div", { style: { height: 5, borderRadius: 10, background: "rgba(0,0,0,0.07)", overflow: "hidden" } }, /* @__PURE__ */ React.createElement("div", { style: {
     height: "100%",
     borderRadius: 10,
     transition: "width 0.5s",
@@ -291,7 +291,7 @@ function StreakCalendar({ recentPlayDates = [], streakDays = 0, streakRecover = 
     fontWeight: 700,
     cursor: recovering ? "not-allowed" : "pointer",
     fontFamily: "'Noto Sans KR',sans-serif"
-  } }, recovering ? t("\uBCF5\uAD6C \uC911...", "Restoring...") : `\u{1F6E1}\uFE0F \uBCF5\uAD6C\uAD8C \uC0AC\uC6A9\uD558\uC5EC \uC2A4\uD2B8\uB9AD \uBCF5\uC6D0 (${streakRecover}\uAC1C \uBCF4\uC720)`), streakRecover > 0 && streakDays > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 8, fontSize: 10, color: C.amber, fontWeight: 600, textAlign: "right" } }, "\u{1F6E1}\uFE0F \uBCF5\uAD6C\uAD8C ", streakRecover, "\uAC1C \uBCF4\uC720 (\uC5F0\uC18D \uB04A\uAE38 \uB54C \uC790\uB3D9 \uC0AC\uC6A9 \uAC00\uB2A5)"));
+  } }, recovering ? t("\uBCF5\uAD6C \uC911...", "Restoring...") : t(`\u{1F6E1}\uFE0F \uBCF5\uAD6C\uAD8C \uC0AC\uC6A9\uD558\uC5EC \uC2A4\uD2B8\uB9AD \uBCF5\uC6D0 (${streakRecover}\uAC1C \uBCF4\uC720)`, `\u{1F6E1}\uFE0F Restore streak with a recovery pass (${streakRecover} left)`)), streakRecover > 0 && streakDays > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 8, fontSize: 10, color: C.amber, fontWeight: 600, textAlign: "right" } }, "\u{1F6E1}\uFE0F ", t(`\uBCF5\uAD6C\uAD8C ${streakRecover}\uAC1C \uBCF4\uC720 (\uC5F0\uC18D \uB04A\uAE38 \uB54C \uC790\uB3D9 \uC0AC\uC6A9 \uAC00\uB2A5)`, `${streakRecover} recovery pass(es) \u2014 auto-used when a streak breaks`)));
 }
 function DailyTip({ hubData }) {
   const [tip, setTip] = useState(null);
@@ -321,7 +321,7 @@ function DailyTip({ hubData }) {
     color: C.muted,
     animation: "pulse 1.5s infinite",
     fontFamily: "'Noto Sans KR',sans-serif"
-  } }, "\u{1F916} \uC624\uB298\uC758 \uCF54\uCE58 \uBA54\uC2DC\uC9C0\uB97C \uBD88\uB7EC\uC624\uB294 \uC911..."));
+  } }, "\u{1F916} ", t("\uC624\uB298\uC758 \uCF54\uCE58 \uBA54\uC2DC\uC9C0\uB97C \uBD88\uB7EC\uC624\uB294 \uC911...", "Loading today's coach message...")));
   if (!tip) return null;
   return /* @__PURE__ */ React.createElement("div", { style: {
     background: `linear-gradient(135deg, ${C.sagePale}, rgba(255,255,255,0.92))`,
@@ -329,7 +329,7 @@ function DailyTip({ hubData }) {
     padding: "13px 16px",
     border: `1px solid ${C.sage}25`,
     backdropFilter: "blur(8px)"
-  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, fontWeight: 700, color: C.sage, marginBottom: 5, letterSpacing: "0.5px" } }, "\u{1F916} \uC624\uB298\uC758 \uCF54\uCE58 \uBA54\uC2DC\uC9C0"), /* @__PURE__ */ React.createElement("div", { style: {
+  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, fontWeight: 700, color: C.sage, marginBottom: 5, letterSpacing: "0.5px" } }, "\u{1F916} ", t("\uC624\uB298\uC758 \uCF54\uCE58 \uBA54\uC2DC\uC9C0", "Today's Coach Message")), /* @__PURE__ */ React.createElement("div", { style: {
     fontSize: 13,
     color: C.dark,
     lineHeight: 1.65,
@@ -363,7 +363,7 @@ function Leaderboard({ currentUserEmail }) {
       border: `1px solid ${isMe ? C.sage + "44" : "rgba(255,255,255,0.5)"}`,
       backdropFilter: "blur(6px)",
       boxShadow: isMe ? `0 2px 12px ${C.sage}20` : "none"
-    } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 18, minWidth: 28, textAlign: "center", fontWeight: 700 } }, rank), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14 } }, levelInfo.emoji), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.dark, display: "flex", alignItems: "center", gap: 5 } }, entry.nickname || entry.email?.split("@")[0] || t("\uC815\uC6D0\uC0AC", "Gardener"), isMe && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, background: C.sage, color: "white", borderRadius: 4, padding: "1px 5px" } }, t("\uB098", "Me"))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, "Lv.", entry.garden_level, " ", levelInfo.name, (entry.streak_days || 0) > 1 && ` \xB7 \u{1F525} ${entry.streak_days}\uC77C`)), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "right", flexShrink: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.sage } }, (entry.total_exp || 0).toLocaleString()), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: C.muted } }, "EXP")));
+    } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 18, minWidth: 28, textAlign: "center", fontWeight: 700 } }, rank), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14 } }, levelInfo.emoji), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.dark, display: "flex", alignItems: "center", gap: 5 } }, entry.nickname || entry.email?.split("@")[0] || t("\uC815\uC6D0\uC0AC", "Gardener"), isMe && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, background: C.sage, color: "white", borderRadius: 4, padding: "1px 5px" } }, t("\uB098", "Me"))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, "Lv.", entry.garden_level, " ", levelInfo.name, (entry.streak_days || 0) > 1 && t(` \xB7 \u{1F525} ${entry.streak_days}\uC77C`, ` \xB7 \u{1F525} ${entry.streak_days}d`))), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "right", flexShrink: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.sage } }, (entry.total_exp || 0).toLocaleString()), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: C.muted } }, "EXP")));
   }));
 }
 function RecentActivity({ sessions = [] }) {
@@ -403,7 +403,10 @@ function LoginGate() {
     background: `linear-gradient(160deg, ${C.sagePale}, ${C.cream}, #EBF4FA)`,
     padding: 24,
     textAlign: "center"
-  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 72, marginBottom: 20, animation: "float 3s ease-in-out infinite" } }, "\u{1F33F}"), /* @__PURE__ */ React.createElement("h1", { style: { fontSize: 28, fontWeight: 700, color: C.dark, marginBottom: 10, fontFamily: "'Noto Serif KR', serif" } }, t("\uB9C8\uC74C\uC758 \uC815\uC6D0", "Mind Garden")), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 15, color: C.muted, lineHeight: 1.8, marginBottom: 32, maxWidth: 300 } }, "The Light of Life\uC5D0\uC11C \uB85C\uADF8\uC778\uD558\uBA74", /* @__PURE__ */ React.createElement("br", null), "\uBCC4\uB3C4 \uB85C\uADF8\uC778 \uC5C6\uC774 \uBC14\uB85C \uC774\uC6A9\uD560 \uC218 \uC788\uC5B4\uC694.", /* @__PURE__ */ React.createElement("br", null), "\uC2EC\uB9AC\uAC80\uC0AC \uACB0\uACFC\uC640 \uC5F0\uACB0\uD558\uC5EC", /* @__PURE__ */ React.createElement("br", null), "\uB098\uB9CC\uC758 \uC815\uC6D0\uC744 \uAC00\uAFB8\uC138\uC694 \u{1F33F}"), /* @__PURE__ */ React.createElement("a", { href: PHYWEB_URL, style: {
+  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 72, marginBottom: 20, animation: "float 3s ease-in-out infinite" } }, "\u{1F33F}"), /* @__PURE__ */ React.createElement("h1", { style: { fontSize: 28, fontWeight: 700, color: C.dark, marginBottom: 10, fontFamily: "'Noto Serif KR', serif" } }, t("\uB9C8\uC74C\uC758 \uC815\uC6D0", "Mind Garden")), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 15, color: C.muted, lineHeight: 1.8, marginBottom: 32, maxWidth: 300 } }, t(
+    /* @__PURE__ */ React.createElement(React.Fragment, null, "The Light of Life\uC5D0\uC11C \uB85C\uADF8\uC778\uD558\uBA74", /* @__PURE__ */ React.createElement("br", null), "\uBCC4\uB3C4 \uB85C\uADF8\uC778 \uC5C6\uC774 \uBC14\uB85C \uC774\uC6A9\uD560 \uC218 \uC788\uC5B4\uC694.", /* @__PURE__ */ React.createElement("br", null), "\uC2EC\uB9AC\uAC80\uC0AC \uACB0\uACFC\uC640 \uC5F0\uACB0\uD558\uC5EC", /* @__PURE__ */ React.createElement("br", null), "\uB098\uB9CC\uC758 \uC815\uC6D0\uC744 \uAC00\uAFB8\uC138\uC694 \u{1F33F}"),
+    /* @__PURE__ */ React.createElement(React.Fragment, null, "Log in to The Light of Life", /* @__PURE__ */ React.createElement("br", null), "and use it instantly \u2014 no separate login.", /* @__PURE__ */ React.createElement("br", null), "Connect your test results", /* @__PURE__ */ React.createElement("br", null), "and tend your own garden \u{1F33F}")
+  )), /* @__PURE__ */ React.createElement("a", { href: PHYWEB_URL, style: {
     display: "inline-block",
     padding: "14px 36px",
     background: `linear-gradient(135deg, ${C.sage}, ${C.sageL})`,
@@ -414,7 +417,7 @@ function LoginGate() {
     textDecoration: "none",
     boxShadow: `0 8px 24px ${C.sage}44`,
     fontFamily: "'Noto Sans KR', sans-serif"
-  } }, "The Light of Life \uB85C\uADF8\uC778\uD558\uACE0 \uC2DC\uC791\uD558\uAE30 \u2192"));
+  } }, t("The Light of Life \uB85C\uADF8\uC778\uD558\uACE0 \uC2DC\uC791\uD558\uAE30 \u2192", "Log in to The Light of Life \u2192")));
 }
 const ALL_ACHIEVEMENT_IDS = [
   // 연속 출석
@@ -451,7 +454,7 @@ const CAMPAIGN_DEF = [
     colorLight: "#EAF2EC",
     desc: t("\uB098\uC758 \uAC10\uC815\uC744 \uC54C\uC544\uCC44\uACE0 \uB9C8\uC74C\uC744 \uB3CC\uBCF4\uB294 \uCCAB \uC5EC\uC815\uC744 \uC2DC\uC791\uD574\uC694", "Begin your first journey to notice your emotions and care for your mind."),
     steps: [
-      { game: "mood", module: "checkin", name: "\uAC10\uC815 \uC218\uCC44\uD654 \u2014 \uC624\uB298 \uAC10\uC815 \uAE30\uB85D\uD558\uAE30", emoji: "\u{1F3A8}" },
+      { game: "mood", module: "checkin", name: t("\uAC10\uC815 \uC218\uCC44\uD654 \u2014 \uC624\uB298 \uAC10\uC815 \uAE30\uB85D\uD558\uAE30", "Altar of Thanks \u2014 Record today's emotion"), emoji: "\u{1F3A8}" },
       { game: "garden", module: "breathing", name: t("\uB9C8\uC74C\uC758 \uC815\uC6D0 \u2014 \uD638\uD761 \uD6C8\uB828 \uC644\uB8CC\uD558\uAE30", "Mind Garden \u2014 Complete breathing training"), emoji: "\u{1F4A7}" },
       { game: "gratitude", module: "gratitude_write", name: t("\uBCC4\uBE5B \uAC10\uC0AC \uC77C\uAE30 \u2014 \uAC10\uC0AC \uC77C\uAE30 \uC4F0\uAE30", "Starlight Gratitude \u2014 Write a gratitude journal"), emoji: "\u2B50" }
     ],
@@ -557,7 +560,7 @@ function CampaignSection({ onPlay }) {
     color: "white",
     borderRadius: 100,
     padding: "2px 9px"
-  } }, rewardedCount, " / ", CAMPAIGN_DEF.length, " \uC644\uB8CC")), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: C.muted } }, expanded ? t("\uC811\uAE30 \u25B2", "Collapse \u25B2") : t("\uD3BC\uCE58\uAE30 \u25BC", "Expand \u25BC"))), expanded && /* @__PURE__ */ React.createElement("div", { style: {
+  } }, rewardedCount, " / ", CAMPAIGN_DEF.length, " ", t("\uC644\uB8CC", "done"))), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: C.muted } }, expanded ? t("\uC811\uAE30 \u25B2", "Collapse \u25B2") : t("\uD3BC\uCE58\uAE30 \u25BC", "Expand \u25BC"))), expanded && /* @__PURE__ */ React.createElement("div", { style: {
     background: "rgba(255,255,255,0.65)",
     backdropFilter: "blur(8px)",
     borderRadius: "0 0 20px 20px",
@@ -574,7 +577,7 @@ function CampaignSection({ onPlay }) {
     alignItems: "center",
     gap: 10,
     animation: "fadeUp 0.3s ease"
-  } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 24 } }, "\u{1F389}"), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.amber } }, t("\uCC55\uD130 \uBCF4\uC0C1 \uC218\uB839 \uC644\uB8CC!", "Chapter reward claimed!")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted } }, "+", claimResult.credits, " \uD06C\uB808\uB527\uC774 \uC9C0\uAE09\uB410\uC5B4\uC694")), /* @__PURE__ */ React.createElement("button", { onClick: () => setClaimResult(null), style: {
+  } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 24 } }, "\u{1F389}"), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.amber } }, t("\uCC55\uD130 \uBCF4\uC0C1 \uC218\uB839 \uC644\uB8CC!", "Chapter reward claimed!")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted } }, t(`+${claimResult.credits} \uD06C\uB808\uB527\uC774 \uC9C0\uAE09\uB410\uC5B4\uC694`, `+${claimResult.credits} credits awarded`))), /* @__PURE__ */ React.createElement("button", { onClick: () => setClaimResult(null), style: {
     marginLeft: "auto",
     background: "none",
     border: "none",
@@ -665,7 +668,7 @@ function CampaignSection({ onPlay }) {
       alignItems: "center",
       justifyContent: "space-between",
       gap: 10
-    } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: rewarded ? ch.color : canClaim ? C.amber : C.muted } }, rewarded ? `\u2705 ${ch.rewardBadge} ${ch.rewardName} \uD68D\uB4DD!` : `\u{1F381} \uCC55\uD130 \uC644\uB8CC \uBCF4\uC0C1: +${ch.rewardCredits} \uD06C\uB808\uB527 \xB7 ${ch.rewardBadge} ${ch.rewardName}`), rewarded && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: C.muted, marginTop: 2 } }, t("\uBCF4\uC0C1\uC774 \uC9C0\uAE09\uB410\uC5B4\uC694", "Reward has been sent."))), canClaim && /* @__PURE__ */ React.createElement(
+    } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: rewarded ? ch.color : canClaim ? C.amber : C.muted } }, rewarded ? t(`\u2705 ${ch.rewardBadge} ${ch.rewardName} \uD68D\uB4DD!`, `\u2705 Earned ${ch.rewardBadge} ${ch.rewardName}!`) : t(`\u{1F381} \uCC55\uD130 \uC644\uB8CC \uBCF4\uC0C1: +${ch.rewardCredits} \uD06C\uB808\uB527 \xB7 ${ch.rewardBadge} ${ch.rewardName}`, `\u{1F381} Chapter reward: +${ch.rewardCredits} cr \xB7 ${ch.rewardBadge} ${ch.rewardName}`)), rewarded && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: C.muted, marginTop: 2 } }, t("\uBCF4\uC0C1\uC774 \uC9C0\uAE09\uB410\uC5B4\uC694", "Reward has been sent."))), canClaim && /* @__PURE__ */ React.createElement(
       "button",
       {
         onClick: () => handleClaim(ch.id),
@@ -684,7 +687,7 @@ function CampaignSection({ onPlay }) {
           boxShadow: `0 4px 12px ${C.amber}44`
         }
       },
-      claiming === ch.id ? "..." : "\uBCF4\uC0C1 \uBC1B\uAE30 \u{1F381}"
+      claiming === ch.id ? "..." : t("\uBCF4\uC0C1 \uBC1B\uAE30 \u{1F381}", "Claim \u{1F381}")
     ))), locked && /* @__PURE__ */ React.createElement("div", { style: { padding: "10px 16px 14px", textAlign: "center", fontSize: 12, color: C.muted } }, t("\uC774\uC804 \uCC55\uD130\uB97C \uC644\uB8CC\uD558\uBA74 \uD574\uAE08\uB3FC\uC694", "Complete the previous chapter to unlock.")));
   }))));
 }
@@ -735,8 +738,8 @@ function GameStatsSection() {
     borderTop: "none",
     marginTop: -4
   } }, loading && /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: "24px", color: C.muted, fontSize: 13 } }, t("\uBD88\uB7EC\uC624\uB294 \uC911...", "Loading...")), !loading && stats && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16, paddingTop: 16 } }, [
-    { label: t("\uC774\uBC88 \uC8FC \uD50C\uB808\uC774", "This Week"), value: `${week.playCount || 0}\uD68C`, sub: `+${week.expGained || 0} EXP`, color: C.sage },
-    { label: t("\uC774\uBC88 \uB2EC \uD50C\uB808\uC774", "This Month"), value: `${month.playCount || 0}\uD68C`, sub: `+${month.expGained || 0} EXP`, color: C.amber }
+    { label: t("\uC774\uBC88 \uC8FC \uD50C\uB808\uC774", "This Week"), value: t(`${week.playCount || 0}\uD68C`, `${week.playCount || 0}x`), sub: `+${week.expGained || 0} EXP`, color: C.sage },
+    { label: t("\uC774\uBC88 \uB2EC \uD50C\uB808\uC774", "This Month"), value: t(`${month.playCount || 0}\uD68C`, `${month.playCount || 0}x`), sub: `+${month.expGained || 0} EXP`, color: C.amber }
   ].map((c) => /* @__PURE__ */ React.createElement("div", { key: c.label, style: {
     background: "white",
     borderRadius: 14,
@@ -744,7 +747,7 @@ function GameStatsSection() {
     border: `1px solid ${c.color}22`
   } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginBottom: 4 } }, c.label), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 20, fontWeight: 700, color: c.color } }, c.value), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, c.sub)))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: C.muted, marginBottom: 10, letterSpacing: "0.5px" } }, t("\uAC8C\uC784\uBCC4 \uC218\uD589 \uD604\uD669", "Performance by Game")), perGame.length === 0 && /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: "20px", color: C.muted, fontSize: 13 } }, t("\uC544\uC9C1 \uD50C\uB808\uC774 \uAE30\uB85D\uC774 \uC5C6\uC5B4\uC694", "No play records yet")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, perGame.map((g) => {
     const meta = STATS_GAME_META[g.game_id] || { name: g.game_id, emoji: "\u{1F3AE}" };
-    const lastDate = g.last_played ? new Date(g.last_played).toLocaleDateString("ko-KR", { month: "short", day: "numeric" }) : "-";
+    const lastDate = g.last_played ? new Date(g.last_played).toLocaleDateString(GAME_LANG === "en" ? "en-US" : "ko-KR", { month: "short", day: "numeric" }) : "-";
     return /* @__PURE__ */ React.createElement("div", { key: g.game_id, style: {
       display: "flex",
       alignItems: "center",
@@ -752,7 +755,7 @@ function GameStatsSection() {
       background: "white",
       borderRadius: 12,
       padding: "12px 14px"
-    } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 20 } }, meta.emoji), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 600, color: C.dark } }, meta.name), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, "\uB9C8\uC9C0\uB9C9: ", lastDate))), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "right" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 700, color: C.sage } }, g.play_count || 0, "\uD68C"), (g.best_score || 0) > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.amber } }, t("\uBCA0\uC2A4\uD2B8", "Best"), " ", g.best_score, "\uC810")));
+    } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 20 } }, meta.emoji), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 600, color: C.dark } }, meta.name), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, t("\uB9C8\uC9C0\uB9C9:", "Last:"), " ", lastDate))), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "right" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 700, color: C.sage } }, g.play_count || 0, t("\uD68C", "x")), (g.best_score || 0) > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.amber } }, t("\uBCA0\uC2A4\uD2B8", "Best"), " ", g.best_score, t("\uC810", "pts"))));
   })))));
 }
 function AchievementPanel({ earned = [], isMaster = false }) {
@@ -809,7 +812,7 @@ function AchievementPanel({ earned = [], isMaster = false }) {
     fontWeight: 600,
     fontFamily: "'Noto Sans KR',sans-serif",
     padding: "2px 0"
-  } }, expanded ? t("\uC811\uAE30 \u25B2", "Collapse \u25B2") : `+${sorted.length - 6}\uAC1C \uB354\uBCF4\uAE30 \u25BC`));
+  } }, expanded ? t("\uC811\uAE30 \u25B2", "Collapse \u25B2") : t(`+${sorted.length - 6}\uAC1C \uB354\uBCF4\uAE30 \u25BC`, `+${sorted.length - 6} more \u25BC`)));
 }
 function AchievementToast({ achievements = [], onDismiss }) {
   const [visible, setVisible] = useState(true);
@@ -851,9 +854,9 @@ const HISTORY_GAME_META = {
   gratitude: { name: t("\uAC10\uC0AC \uC77C\uAE30", "Gratitude Journal"), emoji: "\u{1F31F}", color: "#F59E0B" },
   burnout: { name: t("\uBC88\uC544\uC6C3 \uD68C\uBCF5", "BURNOUT Recovery"), emoji: "\u26A1", color: "#F97316" },
   focus: { name: t("\uC9D1\uC911\uB825 \uD6C8\uB828", "Focus Training"), emoji: "\u{1F3AF}", color: "#0EA5E9" },
-  worry: { name: t("\uAC71\uC815 \uD48D\uC120", "Worry Balloon"), emoji: "\u{1F388}", color: "#8B5CF6" },
-  tree: { name: t("\uB9C8\uC74C \uB098\uBB34", "Mind Tree"), emoji: "\u{1F332}", color: "#16A34A" },
-  qt: { name: "QT \uBB35\uC0C1", emoji: "\u271D\uFE0F", color: "#7C3AED" }
+  worry: { name: t("\uAE30\uB3C4 \uD48D\uC120", "Prayer Balloons"), emoji: "\u{1F388}", color: "#8B5CF6" },
+  tree: { name: t("\uBBFF\uC74C\uC758 \uB098\uBB34", "Tree of Faith"), emoji: "\u{1F332}", color: "#16A34A" },
+  qt: { name: t("QT \uBB35\uC0C1", "QT Devotion"), emoji: "\u271D\uFE0F", color: "#7C3AED" }
 };
 function GameHistorySection() {
   const [sessions, setSessions] = React.useState(null);
@@ -873,8 +876,8 @@ function GameHistorySection() {
     const date = new Date(s.created_at);
     const dateStr = date.toLocaleDateString("ko-KR", { month: "short", day: "numeric" });
     const timeStr = date.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
-    const dur = s.duration_sec > 0 ? s.duration_sec >= 60 ? `${Math.floor(s.duration_sec / 60)}\uBD84` : `${s.duration_sec}\uCD08` : null;
-    return /* @__PURE__ */ React.createElement("div", { key: i, style: { display: "flex", alignItems: "center", gap: 12, background: "white", borderRadius: 12, padding: "10px 14px", borderLeft: `3px solid ${meta.color}` } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 20, flexShrink: 0 } }, meta.emoji), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.dark } }, meta.name), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 2 } }, dateStr, " ", timeStr, dur ? ` \xB7 ${dur}` : "")), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "right", flexShrink: 0 } }, s.score > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: meta.color } }, s.score, "\uC810"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, "+", s.exp_gained || 0, " EXP")));
+    const dur = s.duration_sec > 0 ? s.duration_sec >= 60 ? t(`${Math.floor(s.duration_sec / 60)}\uBD84`, `${Math.floor(s.duration_sec / 60)}m`) : t(`${s.duration_sec}\uCD08`, `${s.duration_sec}s`) : null;
+    return /* @__PURE__ */ React.createElement("div", { key: i, style: { display: "flex", alignItems: "center", gap: 12, background: "white", borderRadius: 12, padding: "10px 14px", borderLeft: `3px solid ${meta.color}` } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 20, flexShrink: 0 } }, meta.emoji), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.dark } }, meta.name), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 2 } }, dateStr, " ", timeStr, dur ? ` \xB7 ${dur}` : "")), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "right", flexShrink: 0 } }, s.score > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: meta.color } }, s.score, t("\uC810", "pts")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, "+", s.exp_gained || 0, " EXP")));
   }))));
 }
 const BURNOUT_LEVELS = [
@@ -924,7 +927,7 @@ function BurnoutTrendSection({ userTestScores }) {
     color: level.color,
     borderRadius: 100,
     padding: "2px 8px"
-  } }, t("\uD604\uC7AC", "Current"), " ", burnoutScore, "\uC810 \xB7 ", level.label)), /* @__PURE__ */ React.createElement("button", { onClick: handleToggle, style: {
+  } }, t("\uD604\uC7AC", "Current"), " ", burnoutScore, t("\uC810", "pts"), " \xB7 ", level.label)), /* @__PURE__ */ React.createElement("button", { onClick: handleToggle, style: {
     background: "none",
     border: "none",
     cursor: "pointer",
@@ -964,7 +967,7 @@ function BurnoutTrendSection({ userTestScores }) {
       fontWeight: 600,
       textAlign: "center",
       color: diff <= 0 ? "#9333EA" : "#EF4444"
-    } }, diff <= 0 ? `\u2705 \uC9C0\uB09C \uD68C \uB300\uBE44 ${Math.abs(diff)}\uC810 \uAC1C\uC120\uB410\uC5B4\uC694!` : `\u26A0\uFE0F \uC9C0\uB09C \uD68C \uB300\uBE44 ${diff}\uC810 \uB192\uC544\uC84C\uC5B4\uC694. \uC26C\uC5B4\uAC00\uC138\uC694.`);
+    } }, diff <= 0 ? t(`\u2705 \uC9C0\uB09C \uD68C \uB300\uBE44 ${Math.abs(diff)}\uC810 \uAC1C\uC120\uB410\uC5B4\uC694!`, `\u2705 Improved by ${Math.abs(diff)} pts vs last time!`) : t(`\u26A0\uFE0F \uC9C0\uB09C \uD68C \uB300\uBE44 ${diff}\uC810 \uB192\uC544\uC84C\uC5B4\uC694. \uC26C\uC5B4\uAC00\uC138\uC694.`, `\u26A0\uFE0F Up ${diff} pts vs last time. Take a rest.`));
   })()), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap" } }, BURNOUT_LEVELS.map((l) => /* @__PURE__ */ React.createElement("div", { key: l.label, style: {
     fontSize: 10,
     padding: "3px 8px",
@@ -972,7 +975,7 @@ function BurnoutTrendSection({ userTestScores }) {
     background: l.bg,
     color: l.color,
     fontWeight: 600
-  } }, l.label, " ~", l.max, "\uC810")))));
+  } }, l.label, " ~", l.max, t("\uC810", "pts"))))));
 }
 function AIDiarySection() {
   const [diary, setDiary] = useState(null);
@@ -995,15 +998,18 @@ function AIDiarySection() {
   }
   function share() {
     if (!diary) return;
-    const text = `\u{1F4D4} \uC624\uB298\uC758 \uB9C8\uC74C \uC77C\uAE30
+    const text = t(`\u{1F4D4} \uC624\uB298\uC758 \uB9C8\uC74C \uC77C\uAE30
 ${diary}
 
-\uCE58\uC720 \uAC8C\uC784\uC5D0\uC11C \uAE30\uB85D\uD588\uC5B4\uC694 \u{1F33F} https://game.maumful.com`;
+\uCE58\uC720 \uAC8C\uC784\uC5D0\uC11C \uAE30\uB85D\uD588\uC5B4\uC694 \u{1F33F} https://jesusmaum.com`, `\u{1F4D4} Today's Mind Diary
+${diary}
+
+Recorded on The Light of Life \u{1F33F} https://jesusmaum.com`);
     if (navigator.share) {
       navigator.share({ title: t("\uB9C8\uC74C \uC77C\uAE30", "Mind Diary"), text }).catch(() => {
       });
     } else {
-      navigator.clipboard?.writeText(text).then(() => alert("\uBCF5\uC0AC\uB410\uC5B4\uC694!"));
+      navigator.clipboard?.writeText(text).then(() => alert(t("\uBCF5\uC0AC\uB410\uC5B4\uC694!", "Copied!")));
     }
   }
   if (!checked && !diary) {
@@ -1019,7 +1025,7 @@ ${diary}
   }
   if (noData) return null;
   if (!diary) return null;
-  const todayStr = (/* @__PURE__ */ new Date()).toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "short" });
+  const todayStr = (/* @__PURE__ */ new Date()).toLocaleDateString(GAME_LANG === "en" ? "en-US" : "ko-KR", { month: "long", day: "numeric", weekday: "short" });
   return /* @__PURE__ */ React.createElement("div", { style: { background: "linear-gradient(135deg,#f0fdf4,#dcfce7)", borderRadius: 16, padding: "16px 18px", marginBottom: 12, border: "1px solid #bbf7d0" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 18 } }, "\u{1F4D4}"), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, fontWeight: 700, color: "#15803d" } }, t("\uC624\uB298\uC758 \uB9C8\uC74C \uC77C\uAE30", "Today's Mind Diary")), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: "#86efac", marginLeft: 8 } }, todayStr))), /* @__PURE__ */ React.createElement(
     "button",
     {
@@ -1039,7 +1045,7 @@ const MOOD_EMOJI_MAP = {
   hopeful: "\u{1F31F}",
   bored: "\u{1F611}"
 };
-const DAY_LABELS = [t("\uC77C", "d"), "\uC6D4", "\uD654", "\uC218", "\uBAA9", "\uAE08", "\uD1A0"];
+const DAY_LABELS = [t("\uC77C", "Su"), t("\uC6D4", "Mo"), t("\uD654", "Tu"), t("\uC218", "We"), t("\uBAA9", "Th"), t("\uAE08", "Fr"), t("\uD1A0", "Sa")];
 function WeekMoodSummaryCard() {
   const [entries, setEntries] = useState(null);
   const [loaded, setLoaded] = useState(false);
@@ -1081,7 +1087,7 @@ function WeekMoodSummaryCard() {
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 12
-  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.dark, display: "flex", alignItems: "center", gap: 6 } }, dominantEmoji, " \uC774\uBC88 \uC8FC \uAC10\uC815 \uD750\uB984"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, entries.length, "\uC77C \uAE30\uB85D")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, justifyContent: "space-between" } }, weekDays.map(({ dayIdx, date, entry }, i) => {
+  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.dark, display: "flex", alignItems: "center", gap: 6 } }, dominantEmoji, " ", t("\uC774\uBC88 \uC8FC \uAC10\uC815 \uD750\uB984", "This Week's Mood Flow")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, t(`${entries.length}\uC77C \uAE30\uB85D`, `${entries.length} days`))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, justifyContent: "space-between" } }, weekDays.map(({ dayIdx, date, entry }, i) => {
     const isToday = date.toDateString() === today.toDateString();
     const emoji = entry ? MOOD_EMOJI_MAP[entry.emotion] || "\u{1F3A8}" : null;
     const intensity = entry ? entry.intensity || 3 : 0;
@@ -1101,7 +1107,7 @@ function WeekMoodSummaryCard() {
       color: isToday ? C.sage : C.muted,
       fontWeight: isToday ? 700 : 400
     } }, DAY_LABELS[dayIdx]));
-  })), dominant && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginTop: 10, textAlign: "center" } }, "\uC774\uBC88 \uC8FC \uC8FC\uC694 \uAC10\uC815:", " ", /* @__PURE__ */ React.createElement("span", { style: { color: C.dark, fontWeight: 600 } }, dominantEmoji, " ", dominant[0] === "happy" ? t("\uD589\uBCF5", "Happy") : dominant[0] === "calm" ? t("\uD3C9\uC628", "Calm") : dominant[0] === "tired" ? t("\uD53C\uACE4", "Tired") : dominant[0] === "anxious" ? t("\uBD88\uC548", "Anxious") : dominant[0] === "sad" ? t("\uC2AC\uD514", "Sad") : dominant[0]), " ", "(", dominant[1], "\uC77C)"));
+  })), dominant && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginTop: 10, textAlign: "center" } }, t("\uC774\uBC88 \uC8FC \uC8FC\uC694 \uAC10\uC815:", "Main emotion this week:"), " ", /* @__PURE__ */ React.createElement("span", { style: { color: C.dark, fontWeight: 600 } }, dominantEmoji, " ", dominant[0] === "happy" ? t("\uD589\uBCF5", "Happy") : dominant[0] === "calm" ? t("\uD3C9\uC628", "Calm") : dominant[0] === "tired" ? t("\uD53C\uACE4", "Tired") : dominant[0] === "anxious" ? t("\uBD88\uC548", "Anxious") : dominant[0] === "sad" ? t("\uC2AC\uD514", "Sad") : dominant[0]), " ", "(", t(`${dominant[1]}\uC77C`, `${dominant[1]} days`), ")"));
 }
 const EMOTION_DISPLAY = {
   happy: { emoji: "\u{1F60A}", label: t("\uD589\uBCF5", "Happy"), color: "#F59E0B" },
@@ -1137,19 +1143,24 @@ function EmotionWeeklyReport() {
     color: C.sage,
     borderRadius: 100,
     padding: "2px 8px"
-  } }, entries.length, "\uC77C \uAE30\uB85D")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6 } }, expanded && reportData?.report && /* @__PURE__ */ React.createElement("button", { onClick: () => {
+  } }, t(`${entries.length}\uC77C \uAE30\uB85D`, `${entries.length} days`))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6 } }, expanded && reportData?.report && /* @__PURE__ */ React.createElement("button", { onClick: () => {
     const topEmotion = entries.length > 0 ? EMOTION_DISPLAY[entries[entries.length - 1]?.emotion] || { emoji: "\u{1F636}", label: entries[entries.length - 1]?.emotion } : null;
-    const text = `\u{1F33F} \uC774\uBC88 \uC8FC \uB9C8\uC74C\uC758 \uC815\uC6D0
+    const text = t(`\u{1F33F} \uC774\uBC88 \uC8FC \uB9C8\uC74C\uC758 \uC815\uC6D0
 ${topEmotion ? topEmotion.emoji + " " + topEmotion.label + " " : ""}${entries.length}\uC77C \uAC10\uC815 \uAE30\uB85D
 
 ${reportData.report.slice(0, 80)}...
 
-#The Light of Life #\uCE58\uC720 \uAC8C\uC784 #\uAC10\uC815\uAE30\uB85D`;
+#The Light of Life #\uCE58\uC720\uAC8C\uC784 #\uAC10\uC815\uAE30\uB85D`, `\u{1F33F} This Week's Mind Garden
+${topEmotion ? topEmotion.emoji + " " + topEmotion.label + " " : ""}${entries.length} days of emotion records
+
+${reportData.report.slice(0, 80)}...
+
+#TheLightOfLife #HealingGames #MoodLog`);
     if (navigator.share) {
       navigator.share({ title: t("\uC774\uBC88 \uC8FC \uAC10\uC815 \uD750\uB984", "This Week's Mood Flow"), text }).catch(() => {
       });
     } else {
-      navigator.clipboard?.writeText(text).then(() => alert("\uBCF5\uC0AC\uB410\uC5B4\uC694!")).catch(() => {
+      navigator.clipboard?.writeText(text).then(() => alert(t("\uBCF5\uC0AC\uB410\uC5B4\uC694!", "Copied!"))).catch(() => {
       });
     }
   }, style: {
@@ -1193,7 +1204,7 @@ ${reportData.report.slice(0, 80)}...
       alignItems: "center",
       justifyContent: "center",
       fontSize: 18
-    } }, em.emoji), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 9, color: C.muted, textAlign: "center" } }, (/* @__PURE__ */ new Date(e.date + "T00:00:00")).toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" })), /* @__PURE__ */ React.createElement("div", { style: {
+    } }, em.emoji), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 9, color: C.muted, textAlign: "center" } }, (/* @__PURE__ */ new Date(e.date + "T00:00:00")).toLocaleDateString(GAME_LANG === "en" ? "en-US" : "ko-KR", { month: "numeric", day: "numeric" })), /* @__PURE__ */ React.createElement("div", { style: {
       width: 4 + e.intensity * 1.5,
       height: 4 + e.intensity * 1.5,
       borderRadius: 100,
@@ -1205,12 +1216,12 @@ ${reportData.report.slice(0, 80)}...
     borderRadius: 14,
     padding: "14px 16px",
     border: `1px solid ${C.sage}22`
-  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, fontWeight: 700, color: C.sage, marginBottom: 6, letterSpacing: "0.5px" } }, "\u{1F916} AI \uAC10\uC815 \uD328\uD134 \uBD84\uC11D"), /* @__PURE__ */ React.createElement("div", { style: {
+  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, fontWeight: 700, color: C.sage, marginBottom: 6, letterSpacing: "0.5px" } }, "\u{1F916} ", t("AI \uAC10\uC815 \uD328\uD134 \uBD84\uC11D", "AI Emotion Pattern Analysis")), /* @__PURE__ */ React.createElement("div", { style: {
     fontSize: 13,
     color: C.dark,
     lineHeight: 1.75,
     fontFamily: "'Noto Sans KR',sans-serif"
-  } }, reportData.report), reportData.cached && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: C.muted, marginTop: 6 } }, "\uC774\uBC88 \uC8FC \uBD84\uC11D \xB7 \uB9E4\uC8FC \uC6D4\uC694\uC77C \uAC31\uC2E0"))));
+  } }, reportData.report), reportData.cached && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: C.muted, marginTop: 6 } }, t("\uC774\uBC88 \uC8FC \uBD84\uC11D \xB7 \uB9E4\uC8FC \uC6D4\uC694\uC77C \uAC31\uC2E0", "This week's analysis \xB7 updated every Monday")))));
 }
 const GAME_META = {
   garden: { name: t("\uB9C8\uC74C\uC758 \uC815\uC6D0", "Mind Garden"), emoji: "\u{1F33F}" },
@@ -1233,11 +1244,11 @@ function TodayRecommendCard({ hubData, onPlay }) {
   let rec = null;
   const gad7 = userTestScores.GAD7;
   if (phq9 !== void 0 && phq9 >= 15) {
-    rec = { gameId: "garden", reason: `PHQ-9 ${phq9}\uC810 \u2014 \uC9C0\uAE08 \uD638\uD761 \uD6C8\uB828\uC774 \uB9C8\uC74C\uC744 \uC548\uC815\uC2DC\uCF1C\uC918\uC694`, color: C.dusty };
+    rec = { gameId: "garden", reason: t(`PHQ-9 ${phq9}\uC810 \u2014 \uC9C0\uAE08 \uD638\uD761 \uD6C8\uB828\uC774 \uB9C8\uC74C\uC744 \uC548\uC815\uC2DC\uCF1C\uC918\uC694`, `PHQ-9 ${phq9} \u2014 breath prayer can steady your heart now`), color: C.dusty };
   } else if (gad7 !== void 0 && gad7 >= 10) {
-    rec = { gameId: "worry", reason: `GAD-7 ${gad7}\uC810 \u2014 \uBD88\uC548\uD55C \uC0DD\uAC01\uC744 \uD48D\uC120\uC5D0 \uB2F4\uC544 \uB0B4\uB824\uB193\uC544\uC694 \u{1FAE7}`, color: "#7B9ED9" };
+    rec = { gameId: "worry", reason: t(`GAD-7 ${gad7}\uC810 \u2014 \uBD88\uC548\uD55C \uC0DD\uAC01\uC744 \uD48D\uC120\uC5D0 \uB2F4\uC544 \uB0B4\uB824\uB193\uC544\uC694 \u{1FAE7}`, `GAD-7 ${gad7} \u2014 place anxious thoughts in a balloon and lift them up \u{1FAE7}`), color: "#7B9ED9" };
   } else if (burnout !== void 0 && burnout >= 60 && level >= 2) {
-    rec = { gameId: "burnout", reason: `\uBC88\uC544\uC6C3 \uC9C0\uC218 ${burnout}\uC810 \u2014 \uC624\uB298 \uD68C\uBCF5 \uBBF8\uC158\uC744 \uC2DC\uC791\uD574\uBCF4\uC138\uC694`, color: C.amber };
+    rec = { gameId: "burnout", reason: t(`\uBC88\uC544\uC6C3 \uC9C0\uC218 ${burnout}\uC810 \u2014 \uC624\uB298 \uD68C\uBCF5 \uBBF8\uC158\uC744 \uC2DC\uC791\uD574\uBCF4\uC138\uC694`, `Burnout ${burnout} \u2014 start a recovery mission today`), color: C.amber };
   } else if (!recentIds.includes("mood")) {
     rec = { gameId: "mood", reason: t("\uC624\uB298 \uAC10\uC815 \uAE30\uB85D\uC744 \uC544\uC9C1 \uC548 \uD588\uC5B4\uC694 \u270D\uFE0F", "You haven't recorded your emotions today \u270D\uFE0F"), color: C.sage };
   } else if (phq9 !== void 0 && phq9 >= 5) {
@@ -1259,7 +1270,7 @@ function TodayRecommendCard({ hubData, onPlay }) {
     padding: "16px 20px",
     marginBottom: 24,
     border: `1px solid ${rec.color}28`
-  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, fontWeight: 700, color: rec.color, marginBottom: 10, letterSpacing: "0.5px" } }, "\u2728 \uC624\uB298\uC758 \uCD94\uCC9C"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 14 } }, /* @__PURE__ */ React.createElement("div", { style: {
+  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, fontWeight: 700, color: rec.color, marginBottom: 10, letterSpacing: "0.5px" } }, "\u2728 ", t("\uC624\uB298\uC758 \uCD94\uCC9C", "Today's Pick")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 14 } }, /* @__PURE__ */ React.createElement("div", { style: {
     width: 52,
     height: 52,
     borderRadius: 16,
@@ -1358,7 +1369,7 @@ function DailyQuestCard({ todaySessions = [], level = 1, userId = 0, streakRecov
     fontSize: 11,
     fontWeight: 700,
     cursor: "pointer"
-  } }, bonusClaiming ? "..." : "\u{1F381} +50 EXP"), bonusDone && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: C.sage, fontWeight: 700 } }, "\u2713 \uBCF4\uB108\uC2A4 \uD68D\uB4DD!", streakRecover > 0 && ` \u{1F6E1}\uFE0F${streakRecover}`)), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, quests.map((q) => {
+  } }, bonusClaiming ? "..." : "\u{1F381} +50 EXP"), bonusDone && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: C.sage, fontWeight: 700 } }, t("\u2713 \uBCF4\uB108\uC2A4 \uD68D\uB4DD!", "\u2713 Bonus earned!"), streakRecover > 0 && ` \u{1F6E1}\uFE0F${streakRecover}`)), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, quests.map((q) => {
     const done = isQuestDone(q);
     return /* @__PURE__ */ React.createElement("div", { key: q.id, style: {
       display: "flex",
@@ -1392,7 +1403,7 @@ function OnboardingOverlay({ onDone }) {
     {
       emoji: "\u{1F33F}",
       title: t("\uB9C8\uC74C\uC758 \uC815\uC6D0\uC5D0 \uC624\uC2E0 \uAC83\uC744 \uD658\uC601\uD574\uC694", "Welcome to Mind Garden"),
-      body: "The Light of Life\uC758 \uC2EC\uB9AC\uAC80\uC0AC \uACB0\uACFC\uC640 \uC5F0\uB3D9\uD558\uC5EC \uB098\uB9CC\uC758 \uCE58\uC720 \uACF5\uAC04\uC744 \uAC00\uAFB8\uB294 \uAC8C\uC784 \uD50C\uB7AB\uD3FC\uC774\uC5D0\uC694. \uAC8C\uC784\uC744 \uC990\uAE30\uBA70 \uB9C8\uC74C\uC744 \uB3CC\uBCF4\uC138\uC694."
+      body: t("The Light of Life\uC758 \uC2EC\uB9AC\uAC80\uC0AC \uACB0\uACFC\uC640 \uC5F0\uB3D9\uD558\uC5EC \uB098\uB9CC\uC758 \uCE58\uC720 \uACF5\uAC04\uC744 \uAC00\uAFB8\uB294 \uAC8C\uC784 \uD50C\uB7AB\uD3FC\uC774\uC5D0\uC694. \uAC8C\uC784\uC744 \uC990\uAE30\uBA70 \uB9C8\uC74C\uC744 \uB3CC\uBCF4\uC138\uC694.", "A game platform that links with your psychological test results on The Light of Life to cultivate your own healing space. Enjoy the games and care for your heart.")
     },
     {
       emoji: "\u{1F331}",
@@ -1575,7 +1586,7 @@ function GameHubApp() {
         alert(res.error || t("\uD06C\uB808\uB527 \uCC28\uAC10 \uC2E4\uD328. \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.", "Credit deduction failed. Please try again."));
       }
     } catch {
-      alert("\uB124\uD2B8\uC6CC\uD06C \uC624\uB958. \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.");
+      alert(t("\uB124\uD2B8\uC6CC\uD06C \uC624\uB958. \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.", "Network error. Please try again."));
     }
     setSpendLoading(false);
   }, [creditModal]);
@@ -1589,7 +1600,7 @@ function GameHubApp() {
   if (activeGame === "burnout") return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden" } }, /* @__PURE__ */ React.createElement(BurnoutGame, { userTestResults: data?.userTestScores || {}, onSessionEnd: handleGameExit }));
   if (activeGame === "focus") return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden" } }, /* @__PURE__ */ React.createElement(FocusGame, { onExit: handleGameExit }));
   if (activeGame === "worry") return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden" } }, /* @__PURE__ */ React.createElement(WorryGame, { onExit: handleGameExit }));
-  if (activeGame === "qt") return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden" } }, typeof QTGame !== "undefined" ? /* @__PURE__ */ React.createElement(QTGame, { onExit: handleGameExit }) : /* @__PURE__ */ React.createElement("div", { style: { padding: 32, textAlign: "center", color: "#6B21A8" } }, "QT \uAC8C\uC784\uC744 \uBD88\uB7EC\uC624\uB294 \uC911..."));
+  if (activeGame === "qt") return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden" } }, typeof QTGame !== "undefined" ? /* @__PURE__ */ React.createElement(QTGame, { onExit: handleGameExit }) : /* @__PURE__ */ React.createElement("div", { style: { padding: 32, textAlign: "center", color: "#6B21A8" } }, t("QT \uAC8C\uC784\uC744 \uBD88\uB7EC\uC624\uB294 \uC911...", "Loading QT game...")));
   if (error) return /* @__PURE__ */ React.createElement("div", { style: {
     minHeight: "100vh",
     display: "flex",
@@ -1608,7 +1619,7 @@ function GameHubApp() {
     fontWeight: 600,
     textDecoration: "none",
     fontFamily: "'Noto Sans KR', sans-serif"
-  } }, "The Light of Life\uC73C\uB85C \uB3CC\uC544\uAC00\uAE30"));
+  } }, t("The Light of Life\uC73C\uB85C \uB3CC\uC544\uAC00\uAE30", "Back to The Light of Life")));
   const { user, gameStatus, recentSessions, completedTests, achievements } = data || {};
   const levelInfo = GameEngine.getLevelInfo(gameStatus?.total_exp || 0);
   const gardenTheme = GameEngine.getGardenTheme(gameStatus?.visual_status || "clearing");
@@ -1673,7 +1684,7 @@ function GameHubApp() {
     display: "flex",
     alignItems: "center",
     gap: 5
-  } }, "\u{1F525} ", gameStatus.streak_days, "\uC77C \uC5F0\uC18D")), /* @__PURE__ */ React.createElement("div", { style: { padding: "16px 20px 20px", display: "flex", flexDirection: "column", gap: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 18, fontWeight: 700, color: C.dark, marginBottom: 4 } }, t("\uC548\uB155\uD558\uC138\uC694,", "Hello,"), " ", user?.nickname || user?.email?.split("@")[0], t("\uB2D8 \u{1F44B}", " \u{1F44B}"), isMaster && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, background: "#6B21A8", color: "white", borderRadius: 6, padding: "2px 8px", fontWeight: 700, marginLeft: 6 } }, "MASTER")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: C.muted } }, gardenTheme.desc)), /* @__PURE__ */ React.createElement("button", { onClick: toggleGameLang, title: "Language", style: { flexShrink: 0, fontSize: 12, fontWeight: 700, color: C.muted, cursor: "pointer", padding: "5px 10px", borderRadius: 8, border: "1px solid rgba(0,0,0,0.1)", background: "rgba(255,255,255,0.7)" } }, GAME_LANG === "en" ? "\uD55C" : "EN")), /* @__PURE__ */ React.createElement(DailyTip, { hubData: data }), /* @__PURE__ */ React.createElement(LevelBar, { levelInfo }), /* @__PURE__ */ React.createElement(
+  } }, "\u{1F525} ", t(`${gameStatus.streak_days}\uC77C \uC5F0\uC18D`, `${gameStatus.streak_days}-day streak`))), /* @__PURE__ */ React.createElement("div", { style: { padding: "16px 20px 20px", display: "flex", flexDirection: "column", gap: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 18, fontWeight: 700, color: C.dark, marginBottom: 4 } }, t("\uC548\uB155\uD558\uC138\uC694,", "Hello,"), " ", user?.nickname || user?.email?.split("@")[0], t("\uB2D8 \u{1F44B}", " \u{1F44B}"), isMaster && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, background: "#6B21A8", color: "white", borderRadius: 6, padding: "2px 8px", fontWeight: 700, marginLeft: 6 } }, "MASTER")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: C.muted } }, gardenTheme.desc)), /* @__PURE__ */ React.createElement("button", { onClick: toggleGameLang, title: "Language", style: { flexShrink: 0, fontSize: 12, fontWeight: 700, color: C.muted, cursor: "pointer", padding: "5px 10px", borderRadius: 8, border: "1px solid rgba(0,0,0,0.1)", background: "rgba(255,255,255,0.7)" } }, GAME_LANG === "en" ? "\uD55C" : "EN")), /* @__PURE__ */ React.createElement(DailyTip, { hubData: data }), /* @__PURE__ */ React.createElement(LevelBar, { levelInfo }), /* @__PURE__ */ React.createElement(
     StreakCalendar,
     {
       recentPlayDates: data?.recentPlayDates || [],
@@ -1758,10 +1769,10 @@ function GameHubApp() {
     borderRadius: 14,
     padding: "14px 16px",
     marginBottom: 18
-  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 13 } }, /* @__PURE__ */ React.createElement("span", { style: { color: "#8A8A78" } }, t("\uD604\uC7AC \uD06C\uB808\uB527", "Current Credits")), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, color: "#2C2C20" } }, creditModal.balance, " \uD06C\uB808\uB527")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 13 } }, /* @__PURE__ */ React.createElement("span", { style: { color: "#8A8A78" } }, t("\uCC28\uAC10 \uC608\uC815", "To be deducted")), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, color: "#D4954A" } }, "- ", creditModal.cost, " \uD06C\uB808\uB527")), /* @__PURE__ */ React.createElement("div", { style: { height: 1, background: "rgba(0,0,0,0.08)", margin: "10px 0" } }), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 14 } }, /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, color: "#2C2C20" } }, t("\uCC28\uAC10 \uD6C4 \uC794\uC561", "Balance after")), /* @__PURE__ */ React.createElement("span", { style: {
+  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 13 } }, /* @__PURE__ */ React.createElement("span", { style: { color: "#8A8A78" } }, t("\uD604\uC7AC \uD06C\uB808\uB527", "Current Credits")), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, color: "#2C2C20" } }, t(`${creditModal.balance} \uD06C\uB808\uB527`, `${creditModal.balance} cr`))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 13 } }, /* @__PURE__ */ React.createElement("span", { style: { color: "#8A8A78" } }, t("\uCC28\uAC10 \uC608\uC815", "To be deducted")), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, color: "#D4954A" } }, "- ", t(`${creditModal.cost} \uD06C\uB808\uB527`, `${creditModal.cost} cr`))), /* @__PURE__ */ React.createElement("div", { style: { height: 1, background: "rgba(0,0,0,0.08)", margin: "10px 0" } }), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 14 } }, /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, color: "#2C2C20" } }, t("\uCC28\uAC10 \uD6C4 \uC794\uC561", "Balance after")), /* @__PURE__ */ React.createElement("span", { style: {
     fontWeight: 700,
     color: creditModal.balance >= creditModal.cost ? "#6B21A8" : "#C05050"
-  } }, Math.max(0, creditModal.balance - creditModal.cost), " \uD06C\uB808\uB527"))), (creditModal.insufficient || creditModal.balance < creditModal.cost) && /* @__PURE__ */ React.createElement("div", { style: {
+  } }, t(`${Math.max(0, creditModal.balance - creditModal.cost)} \uD06C\uB808\uB527`, `${Math.max(0, creditModal.balance - creditModal.cost)} cr`)))), (creditModal.insufficient || creditModal.balance < creditModal.cost) && /* @__PURE__ */ React.createElement("div", { style: {
     background: "#FEF2F2",
     border: "1px solid rgba(192,80,80,0.2)",
     borderRadius: 10,
@@ -1770,7 +1781,7 @@ function GameHubApp() {
     fontSize: 12,
     color: "#C05050",
     lineHeight: 1.6
-  } }, "\uD06C\uB808\uB527\uC774 \uBD80\uC871\uD574\uC694. The Light of Life\uC5D0\uC11C \uD06C\uB808\uB527\uC744 \uCDA9\uC804\uD55C \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694."), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10 } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setCreditModal(null), style: {
+  } }, t("\uD06C\uB808\uB527\uC774 \uBD80\uC871\uD574\uC694. The Light of Life\uC5D0\uC11C \uD06C\uB808\uB527\uC744 \uCDA9\uC804\uD55C \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.", "Not enough credits. Please recharge on The Light of Life and try again.")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10 } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setCreditModal(null), style: {
     fontFamily: "'Noto Sans KR',sans-serif",
     flex: 1,
     padding: "12px",
@@ -1815,7 +1826,7 @@ function GameHubApp() {
         cursor: spendLoading ? "not-allowed" : "pointer"
       }
     },
-    spendLoading ? t("\uCC98\uB9AC \uC911...", "Processing...") : `${creditModal.cost} \uD06C\uB808\uB527\uC73C\uB85C \uC2DC\uC791`
+    spendLoading ? t("\uCC98\uB9AC \uC911...", "Processing...") : t(`${creditModal.cost} \uD06C\uB808\uB527\uC73C\uB85C \uC2DC\uC791`, `Start for ${creditModal.cost} cr`)
   )))), newAchievements.length > 0 && /* @__PURE__ */ React.createElement(AchievementToast, { achievements: newAchievements, onDismiss: () => setNewAchievements([]) }), sessionFeedback && /* @__PURE__ */ React.createElement("div", { style: {
     position: "fixed",
     bottom: 80,

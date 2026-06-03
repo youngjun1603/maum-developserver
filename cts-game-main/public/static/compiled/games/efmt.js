@@ -1,6 +1,6 @@
 const GE = {
   // 팔레트
-  sage: "#4A7C59",
+  sage: "#6B21A8",
   sageL: "#7BA88A",
   sagePale: "#EAF2EC",
   cream: "#FDFCF7",
@@ -17,7 +17,7 @@ const EMOTIONS = {
     label: t("\uAE30\uC05C \uAF43", "Happy Flower"),
     petalColor: "#FCD34D",
     centerColor: "#F59E0B",
-    stemColor: "#4A7C59",
+    stemColor: "#6B21A8",
     face: "happy",
     // 위로 굽은 미소
     isTarget: true

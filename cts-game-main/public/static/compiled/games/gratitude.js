@@ -6,7 +6,7 @@ const GV = {
   starL: "#FFF5C8",
   rose: "#C97B8A",
   rosePale: "#FCF0F2",
-  sage: "#4A7C59",
+  sage: "#6B21A8",
   sagePale: "#EAF2EC",
   cream: "#FDFCF7",
   muted: "#8A8A78",

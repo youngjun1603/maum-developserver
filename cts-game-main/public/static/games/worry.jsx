@@ -60,7 +60,18 @@ const WB_COLORS = [
   { from: '#A0CCEE', to: '#6AAAD8', border: '#3A88C040', shine: '#3A88C0', text: '#1A4A7A' },
 ];
 
-const EXAMPLE_WORRIES = [
+const EXAMPLE_WORRIES = GAME_LANG === 'en' ? [
+  'I have way too much to do lately',
+  "I'm not sure if this decision is right",
+  'Things feel awkward in my relationship',
+  'I feel anxious about the future',
+  "I'm worried whether I'm doing well",
+  'My body keeps feeling tired',
+  "I'm afraid I'll forget something important",
+  'My heart feels empty',
+  'I feel like I am all alone',
+  "I'm scared and anxious about tomorrow",
+] : [
   '요즘 일이 너무 많아요',
   '이 결정이 맞는 건지 모르겠어요',
   '관계가 어색해진 것 같아요',
@@ -185,7 +196,7 @@ const WorryGame = ({ onExit }) => {
       height: '100%',
     }}>
       <WBHeader
-        title="🫧 기도 풍선"
+        title={t('🫧 기도 풍선', '🫧 Prayer Balloons')}
         right={
           <button onClick={() => onExit(null)} style={{
             fontFamily: "'Noto Sans KR',sans-serif",
@@ -206,11 +217,11 @@ const WorryGame = ({ onExit }) => {
           <div style={{
             fontSize: 22, fontWeight: 700, color: '#2C3E50',
             fontFamily: "'Noto Serif KR',serif", marginBottom: 10,
-          }}>마음의 짐을 주님께 올려드려요</div>
+          }}>{t('마음의 짐을 주님께 올려드려요', 'Lift your burdens to the Lord')}</div>
           <div style={{ fontSize: 14, color: '#5A6A7A', lineHeight: 1.75 }}>
-            지금 마음을 무겁게 하는 걱정들을<br />
-            풍선에 담고 하나씩 터뜨려 보세요.<br />
-            <span style={{ color: '#8A9AB0' }}>주님께 맡기는 것이 마음을 가볍게 해요. (벧전 5:7)</span>
+            {t(<>지금 마음을 무겁게 하는 걱정들을<br />풍선에 담고 하나씩 터뜨려 보세요.<br /></>,
+               <>Place the worries weighing on your heart<br />into balloons and pop them one by one.<br /></>)}
+            <span style={{ color: '#8A9AB0' }}>{t('주님께 맡기는 것이 마음을 가볍게 해요. (벧전 5:7)', 'Entrusting them to the Lord lightens your heart. (1 Pet 5:7)')}</span>
           </div>
         </div>
 
@@ -220,8 +231,8 @@ const WorryGame = ({ onExit }) => {
           boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
         }}>
           {[
-            { emoji: '✍️', text: '지금 마음의 짐 1~3가지를 적어요' },
-            { emoji: '🫧', text: '걱정들을 풍선에 담아 주님께 올려드립니다' },
+            { emoji: '✍️', text: t('지금 마음의 짐 1~3가지를 적어요', 'Write down 1–3 burdens on your heart') },
+            { emoji: '🫧', text: t('걱정들을 풍선에 담아 주님께 올려드립니다', 'Place worries in balloons and lift them to the Lord') },
             { emoji: '💥', text: t('클릭해서 하나씩 터뜨려요', 'Click to pop them one by one') },
           ].map((s, i) => (
             <div key={i} style={{
@@ -274,7 +285,7 @@ const WorryGame = ({ onExit }) => {
             {t('지금 마음을 무겁게 하는 것들은?', 'What\'s weighing on your mind right now?')}
           </div>
           <div style={{ fontSize: 12, color: '#8A9AB0', marginTop: 5 }}>
-            아주 작은 마음의 짐도 괜찮아요 · 최소 1개 이상
+            {t('아주 작은 마음의 짐도 괜찮아요 · 최소 1개 이상', 'Even the smallest burden is fine · at least 1')}
           </div>
         </div>
 
@@ -301,7 +312,7 @@ const WorryGame = ({ onExit }) => {
                   next[i] = e.target.value;
                   setInputs(next);
                 }}
-                placeholder={i === 0 ? '지금 마음을 무겁게 하는 것...' : '또 다른 마음의 짐이 있다면...'}
+                placeholder={i === 0 ? t('지금 마음을 무겁게 하는 것...', "What's weighing on your heart...") : t('또 다른 마음의 짐이 있다면...', 'If there is another burden...')}
                 maxLength={35}
                 style={{
                   fontFamily: "'Noto Sans KR',sans-serif",
@@ -363,7 +374,7 @@ const WorryGame = ({ onExit }) => {
         height: '100%', overflow: 'hidden',
       }}>
         <WBHeader
-          title={saving ? t('저장 중...', 'Saving...') : `${poppedCount === totalCount ? '🎉' : '🫧'} ${poppedCount}/${totalCount} 터뜨렸어요`}
+          title={saving ? t('저장 중...', 'Saving...') : t(`${poppedCount === totalCount ? '🎉' : '🫧'} ${poppedCount}/${totalCount} 터뜨렸어요`, `${poppedCount === totalCount ? '🎉' : '🫧'} ${poppedCount}/${totalCount} popped`)}
           left={
             !saving && (
               <button onClick={() => setScreen('input')} style={{
@@ -407,7 +418,7 @@ const WorryGame = ({ onExit }) => {
               background: 'rgba(255,255,255,0.5)', backdropFilter: 'blur(4px)',
             }}>
               <div style={{ fontSize: 13, color: '#5A6A7A', animation: 'pulse 1.5s infinite' }}>
-                주님께 맡기는 중... 🌈
+                {t('주님께 맡기는 중... 🌈', 'Entrusting to the Lord... 🌈')}
               </div>
             </div>
           )}
@@ -478,7 +489,7 @@ const WorryGame = ({ onExit }) => {
       height: '100%',
     }}>
       <WBHeader
-        title="🫧 기도 풍선"
+        title={t('🫧 기도 풍선', '🫧 Prayer Balloons')}
         right={
           <button onClick={() => onExit(doneData || null)} style={{
             fontFamily: "'Noto Sans KR',sans-serif",
@@ -500,10 +511,10 @@ const WorryGame = ({ onExit }) => {
           <div style={{
             fontSize: 22, fontWeight: 700, color: '#2C3E50',
             fontFamily: "'Noto Serif KR',serif",
-          }}>주님께 올려드렸어요!!</div>
+          }}>{t('주님께 올려드렸어요!!', 'Lifted up to the Lord!!')}</div>
           <div style={{ fontSize: 14, color: '#5A6A7A', marginTop: 8, lineHeight: 1.75 }}>
-            {bubbles.length}개의 짐을 풍선에 담아<br />
-            모두 주님께 올려드렸어요 🙏
+            {t(<>{bubbles.length}개의 짐을 풍선에 담아<br />모두 주님께 올려드렸어요 🙏</>,
+               <>You placed {bubbles.length} burden(s) into balloons<br />and lifted them all to the Lord 🙏</>)}
           </div>
         </div>
 
@@ -565,8 +576,8 @@ const WorryGame = ({ onExit }) => {
           maxWidth: 260, lineHeight: 1.75,
           animation: 'wbFadeUp 0.5s ease 0.5s both',
         }}>
-          걱정은 생각일 뿐이에요.<br />
-          지금 이 순간 당신은 괜찮아요 💙
+          {t(<>걱정은 생각일 뿐이에요.<br />지금 이 순간 당신은 괜찮아요 💙</>,
+             <>Worries are only thoughts.<br />In this very moment, you are okay 💙</>)}
         </div>
 
         <div style={{

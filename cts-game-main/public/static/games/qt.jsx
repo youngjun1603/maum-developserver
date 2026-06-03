@@ -92,11 +92,12 @@ const QTGame = ({ onExit }) => {
           fontSize:40, marginBottom:24,
         }}>📖</div>
 
-        <h1 style={{fontSize:26,fontWeight:700,color:'#4C1D95',marginBottom:8}}>QT 체크인</h1>
-        <p style={{fontSize:16,color:'#6B21A8',fontWeight:500,marginBottom:4}}>오늘의 말씀 묵상을 기록하세요</p>
+        <h1 style={{fontSize:26,fontWeight:700,color:'#4C1D95',marginBottom:8}}>{t('QT 체크인', 'QT Check-in')}</h1>
+        <p style={{fontSize:16,color:'#6B21A8',fontWeight:500,marginBottom:4}}>{t('오늘의 말씀 묵상을 기록하세요', "Record today's Scripture meditation")}</p>
         <p style={{fontSize:13,color:'#7C3AED',marginBottom:28,lineHeight:1.6}}>
-          "오직 여호와의 율법을 즐거워하여<br/>그의 율법을 주야로 묵상하는도다"<br/>
-          <span style={{fontSize:11,color:'#9333EA'}}>시편 1:2</span>
+          {t(<>"오직 여호와의 율법을 즐거워하여<br/>그의 율법을 주야로 묵상하는도다"<br/></>,
+             <>"But his delight is in the law of the LORD,<br/>and he meditates on it day and night."<br/></>)}
+          <span style={{fontSize:11,color:'#9333EA'}}>{t('시편 1:2', 'Psalm 1:2')}</span>
         </p>
 
         {todayDone && (
@@ -104,7 +105,7 @@ const QTGame = ({ onExit }) => {
             background:'linear-gradient(135deg,#D4AF37,#F59E0B)', color:'white',
             borderRadius:12, padding:'10px 20px', marginBottom:20, fontSize:14, fontWeight:600,
           }}>
-            ✅ 오늘 QT를 완료했어요!
+            {t('✅ 오늘 QT를 완료했어요!', '✅ You completed QT today!')}
           </div>
         )}
 
@@ -117,7 +118,7 @@ const QTGame = ({ onExit }) => {
               fontSize:16, fontWeight:700, cursor:'pointer',
             }}
           >
-            {todayDone ? '다시 기록하기' : '📖 오늘 QT 시작'}
+            {todayDone ? t('다시 기록하기', 'Record again') : t('📖 오늘 QT 시작', '📖 Start Today\'s QT')}
           </button>
           <button
             onClick={() => setScreen('calendar')}
@@ -127,18 +128,18 @@ const QTGame = ({ onExit }) => {
               fontSize:15, fontWeight:600, cursor:'pointer',
             }}
           >
-            📅 QT 달력 보기
+            {t('📅 QT 달력 보기', '📅 View QT Calendar')}
           </button>
         </div>
 
         <div style={{display:'flex',alignItems:'center',gap:8,marginTop:20,color:'#9333EA',fontSize:13}}>
-          <span>연속 {history.length > 0 ? calcStreak(history) : 0}일 QT 중</span>
+          <span>{t(`연속 ${history.length > 0 ? calcStreak(history) : 0}일 QT 중`, `${history.length > 0 ? calcStreak(history) : 0}-day QT streak`)}</span>
           <span>🔥</span>
         </div>
 
         <button onClick={() => onExit(null)}
           style={{marginTop:24,background:'none',border:'none',color:'#9CA3AF',fontSize:13,cursor:'pointer'}}>
-          ← 게임 목록으로
+          {t('← 게임 목록으로', '← Back to games')}
         </button>
       </div>
     );
@@ -161,7 +162,7 @@ const QTGame = ({ onExit }) => {
             ←
           </button>
           <div>
-            <div style={{color:'white',fontWeight:700,fontSize:17}}>📖 오늘의 QT</div>
+            <div style={{color:'white',fontWeight:700,fontSize:17}}>{t('📖 오늘의 QT', "📖 Today's QT")}</div>
             <div style={{color:'rgba(255,255,255,0.8)',fontSize:12}}>{todayKey}</div>
           </div>
         </div>
@@ -170,13 +171,13 @@ const QTGame = ({ onExit }) => {
 
           {/* 말씀 정보 */}
           <div style={{background:'white',borderRadius:16,padding:20,marginBottom:16,boxShadow:'0 2px 12px rgba(107,33,168,0.08)'}}>
-            <div style={{fontSize:13,fontWeight:700,color:'#6B21A8',marginBottom:12}}>📚 오늘 읽은 성경</div>
+            <div style={{fontSize:13,fontWeight:700,color:'#6B21A8',marginBottom:12}}>{t('📚 오늘 읽은 성경', '📚 Scripture I read today')}</div>
             <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr',gap:10}}>
               <div>
-                <label style={{fontSize:11,color:'#7C3AED',fontWeight:600}}>책 이름 *</label>
+                <label style={{fontSize:11,color:'#7C3AED',fontWeight:600}}>{t('책 이름 *', 'Book *')}</label>
                 <input
                   value={book} onChange={e => setBook(e.target.value)}
-                  placeholder="예: 시편"
+                  placeholder={t('예: 시편', 'e.g., Psalm')}
                   style={{
                     width:'100%', border:'1.5px solid #DDD6FE', borderRadius:10,
                     padding:'9px 12px', fontSize:14, outline:'none', marginTop:4,
@@ -185,7 +186,7 @@ const QTGame = ({ onExit }) => {
                 />
               </div>
               <div>
-                <label style={{fontSize:11,color:'#7C3AED',fontWeight:600}}>장</label>
+                <label style={{fontSize:11,color:'#7C3AED',fontWeight:600}}>{t('장', 'Ch.')}</label>
                 <input
                   value={chapter} onChange={e => setChapter(e.target.value)}
                   placeholder="1"
@@ -197,7 +198,7 @@ const QTGame = ({ onExit }) => {
                 />
               </div>
               <div>
-                <label style={{fontSize:11,color:'#7C3AED',fontWeight:600}}>절</label>
+                <label style={{fontSize:11,color:'#7C3AED',fontWeight:600}}>{t('절', 'Verse')}</label>
                 <input
                   value={verse} onChange={e => setVerse(e.target.value)}
                   placeholder="1-10"
@@ -214,11 +215,11 @@ const QTGame = ({ onExit }) => {
           {/* 묵상 내용 */}
           <div style={{background:'white',borderRadius:16,padding:20,marginBottom:16,boxShadow:'0 2px 12px rgba(107,33,168,0.08)'}}>
             <div style={{fontSize:13,fontWeight:700,color:'#6B21A8',marginBottom:8}}>
-              🌱 오늘 말씀에서 받은 은혜 *
+              {t('🌱 오늘 말씀에서 받은 은혜 *', '🌱 The grace I received from the Word today *')}
             </div>
             <textarea
               value={meditation} onChange={e => setMeditation(e.target.value)}
-              placeholder="오늘 읽은 말씀이 내 마음에 어떻게 다가왔나요? 깨달은 것, 위로 받은 것, 도전 받은 것을 자유롭게 적어보세요."
+              placeholder={t('오늘 읽은 말씀이 내 마음에 어떻게 다가왔나요? 깨달은 것, 위로 받은 것, 도전 받은 것을 자유롭게 적어보세요.', 'How did today\'s Scripture speak to your heart? Freely write what you realized, were comforted by, or were challenged by.')}
               rows={5}
               style={{
                 width:'100%', border:'1.5px solid #DDD6FE', borderRadius:12,
@@ -231,11 +232,11 @@ const QTGame = ({ onExit }) => {
           {/* 기도 제목 */}
           <div style={{background:'white',borderRadius:16,padding:20,marginBottom:24,boxShadow:'0 2px 12px rgba(107,33,168,0.08)'}}>
             <div style={{fontSize:13,fontWeight:700,color:'#6B21A8',marginBottom:8}}>
-              🙏 오늘의 기도 제목 (선택)
+              {t('🙏 오늘의 기도 제목 (선택)', '🙏 Today\'s prayer request (optional)')}
             </div>
             <textarea
               value={prayer} onChange={e => setPrayer(e.target.value)}
-              placeholder="오늘 말씀을 통해 드리고 싶은 기도를 적어보세요."
+              placeholder={t('오늘 말씀을 통해 드리고 싶은 기도를 적어보세요.', 'Write a prayer you\'d like to offer through today\'s Word.')}
               rows={3}
               style={{
                 width:'100%', border:'1.5px solid #DDD6FE', borderRadius:12,
@@ -257,7 +258,7 @@ const QTGame = ({ onExit }) => {
               fontFamily:"'Noto Sans KR',sans-serif",
             }}
           >
-            {saving ? t('저장 중...', 'Saving...') : '✅ QT 완료하기'}
+            {saving ? t('저장 중...', 'Saving...') : t('✅ QT 완료하기', '✅ Complete QT')}
           </button>
         </div>
       </div>
@@ -287,21 +288,21 @@ const QTGame = ({ onExit }) => {
             style={{background:'none',border:'none',color:'rgba(255,255,255,0.8)',fontSize:20,cursor:'pointer'}}>
             ←
           </button>
-          <div style={{color:'white',fontWeight:700,fontSize:17}}>📅 QT 달력</div>
+          <div style={{color:'white',fontWeight:700,fontSize:17}}>{t('📅 QT 달력', '📅 QT Calendar')}</div>
         </div>
 
         <div style={{maxWidth:480, margin:'0 auto', padding:'24px 20px'}}>
           <div style={{textAlign:'center', marginBottom:20}}>
             <div style={{fontSize:18,fontWeight:700,color:'#4C1D95'}}>
-              {year}년 {month + 1}월
+              {t(`${year}년 ${month + 1}월`, new Date(year, month).toLocaleDateString('en-US',{month:'long',year:'numeric'}))}
             </div>
             <div style={{fontSize:13,color:'#7C3AED',marginTop:4}}>
-              이번 달 {history.filter(h=>h.date.startsWith(`${year}-${String(month+1).padStart(2,'0')}`)).length}회 QT 완료
+              {t(`이번 달 ${history.filter(h=>h.date.startsWith(`${year}-${String(month+1).padStart(2,'0')}`)).length}회 QT 완료`, `${history.filter(h=>h.date.startsWith(`${year}-${String(month+1).padStart(2,'0')}`)).length} QT done this month`)}
             </div>
           </div>
 
           <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:4,marginBottom:8}}>
-            {[t('일', 'd'),'월','화','수','목','금','토'].map(d => (
+            {[t('일','Su'),t('월','Mo'),t('화','Tu'),t('수','We'),t('목','Th'),t('금','Fr'),t('토','Sa')].map(d => (
               <div key={d} style={{textAlign:'center',fontSize:11,fontWeight:700,color:'#7C3AED',padding:'4px 0'}}>{d}</div>
             ))}
           </div>
@@ -329,7 +330,7 @@ const QTGame = ({ onExit }) => {
 
           {/* 최근 QT 기록 */}
           <div style={{marginTop:24}}>
-            <div style={{fontSize:14,fontWeight:700,color:'#4C1D95',marginBottom:12}}>최근 QT 기록</div>
+            <div style={{fontSize:14,fontWeight:700,color:'#4C1D95',marginBottom:12}}>{t('최근 QT 기록', 'Recent QT Records')}</div>
             {history.slice(0, 5).map((h, i) => (
               <div key={i} style={{
                 background:'white', borderRadius:14, padding:'14px 16px', marginBottom:10,
@@ -337,7 +338,7 @@ const QTGame = ({ onExit }) => {
               }}>
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
                   <span style={{fontSize:13,fontWeight:700,color:'#6B21A8'}}>
-                    📖 {h.book} {h.chapter && `${h.chapter}장`}{h.verse && ` ${h.verse}절`}
+                    📖 {h.book} {h.chapter && t(`${h.chapter}장`, `ch.${h.chapter}`)}{h.verse && t(` ${h.verse}절`, `:${h.verse}`)}
                   </span>
                   <span style={{fontSize:11,color:'#9CA3AF'}}>{h.date}</span>
                 </div>
@@ -364,7 +365,7 @@ const QTGame = ({ onExit }) => {
               fontFamily:"'Noto Sans KR',sans-serif",
             }}
           >
-            📖 오늘 QT 하기
+            {t('📖 오늘 QT 하기', "📖 Do Today's QT")}
           </button>
         </div>
       </div>
@@ -388,22 +389,22 @@ const QTGame = ({ onExit }) => {
         }}>✝️</div>
 
         <h2 style={{fontSize:24,fontWeight:700,color:'#4C1D95',marginBottom:8}}>
-          말씀이 임했습니다!
+          {t('말씀이 임했습니다!', 'The Word has come!')}
         </h2>
         <p style={{fontSize:15,color:'#6B21A8',marginBottom:4}}>
-          오늘의 QT를 완료했어요
+          {t('오늘의 QT를 완료했어요', "You completed today's QT")}
         </p>
         {streak >= 3 && (
           <div style={{
             background:'linear-gradient(135deg,#6B21A8,#9333EA)', color:'white',
             borderRadius:20, padding:'6px 18px', marginBottom:16, fontSize:13, fontWeight:600,
           }}>
-            🔥 {streak}일 연속 QT 중!
+            {t(`🔥 ${streak}일 연속 QT 중!`, `🔥 ${streak}-day QT streak!`)}
           </div>
         )}
         {doneData?.expGained > 0 && (
           <div style={{color:'#D4AF37', fontSize:16, fontWeight:700, marginBottom:16}}>
-            +{doneData.expGained} EXP 획득
+            {t(`+${doneData.expGained} EXP 획득`, `+${doneData.expGained} EXP earned`)}
           </div>
         )}
 
@@ -411,9 +412,9 @@ const QTGame = ({ onExit }) => {
           fontSize:13, color:'#7C3AED', marginBottom:28,
           lineHeight:1.8, background:'#F3E8FF', borderRadius:12, padding:'12px 20px',
         }}>
-          "여호와의 말씀은 순결함이여<br/>
-          흙 도가니에 일곱 번 단련한 은 같도다"<br/>
-          <span style={{fontSize:11}}>시편 12:6</span>
+          {t(<>"여호와의 말씀은 순결함이여<br/>흙 도가니에 일곱 번 단련한 은 같도다"<br/></>,
+             <>"The words of the LORD are flawless,<br/>like silver refined seven times in a furnace."<br/></>)}
+          <span style={{fontSize:11}}>{t('시편 12:6', 'Psalm 12:6')}</span>
         </p>
 
         <div style={{display:'flex', gap:12, flexWrap:'wrap', justifyContent:'center'}}>
@@ -425,7 +426,7 @@ const QTGame = ({ onExit }) => {
               fontFamily:"'Noto Sans KR',sans-serif",
             }}
           >
-            📅 달력 보기
+            {t('📅 달력 보기', '📅 View Calendar')}
           </button>
           <button
             onClick={() => onExit({ score: 50, expGained: doneData?.expGained || 0 })}
@@ -435,7 +436,7 @@ const QTGame = ({ onExit }) => {
               fontFamily:"'Noto Sans KR',sans-serif",
             }}
           >
-            게임 목록으로 →
+            {t('게임 목록으로 →', 'Back to games →')}
           </button>
         </div>
       </div>

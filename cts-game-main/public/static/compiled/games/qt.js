@@ -92,7 +92,10 @@ const QTGame = ({ onExit }) => {
       justifyContent: "center",
       fontSize: 40,
       marginBottom: 24
-    } }, "\u{1F4D6}"), /* @__PURE__ */ React.createElement("h1", { style: { fontSize: 26, fontWeight: 700, color: "#4C1D95", marginBottom: 8 } }, "QT \uCCB4\uD06C\uC778"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 16, color: "#6B21A8", fontWeight: 500, marginBottom: 4 } }, "\uC624\uB298\uC758 \uB9D0\uC500 \uBB35\uC0C1\uC744 \uAE30\uB85D\uD558\uC138\uC694"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: "#7C3AED", marginBottom: 28, lineHeight: 1.6 } }, '"\uC624\uC9C1 \uC5EC\uD638\uC640\uC758 \uC728\uBC95\uC744 \uC990\uAC70\uC6CC\uD558\uC5EC', /* @__PURE__ */ React.createElement("br", null), '\uADF8\uC758 \uC728\uBC95\uC744 \uC8FC\uC57C\uB85C \uBB35\uC0C1\uD558\uB294\uB3C4\uB2E4"', /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: "#9333EA" } }, "\uC2DC\uD3B8 1:2")), todayDone && /* @__PURE__ */ React.createElement("div", { style: {
+    } }, "\u{1F4D6}"), /* @__PURE__ */ React.createElement("h1", { style: { fontSize: 26, fontWeight: 700, color: "#4C1D95", marginBottom: 8 } }, t("QT \uCCB4\uD06C\uC778", "QT Check-in")), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 16, color: "#6B21A8", fontWeight: 500, marginBottom: 4 } }, t("\uC624\uB298\uC758 \uB9D0\uC500 \uBB35\uC0C1\uC744 \uAE30\uB85D\uD558\uC138\uC694", "Record today's Scripture meditation")), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: "#7C3AED", marginBottom: 28, lineHeight: 1.6 } }, t(
+      /* @__PURE__ */ React.createElement(React.Fragment, null, '"\uC624\uC9C1 \uC5EC\uD638\uC640\uC758 \uC728\uBC95\uC744 \uC990\uAC70\uC6CC\uD558\uC5EC', /* @__PURE__ */ React.createElement("br", null), '\uADF8\uC758 \uC728\uBC95\uC744 \uC8FC\uC57C\uB85C \uBB35\uC0C1\uD558\uB294\uB3C4\uB2E4"', /* @__PURE__ */ React.createElement("br", null)),
+      /* @__PURE__ */ React.createElement(React.Fragment, null, '"But his delight is in the law of the LORD,', /* @__PURE__ */ React.createElement("br", null), 'and he meditates on it day and night."', /* @__PURE__ */ React.createElement("br", null))
+    ), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: "#9333EA" } }, t("\uC2DC\uD3B8 1:2", "Psalm 1:2"))), todayDone && /* @__PURE__ */ React.createElement("div", { style: {
       background: "linear-gradient(135deg,#D4AF37,#F59E0B)",
       color: "white",
       borderRadius: 12,
@@ -100,7 +103,7 @@ const QTGame = ({ onExit }) => {
       marginBottom: 20,
       fontSize: 14,
       fontWeight: 600
-    } }, "\u2705 \uC624\uB298 QT\uB97C \uC644\uB8CC\uD588\uC5B4\uC694!"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" } }, /* @__PURE__ */ React.createElement(
+    } }, t("\u2705 \uC624\uB298 QT\uB97C \uC644\uB8CC\uD588\uC5B4\uC694!", "\u2705 You completed QT today!")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" } }, /* @__PURE__ */ React.createElement(
       "button",
       {
         onClick: () => setScreen("write"),
@@ -115,7 +118,7 @@ const QTGame = ({ onExit }) => {
           cursor: "pointer"
         }
       },
-      todayDone ? "\uB2E4\uC2DC \uAE30\uB85D\uD558\uAE30" : "\u{1F4D6} \uC624\uB298 QT \uC2DC\uC791"
+      todayDone ? t("\uB2E4\uC2DC \uAE30\uB85D\uD558\uAE30", "Record again") : t("\u{1F4D6} \uC624\uB298 QT \uC2DC\uC791", "\u{1F4D6} Start Today's QT")
     ), /* @__PURE__ */ React.createElement(
       "button",
       {
@@ -131,14 +134,14 @@ const QTGame = ({ onExit }) => {
           cursor: "pointer"
         }
       },
-      "\u{1F4C5} QT \uB2EC\uB825 \uBCF4\uAE30"
-    )), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, marginTop: 20, color: "#9333EA", fontSize: 13 } }, /* @__PURE__ */ React.createElement("span", null, "\uC5F0\uC18D ", history.length > 0 ? calcStreak(history) : 0, "\uC77C QT \uC911"), /* @__PURE__ */ React.createElement("span", null, "\u{1F525}")), /* @__PURE__ */ React.createElement(
+      t("\u{1F4C5} QT \uB2EC\uB825 \uBCF4\uAE30", "\u{1F4C5} View QT Calendar")
+    )), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, marginTop: 20, color: "#9333EA", fontSize: 13 } }, /* @__PURE__ */ React.createElement("span", null, t(`\uC5F0\uC18D ${history.length > 0 ? calcStreak(history) : 0}\uC77C QT \uC911`, `${history.length > 0 ? calcStreak(history) : 0}-day QT streak`)), /* @__PURE__ */ React.createElement("span", null, "\u{1F525}")), /* @__PURE__ */ React.createElement(
       "button",
       {
         onClick: () => onExit(null),
         style: { marginTop: 24, background: "none", border: "none", color: "#9CA3AF", fontSize: 13, cursor: "pointer" }
       },
-      "\u2190 \uAC8C\uC784 \uBAA9\uB85D\uC73C\uB85C"
+      t("\u2190 \uAC8C\uC784 \uBAA9\uB85D\uC73C\uB85C", "\u2190 Back to games")
     ));
   }
   if (screen === "write") {
@@ -159,12 +162,12 @@ const QTGame = ({ onExit }) => {
         style: { background: "none", border: "none", color: "rgba(255,255,255,0.8)", fontSize: 20, cursor: "pointer" }
       },
       "\u2190"
-    ), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { color: "white", fontWeight: 700, fontSize: 17 } }, "\u{1F4D6} \uC624\uB298\uC758 QT"), /* @__PURE__ */ React.createElement("div", { style: { color: "rgba(255,255,255,0.8)", fontSize: 12 } }, todayKey))), /* @__PURE__ */ React.createElement("div", { style: { maxWidth: 480, margin: "0 auto", padding: "24px 20px" } }, /* @__PURE__ */ React.createElement("div", { style: { background: "white", borderRadius: 16, padding: 20, marginBottom: 16, boxShadow: "0 2px 12px rgba(107,33,168,0.08)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: "#6B21A8", marginBottom: 12 } }, "\u{1F4DA} \uC624\uB298 \uC77D\uC740 \uC131\uACBD"), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 10 } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 11, color: "#7C3AED", fontWeight: 600 } }, "\uCC45 \uC774\uB984 *"), /* @__PURE__ */ React.createElement(
+    ), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { color: "white", fontWeight: 700, fontSize: 17 } }, t("\u{1F4D6} \uC624\uB298\uC758 QT", "\u{1F4D6} Today's QT")), /* @__PURE__ */ React.createElement("div", { style: { color: "rgba(255,255,255,0.8)", fontSize: 12 } }, todayKey))), /* @__PURE__ */ React.createElement("div", { style: { maxWidth: 480, margin: "0 auto", padding: "24px 20px" } }, /* @__PURE__ */ React.createElement("div", { style: { background: "white", borderRadius: 16, padding: 20, marginBottom: 16, boxShadow: "0 2px 12px rgba(107,33,168,0.08)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: "#6B21A8", marginBottom: 12 } }, t("\u{1F4DA} \uC624\uB298 \uC77D\uC740 \uC131\uACBD", "\u{1F4DA} Scripture I read today")), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 10 } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 11, color: "#7C3AED", fontWeight: 600 } }, t("\uCC45 \uC774\uB984 *", "Book *")), /* @__PURE__ */ React.createElement(
       "input",
       {
         value: book,
         onChange: (e) => setBook(e.target.value),
-        placeholder: "\uC608: \uC2DC\uD3B8",
+        placeholder: t("\uC608: \uC2DC\uD3B8", "e.g., Psalm"),
         style: {
           width: "100%",
           border: "1.5px solid #DDD6FE",
@@ -176,7 +179,7 @@ const QTGame = ({ onExit }) => {
           fontFamily: "'Noto Sans KR',sans-serif"
         }
       }
-    )), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 11, color: "#7C3AED", fontWeight: 600 } }, "\uC7A5"), /* @__PURE__ */ React.createElement(
+    )), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 11, color: "#7C3AED", fontWeight: 600 } }, t("\uC7A5", "Ch.")), /* @__PURE__ */ React.createElement(
       "input",
       {
         value: chapter,
@@ -193,7 +196,7 @@ const QTGame = ({ onExit }) => {
           fontFamily: "'Noto Sans KR',sans-serif"
         }
       }
-    )), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 11, color: "#7C3AED", fontWeight: 600 } }, "\uC808"), /* @__PURE__ */ React.createElement(
+    )), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 11, color: "#7C3AED", fontWeight: 600 } }, t("\uC808", "Verse")), /* @__PURE__ */ React.createElement(
       "input",
       {
         value: verse,
@@ -210,12 +213,12 @@ const QTGame = ({ onExit }) => {
           fontFamily: "'Noto Sans KR',sans-serif"
         }
       }
-    )))), /* @__PURE__ */ React.createElement("div", { style: { background: "white", borderRadius: 16, padding: 20, marginBottom: 16, boxShadow: "0 2px 12px rgba(107,33,168,0.08)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: "#6B21A8", marginBottom: 8 } }, "\u{1F331} \uC624\uB298 \uB9D0\uC500\uC5D0\uC11C \uBC1B\uC740 \uC740\uD61C *"), /* @__PURE__ */ React.createElement(
+    )))), /* @__PURE__ */ React.createElement("div", { style: { background: "white", borderRadius: 16, padding: 20, marginBottom: 16, boxShadow: "0 2px 12px rgba(107,33,168,0.08)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: "#6B21A8", marginBottom: 8 } }, t("\u{1F331} \uC624\uB298 \uB9D0\uC500\uC5D0\uC11C \uBC1B\uC740 \uC740\uD61C *", "\u{1F331} The grace I received from the Word today *")), /* @__PURE__ */ React.createElement(
       "textarea",
       {
         value: meditation,
         onChange: (e) => setMeditation(e.target.value),
-        placeholder: "\uC624\uB298 \uC77D\uC740 \uB9D0\uC500\uC774 \uB0B4 \uB9C8\uC74C\uC5D0 \uC5B4\uB5BB\uAC8C \uB2E4\uAC00\uC654\uB098\uC694? \uAE68\uB2EC\uC740 \uAC83, \uC704\uB85C \uBC1B\uC740 \uAC83, \uB3C4\uC804 \uBC1B\uC740 \uAC83\uC744 \uC790\uC720\uB86D\uAC8C \uC801\uC5B4\uBCF4\uC138\uC694.",
+        placeholder: t("\uC624\uB298 \uC77D\uC740 \uB9D0\uC500\uC774 \uB0B4 \uB9C8\uC74C\uC5D0 \uC5B4\uB5BB\uAC8C \uB2E4\uAC00\uC654\uB098\uC694? \uAE68\uB2EC\uC740 \uAC83, \uC704\uB85C \uBC1B\uC740 \uAC83, \uB3C4\uC804 \uBC1B\uC740 \uAC83\uC744 \uC790\uC720\uB86D\uAC8C \uC801\uC5B4\uBCF4\uC138\uC694.", "How did today's Scripture speak to your heart? Freely write what you realized, were comforted by, or were challenged by."),
         rows: 5,
         style: {
           width: "100%",
@@ -230,12 +233,12 @@ const QTGame = ({ onExit }) => {
           color: "#1A1A1A"
         }
       }
-    )), /* @__PURE__ */ React.createElement("div", { style: { background: "white", borderRadius: 16, padding: 20, marginBottom: 24, boxShadow: "0 2px 12px rgba(107,33,168,0.08)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: "#6B21A8", marginBottom: 8 } }, "\u{1F64F} \uC624\uB298\uC758 \uAE30\uB3C4 \uC81C\uBAA9 (\uC120\uD0DD)"), /* @__PURE__ */ React.createElement(
+    )), /* @__PURE__ */ React.createElement("div", { style: { background: "white", borderRadius: 16, padding: 20, marginBottom: 24, boxShadow: "0 2px 12px rgba(107,33,168,0.08)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: "#6B21A8", marginBottom: 8 } }, t("\u{1F64F} \uC624\uB298\uC758 \uAE30\uB3C4 \uC81C\uBAA9 (\uC120\uD0DD)", "\u{1F64F} Today's prayer request (optional)")), /* @__PURE__ */ React.createElement(
       "textarea",
       {
         value: prayer,
         onChange: (e) => setPrayer(e.target.value),
-        placeholder: "\uC624\uB298 \uB9D0\uC500\uC744 \uD1B5\uD574 \uB4DC\uB9AC\uACE0 \uC2F6\uC740 \uAE30\uB3C4\uB97C \uC801\uC5B4\uBCF4\uC138\uC694.",
+        placeholder: t("\uC624\uB298 \uB9D0\uC500\uC744 \uD1B5\uD574 \uB4DC\uB9AC\uACE0 \uC2F6\uC740 \uAE30\uB3C4\uB97C \uC801\uC5B4\uBCF4\uC138\uC694.", "Write a prayer you'd like to offer through today's Word."),
         rows: 3,
         style: {
           width: "100%",
@@ -268,7 +271,7 @@ const QTGame = ({ onExit }) => {
           fontFamily: "'Noto Sans KR',sans-serif"
         }
       },
-      saving ? t("\uC800\uC7A5 \uC911...", "Saving...") : "\u2705 QT \uC644\uB8CC\uD558\uAE30"
+      saving ? t("\uC800\uC7A5 \uC911...", "Saving...") : t("\u2705 QT \uC644\uB8CC\uD558\uAE30", "\u2705 Complete QT")
     )));
   }
   if (screen === "calendar") {
@@ -296,7 +299,7 @@ const QTGame = ({ onExit }) => {
         style: { background: "none", border: "none", color: "rgba(255,255,255,0.8)", fontSize: 20, cursor: "pointer" }
       },
       "\u2190"
-    ), /* @__PURE__ */ React.createElement("div", { style: { color: "white", fontWeight: 700, fontSize: 17 } }, "\u{1F4C5} QT \uB2EC\uB825")), /* @__PURE__ */ React.createElement("div", { style: { maxWidth: 480, margin: "0 auto", padding: "24px 20px" } }, /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", marginBottom: 20 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 18, fontWeight: 700, color: "#4C1D95" } }, year, "\uB144 ", month + 1, "\uC6D4"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "#7C3AED", marginTop: 4 } }, "\uC774\uBC88 \uB2EC ", history.filter((h) => h.date.startsWith(`${year}-${String(month + 1).padStart(2, "0")}`)).length, "\uD68C QT \uC644\uB8CC")), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4, marginBottom: 8 } }, [t("\uC77C", "d"), "\uC6D4", "\uD654", "\uC218", "\uBAA9", "\uAE08", "\uD1A0"].map((d) => /* @__PURE__ */ React.createElement("div", { key: d, style: { textAlign: "center", fontSize: 11, fontWeight: 700, color: "#7C3AED", padding: "4px 0" } }, d))), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4 } }, monthDates.map((d, i) => {
+    ), /* @__PURE__ */ React.createElement("div", { style: { color: "white", fontWeight: 700, fontSize: 17 } }, t("\u{1F4C5} QT \uB2EC\uB825", "\u{1F4C5} QT Calendar"))), /* @__PURE__ */ React.createElement("div", { style: { maxWidth: 480, margin: "0 auto", padding: "24px 20px" } }, /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", marginBottom: 20 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 18, fontWeight: 700, color: "#4C1D95" } }, t(`${year}\uB144 ${month + 1}\uC6D4`, new Date(year, month).toLocaleDateString("en-US", { month: "long", year: "numeric" }))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "#7C3AED", marginTop: 4 } }, t(`\uC774\uBC88 \uB2EC ${history.filter((h) => h.date.startsWith(`${year}-${String(month + 1).padStart(2, "0")}`)).length}\uD68C QT \uC644\uB8CC`, `${history.filter((h) => h.date.startsWith(`${year}-${String(month + 1).padStart(2, "0")}`)).length} QT done this month`))), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4, marginBottom: 8 } }, [t("\uC77C", "Su"), t("\uC6D4", "Mo"), t("\uD654", "Tu"), t("\uC218", "We"), t("\uBAA9", "Th"), t("\uAE08", "Fr"), t("\uD1A0", "Sa")].map((d) => /* @__PURE__ */ React.createElement("div", { key: d, style: { textAlign: "center", fontSize: 11, fontWeight: 700, color: "#7C3AED", padding: "4px 0" } }, d))), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4 } }, monthDates.map((d, i) => {
       if (!d) return /* @__PURE__ */ React.createElement("div", { key: i });
       const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
       const done = history.some((h) => h.date === dateKey);
@@ -314,13 +317,13 @@ const QTGame = ({ onExit }) => {
         border: isToday ? "2px solid #D4AF37" : "none",
         cursor: done ? "pointer" : "default"
       } }, done ? "\u271D\uFE0F" : d);
-    })), /* @__PURE__ */ React.createElement("div", { style: { marginTop: 24 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: "#4C1D95", marginBottom: 12 } }, "\uCD5C\uADFC QT \uAE30\uB85D"), history.slice(0, 5).map((h, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: {
+    })), /* @__PURE__ */ React.createElement("div", { style: { marginTop: 24 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: "#4C1D95", marginBottom: 12 } }, t("\uCD5C\uADFC QT \uAE30\uB85D", "Recent QT Records")), history.slice(0, 5).map((h, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: {
       background: "white",
       borderRadius: 14,
       padding: "14px 16px",
       marginBottom: 10,
       boxShadow: "0 2px 8px rgba(107,33,168,0.07)"
-    } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, fontWeight: 700, color: "#6B21A8" } }, "\u{1F4D6} ", h.book, " ", h.chapter && `${h.chapter}\uC7A5`, h.verse && ` ${h.verse}\uC808`), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: "#9CA3AF" } }, h.date)), /* @__PURE__ */ React.createElement("p", { style: {
+    } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, fontWeight: 700, color: "#6B21A8" } }, "\u{1F4D6} ", h.book, " ", h.chapter && t(`${h.chapter}\uC7A5`, `ch.${h.chapter}`), h.verse && t(` ${h.verse}\uC808`, `:${h.verse}`)), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: "#9CA3AF" } }, h.date)), /* @__PURE__ */ React.createElement("p", { style: {
       fontSize: 13,
       color: "#374151",
       lineHeight: 1.5,
@@ -347,7 +350,7 @@ const QTGame = ({ onExit }) => {
           fontFamily: "'Noto Sans KR',sans-serif"
         }
       },
-      "\u{1F4D6} \uC624\uB298 QT \uD558\uAE30"
+      t("\u{1F4D6} \uC624\uB298 QT \uD558\uAE30", "\u{1F4D6} Do Today's QT")
     )));
   }
   if (screen === "done") {
@@ -372,7 +375,7 @@ const QTGame = ({ onExit }) => {
       justifyContent: "center",
       fontSize: 44,
       marginBottom: 20
-    } }, "\u271D\uFE0F"), /* @__PURE__ */ React.createElement("h2", { style: { fontSize: 24, fontWeight: 700, color: "#4C1D95", marginBottom: 8 } }, "\uB9D0\uC500\uC774 \uC784\uD588\uC2B5\uB2C8\uB2E4!"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 15, color: "#6B21A8", marginBottom: 4 } }, "\uC624\uB298\uC758 QT\uB97C \uC644\uB8CC\uD588\uC5B4\uC694"), streak >= 3 && /* @__PURE__ */ React.createElement("div", { style: {
+    } }, "\u271D\uFE0F"), /* @__PURE__ */ React.createElement("h2", { style: { fontSize: 24, fontWeight: 700, color: "#4C1D95", marginBottom: 8 } }, t("\uB9D0\uC500\uC774 \uC784\uD588\uC2B5\uB2C8\uB2E4!", "The Word has come!")), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 15, color: "#6B21A8", marginBottom: 4 } }, t("\uC624\uB298\uC758 QT\uB97C \uC644\uB8CC\uD588\uC5B4\uC694", "You completed today's QT")), streak >= 3 && /* @__PURE__ */ React.createElement("div", { style: {
       background: "linear-gradient(135deg,#6B21A8,#9333EA)",
       color: "white",
       borderRadius: 20,
@@ -380,7 +383,7 @@ const QTGame = ({ onExit }) => {
       marginBottom: 16,
       fontSize: 13,
       fontWeight: 600
-    } }, "\u{1F525} ", streak, "\uC77C \uC5F0\uC18D QT \uC911!"), doneData?.expGained > 0 && /* @__PURE__ */ React.createElement("div", { style: { color: "#D4AF37", fontSize: 16, fontWeight: 700, marginBottom: 16 } }, "+", doneData.expGained, " EXP \uD68D\uB4DD"), /* @__PURE__ */ React.createElement("p", { style: {
+    } }, t(`\u{1F525} ${streak}\uC77C \uC5F0\uC18D QT \uC911!`, `\u{1F525} ${streak}-day QT streak!`)), doneData?.expGained > 0 && /* @__PURE__ */ React.createElement("div", { style: { color: "#D4AF37", fontSize: 16, fontWeight: 700, marginBottom: 16 } }, t(`+${doneData.expGained} EXP \uD68D\uB4DD`, `+${doneData.expGained} EXP earned`)), /* @__PURE__ */ React.createElement("p", { style: {
       fontSize: 13,
       color: "#7C3AED",
       marginBottom: 28,
@@ -388,7 +391,10 @@ const QTGame = ({ onExit }) => {
       background: "#F3E8FF",
       borderRadius: 12,
       padding: "12px 20px"
-    } }, '"\uC5EC\uD638\uC640\uC758 \uB9D0\uC500\uC740 \uC21C\uACB0\uD568\uC774\uC5EC', /* @__PURE__ */ React.createElement("br", null), '\uD759 \uB3C4\uAC00\uB2C8\uC5D0 \uC77C\uACF1 \uBC88 \uB2E8\uB828\uD55C \uC740 \uAC19\uB3C4\uB2E4"', /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11 } }, "\uC2DC\uD3B8 12:6")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" } }, /* @__PURE__ */ React.createElement(
+    } }, t(
+      /* @__PURE__ */ React.createElement(React.Fragment, null, '"\uC5EC\uD638\uC640\uC758 \uB9D0\uC500\uC740 \uC21C\uACB0\uD568\uC774\uC5EC', /* @__PURE__ */ React.createElement("br", null), '\uD759 \uB3C4\uAC00\uB2C8\uC5D0 \uC77C\uACF1 \uBC88 \uB2E8\uB828\uD55C \uC740 \uAC19\uB3C4\uB2E4"', /* @__PURE__ */ React.createElement("br", null)),
+      /* @__PURE__ */ React.createElement(React.Fragment, null, '"The words of the LORD are flawless,', /* @__PURE__ */ React.createElement("br", null), 'like silver refined seven times in a furnace."', /* @__PURE__ */ React.createElement("br", null))
+    ), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11 } }, t("\uC2DC\uD3B8 12:6", "Psalm 12:6"))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" } }, /* @__PURE__ */ React.createElement(
       "button",
       {
         onClick: () => setScreen("calendar"),
@@ -404,7 +410,7 @@ const QTGame = ({ onExit }) => {
           fontFamily: "'Noto Sans KR',sans-serif"
         }
       },
-      "\u{1F4C5} \uB2EC\uB825 \uBCF4\uAE30"
+      t("\u{1F4C5} \uB2EC\uB825 \uBCF4\uAE30", "\u{1F4C5} View Calendar")
     ), /* @__PURE__ */ React.createElement(
       "button",
       {
@@ -421,7 +427,7 @@ const QTGame = ({ onExit }) => {
           fontFamily: "'Noto Sans KR',sans-serif"
         }
       },
-      "\uAC8C\uC784 \uBAA9\uB85D\uC73C\uB85C \u2192"
+      t("\uAC8C\uC784 \uBAA9\uB85D\uC73C\uB85C \u2192", "Back to games \u2192")
     )));
   }
   return null;

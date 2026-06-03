@@ -5,7 +5,7 @@
 // ============================================================
 
 const GE = { // 팔레트
-  sage:'#4A7C59', sageL:'#7BA88A', sagePale:'#EAF2EC',
+  sage:'#6B21A8', sageL:'#7BA88A', sagePale:'#EAF2EC',
   cream:'#FDFCF7', muted:'#8A8A78', dark:'#2C2C20',
   amber:'#D4954A', rose:'#C97B8A', dusty:'#6B8FA8',
   warn:'#C05050',
@@ -16,7 +16,7 @@ const EMOTIONS = {
   happy: {
     name:t('기쁨','Joy'), label:t('기쁜 꽃','Happy Flower'),
     petalColor:'#FCD34D', centerColor:'#F59E0B',
-    stemColor:'#4A7C59',
+    stemColor:'#6B21A8',
     face: 'happy', // 위로 굽은 미소
     isTarget: true,
   },

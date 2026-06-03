@@ -5,7 +5,7 @@
 // ============================================================
 
 const FC = {
-  sage:'#4A7C59', sageL:'#7BA88A', sagePale:'#EAF2EC',
+  sage:'#6B21A8', sageL:'#7BA88A', sagePale:'#EAF2EC',
   cream:'#FDFCF7', muted:'#8A8A78', dark:'#2C2C20',
   amber:'#D4954A', amberL:'#E8C47A',
   sky:'#5A9BBF', skyL:'#A0C8E0', skyPale:'#E8F4FA',

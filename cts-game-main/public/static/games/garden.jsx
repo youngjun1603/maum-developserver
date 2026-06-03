@@ -6,7 +6,7 @@
 
 // ── 팔레트 (game_hub 와 동일) ────────────────────────────────
 const GC = {
-  sage:    '#4A7C59', sageL: '#7BA88A', sagePale: '#EAF2EC',
+  sage:    '#6B21A8', sageL: '#7BA88A', sagePale: '#EAF2EC',
   cream:   '#FDFCF7', sand:  '#F5EFE0',
   dusty:   '#6B8FA8', dustyL:'#A8C4D4',
   amber:   '#D4954A', amberL:'#E8C47A',
@@ -87,7 +87,7 @@ const BREATH_METHODS = [
     desc: t('집중·스트레스 해소', 'Focus & stress relief'),
     phases: [
       { id:'inhale',   label:t('들이마시기', 'Inhale'), color:'#5A8AC0', dur:4 },
-      { id:'hold_in',  label:t('참  기',     'Hold'),   color:'#4A7C59', dur:4 },
+      { id:'hold_in',  label:t('참  기',     'Hold'),   color:'#6B21A8', dur:4 },
       { id:'exhale',   label:t('내  쉬기',   'Exhale'), color:'#9BA8B0', dur:4 },
       { id:'hold_out', label:t('참  기',     'Hold'),   color:'#6B8FA8', dur:4 },
     ],
@@ -99,7 +99,7 @@ const BREATH_METHODS = [
     desc: t('수면·깊은 이완', 'Sleep & deep relaxation'),
     phases: [
       { id:'inhale',   label:t('들이마시기', 'Inhale'), color:'#5A8AC0', dur:4 },
-      { id:'hold_in',  label:t('참  기',     'Hold'),   color:'#4A7C59', dur:7 },
+      { id:'hold_in',  label:t('참  기',     'Hold'),   color:'#6B21A8', dur:7 },
       { id:'exhale',   label:t('내  쉬기',   'Exhale'), color:'#9BA8B0', dur:8 },
     ],
   },
@@ -110,7 +110,7 @@ const BREATH_METHODS = [
     desc: t('불안·공황 시 빠른 진정', 'Fast relief for anxiety & panic'),
     phases: [
       { id:'inhale',   label:t('들이마시기', 'Inhale'), color:'#5A8AC0', dur:2 },
-      { id:'hold_in',  label:t('참  기',     'Hold'),   color:'#4A7C59', dur:1 },
+      { id:'hold_in',  label:t('참  기',     'Hold'),   color:'#6B21A8', dur:1 },
       { id:'exhale',   label:t('내  쉬기',   'Exhale'), color:'#9BA8B0', dur:4 },
     ],
   },
