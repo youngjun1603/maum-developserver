@@ -1878,12 +1878,14 @@ function PsychologicalTestSystem() {
       const data = await res.json();
       const token = data.success ? data.gameToken : tokenStore.getAccess();
       const gameParam = gameKey ? `&game=${encodeURIComponent(gameKey)}` : '';
-      const gameUrl = `https://game.maumful.com${token ? '?t=' + encodeURIComponent(token) + gameParam : ''}`;
+      const langParam = lang === 'en' ? '&lang=en' : '';
+      const gameUrl = `https://game.maumful.com${token ? '?t=' + encodeURIComponent(token) + gameParam + langParam : ''}`;
       window.open(gameUrl, '_blank', 'noopener noreferrer');
     } catch {
       // 실패 시 기존 토큰으로 fallback
       const token = tokenStore.getAccess();
-      const gameUrl = `https://game.maumful.com${token ? '?t=' + encodeURIComponent(token) : ''}`;
+      const langParam = lang === 'en' ? '&lang=en' : '';
+      const gameUrl = `https://game.maumful.com${token ? '?t=' + encodeURIComponent(token) + langParam : ''}`;
       window.open(gameUrl, '_blank', 'noopener noreferrer');
     }
   }
