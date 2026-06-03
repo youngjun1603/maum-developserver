@@ -8,7 +8,7 @@ const GV = {
   night:'#0D1B2A', nightM:'#1A2E42', nightL:'#254B6A',
   star:'#FFE08A', starL:'#FFF5C8',
   rose:'#C97B8A', rosePale:'#FCF0F2',
-  sage:'#6B21A8', sagePale:'#EAF2EC',
+  sage:'#4A7C59', sagePale:'#EAF2EC',
   cream:'#FDFCF7', muted:'#8A8A78', dark:'#2C2C20',
   dusty:'#6B8FA8', dustyL:'#A8C4D4',
   amber:'#D4954A',
@@ -17,19 +17,19 @@ const GV = {
 // ── 감사 질문 풀 (매일 다르게) ──────────────────────────────
 const QUESTION_POOL = [
   [
-    { id:'q1', prompt:'오늘 작은 기쁨을 준 것은?', placeholder:'따뜻한 커피 한 잔, 맑은 하늘... 아주 작아도 좋아요', emoji:'☕' },
-    { id:'q2', prompt:'나에게 감사한 내 모습은?', placeholder:'끝까지 포기하지 않았던 것, 잘 견뎌낸 것...', emoji:'💪' },
-    { id:'q3', prompt:'내일 기대되는 한 가지는?', placeholder:'아주 작은 것도 괜찮아요', emoji:'🌅' },
+    { id:'q1', prompt:t('오늘 작은 기쁨을 준 것은?', 'What brought you a small joy today?'), placeholder:t('따뜻한 커피 한 잔, 맑은 하늘... 아주 작아도 좋아요', 'A warm cup of coffee, a clear sky… even the tiniest thing counts'), emoji:'☕' },
+    { id:'q2', prompt:t('나에게 감사한 내 모습은?', 'What about yourself are you grateful for?'), placeholder:t('끝까지 포기하지 않았던 것, 잘 견뎌낸 것...', 'Not giving up, holding on through the day…'), emoji:'💪' },
+    { id:'q3', prompt:t('내일 기대되는 한 가지는?', 'What is one thing you look forward to tomorrow?'), placeholder:t('아주 작은 것도 괜찮아요', 'Even the smallest thing is perfectly fine'), emoji:'🌅' },
   ],
   [
-    { id:'q1', prompt:'오늘 나를 미소 짓게 한 것은?', placeholder:'어떤 순간이든 좋아요', emoji:'😊' },
-    { id:'q2', prompt:'오늘 내가 잘한 한 가지는?', placeholder:'아무리 작아도 진짜 잘한 거예요', emoji:'✨' },
-    { id:'q3', prompt:'나의 삶에 있어서 감사한 것은?', placeholder:'사람, 공간, 상황... 무엇이든', emoji:'🙏' },
+    { id:'q1', prompt:t('오늘 나를 미소 짓게 한 것은?', 'What made you smile today?'), placeholder:t('어떤 순간이든 좋아요', 'Any moment is welcome'), emoji:'😊' },
+    { id:'q2', prompt:t('오늘 내가 잘한 한 가지는?', 'What is one thing you did well today?'), placeholder:t('아무리 작아도 진짜 잘한 거예요', 'No matter how small, it truly counts'), emoji:'✨' },
+    { id:'q3', prompt:t('나의 삶에 있어서 감사한 것은?', 'What are you grateful for in your life?'), placeholder:t('사람, 공간, 상황... 무엇이든', 'A person, a place, a situation… anything'), emoji:'🙏' },
   ],
   [
-    { id:'q1', prompt:'오늘 나에게 친절했던 것은?', placeholder:'나 자신이거나 다른 누군가', emoji:'💙' },
-    { id:'q2', prompt:'힘들었지만 버텨낸 것이 있다면?', placeholder:'당신은 이미 잘하고 있어요', emoji:'🌿' },
-    { id:'q3', prompt:'지금 이 순간 느끼는 좋은 감각은?', placeholder:'따뜻함, 조용함, 편안함...', emoji:'🍃' },
+    { id:'q1', prompt:t('오늘 나에게 친절했던 것은?', 'What was kind to you today?'), placeholder:t('나 자신이거나 다른 누군가', 'Yourself or someone else'), emoji:'💙' },
+    { id:'q2', prompt:t('힘들었지만 버텨낸 것이 있다면?', 'Is there something hard you pushed through?'), placeholder:t('당신은 이미 잘하고 있어요', 'You are already doing great'), emoji:'🌿' },
+    { id:'q3', prompt:t('지금 이 순간 느끼는 좋은 감각은?', 'What good sensation do you feel right now?'), placeholder:t('따뜻함, 조용함, 편안함...', 'Warmth, stillness, comfort…'), emoji:'🍃' },
   ],
 ];
 
@@ -126,7 +126,7 @@ function NightSky({ litStars = 0, width = 320, height = 200 }) {
             <text x={s.x} y={s.y + s.size + 12}
               textAnchor="middle" fill={GV.starL}
               style={{ fontSize:9, fontFamily:"'Noto Sans KR',sans-serif", fontWeight:600 }}>
-              {i === 0 ? '기쁨' : i === 1 ? '나' : '내일'}
+              {i === 0 ? t('기쁨','Joy') : i === 1 ? t('나','Me') : t('내일','Tomorrow')}
             </text>
           )}
         </g>
@@ -224,9 +224,12 @@ function GratitudeGame({ onExit }) {
       .map(q => answers[q.id]?.trim())
       .filter(Boolean)
       .map((a, i) => `${questions[i].emoji} ${a}`);
-    const text = `⭐ 오늘의 감사 일기\n\n${lines.join('\n')}\n\n마음게임에서 함께해요 💕\nhttps://game.maumful.com`;
+    const text = t(
+      `⭐ 오늘의 감사 일기\n\n${lines.join('\n')}\n\n마음게임에서 함께해요 💕\nhttps://game.maumful.com`,
+      `⭐ Today's Gratitude Journal\n\n${lines.join('\n')}\n\nJoin us on Maum Game 💕\nhttps://game.maumful.com`
+    );
     navigator.share
-      ? navigator.share({ title: '오늘의 감사 일기', text }).catch(() => {})
+      ? navigator.share({ title: t('오늘의 감사 일기', "Today's Gratitude Journal"), text }).catch(() => {})
       : navigator.clipboard?.writeText(text).catch(() => {});
   }
 
@@ -244,13 +247,13 @@ function GratitudeGame({ onExit }) {
       }}>
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
           <span style={{ fontSize:20 }}>⭐</span>
-          <span style={{ fontSize:15, fontWeight:700, color:'white', fontFamily:"'Noto Serif KR',serif" }}>별빛 감사 일기</span>
+          <span style={{ fontSize:15, fontWeight:700, color:'white', fontFamily:"'Noto Serif KR',serif" }}>{t('별빛 감사 일기', 'Starlight Gratitude Journal')}</span>
         </div>
         <button onClick={()=>onExit(null)} style={{
           fontFamily:"'Noto Sans KR',sans-serif",
           background:'rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.7)',
           border:'none', borderRadius:9, padding:'6px 13px', fontSize:12, cursor:'pointer',
-        }}>허브로 →</button>
+        }}>{t('허브로 →', 'Hub →')}</button>
       </div>
 
       <div style={{ height:200 }}>
@@ -259,12 +262,12 @@ function GratitudeGame({ onExit }) {
 
       <div style={{ flex:1, padding:'24px 20px', overflowY:'auto' }}>
         <h2 style={{ fontSize:20, fontWeight:700, color:'white', marginBottom:10, fontFamily:"'Noto Serif KR',serif" }}>
-          오늘의 별을 밝혀요
+          {t('오늘의 별을 밝혀요', "Light today's stars")}
         </h2>
         <p style={{ fontSize:14, color:'rgba(255,255,255,0.7)', lineHeight:1.8, marginBottom:24 }}>
-          3가지 질문에 솔직하게 답하면<br/>
-          밤하늘에 감사의 별 3개가 빛나요.<br/>
-          아주 작은 것도 충분해요.
+          {t('3가지 질문에 솔직하게 답하면', 'Answer 3 questions honestly')}<br/>
+          {t('밤하늘에 감사의 별 3개가 빛나요.', '3 gratitude stars will light up the night sky.')}<br/>
+          {t('아주 작은 것도 충분해요.', 'Even the smallest thing is enough.')}
         </p>
 
         {/* 오늘의 질문 미리보기 */}
@@ -289,7 +292,7 @@ function GratitudeGame({ onExit }) {
             color:'white', border:'none', borderRadius:14, fontSize:15, fontWeight:700, cursor:'pointer',
             boxShadow:`0 4px 16px rgba(107,143,168,0.4)`,
           }}>
-          별 밝히기 시작 ⭐
+          {t('별 밝히기 시작 ⭐', 'Start lighting stars ⭐')}
         </button>
       </div>
     </div>
@@ -390,7 +393,7 @@ function GratitudeGame({ onExit }) {
                       border:'none', borderRadius:10, fontSize:13, fontWeight:700, cursor:'pointer',
                       transition:'all 0.2s',
                     }}>
-                    {i === questions.length - 1 ? '마지막 별 밝히기 ⭐' : '별 밝히기 ⭐'}
+                    {i === questions.length - 1 ? t('마지막 별 밝히기 ⭐', 'Light the last star ⭐') : t('별 밝히기 ⭐', 'Light a star ⭐')}
                   </button>
                 </div>
               )}
@@ -420,11 +423,11 @@ function GratitudeGame({ onExit }) {
 
       <div style={{ flex:1, padding:'24px 20px', overflowY:'auto' }}>
         <h2 style={{ fontSize:22, fontWeight:700, color:'white', marginBottom:8, fontFamily:"'Noto Serif KR',serif", textAlign:'center' }}>
-          밤하늘에 별 3개가 떴어요 ⭐
+          {t('밤하늘에 별 3개가 떴어요 ⭐', '3 stars shine in the night sky ⭐')}
         </h2>
         <p style={{ fontSize:13, color:'rgba(255,255,255,0.65)', lineHeight:1.8, marginBottom:22, textAlign:'center' }}>
-          감사한 마음이 밤하늘을 수놓았어요.<br/>
-          오늘도 수고 많으셨어요.
+          {t('감사한 마음이 밤하늘을 수놓았어요.', 'Your gratitude has lit up the night sky.')}<br/>
+          {t('오늘도 수고 많으셨어요.', 'You did great today.')}
         </p>
 
         {/* 답변 요약 */}
@@ -452,7 +455,7 @@ function GratitudeGame({ onExit }) {
             color:'rgba(255,255,255,0.85)', border:'1px solid rgba(255,255,255,0.2)',
             borderRadius:14, fontSize:13, fontWeight:600, cursor:'pointer', marginBottom:10,
           }}>
-          💕 파트너와 공유하기
+          {t('💕 파트너와 공유하기', '💕 Share with partner')}
         </button>
         <button onClick={handleFinish}
           style={{
@@ -460,7 +463,7 @@ function GratitudeGame({ onExit }) {
             padding:'14px', background:`linear-gradient(135deg, #4A5A8A, ${GV.dusty})`,
             color:'white', border:'none', borderRadius:14, fontSize:15, fontWeight:700, cursor:'pointer',
           }}>
-          경험치 받기 →
+          {t('경험치 받기 →', 'Claim EXP →')}
         </button>
       </div>
     </div>

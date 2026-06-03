@@ -76,7 +76,7 @@ function GardenSVG({ status = "clearing", level = 1, style = {} }) {
 }
 function LevelBar({ levelInfo }) {
   const { level, name, emoji, progress, currentExp, maxExp } = levelInfo || {};
-  return /* @__PURE__ */ React.createElement("div", { style: { padding: "16px 20px", background: "rgba(255,255,255,0.7)", borderRadius: 16, backdropFilter: "blur(8px)" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 22 } }, emoji), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 700, color: C.dark } }, "Lv.", level, " ", name), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, "\uB2E4\uC74C \uB808\uBCA8\uAE4C\uC9C0 ", maxExp - currentExp, " EXP"))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 600, color: C.sage } }, currentExp, " EXP")), /* @__PURE__ */ React.createElement("div", { style: { height: 10, background: "rgba(0,0,0,0.08)", borderRadius: 100, overflow: "hidden" } }, /* @__PURE__ */ React.createElement("div", { style: {
+  return /* @__PURE__ */ React.createElement("div", { style: { padding: "16px 20px", background: "rgba(255,255,255,0.7)", borderRadius: 16, backdropFilter: "blur(8px)" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 22 } }, emoji), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 700, color: C.dark } }, "Lv.", level, " ", name), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, t("\uB2E4\uC74C \uB808\uBCA8\uAE4C\uC9C0", "Next level in"), " ", maxExp - currentExp, " EXP"))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 600, color: C.sage } }, currentExp, " EXP")), /* @__PURE__ */ React.createElement("div", { style: { height: 10, background: "rgba(0,0,0,0.08)", borderRadius: 100, overflow: "hidden" } }, /* @__PURE__ */ React.createElement("div", { style: {
     height: "100%",
     width: `${progress}%`,
     background: `linear-gradient(90deg, ${C.sage}, ${C.sageL})`,
@@ -86,21 +86,21 @@ function LevelBar({ levelInfo }) {
   } })));
 }
 const TEST_META_HUB = {
-  PHQ9: { label: "PHQ-9", emoji: "\u{1F331}", desc: "\uC6B0\uC6B8 \uC120\uBCC4" },
-  GAD7: { label: "GAD-7", emoji: "\u{1F499}", desc: "\uBD88\uC548 \uC120\uBCC4" },
-  DASS21: { label: "DASS-21", emoji: "\u{1F30A}", desc: "\uC2A4\uD2B8\uB808\uC2A4" },
-  BIG5: { label: "Big5", emoji: "\u{1F9E0}", desc: "\uC131\uACA9 \uBD84\uC11D" },
-  SCT: { label: "SCT", emoji: "\u270D\uFE0F", desc: "\uBB38\uC7A5 \uC644\uC131" },
-  DSI: { label: "DSI", emoji: "\u{1FA9E}", desc: "\uC790\uC544 \uBD84\uD654" },
-  BURNOUT: { label: "K-MBI+", emoji: "\u{1F525}", desc: "\uBC88\uC544\uC6C3" },
-  LOST: { label: "LOST", emoji: "\u{1F9ED}", desc: "\uD589\uB3D9 \uC591\uC2DD" }
+  PHQ9: { label: "PHQ-9", emoji: "\u{1F331}", desc: t("\uC6B0\uC6B8 \uC120\uBCC4", "Depression") },
+  GAD7: { label: "GAD-7", emoji: "\u{1F499}", desc: t("\uBD88\uC548 \uC120\uBCC4", "Anxiety") },
+  DASS21: { label: "DASS-21", emoji: "\u{1F30A}", desc: t("\uC2A4\uD2B8\uB808\uC2A4", "Stress") },
+  BIG5: { label: "Big5", emoji: "\u{1F9E0}", desc: t("\uC131\uACA9 \uBD84\uC11D", "Personality") },
+  SCT: { label: "SCT", emoji: "\u270D\uFE0F", desc: t("\uBB38\uC7A5 \uC644\uC131", "Sentence Completion") },
+  DSI: { label: "DSI", emoji: "\u{1FA9E}", desc: t("\uC790\uC544 \uBD84\uD654", "Self Differentiation") },
+  BURNOUT: { label: "K-MBI+", emoji: "\u{1F525}", desc: t("\uBC88\uC544\uC6C3", "Burnout") },
+  LOST: { label: "LOST", emoji: "\u{1F9ED}", desc: t("\uD589\uB3D9 \uC591\uC2DD", "Behavior Pattern") }
 };
 function TestBadgeRow({ completedTests = [] }) {
   const allTests = Object.keys(TEST_META_HUB);
-  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 10, letterSpacing: "0.5px" } }, "\uC5F0\uACB0\uB41C \uC2EC\uB9AC\uAC80\uC0AC"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 7 } }, allTests.map((t) => {
-    const meta = TEST_META_HUB[t];
-    const done = completedTests.includes(t);
-    return /* @__PURE__ */ React.createElement("div", { key: t, style: {
+  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 10, letterSpacing: "0.5px" } }, t("\uC5F0\uACB0\uB41C \uC2EC\uB9AC\uAC80\uC0AC", "Linked Tests")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 7 } }, allTests.map((t2) => {
+    const meta = TEST_META_HUB[t2];
+    const done = completedTests.includes(t2);
+    return /* @__PURE__ */ React.createElement("div", { key: t2, style: {
       display: "flex",
       alignItems: "center",
       gap: 5,
@@ -110,7 +110,7 @@ function TestBadgeRow({ completedTests = [] }) {
       border: `1px solid ${done ? C.sage + "44" : "transparent"}`,
       opacity: done ? 1 : 0.5
     } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13 } }, meta.emoji), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, fontWeight: done ? 600 : 400, color: done ? C.sage : C.muted } }, meta.label), done && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, color: C.sage } }, "\u2713"));
-  })), completedTests.length === 0 && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 10, fontSize: 12, color: C.muted, lineHeight: 1.6 } }, "\uC2EC\uB9AC\uAC80\uC0AC\uB97C \uC644\uB8CC\uD558\uBA74 \uAC8C\uC784\uC774 \uB354 \uD48D\uC131\uD574\uC838\uC694.", " ", /* @__PURE__ */ React.createElement("a", { href: PHYWEB_URL, style: { color: C.sage, fontWeight: 600, textDecoration: "none" } }, "The Light of Life\uC5D0\uC11C \uAC80\uC0AC\uD558\uAE30 \u2192")));
+  })), completedTests.length === 0 && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 10, fontSize: 12, color: C.muted, lineHeight: 1.6 } }, t("\uC2EC\uB9AC\uAC80\uC0AC\uB97C \uC644\uB8CC\uD558\uBA74 \uAC8C\uC784\uC774 \uB354 \uD48D\uC131\uD574\uC838\uC694.", "Complete psych tests to enrich your game experience."), " ", /* @__PURE__ */ React.createElement("a", { href: PHYWEB_URL, style: { color: C.sage, fontWeight: 600, textDecoration: "none" } }, "The Light of Life\uC5D0\uC11C \uAC80\uC0AC\uD558\uAE30 \u2192")));
 }
 function GameCardSkeleton() {
   return /* @__PURE__ */ React.createElement("div", { style: {
@@ -182,7 +182,7 @@ function GameCard({ game, onPlay, enterDelay = 0 }) {
       padding: "3px 9px",
       borderRadius: 100,
       letterSpacing: "0.5px"
-    } }, "\uC900\uBE44 \uC911"),
+    } }, t("\uC900\uBE44 \uC911", "Coming Soon")),
     !comingSoon && !game.isUnlocked && /* @__PURE__ */ React.createElement("div", { style: {
       position: "absolute",
       top: 12,
@@ -216,8 +216,8 @@ function GameCard({ game, onPlay, enterDelay = 0 }) {
       fontWeight: 600,
       marginBottom: 4,
       color: game.creditCost > 0 ? "#D4954A" : "#6B21A8"
-    } }, game.creditCost > 0 ? `\u{1F33F} ${game.creditCost} \uD06C\uB808\uB527` : "\uBB34\uB8CC"),
-    game.requiredTests.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.dusty, marginBottom: 12 } }, game.requiredTests.map((t) => TEST_META_HUB[t]?.label || t).join(" \xB7 "), " \uC5F0\uB3D9"),
+    } }, game.creditCost > 0 ? `\u{1F33F} ${game.creditCost} \uD06C\uB808\uB527` : t("\uBB34\uB8CC", "Free")),
+    game.requiredTests.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.dusty, marginBottom: 12 } }, game.requiredTests.map((t2) => TEST_META_HUB[t2]?.label || t2).join(" \xB7 "), " \uC5F0\uB3D9"),
     game.modules?.length > 0 && !comingSoon && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 5, marginBottom: 14 } }, game.modules.map((m) => /* @__PURE__ */ React.createElement("div", { key: m.id, style: { display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: C.muted } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14 } }, m.emoji), /* @__PURE__ */ React.createElement("span", null, m.name)))),
     /* @__PURE__ */ React.createElement(
       "button",
@@ -236,7 +236,7 @@ function GameCard({ game, onPlay, enterDelay = 0 }) {
           boxShadow: !locked ? `0 4px 12px ${C.sage}40` : "none"
         }
       },
-      comingSoon ? "\uACE7 \uCD9C\uC2DC\uB429\uB2C8\uB2E4" : locked ? "\u{1F512} \uC7A0\uAE08 \uD574\uC81C \uD544\uC694" : "\uC2DC\uC791\uD558\uAE30 \u2192"
+      comingSoon ? t("\uACE7 \uCD9C\uC2DC\uB429\uB2C8\uB2E4", "Coming Soon") : locked ? "\u{1F512} \uC7A0\uAE08 \uD574\uC81C \uD544\uC694" : t("\uC2DC\uC791\uD558\uAE30 \u2192", "Start \u2192")
     )
   );
 }
@@ -247,7 +247,7 @@ function StreakCalendar({ recentPlayDates = [], streakDays = 0, streakRecover = 
     const d = /* @__PURE__ */ new Date();
     d.setDate(d.getDate() - i);
     const iso = d.toISOString().slice(0, 10);
-    const dow = ["\uC77C", "\uC6D4", "\uD654", "\uC218", "\uBAA9", "\uAE08", "\uD1A0"][d.getDay()];
+    const dow = [t("\uC77C", "d"), "\uC6D4", "\uD654", "\uC218", "\uBAA9", "\uAE08", "\uD1A0"][d.getDay()];
     days.push({ iso, dow, played: recentPlayDates.includes(iso) });
   }
   const MILESTONES = [3, 7, 14, 30, 60, 90];
@@ -291,7 +291,7 @@ function StreakCalendar({ recentPlayDates = [], streakDays = 0, streakRecover = 
     fontWeight: 700,
     cursor: recovering ? "not-allowed" : "pointer",
     fontFamily: "'Noto Sans KR',sans-serif"
-  } }, recovering ? "\uBCF5\uAD6C \uC911..." : `\u{1F6E1}\uFE0F \uBCF5\uAD6C\uAD8C \uC0AC\uC6A9\uD558\uC5EC \uC2A4\uD2B8\uB9AD \uBCF5\uC6D0 (${streakRecover}\uAC1C \uBCF4\uC720)`), streakRecover > 0 && streakDays > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 8, fontSize: 10, color: C.amber, fontWeight: 600, textAlign: "right" } }, "\u{1F6E1}\uFE0F \uBCF5\uAD6C\uAD8C ", streakRecover, "\uAC1C \uBCF4\uC720 (\uC5F0\uC18D \uB04A\uAE38 \uB54C \uC790\uB3D9 \uC0AC\uC6A9 \uAC00\uB2A5)"));
+  } }, recovering ? t("\uBCF5\uAD6C \uC911...", "Restoring...") : `\u{1F6E1}\uFE0F \uBCF5\uAD6C\uAD8C \uC0AC\uC6A9\uD558\uC5EC \uC2A4\uD2B8\uB9AD \uBCF5\uC6D0 (${streakRecover}\uAC1C \uBCF4\uC720)`), streakRecover > 0 && streakDays > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 8, fontSize: 10, color: C.amber, fontWeight: 600, textAlign: "right" } }, "\u{1F6E1}\uFE0F \uBCF5\uAD6C\uAD8C ", streakRecover, "\uAC1C \uBCF4\uC720 (\uC5F0\uC18D \uB04A\uAE38 \uB54C \uC790\uB3D9 \uC0AC\uC6A9 \uAC00\uB2A5)"));
 }
 function DailyTip({ hubData }) {
   const [tip, setTip] = useState(null);
@@ -346,8 +346,8 @@ function Leaderboard({ currentUserEmail }) {
     }).catch(() => {
     }).finally(() => setLoading(false));
   }, []);
-  if (loading) return /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: "20px 0" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: C.muted, animation: "pulse 1.5s infinite" } }, "\uC21C\uC704\uB97C \uBD88\uB7EC\uC624\uB294 \uC911..."));
-  if (!data?.length) return /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: "20px 0", color: C.muted, fontSize: 13 } }, "\uC544\uC9C1 \uC21C\uC704 \uB370\uC774\uD130\uAC00 \uC5C6\uC5B4\uC694");
+  if (loading) return /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: "20px 0" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: C.muted, animation: "pulse 1.5s infinite" } }, t("\uC21C\uC704\uB97C \uBD88\uB7EC\uC624\uB294 \uC911...", "Loading rankings...")));
+  if (!data?.length) return /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: "20px 0", color: C.muted, fontSize: 13 } }, t("\uC544\uC9C1 \uC21C\uC704 \uB370\uC774\uD130\uAC00 \uC5C6\uC5B4\uC694", "No ranking data yet"));
   const MEDAL = ["\u{1F947}", "\u{1F948}", "\u{1F949}"];
   return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, data.map((entry, i) => {
     const levelInfo = GameEngine.getLevelInfo(entry.total_exp || 0);
@@ -363,23 +363,23 @@ function Leaderboard({ currentUserEmail }) {
       border: `1px solid ${isMe ? C.sage + "44" : "rgba(255,255,255,0.5)"}`,
       backdropFilter: "blur(6px)",
       boxShadow: isMe ? `0 2px 12px ${C.sage}20` : "none"
-    } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 18, minWidth: 28, textAlign: "center", fontWeight: 700 } }, rank), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14 } }, levelInfo.emoji), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.dark, display: "flex", alignItems: "center", gap: 5 } }, entry.nickname || entry.email?.split("@")[0] || "\uC815\uC6D0\uC0AC", isMe && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, background: C.sage, color: "white", borderRadius: 4, padding: "1px 5px" } }, "\uB098")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, "Lv.", entry.garden_level, " ", levelInfo.name, (entry.streak_days || 0) > 1 && ` \xB7 \u{1F525} ${entry.streak_days}\uC77C`)), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "right", flexShrink: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.sage } }, (entry.total_exp || 0).toLocaleString()), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: C.muted } }, "EXP")));
+    } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 18, minWidth: 28, textAlign: "center", fontWeight: 700 } }, rank), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14 } }, levelInfo.emoji), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.dark, display: "flex", alignItems: "center", gap: 5 } }, entry.nickname || entry.email?.split("@")[0] || t("\uC815\uC6D0\uC0AC", "Gardener"), isMe && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, background: C.sage, color: "white", borderRadius: 4, padding: "1px 5px" } }, t("\uB098", "Me"))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, "Lv.", entry.garden_level, " ", levelInfo.name, (entry.streak_days || 0) > 1 && ` \xB7 \u{1F525} ${entry.streak_days}\uC77C`)), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "right", flexShrink: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.sage } }, (entry.total_exp || 0).toLocaleString()), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: C.muted } }, "EXP")));
   }));
 }
 function RecentActivity({ sessions = [] }) {
   if (sessions.length === 0) return null;
   const MODULE_LABEL = {
-    breathing: { emoji: "\u{1F4A7}", name: "\uD638\uD761 \uD6C8\uB828" },
-    cbt: { emoji: "\u{1F331}", name: "\uC0DD\uAC01 \uAD50\uC815" },
-    efmt: { emoji: "\u{1F338}", name: "\uAC10\uC815 \uD6C8\uB828" },
-    relax: { emoji: "\u{1F3DE}\uFE0F", name: "\uC774\uC644 \uD6C8\uB828" },
-    missions: { emoji: "\u{1F3AF}", name: "\uD68C\uBCF5 \uBBF8\uC158" },
-    city: { emoji: "\u{1F3D9}\uFE0F", name: "\uD68C\uBCF5 \uB3C4\uC2DC" },
-    weekly_report: { emoji: "\u{1F4CA}", name: "\uC8FC\uAC04 \uB9AC\uD3EC\uD2B8" },
-    checkin: { emoji: "\u{1F3A8}", name: "\uAC10\uC815 \uCCB4\uD06C\uC778" },
-    daily_quest_bonus: { emoji: "\u{1F381}", name: "\uB370\uC77C\uB9AC \uD018\uC2A4\uD2B8 \uBCF4\uB108\uC2A4" }
+    breathing: { emoji: "\u{1F4A7}", name: t("\uD638\uD761 \uD6C8\uB828", "Breathing Training") },
+    cbt: { emoji: "\u{1F331}", name: t("\uC0DD\uAC01 \uAD50\uC815", "Thought Reframing") },
+    efmt: { emoji: "\u{1F338}", name: t("\uAC10\uC815 \uD6C8\uB828", "Emotion Training") },
+    relax: { emoji: "\u{1F3DE}\uFE0F", name: t("\uC774\uC644 \uD6C8\uB828", "Relaxation Training") },
+    missions: { emoji: "\u{1F3AF}", name: t("\uD68C\uBCF5 \uBBF8\uC158", "Recovery Mission") },
+    city: { emoji: "\u{1F3D9}\uFE0F", name: t("\uD68C\uBCF5 \uB3C4\uC2DC", "Recovery City") },
+    weekly_report: { emoji: "\u{1F4CA}", name: t("\uC8FC\uAC04 \uB9AC\uD3EC\uD2B8", "Weekly Report") },
+    checkin: { emoji: "\u{1F3A8}", name: t("\uAC10\uC815 \uCCB4\uD06C\uC778", "Emotion Check-in") },
+    daily_quest_bonus: { emoji: "\u{1F381}", name: t("\uB370\uC77C\uB9AC \uD018\uC2A4\uD2B8 \uBCF4\uB108\uC2A4", "Daily Quest Bonus") }
   };
-  return /* @__PURE__ */ React.createElement("div", { style: { marginTop: 32 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: C.dark, marginBottom: 14, display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16 } }, "\u{1F4DC}"), " \uCD5C\uADFC \uD50C\uB808\uC774 \uAE30\uB85D"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, sessions.map((s, i) => {
+  return /* @__PURE__ */ React.createElement("div", { style: { marginTop: 32 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: C.dark, marginBottom: 14, display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16 } }, "\u{1F4DC}"), " ", t("\uCD5C\uADFC \uD50C\uB808\uC774 \uAE30\uB85D", "Recent Activity")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, sessions.map((s, i) => {
     const m = MODULE_LABEL[s.module_type] || { emoji: "\u{1F3AE}", name: s.module_type };
     return /* @__PURE__ */ React.createElement("div", { key: i, style: {
       display: "flex",
@@ -390,7 +390,7 @@ function RecentActivity({ sessions = [] }) {
       background: "rgba(255,255,255,0.6)",
       backdropFilter: "blur(6px)",
       border: "1px solid rgba(255,255,255,0.5)"
-    } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 20 } }, m.emoji), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 600, color: C.dark } }, m.name), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, GameEngine.formatRelativeTime(s.created_at))), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "right" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 600, color: C.sage } }, "+", s.exp_gained, " EXP"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, "\uC810\uC218 ", s.score)));
+    } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 20 } }, m.emoji), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 600, color: C.dark } }, m.name), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, GameEngine.formatRelativeTime(s.created_at))), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "right" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 600, color: C.sage } }, "+", s.exp_gained, " EXP"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, t("\uC810\uC218", "Score"), " ", s.score)));
   })));
 }
 function LoginGate() {
@@ -403,7 +403,7 @@ function LoginGate() {
     background: `linear-gradient(160deg, ${C.sagePale}, ${C.cream}, #EBF4FA)`,
     padding: 24,
     textAlign: "center"
-  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 72, marginBottom: 20, animation: "float 3s ease-in-out infinite" } }, "\u{1F33F}"), /* @__PURE__ */ React.createElement("h1", { style: { fontSize: 28, fontWeight: 700, color: C.dark, marginBottom: 10, fontFamily: "'Noto Serif KR', serif" } }, "\uB9C8\uC74C\uC758 \uC815\uC6D0"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 15, color: C.muted, lineHeight: 1.8, marginBottom: 32, maxWidth: 300 } }, "The Light of Life\uC5D0\uC11C \uB85C\uADF8\uC778\uD558\uBA74", /* @__PURE__ */ React.createElement("br", null), "\uBCC4\uB3C4 \uB85C\uADF8\uC778 \uC5C6\uC774 \uBC14\uB85C \uC774\uC6A9\uD560 \uC218 \uC788\uC5B4\uC694.", /* @__PURE__ */ React.createElement("br", null), "\uC2EC\uB9AC\uAC80\uC0AC \uACB0\uACFC\uC640 \uC5F0\uACB0\uD558\uC5EC", /* @__PURE__ */ React.createElement("br", null), "\uB098\uB9CC\uC758 \uC815\uC6D0\uC744 \uAC00\uAFB8\uC138\uC694 \u{1F33F}"), /* @__PURE__ */ React.createElement("a", { href: PHYWEB_URL, style: {
+  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 72, marginBottom: 20, animation: "float 3s ease-in-out infinite" } }, "\u{1F33F}"), /* @__PURE__ */ React.createElement("h1", { style: { fontSize: 28, fontWeight: 700, color: C.dark, marginBottom: 10, fontFamily: "'Noto Serif KR', serif" } }, t("\uB9C8\uC74C\uC758 \uC815\uC6D0", "Mind Garden")), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 15, color: C.muted, lineHeight: 1.8, marginBottom: 32, maxWidth: 300 } }, "The Light of Life\uC5D0\uC11C \uB85C\uADF8\uC778\uD558\uBA74", /* @__PURE__ */ React.createElement("br", null), "\uBCC4\uB3C4 \uB85C\uADF8\uC778 \uC5C6\uC774 \uBC14\uB85C \uC774\uC6A9\uD560 \uC218 \uC788\uC5B4\uC694.", /* @__PURE__ */ React.createElement("br", null), "\uC2EC\uB9AC\uAC80\uC0AC \uACB0\uACFC\uC640 \uC5F0\uACB0\uD558\uC5EC", /* @__PURE__ */ React.createElement("br", null), "\uB098\uB9CC\uC758 \uC815\uC6D0\uC744 \uAC00\uAFB8\uC138\uC694 \u{1F33F}"), /* @__PURE__ */ React.createElement("a", { href: PHYWEB_URL, style: {
     display: "inline-block",
     padding: "14px 36px",
     background: `linear-gradient(135deg, ${C.sage}, ${C.sageL})`,
@@ -444,56 +444,56 @@ const ALL_ACHIEVEMENT_IDS = [
 const CAMPAIGN_DEF = [
   {
     id: "ch1",
-    title: "\uCCAB \uBC1C\uAC78\uC74C",
-    subtitle: "\uB9C8\uC74C \uCC59\uAE30\uAE30",
+    title: t("\uCCAB \uBC1C\uAC78\uC74C", "First Steps"),
+    subtitle: t("\uB9C8\uC74C \uCC59\uAE30\uAE30", "Mindfulness"),
     emoji: "\u{1F331}",
     color: "#6B21A8",
     colorLight: "#EAF2EC",
-    desc: "\uB098\uC758 \uAC10\uC815\uC744 \uC54C\uC544\uCC44\uACE0 \uB9C8\uC74C\uC744 \uB3CC\uBCF4\uB294 \uCCAB \uC5EC\uC815\uC744 \uC2DC\uC791\uD574\uC694",
+    desc: t("\uB098\uC758 \uAC10\uC815\uC744 \uC54C\uC544\uCC44\uACE0 \uB9C8\uC74C\uC744 \uB3CC\uBCF4\uB294 \uCCAB \uC5EC\uC815\uC744 \uC2DC\uC791\uD574\uC694", "Begin your first journey to notice your emotions and care for your mind."),
     steps: [
       { game: "mood", module: "checkin", name: "\uAC10\uC815 \uC218\uCC44\uD654 \u2014 \uC624\uB298 \uAC10\uC815 \uAE30\uB85D\uD558\uAE30", emoji: "\u{1F3A8}" },
-      { game: "garden", module: "breathing", name: "\uB9C8\uC74C\uC758 \uC815\uC6D0 \u2014 \uD638\uD761 \uD6C8\uB828 \uC644\uB8CC\uD558\uAE30", emoji: "\u{1F4A7}" },
-      { game: "gratitude", module: "gratitude_write", name: "\uBCC4\uBE5B \uAC10\uC0AC \uC77C\uAE30 \u2014 \uAC10\uC0AC \uC77C\uAE30 \uC4F0\uAE30", emoji: "\u2B50" }
+      { game: "garden", module: "breathing", name: t("\uB9C8\uC74C\uC758 \uC815\uC6D0 \u2014 \uD638\uD761 \uD6C8\uB828 \uC644\uB8CC\uD558\uAE30", "Mind Garden \u2014 Complete breathing training"), emoji: "\u{1F4A7}" },
+      { game: "gratitude", module: "gratitude_write", name: t("\uBCC4\uBE5B \uAC10\uC0AC \uC77C\uAE30 \u2014 \uAC10\uC0AC \uC77C\uAE30 \uC4F0\uAE30", "Starlight Gratitude \u2014 Write a gratitude journal"), emoji: "\u2B50" }
     ],
     rewardCredits: 30,
     rewardBadge: "\u{1F331}",
-    rewardName: "\uB9C8\uC74C \uC528\uC557",
+    rewardName: t("\uB9C8\uC74C \uC528\uC557", "Mind Seed"),
     unlockLevel: 1
   },
   {
     id: "ch2",
-    title: "\uB9C8\uC74C \uAD50\uC815",
-    subtitle: "\uC778\uC9C0 \uD6C8\uB828",
+    title: t("\uB9C8\uC74C \uAD50\uC815", "Mind Correction"),
+    subtitle: t("\uC778\uC9C0 \uD6C8\uB828", "Cognitive Training"),
     emoji: "\u{1F338}",
     color: "#C97B8A",
     colorLight: "#FAE8EC",
-    desc: "\uBD80\uC815\uC801\uC778 \uC0DD\uAC01 \uD328\uD134\uC744 \uC778\uC2DD\uD558\uACE0 \uAC10\uC815 \uC778\uC9C0 \uB2A5\uB825\uC744 \uD0A4\uC6CC\uC694",
+    desc: t("\uBD80\uC815\uC801\uC778 \uC0DD\uAC01 \uD328\uD134\uC744 \uC778\uC2DD\uD558\uACE0 \uAC10\uC815 \uC778\uC9C0 \uB2A5\uB825\uC744 \uD0A4\uC6CC\uC694", "Recognize negative thought patterns and develop emotional awareness."),
     steps: [
-      { game: "garden", module: "cbt", name: "\uB9C8\uC74C\uC758 \uC815\uC6D0 \u2014 \uC0DD\uAC01 \uAD50\uC815 \uC644\uB8CC\uD558\uAE30", emoji: "\u{1F331}" },
-      { game: "efmt", module: null, name: "\uAC10\uC815\uAF43 \uCC3E\uAE30 \u2014 \uAC10\uC815 \uC778\uC2DD \uD6C8\uB828 \uC644\uB8CC\uD558\uAE30", emoji: "\u{1F338}" },
-      { game: "burnout", module: "missions", name: "\uBC88\uC544\uC6C3 \uD68C\uBCF5 \u2014 \uD68C\uBCF5 \uBBF8\uC158 \uC644\uB8CC\uD558\uAE30", emoji: "\u26A1" }
+      { game: "garden", module: "cbt", name: t("\uB9C8\uC74C\uC758 \uC815\uC6D0 \u2014 \uC0DD\uAC01 \uAD50\uC815 \uC644\uB8CC\uD558\uAE30", "Mind Garden \u2014 Complete thought reframing"), emoji: "\u{1F331}" },
+      { game: "efmt", module: null, name: t("\uAC10\uC815\uAF43 \uCC3E\uAE30 \u2014 \uAC10\uC815 \uC778\uC2DD \uD6C8\uB828 \uC644\uB8CC\uD558\uAE30", "Emotion Flower \u2014 Complete emotion recognition training"), emoji: "\u{1F338}" },
+      { game: "burnout", module: "missions", name: t("\uBC88\uC544\uC6C3 \uD68C\uBCF5 \u2014 \uD68C\uBCF5 \uBBF8\uC158 \uC644\uB8CC\uD558\uAE30", "BURNOUT Recovery \u2014 Complete a recovery mission"), emoji: "\u26A1" }
     ],
     rewardCredits: 50,
     rewardBadge: "\u{1F338}",
-    rewardName: "\uB9C8\uC74C \uAF43\uBD09\uC624\uB9AC",
+    rewardName: t("\uB9C8\uC74C \uAF43\uBD09\uC624\uB9AC", "Mind Bud"),
     unlockLevel: 2
   },
   {
     id: "ch3",
-    title: "\uAE4A\uC740 \uC131\uC7A5",
-    subtitle: "\uC790\uC544 \uD0D0\uD5D8",
+    title: t("\uAE4A\uC740 \uC131\uC7A5", "Deep Growth"),
+    subtitle: t("\uC790\uC544 \uD0D0\uD5D8", "Self Exploration"),
     emoji: "\u{1F333}",
     color: "#5A9BBF",
     colorLight: "#E8F4FA",
-    desc: "\uC9D1\uC911\uB825\uACFC \uB0B4\uBA74\uC758 \uB098\uBB34\uB97C \uD1B5\uD574 \uC790\uC544\uB97C \uAE4A\uC774 \uD0D0\uD5D8\uD574\uC694",
+    desc: t("\uC9D1\uC911\uB825\uACFC \uB0B4\uBA74\uC758 \uB098\uBB34\uB97C \uD1B5\uD574 \uC790\uC544\uB97C \uAE4A\uC774 \uD0D0\uD5D8\uD574\uC694", "Deeply explore yourself through focus and your inner tree."),
     steps: [
-      { game: "focus", module: null, name: "\uB9C8\uC74C \uC9D1\uC911\uB825 \u2014 \uC9D1\uC911\uB825 \uD6C8\uB828 \uC644\uB8CC\uD558\uAE30", emoji: "\u{1F9E0}" },
-      { game: "tree", module: null, name: "\uB0B4\uBA74\uC758 \uB098\uBB34 \u2014 \uC790\uC544 \uD0D0\uD5D8\uD558\uAE30", emoji: "\u{1F333}" },
-      { game: "efmt", module: null, name: "\uAC10\uC815\uAF43 \uCC3E\uAE30 \u2014 \uAC10\uC815 \uC778\uC2DD \uC7AC\uB3C4\uC804\uD558\uAE30", emoji: "\u{1F4AD}" }
+      { game: "focus", module: null, name: t("\uB9C8\uC74C \uC9D1\uC911\uB825 \u2014 \uC9D1\uC911\uB825 \uD6C8\uB828 \uC644\uB8CC\uD558\uAE30", "Mind Focus \u2014 Complete focus training"), emoji: "\u{1F9E0}" },
+      { game: "tree", module: null, name: t("\uB0B4\uBA74\uC758 \uB098\uBB34 \u2014 \uC790\uC544 \uD0D0\uD5D8\uD558\uAE30", "Inner Tree \u2014 Explore your inner self"), emoji: "\u{1F333}" },
+      { game: "efmt", module: null, name: t("\uAC10\uC815\uAF43 \uCC3E\uAE30 \u2014 \uAC10\uC815 \uC778\uC2DD \uC7AC\uB3C4\uC804\uD558\uAE30", "Emotion Flower \u2014 Retry emotion recognition"), emoji: "\u{1F4AD}" }
     ],
     rewardCredits: 80,
     rewardBadge: "\u{1F333}",
-    rewardName: "\uB9C8\uC74C \uB9CC\uAC1C",
+    rewardName: t("\uB9C8\uC74C \uB9CC\uAC1C", "Mind Full Bloom"),
     unlockLevel: 3
   }
 ];
@@ -524,7 +524,7 @@ function CampaignSection({ onPlay }) {
         const fresh = await GameEngine.getCampaign();
         if (fresh.success) setData(fresh.data);
       } else {
-        alert(res.error || "\uBCF4\uC0C1 \uC218\uB839 \uC2E4\uD328");
+        alert(res.error || t("\uBCF4\uC0C1 \uC218\uB839 \uC2E4\uD328", "Failed to claim reward"));
       }
     } finally {
       setClaiming(null);
@@ -550,21 +550,21 @@ function CampaignSection({ onPlay }) {
     cursor: "pointer",
     fontFamily: "'Noto Sans KR',sans-serif",
     transition: "border-radius 0.2s"
-  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16 } }, "\u{1F4D6}"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, fontWeight: 700, color: C.dark } }, "\uC2A4\uD1A0\uB9AC \uCEA0\uD398\uC778"), rewardedCount > 0 && /* @__PURE__ */ React.createElement("span", { style: {
+  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16 } }, "\u{1F4D6}"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, fontWeight: 700, color: C.dark } }, t("\uC2A4\uD1A0\uB9AC \uCEA0\uD398\uC778", "Story Campaign")), rewardedCount > 0 && /* @__PURE__ */ React.createElement("span", { style: {
     fontSize: 11,
     fontWeight: 700,
     background: `linear-gradient(135deg, ${C.amber}, ${C.amberL})`,
     color: "white",
     borderRadius: 100,
     padding: "2px 9px"
-  } }, rewardedCount, " / ", CAMPAIGN_DEF.length, " \uC644\uB8CC")), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: C.muted } }, expanded ? "\uC811\uAE30 \u25B2" : "\uD3BC\uCE58\uAE30 \u25BC")), expanded && /* @__PURE__ */ React.createElement("div", { style: {
+  } }, rewardedCount, " / ", CAMPAIGN_DEF.length, " \uC644\uB8CC")), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: C.muted } }, expanded ? t("\uC811\uAE30 \u25B2", "Collapse \u25B2") : t("\uD3BC\uCE58\uAE30 \u25BC", "Expand \u25BC"))), expanded && /* @__PURE__ */ React.createElement("div", { style: {
     background: "rgba(255,255,255,0.65)",
     backdropFilter: "blur(8px)",
     borderRadius: "0 0 20px 20px",
     padding: "4px 20px 20px",
     border: "1px solid rgba(255,255,255,0.6)",
     borderTop: "none"
-  } }, loading && /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: "24px", color: C.muted, fontSize: 13 } }, "\uBD88\uB7EC\uC624\uB294 \uC911..."), claimResult && /* @__PURE__ */ React.createElement("div", { style: {
+  } }, loading && /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: "24px", color: C.muted, fontSize: 13 } }, t("\uBD88\uB7EC\uC624\uB294 \uC911...", "Loading...")), claimResult && /* @__PURE__ */ React.createElement("div", { style: {
     margin: "12px 0 16px",
     background: `linear-gradient(135deg, ${C.amber}22, ${C.amberL}22)`,
     border: `1px solid ${C.amber}44`,
@@ -574,7 +574,7 @@ function CampaignSection({ onPlay }) {
     alignItems: "center",
     gap: 10,
     animation: "fadeUp 0.3s ease"
-  } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 24 } }, "\u{1F389}"), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.amber } }, "\uCC55\uD130 \uBCF4\uC0C1 \uC218\uB839 \uC644\uB8CC!"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted } }, "+", claimResult.credits, " \uD06C\uB808\uB527\uC774 \uC9C0\uAE09\uB410\uC5B4\uC694")), /* @__PURE__ */ React.createElement("button", { onClick: () => setClaimResult(null), style: {
+  } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 24 } }, "\u{1F389}"), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.amber } }, t("\uCC55\uD130 \uBCF4\uC0C1 \uC218\uB839 \uC644\uB8CC!", "Chapter reward claimed!")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted } }, "+", claimResult.credits, " \uD06C\uB808\uB527\uC774 \uC9C0\uAE09\uB410\uC5B4\uC694")), /* @__PURE__ */ React.createElement("button", { onClick: () => setClaimResult(null), style: {
     marginLeft: "auto",
     background: "none",
     border: "none",
@@ -654,7 +654,7 @@ function CampaignSection({ onPlay }) {
         fontSize: 10,
         fontWeight: 700,
         cursor: "pointer"
-      } }, "\uD558\uAE30 \u2192"));
+      } }, t("\uD558\uAE30 \u2192", "Go \u2192")));
     }), /* @__PURE__ */ React.createElement("div", { style: {
       marginTop: 4,
       padding: "10px 12px",
@@ -665,7 +665,7 @@ function CampaignSection({ onPlay }) {
       alignItems: "center",
       justifyContent: "space-between",
       gap: 10
-    } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: rewarded ? ch.color : canClaim ? C.amber : C.muted } }, rewarded ? `\u2705 ${ch.rewardBadge} ${ch.rewardName} \uD68D\uB4DD!` : `\u{1F381} \uCC55\uD130 \uC644\uB8CC \uBCF4\uC0C1: +${ch.rewardCredits} \uD06C\uB808\uB527 \xB7 ${ch.rewardBadge} ${ch.rewardName}`), rewarded && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: C.muted, marginTop: 2 } }, "\uBCF4\uC0C1\uC774 \uC9C0\uAE09\uB410\uC5B4\uC694")), canClaim && /* @__PURE__ */ React.createElement(
+    } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: rewarded ? ch.color : canClaim ? C.amber : C.muted } }, rewarded ? `\u2705 ${ch.rewardBadge} ${ch.rewardName} \uD68D\uB4DD!` : `\u{1F381} \uCC55\uD130 \uC644\uB8CC \uBCF4\uC0C1: +${ch.rewardCredits} \uD06C\uB808\uB527 \xB7 ${ch.rewardBadge} ${ch.rewardName}`), rewarded && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: C.muted, marginTop: 2 } }, t("\uBCF4\uC0C1\uC774 \uC9C0\uAE09\uB410\uC5B4\uC694", "Reward has been sent."))), canClaim && /* @__PURE__ */ React.createElement(
       "button",
       {
         onClick: () => handleClaim(ch.id),
@@ -685,18 +685,18 @@ function CampaignSection({ onPlay }) {
         }
       },
       claiming === ch.id ? "..." : "\uBCF4\uC0C1 \uBC1B\uAE30 \u{1F381}"
-    ))), locked && /* @__PURE__ */ React.createElement("div", { style: { padding: "10px 16px 14px", textAlign: "center", fontSize: 12, color: C.muted } }, "\uC774\uC804 \uCC55\uD130\uB97C \uC644\uB8CC\uD558\uBA74 \uD574\uAE08\uB3FC\uC694"));
+    ))), locked && /* @__PURE__ */ React.createElement("div", { style: { padding: "10px 16px 14px", textAlign: "center", fontSize: 12, color: C.muted } }, t("\uC774\uC804 \uCC55\uD130\uB97C \uC644\uB8CC\uD558\uBA74 \uD574\uAE08\uB3FC\uC694", "Complete the previous chapter to unlock.")));
   }))));
 }
 const STATS_GAME_META = {
-  garden: { name: "\uB9C8\uC74C \uC815\uC6D0", emoji: "\u{1F33F}" },
-  mood: { name: "\uAC10\uC815 \uCCB4\uD06C\uC778", emoji: "\u{1F3A8}" },
-  efmt: { name: "\uAC10\uC815 \uD0D0\uC0C9", emoji: "\u{1F4AD}" },
-  gratitude: { name: "\uAC10\uC0AC \uC77C\uAE30", emoji: "\u2B50" },
-  tree: { name: "\uC0DD\uAC01 \uB098\uBB34", emoji: "\u{1F333}" },
-  burnout: { name: "\uBC88\uC544\uC6C3 \uCCB4\uD06C", emoji: "\u{1F525}" },
-  focus: { name: "\uB9C8\uC74C \uC9D1\uC911\uB825", emoji: "\u{1F9E0}" },
-  worry: { name: "\uAC71\uC815 \uD48D\uC120", emoji: "\u{1FAE7}" }
+  garden: { name: t("\uB9C8\uC74C \uC815\uC6D0", "Mind Garden"), emoji: "\u{1F33F}" },
+  mood: { name: t("\uAC10\uC815 \uCCB4\uD06C\uC778", "Emotion Check-in"), emoji: "\u{1F3A8}" },
+  efmt: { name: t("\uAC10\uC815 \uD0D0\uC0C9", "Emotion Exploration"), emoji: "\u{1F4AD}" },
+  gratitude: { name: t("\uAC10\uC0AC \uC77C\uAE30", "Gratitude Journal"), emoji: "\u2B50" },
+  tree: { name: t("\uC0DD\uAC01 \uB098\uBB34", "Thought Tree"), emoji: "\u{1F333}" },
+  burnout: { name: t("\uBC88\uC544\uC6C3 \uCCB4\uD06C", "BURNOUT Check"), emoji: "\u{1F525}" },
+  focus: { name: t("\uB9C8\uC74C \uC9D1\uC911\uB825", "Mind Focus"), emoji: "\u{1F9E0}" },
+  worry: { name: t("\uAC71\uC815 \uD48D\uC120", "Worry Balloon"), emoji: "\u{1FAE7}" }
 };
 function GameStatsSection() {
   const [stats, setStats] = React.useState(null);
@@ -726,7 +726,7 @@ function GameStatsSection() {
     border: "1px solid rgba(255,255,255,0.6)",
     cursor: "pointer",
     fontFamily: "'Noto Sans KR',sans-serif"
-  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: C.dark, display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16 } }, "\u{1F4CA}"), " \uB0B4 \uAC8C\uC784 \uD1B5\uACC4"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: C.muted } }, expanded ? "\uC811\uAE30 \u25B2" : "\uD3BC\uCE58\uAE30 \u25BC")), expanded && /* @__PURE__ */ React.createElement("div", { style: {
+  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: C.dark, display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16 } }, "\u{1F4CA}"), " ", t("\uB0B4 \uAC8C\uC784 \uD1B5\uACC4", "My Game Stats")), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: C.muted } }, expanded ? t("\uC811\uAE30 \u25B2", "Collapse \u25B2") : t("\uD3BC\uCE58\uAE30 \u25BC", "Expand \u25BC"))), expanded && /* @__PURE__ */ React.createElement("div", { style: {
     background: "rgba(255,255,255,0.7)",
     backdropFilter: "blur(8px)",
     borderRadius: "0 0 20px 20px",
@@ -734,15 +734,15 @@ function GameStatsSection() {
     border: "1px solid rgba(255,255,255,0.6)",
     borderTop: "none",
     marginTop: -4
-  } }, loading && /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: "24px", color: C.muted, fontSize: 13 } }, "\uBD88\uB7EC\uC624\uB294 \uC911..."), !loading && stats && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16, paddingTop: 16 } }, [
-    { label: "\uC774\uBC88 \uC8FC \uD50C\uB808\uC774", value: `${week.playCount || 0}\uD68C`, sub: `+${week.expGained || 0} EXP`, color: C.sage },
-    { label: "\uC774\uBC88 \uB2EC \uD50C\uB808\uC774", value: `${month.playCount || 0}\uD68C`, sub: `+${month.expGained || 0} EXP`, color: C.amber }
+  } }, loading && /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: "24px", color: C.muted, fontSize: 13 } }, t("\uBD88\uB7EC\uC624\uB294 \uC911...", "Loading...")), !loading && stats && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16, paddingTop: 16 } }, [
+    { label: t("\uC774\uBC88 \uC8FC \uD50C\uB808\uC774", "This Week"), value: `${week.playCount || 0}\uD68C`, sub: `+${week.expGained || 0} EXP`, color: C.sage },
+    { label: t("\uC774\uBC88 \uB2EC \uD50C\uB808\uC774", "This Month"), value: `${month.playCount || 0}\uD68C`, sub: `+${month.expGained || 0} EXP`, color: C.amber }
   ].map((c) => /* @__PURE__ */ React.createElement("div", { key: c.label, style: {
     background: "white",
     borderRadius: 14,
     padding: "14px 16px",
     border: `1px solid ${c.color}22`
-  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginBottom: 4 } }, c.label), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 20, fontWeight: 700, color: c.color } }, c.value), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, c.sub)))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: C.muted, marginBottom: 10, letterSpacing: "0.5px" } }, "\uAC8C\uC784\uBCC4 \uC218\uD589 \uD604\uD669"), perGame.length === 0 && /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: "20px", color: C.muted, fontSize: 13 } }, "\uC544\uC9C1 \uD50C\uB808\uC774 \uAE30\uB85D\uC774 \uC5C6\uC5B4\uC694"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, perGame.map((g) => {
+  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginBottom: 4 } }, c.label), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 20, fontWeight: 700, color: c.color } }, c.value), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, c.sub)))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: C.muted, marginBottom: 10, letterSpacing: "0.5px" } }, t("\uAC8C\uC784\uBCC4 \uC218\uD589 \uD604\uD669", "Performance by Game")), perGame.length === 0 && /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: "20px", color: C.muted, fontSize: 13 } }, t("\uC544\uC9C1 \uD50C\uB808\uC774 \uAE30\uB85D\uC774 \uC5C6\uC5B4\uC694", "No play records yet")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, perGame.map((g) => {
     const meta = STATS_GAME_META[g.game_id] || { name: g.game_id, emoji: "\u{1F3AE}" };
     const lastDate = g.last_played ? new Date(g.last_played).toLocaleDateString("ko-KR", { month: "short", day: "numeric" }) : "-";
     return /* @__PURE__ */ React.createElement("div", { key: g.game_id, style: {
@@ -752,7 +752,7 @@ function GameStatsSection() {
       background: "white",
       borderRadius: 12,
       padding: "12px 14px"
-    } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 20 } }, meta.emoji), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 600, color: C.dark } }, meta.name), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, "\uB9C8\uC9C0\uB9C9: ", lastDate))), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "right" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 700, color: C.sage } }, g.play_count || 0, "\uD68C"), (g.best_score || 0) > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.amber } }, "\uBCA0\uC2A4\uD2B8 ", g.best_score, "\uC810")));
+    } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 20 } }, meta.emoji), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 600, color: C.dark } }, meta.name), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, "\uB9C8\uC9C0\uB9C9: ", lastDate))), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "right" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 700, color: C.sage } }, g.play_count || 0, "\uD68C"), (g.best_score || 0) > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.amber } }, t("\uBCA0\uC2A4\uD2B8", "Best"), " ", g.best_score, "\uC810")));
   })))));
 }
 function AchievementPanel({ earned = [], isMaster = false }) {
@@ -773,7 +773,7 @@ function AchievementPanel({ earned = [], isMaster = false }) {
     padding: "18px 20px",
     marginBottom: 24,
     border: "1px solid rgba(255,255,255,0.6)"
-  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 7 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16 } }, "\u{1F3C5}"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, fontWeight: 700, color: C.dark } }, "\uC5C5\uC801"), /* @__PURE__ */ React.createElement("span", { style: {
+  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 7 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16 } }, "\u{1F3C5}"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, fontWeight: 700, color: C.dark } }, t("\uC5C5\uC801", "Achievements")), /* @__PURE__ */ React.createElement("span", { style: {
     fontSize: 11,
     fontWeight: 700,
     background: earnedCount === totalCount ? `linear-gradient(135deg, ${C.amber}, ${C.amberL})` : C.sagePale,
@@ -809,7 +809,7 @@ function AchievementPanel({ earned = [], isMaster = false }) {
     fontWeight: 600,
     fontFamily: "'Noto Sans KR',sans-serif",
     padding: "2px 0"
-  } }, expanded ? "\uC811\uAE30 \u25B2" : `+${sorted.length - 6}\uAC1C \uB354\uBCF4\uAE30 \u25BC`));
+  } }, expanded ? t("\uC811\uAE30 \u25B2", "Collapse \u25B2") : `+${sorted.length - 6}\uAC1C \uB354\uBCF4\uAE30 \u25BC`));
 }
 function AchievementToast({ achievements = [], onDismiss }) {
   const [visible, setVisible] = useState(true);
@@ -841,18 +841,18 @@ function AchievementToast({ achievements = [], onDismiss }) {
       padding: "12px 16px",
       boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
       border: `1px solid ${C.sage}33`
-    } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 24 } }, a.emoji), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.dark } }, "\uC5C5\uC801 \uB2EC\uC131!"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.sage, fontWeight: 600 } }, a.name)));
+    } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 24 } }, a.emoji), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.dark } }, t("\uC5C5\uC801 \uB2EC\uC131!", "Achievement Unlocked!")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.sage, fontWeight: 600 } }, a.name)));
   }));
 }
 const HISTORY_GAME_META = {
-  mood: { name: "\uAC10\uC815 \uC218\uCC44\uD654", emoji: "\u{1F60A}", color: "#6366F1" },
-  garden: { name: "\uB9C8\uC74C\uC758 \uC815\uC6D0", emoji: "\u{1F33F}", color: "#22C55E" },
-  efmt: { name: "\uAC10\uC815\uAF43", emoji: "\u{1F338}", color: "#EC4899" },
-  gratitude: { name: "\uAC10\uC0AC \uC77C\uAE30", emoji: "\u{1F31F}", color: "#F59E0B" },
-  burnout: { name: "\uBC88\uC544\uC6C3 \uD68C\uBCF5", emoji: "\u26A1", color: "#F97316" },
-  focus: { name: "\uC9D1\uC911\uB825 \uD6C8\uB828", emoji: "\u{1F3AF}", color: "#0EA5E9" },
-  worry: { name: "\uAC71\uC815 \uD48D\uC120", emoji: "\u{1F388}", color: "#8B5CF6" },
-  tree: { name: "\uB9C8\uC74C \uB098\uBB34", emoji: "\u{1F332}", color: "#16A34A" },
+  mood: { name: t("\uAC10\uC815 \uC218\uCC44\uD654", "Emotion Watercolor"), emoji: "\u{1F60A}", color: "#6366F1" },
+  garden: { name: t("\uB9C8\uC74C\uC758 \uC815\uC6D0", "Mind Garden"), emoji: "\u{1F33F}", color: "#22C55E" },
+  efmt: { name: t("\uAC10\uC815\uAF43", "Emotion Flower"), emoji: "\u{1F338}", color: "#EC4899" },
+  gratitude: { name: t("\uAC10\uC0AC \uC77C\uAE30", "Gratitude Journal"), emoji: "\u{1F31F}", color: "#F59E0B" },
+  burnout: { name: t("\uBC88\uC544\uC6C3 \uD68C\uBCF5", "BURNOUT Recovery"), emoji: "\u26A1", color: "#F97316" },
+  focus: { name: t("\uC9D1\uC911\uB825 \uD6C8\uB828", "Focus Training"), emoji: "\u{1F3AF}", color: "#0EA5E9" },
+  worry: { name: t("\uAC71\uC815 \uD48D\uC120", "Worry Balloon"), emoji: "\u{1F388}", color: "#8B5CF6" },
+  tree: { name: t("\uB9C8\uC74C \uB098\uBB34", "Mind Tree"), emoji: "\u{1F332}", color: "#16A34A" },
   qt: { name: "QT \uBB35\uC0C1", emoji: "\u271D\uFE0F", color: "#7C3AED" }
 };
 function GameHistorySection() {
@@ -868,7 +868,7 @@ function GameHistorySection() {
     }
     setExpanded((v) => !v);
   };
-  return /* @__PURE__ */ React.createElement("div", { style: { background: "rgba(255,255,255,0.7)", backdropFilter: "blur(8px)", borderRadius: 20, padding: "16px 20px", marginBottom: 24, border: "1px solid rgba(255,255,255,0.6)" } }, /* @__PURE__ */ React.createElement("button", { onClick: handleToggle, style: { width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", fontFamily: "'Noto Sans KR',sans-serif" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: C.dark, display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React.createElement("span", null, "\u{1F4C5}"), " \uAC8C\uC784 \uD50C\uB808\uC774 \uC774\uB825"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: C.muted } }, expanded ? "\uC811\uAE30 \u25B2" : "\uD3BC\uCE58\uAE30 \u25BC")), expanded && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14 } }, loading && /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: 16, color: C.muted, fontSize: 12 } }, "\uBD88\uB7EC\uC624\uB294 \uC911..."), !loading && sessions && sessions.length === 0 && /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: 16, color: C.muted, fontSize: 12 } }, "\uC544\uC9C1 \uD50C\uB808\uC774 \uAE30\uB85D\uC774 \uC5C6\uC5B4\uC694"), !loading && sessions && sessions.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, sessions.map((s, i) => {
+  return /* @__PURE__ */ React.createElement("div", { style: { background: "rgba(255,255,255,0.7)", backdropFilter: "blur(8px)", borderRadius: 20, padding: "16px 20px", marginBottom: 24, border: "1px solid rgba(255,255,255,0.6)" } }, /* @__PURE__ */ React.createElement("button", { onClick: handleToggle, style: { width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", fontFamily: "'Noto Sans KR',sans-serif" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: C.dark, display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React.createElement("span", null, "\u{1F4C5}"), " ", t("\uAC8C\uC784 \uD50C\uB808\uC774 \uC774\uB825", "Game Play History")), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: C.muted } }, expanded ? t("\uC811\uAE30 \u25B2", "Collapse \u25B2") : t("\uD3BC\uCE58\uAE30 \u25BC", "Expand \u25BC"))), expanded && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14 } }, loading && /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: 16, color: C.muted, fontSize: 12 } }, t("\uBD88\uB7EC\uC624\uB294 \uC911...", "Loading...")), !loading && sessions && sessions.length === 0 && /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: 16, color: C.muted, fontSize: 12 } }, t("\uC544\uC9C1 \uD50C\uB808\uC774 \uAE30\uB85D\uC774 \uC5C6\uC5B4\uC694", "No play records yet")), !loading && sessions && sessions.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, sessions.map((s, i) => {
     const meta = HISTORY_GAME_META[s.game_id] || { name: s.game_id, emoji: "\u{1F3AE}", color: "#6B7280" };
     const date = new Date(s.created_at);
     const dateStr = date.toLocaleDateString("ko-KR", { month: "short", day: "numeric" });
@@ -878,10 +878,10 @@ function GameHistorySection() {
   }))));
 }
 const BURNOUT_LEVELS = [
-  { max: 39, label: "\uB0AE\uC74C", color: "#9333EA", bg: "#F3E8FF" },
-  { max: 59, label: "\uBCF4\uD1B5", color: "#F59E0B", bg: "#FEF3C7" },
-  { max: 79, label: "\uB192\uC74C", color: "#F97316", bg: "#FFEDD5" },
-  { max: 100, label: "\uC2EC\uAC01", color: "#EF4444", bg: "#FEF2F2" }
+  { max: 39, label: t("\uB0AE\uC74C", "Low"), color: "#9333EA", bg: "#F3E8FF" },
+  { max: 59, label: t("\uBCF4\uD1B5", "Medium"), color: "#F59E0B", bg: "#FEF3C7" },
+  { max: 79, label: t("\uB192\uC74C", "High"), color: "#F97316", bg: "#FFEDD5" },
+  { max: 100, label: t("\uC2EC\uAC01", "Severe"), color: "#EF4444", bg: "#FEF2F2" }
 ];
 function getBurnoutLevel(score) {
   return BURNOUT_LEVELS.find((l) => score <= l.max) || BURNOUT_LEVELS[BURNOUT_LEVELS.length - 1];
@@ -917,14 +917,14 @@ function BurnoutTrendSection({ userTestScores }) {
     padding: "16px 20px",
     marginBottom: 24,
     border: "1px solid rgba(255,255,255,0.6)"
-  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 7 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16 } }, "\u{1F525}"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, fontWeight: 700, color: C.dark } }, "\uBC88\uC544\uC6C3 \uC9C0\uC218 \uCD94\uC774"), /* @__PURE__ */ React.createElement("span", { style: {
+  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 7 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16 } }, "\u{1F525}"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, fontWeight: 700, color: C.dark } }, t("\uBC88\uC544\uC6C3 \uC9C0\uC218 \uCD94\uC774", "BURNOUT Score Trend")), /* @__PURE__ */ React.createElement("span", { style: {
     fontSize: 11,
     fontWeight: 700,
     background: level.bg,
     color: level.color,
     borderRadius: 100,
     padding: "2px 8px"
-  } }, "\uD604\uC7AC ", burnoutScore, "\uC810 \xB7 ", level.label)), /* @__PURE__ */ React.createElement("button", { onClick: handleToggle, style: {
+  } }, t("\uD604\uC7AC", "Current"), " ", burnoutScore, "\uC810 \xB7 ", level.label)), /* @__PURE__ */ React.createElement("button", { onClick: handleToggle, style: {
     background: "none",
     border: "none",
     cursor: "pointer",
@@ -932,13 +932,13 @@ function BurnoutTrendSection({ userTestScores }) {
     color: C.muted,
     fontWeight: 600,
     fontFamily: "'Noto Sans KR',sans-serif"
-  } }, expanded ? "\uC811\uAE30 \u25B2" : "\uD3BC\uCE58\uAE30 \u25BC")), expanded && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, animation: "fadeUp 0.3s ease" } }, loading && /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: 16, color: C.muted, fontSize: 12 } }, "\uBD88\uB7EC\uC624\uB294 \uC911..."), !loading && history && entries.length === 0 && /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: 16, color: C.muted, fontSize: 12 } }, "\uC544\uC9C1 \uBC88\uC544\uC6C3 \uAC8C\uC784 \uAE30\uB85D\uC774 \uC5C6\uC5B4\uC694.", /* @__PURE__ */ React.createElement("br", null), "\uAC8C\uC784\uC744 \uD50C\uB808\uC774\uD558\uBA74 \uC810\uC218 \uBCC0\uD654\uB97C \uD655\uC778\uD560 \uC218 \uC788\uC5B4\uC694!"), !loading && entries.length >= 2 && /* @__PURE__ */ React.createElement("div", { style: {
+  } }, expanded ? t("\uC811\uAE30 \u25B2", "Collapse \u25B2") : t("\uD3BC\uCE58\uAE30 \u25BC", "Expand \u25BC"))), expanded && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, animation: "fadeUp 0.3s ease" } }, loading && /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: 16, color: C.muted, fontSize: 12 } }, t("\uBD88\uB7EC\uC624\uB294 \uC911...", "Loading...")), !loading && history && entries.length === 0 && /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: 16, color: C.muted, fontSize: 12 } }, t("\uC544\uC9C1 \uBC88\uC544\uC6C3 \uAC8C\uC784 \uAE30\uB85D\uC774 \uC5C6\uC5B4\uC694.", "No BURNOUT game records yet."), /* @__PURE__ */ React.createElement("br", null), t("\uAC8C\uC784\uC744 \uD50C\uB808\uC774\uD558\uBA74 \uC810\uC218 \uBCC0\uD654\uB97C \uD655\uC778\uD560 \uC218 \uC788\uC5B4\uC694!", "Play the game to track score changes!")), !loading && entries.length >= 2 && /* @__PURE__ */ React.createElement("div", { style: {
     background: "white",
     borderRadius: 14,
     padding: "14px 16px",
     marginBottom: 12,
     border: `1px solid ${level.color}22`
-  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginBottom: 8 } }, "\uBC88\uC544\uC6C3 \uC810\uC218 \uC774\uB825 (\uB0AE\uC744\uC218\uB85D \uAC74\uAC15)"), /* @__PURE__ */ React.createElement("svg", { viewBox: `0 0 ${W} ${H}`, style: { width: "100%", height: "auto", display: "block" } }, /* @__PURE__ */ React.createElement("rect", { x: PAD, y: PAD, width: plotW, height: toY(60) - PAD, fill: "#FEF3C7", opacity: "0.4", rx: "2" }), /* @__PURE__ */ React.createElement("rect", { x: PAD, y: toY(60), width: plotW, height: toY(40) - toY(60), fill: "#FFEDD5", opacity: "0.3", rx: "2" }), /* @__PURE__ */ React.createElement("line", { x1: PAD, y1: toY(60), x2: W - PAD, y2: toY(60), stroke: "#F59E0B", strokeWidth: "1", strokeDasharray: "3 2" }), /* @__PURE__ */ React.createElement("text", { x: W - PAD + 2, y: toY(60) + 3, fontSize: "7", fill: "#F59E0B" }, "60"), /* @__PURE__ */ React.createElement(
+  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginBottom: 8 } }, t("\uBC88\uC544\uC6C3 \uC810\uC218 \uC774\uB825 (\uB0AE\uC744\uC218\uB85D \uAC74\uAC15)", "BURNOUT score history (lower is healthier)")), /* @__PURE__ */ React.createElement("svg", { viewBox: `0 0 ${W} ${H}`, style: { width: "100%", height: "auto", display: "block" } }, /* @__PURE__ */ React.createElement("rect", { x: PAD, y: PAD, width: plotW, height: toY(60) - PAD, fill: "#FEF3C7", opacity: "0.4", rx: "2" }), /* @__PURE__ */ React.createElement("rect", { x: PAD, y: toY(60), width: plotW, height: toY(40) - toY(60), fill: "#FFEDD5", opacity: "0.3", rx: "2" }), /* @__PURE__ */ React.createElement("line", { x1: PAD, y1: toY(60), x2: W - PAD, y2: toY(60), stroke: "#F59E0B", strokeWidth: "1", strokeDasharray: "3 2" }), /* @__PURE__ */ React.createElement("text", { x: W - PAD + 2, y: toY(60) + 3, fontSize: "7", fill: "#F59E0B" }, "60"), /* @__PURE__ */ React.createElement(
     "path",
     {
       d: `${pathD} L ${pts[pts.length - 1].x} ${PAD + plotH} L ${pts[0].x} ${PAD + plotH} Z`,
@@ -1000,33 +1000,33 @@ ${diary}
 
 \uCE58\uC720 \uAC8C\uC784\uC5D0\uC11C \uAE30\uB85D\uD588\uC5B4\uC694 \u{1F33F} https://game.maumful.com`;
     if (navigator.share) {
-      navigator.share({ title: "\uB9C8\uC74C \uC77C\uAE30", text }).catch(() => {
+      navigator.share({ title: t("\uB9C8\uC74C \uC77C\uAE30", "Mind Diary"), text }).catch(() => {
       });
     } else {
       navigator.clipboard?.writeText(text).then(() => alert("\uBCF5\uC0AC\uB410\uC5B4\uC694!"));
     }
   }
   if (!checked && !diary) {
-    return /* @__PURE__ */ React.createElement("div", { style: { background: "white", borderRadius: 16, padding: "16px 18px", marginBottom: 12, border: "1px solid rgba(0,0,0,.08)" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 18 } }, "\u{1F4D4}"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, fontWeight: 700, color: "#6B21A8" } }, "\uC624\uB298\uC758 \uB9C8\uC74C \uC77C\uAE30")), /* @__PURE__ */ React.createElement(
+    return /* @__PURE__ */ React.createElement("div", { style: { background: "white", borderRadius: 16, padding: "16px 18px", marginBottom: 12, border: "1px solid rgba(0,0,0,.08)" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 18 } }, "\u{1F4D4}"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, fontWeight: 700, color: "#6B21A8" } }, t("\uC624\uB298\uC758 \uB9C8\uC74C \uC77C\uAE30", "Today's Mind Diary"))), /* @__PURE__ */ React.createElement(
       "button",
       {
         onClick: loadDiary,
         disabled: loading,
         style: { fontSize: 12, background: "#6B21A8", color: "white", border: "none", borderRadius: 20, padding: "5px 14px", cursor: "pointer", fontFamily: "'Noto Sans KR',sans-serif" }
       },
-      loading ? "\uC0DD\uC131 \uC911..." : "\u270D\uFE0F \uC77C\uAE30 \uC0DD\uC131"
-    )), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: "#9A9A9A", margin: 0 } }, "\uC624\uB298\uC758 \uAC10\uC815 \uAE30\uB85D\uC744 \uBC14\uD0D5\uC73C\uB85C AI\uAC00 \uB9C8\uC74C \uC77C\uAE30\uB97C \uC791\uC131\uD574 \uB4DC\uB824\uC694."));
+      loading ? t("\uC0DD\uC131 \uC911...", "Generating...") : t("\u270D\uFE0F \uC77C\uAE30 \uC0DD\uC131", "\u270D\uFE0F Generate Diary")
+    )), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: "#9A9A9A", margin: 0 } }, t("\uC624\uB298\uC758 \uAC10\uC815 \uAE30\uB85D\uC744 \uBC14\uD0D5\uC73C\uB85C AI\uAC00 \uB9C8\uC74C \uC77C\uAE30\uB97C \uC791\uC131\uD574 \uB4DC\uB824\uC694.", "AI writes a mind diary based on your emotion records today.")));
   }
   if (noData) return null;
   if (!diary) return null;
   const todayStr = (/* @__PURE__ */ new Date()).toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "short" });
-  return /* @__PURE__ */ React.createElement("div", { style: { background: "linear-gradient(135deg,#f0fdf4,#dcfce7)", borderRadius: 16, padding: "16px 18px", marginBottom: 12, border: "1px solid #bbf7d0" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 18 } }, "\u{1F4D4}"), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, fontWeight: 700, color: "#15803d" } }, "\uC624\uB298\uC758 \uB9C8\uC74C \uC77C\uAE30"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: "#86efac", marginLeft: 8 } }, todayStr))), /* @__PURE__ */ React.createElement(
+  return /* @__PURE__ */ React.createElement("div", { style: { background: "linear-gradient(135deg,#f0fdf4,#dcfce7)", borderRadius: 16, padding: "16px 18px", marginBottom: 12, border: "1px solid #bbf7d0" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 18 } }, "\u{1F4D4}"), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, fontWeight: 700, color: "#15803d" } }, t("\uC624\uB298\uC758 \uB9C8\uC74C \uC77C\uAE30", "Today's Mind Diary")), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: "#86efac", marginLeft: 8 } }, todayStr))), /* @__PURE__ */ React.createElement(
     "button",
     {
       onClick: share,
       style: { fontSize: 11, background: "transparent", color: "#16a34a", border: "1px solid #86efac", borderRadius: 20, padding: "4px 10px", cursor: "pointer", fontFamily: "'Noto Sans KR',sans-serif" }
     },
-    "\uACF5\uC720 \u{1F517}"
+    t("\uACF5\uC720 \u{1F517}", "Share \u{1F517}")
   )), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 14, color: "#166534", lineHeight: 1.7, margin: 0, fontStyle: "italic" } }, diary));
 }
 const MOOD_EMOJI_MAP = {
@@ -1039,7 +1039,7 @@ const MOOD_EMOJI_MAP = {
   hopeful: "\u{1F31F}",
   bored: "\u{1F611}"
 };
-const DAY_LABELS = ["\uC77C", "\uC6D4", "\uD654", "\uC218", "\uBAA9", "\uAE08", "\uD1A0"];
+const DAY_LABELS = [t("\uC77C", "d"), "\uC6D4", "\uD654", "\uC218", "\uBAA9", "\uAE08", "\uD1A0"];
 function WeekMoodSummaryCard() {
   const [entries, setEntries] = useState(null);
   const [loaded, setLoaded] = useState(false);
@@ -1101,15 +1101,15 @@ function WeekMoodSummaryCard() {
       color: isToday ? C.sage : C.muted,
       fontWeight: isToday ? 700 : 400
     } }, DAY_LABELS[dayIdx]));
-  })), dominant && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginTop: 10, textAlign: "center" } }, "\uC774\uBC88 \uC8FC \uC8FC\uC694 \uAC10\uC815:", " ", /* @__PURE__ */ React.createElement("span", { style: { color: C.dark, fontWeight: 600 } }, dominantEmoji, " ", dominant[0] === "happy" ? "\uD589\uBCF5" : dominant[0] === "calm" ? "\uD3C9\uC628" : dominant[0] === "tired" ? "\uD53C\uACE4" : dominant[0] === "anxious" ? "\uBD88\uC548" : dominant[0] === "sad" ? "\uC2AC\uD514" : dominant[0]), " ", "(", dominant[1], "\uC77C)"));
+  })), dominant && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginTop: 10, textAlign: "center" } }, "\uC774\uBC88 \uC8FC \uC8FC\uC694 \uAC10\uC815:", " ", /* @__PURE__ */ React.createElement("span", { style: { color: C.dark, fontWeight: 600 } }, dominantEmoji, " ", dominant[0] === "happy" ? t("\uD589\uBCF5", "Happy") : dominant[0] === "calm" ? t("\uD3C9\uC628", "Calm") : dominant[0] === "tired" ? t("\uD53C\uACE4", "Tired") : dominant[0] === "anxious" ? t("\uBD88\uC548", "Anxious") : dominant[0] === "sad" ? t("\uC2AC\uD514", "Sad") : dominant[0]), " ", "(", dominant[1], "\uC77C)"));
 }
 const EMOTION_DISPLAY = {
-  happy: { emoji: "\u{1F60A}", label: "\uD589\uBCF5", color: "#F59E0B" },
-  calm: { emoji: "\u{1F60C}", label: "\uD3C9\uC628", color: "#A78BFA" },
-  tired: { emoji: "\u{1F634}", label: "\uD53C\uACE4", color: "#9BA8B0" },
-  anxious: { emoji: "\u{1F630}", label: "\uBD88\uC548", color: "#C4B5FD" },
-  sad: { emoji: "\u{1F622}", label: "\uC2AC\uD514", color: "#93C5FD" },
-  angry: { emoji: "\u{1F624}", label: "\uD654\uB0A8", color: "#FCA5A5" }
+  happy: { emoji: "\u{1F60A}", label: t("\uD589\uBCF5", "Happy"), color: "#F59E0B" },
+  calm: { emoji: "\u{1F60C}", label: t("\uD3C9\uC628", "Calm"), color: "#A78BFA" },
+  tired: { emoji: "\u{1F634}", label: t("\uD53C\uACE4", "Tired"), color: "#9BA8B0" },
+  anxious: { emoji: "\u{1F630}", label: t("\uBD88\uC548", "Anxious"), color: "#C4B5FD" },
+  sad: { emoji: "\u{1F622}", label: t("\uC2AC\uD514", "Sad"), color: "#93C5FD" },
+  angry: { emoji: "\u{1F624}", label: t("\uD654\uB0A8", "Angry"), color: "#FCA5A5" }
 };
 function EmotionWeeklyReport() {
   const [reportData, setReportData] = useState(null);
@@ -1130,7 +1130,7 @@ function EmotionWeeklyReport() {
     padding: "16px 20px",
     marginBottom: 24,
     border: "1px solid rgba(255,255,255,0.6)"
-  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 7 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16 } }, "\u{1F4CA}"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, fontWeight: 700, color: C.dark } }, "\uC774\uBC88 \uC8FC \uAC10\uC815 \uD750\uB984"), entries.length > 0 && /* @__PURE__ */ React.createElement("span", { style: {
+  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 7 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16 } }, "\u{1F4CA}"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, fontWeight: 700, color: C.dark } }, t("\uC774\uBC88 \uC8FC \uAC10\uC815 \uD750\uB984", "This Week's Mood Flow")), entries.length > 0 && /* @__PURE__ */ React.createElement("span", { style: {
     fontSize: 11,
     fontWeight: 600,
     background: C.sagePale,
@@ -1146,7 +1146,7 @@ ${reportData.report.slice(0, 80)}...
 
 #The Light of Life #\uCE58\uC720 \uAC8C\uC784 #\uAC10\uC815\uAE30\uB85D`;
     if (navigator.share) {
-      navigator.share({ title: "\uC774\uBC88 \uC8FC \uAC10\uC815 \uD750\uB984", text }).catch(() => {
+      navigator.share({ title: t("\uC774\uBC88 \uC8FC \uAC10\uC815 \uD750\uB984", "This Week's Mood Flow"), text }).catch(() => {
       });
     } else {
       navigator.clipboard?.writeText(text).then(() => alert("\uBCF5\uC0AC\uB410\uC5B4\uC694!")).catch(() => {
@@ -1160,7 +1160,7 @@ ${reportData.report.slice(0, 80)}...
     color: C.muted,
     fontWeight: 600,
     fontFamily: "'Noto Sans KR',sans-serif"
-  } }, "\uACF5\uC720 \u{1F517}"), /* @__PURE__ */ React.createElement("button", { onClick: () => setExpanded((v) => !v), style: {
+  } }, t("\uACF5\uC720 \u{1F517}", "Share \u{1F517}")), /* @__PURE__ */ React.createElement("button", { onClick: () => setExpanded((v) => !v), style: {
     background: "none",
     border: "none",
     cursor: "pointer",
@@ -1168,7 +1168,7 @@ ${reportData.report.slice(0, 80)}...
     color: C.muted,
     fontWeight: 600,
     fontFamily: "'Noto Sans KR',sans-serif"
-  } }, expanded ? "\uC811\uAE30 \u25B2" : "\uD3BC\uCE58\uAE30 \u25BC"))), expanded && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, animation: "fadeUp 0.3s ease" } }, entries.length > 0 && /* @__PURE__ */ React.createElement("div", { style: {
+  } }, expanded ? t("\uC811\uAE30 \u25B2", "Collapse \u25B2") : t("\uD3BC\uCE58\uAE30 \u25BC", "Expand \u25BC")))), expanded && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, animation: "fadeUp 0.3s ease" } }, entries.length > 0 && /* @__PURE__ */ React.createElement("div", { style: {
     display: "flex",
     gap: 8,
     overflowX: "auto",
@@ -1213,14 +1213,14 @@ ${reportData.report.slice(0, 80)}...
   } }, reportData.report), reportData.cached && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: C.muted, marginTop: 6 } }, "\uC774\uBC88 \uC8FC \uBD84\uC11D \xB7 \uB9E4\uC8FC \uC6D4\uC694\uC77C \uAC31\uC2E0"))));
 }
 const GAME_META = {
-  garden: { name: "\uB9C8\uC74C\uC758 \uC815\uC6D0", emoji: "\u{1F33F}" },
-  mood: { name: "\uAC10\uC815 \uC218\uCC44\uD654", emoji: "\u{1F3A8}" },
-  efmt: { name: "\uAC10\uC815\uAF43 \uCC3E\uAE30", emoji: "\u{1F338}" },
-  gratitude: { name: "\uBCC4\uBE5B \uAC10\uC0AC \uC77C\uAE30", emoji: "\u2B50" },
-  tree: { name: "\uB0B4\uBA74\uC758 \uB098\uBB34", emoji: "\u{1F333}" },
-  burnout: { name: "\uBC88\uC544\uC6C3 \uD68C\uBCF5", emoji: "\u26A1" },
-  focus: { name: "\uB9C8\uC74C \uC9D1\uC911\uB825", emoji: "\u{1F9E0}" },
-  worry: { name: "\uAC71\uC815 \uD48D\uC120", emoji: "\u{1FAE7}" }
+  garden: { name: t("\uB9C8\uC74C\uC758 \uC815\uC6D0", "Mind Garden"), emoji: "\u{1F33F}" },
+  mood: { name: t("\uAC10\uC815 \uC218\uCC44\uD654", "Emotion Watercolor"), emoji: "\u{1F3A8}" },
+  efmt: { name: t("\uAC10\uC815\uAF43 \uCC3E\uAE30", "Emotion Flower"), emoji: "\u{1F338}" },
+  gratitude: { name: t("\uBCC4\uBE5B \uAC10\uC0AC \uC77C\uAE30", "Starlight Gratitude"), emoji: "\u2B50" },
+  tree: { name: t("\uB0B4\uBA74\uC758 \uB098\uBB34", "Inner Tree"), emoji: "\u{1F333}" },
+  burnout: { name: t("\uBC88\uC544\uC6C3 \uD68C\uBCF5", "BURNOUT Recovery"), emoji: "\u26A1" },
+  focus: { name: t("\uB9C8\uC74C \uC9D1\uC911\uB825", "Mind Focus"), emoji: "\u{1F9E0}" },
+  worry: { name: t("\uAC71\uC815 \uD48D\uC120", "Worry Balloon"), emoji: "\u{1FAE7}" }
 };
 function TodayRecommendCard({ hubData, onPlay }) {
   if (!hubData) return null;
@@ -1239,17 +1239,17 @@ function TodayRecommendCard({ hubData, onPlay }) {
   } else if (burnout !== void 0 && burnout >= 60 && level >= 2) {
     rec = { gameId: "burnout", reason: `\uBC88\uC544\uC6C3 \uC9C0\uC218 ${burnout}\uC810 \u2014 \uC624\uB298 \uD68C\uBCF5 \uBBF8\uC158\uC744 \uC2DC\uC791\uD574\uBCF4\uC138\uC694`, color: C.amber };
   } else if (!recentIds.includes("mood")) {
-    rec = { gameId: "mood", reason: "\uC624\uB298 \uAC10\uC815 \uAE30\uB85D\uC744 \uC544\uC9C1 \uC548 \uD588\uC5B4\uC694 \u270D\uFE0F", color: C.sage };
+    rec = { gameId: "mood", reason: t("\uC624\uB298 \uAC10\uC815 \uAE30\uB85D\uC744 \uC544\uC9C1 \uC548 \uD588\uC5B4\uC694 \u270D\uFE0F", "You haven't recorded your emotions today \u270D\uFE0F"), color: C.sage };
   } else if (phq9 !== void 0 && phq9 >= 5) {
-    rec = { gameId: "worry", reason: "\uB9C8\uC74C\uC18D \uAC71\uC815\uC744 \uD48D\uC120\uC5D0 \uB2F4\uC544 \uB0A0\uB824 \uBCF4\uB0BC\uAE4C\uC694? \u{1FAE7}", color: "#7B9ED9" };
+    rec = { gameId: "worry", reason: t("\uB9C8\uC74C\uC18D \uAC71\uC815\uC744 \uD48D\uC120\uC5D0 \uB2F4\uC544 \uB0A0\uB824 \uBCF4\uB0BC\uAE4C\uC694? \u{1FAE7}", "Float away your worries in a balloon? \u{1FAE7}"), color: "#7B9ED9" };
   } else if (level >= 2 && !recentIds.includes("efmt")) {
-    rec = { gameId: "efmt", reason: "\uAC10\uC815\uAF43 \uCC3E\uAE30\uB85C \uAC10\uC815 \uC778\uC2DD\uB825\uC744 \uD0A4\uC6CC\uBCF4\uC138\uC694 \u{1F338}", color: "#C97B8A" };
+    rec = { gameId: "efmt", reason: t("\uAC10\uC815\uAF43 \uCC3E\uAE30\uB85C \uAC10\uC815 \uC778\uC2DD\uB825\uC744 \uD0A4\uC6CC\uBCF4\uC138\uC694 \u{1F338}", "Build emotional awareness with Emotion Flower \u{1F338}"), color: "#C97B8A" };
   } else if (level >= 2 && !recentIds.includes("gratitude")) {
-    rec = { gameId: "gratitude", reason: "\uC624\uB298\uC758 \uAC10\uC0AC \uC77C\uAE30\uB97C \uC368\uBCFC\uAE4C\uC694? \u2B50", color: C.amber };
+    rec = { gameId: "gratitude", reason: t("\uC624\uB298\uC758 \uAC10\uC0AC \uC77C\uAE30\uB97C \uC368\uBCFC\uAE4C\uC694? \u2B50", "Write today's gratitude journal? \u2B50"), color: C.amber };
   } else if (!recentIds.includes("worry")) {
-    rec = { gameId: "worry", reason: "\uAC71\uC815 \uD48D\uC120\uC73C\uB85C \uB9C8\uC74C\uC18D \uC9D0\uC744 \uAC00\uBCCD\uAC8C \uD574\uBCF4\uC138\uC694 \u{1FAE7}", color: "#7B9ED9" };
+    rec = { gameId: "worry", reason: t("\uAC71\uC815 \uD48D\uC120\uC73C\uB85C \uB9C8\uC74C\uC18D \uC9D0\uC744 \uAC00\uBCCD\uAC8C \uD574\uBCF4\uC138\uC694 \u{1FAE7}", "Lighten your mental load with Worry Balloon \u{1FAE7}"), color: "#7B9ED9" };
   } else {
-    rec = { gameId: "garden", reason: "\uC7A0\uAE50 \uD638\uD761\uC744 \uAC00\uB2E4\uB4EC\uACE0 \uC815\uC6D0\uC744 \uAC00\uAFD4\uBCFC\uAE4C\uC694? \u{1F33F}", color: C.sage };
+    rec = { gameId: "garden", reason: t("\uC7A0\uAE50 \uD638\uD761\uC744 \uAC00\uB2E4\uB4EC\uACE0 \uC815\uC6D0\uC744 \uAC00\uAFD4\uBCFC\uAE4C\uC694? \u{1F33F}", "Take a breath and tend your garden? \u{1F33F}"), color: C.sage };
   }
   const game = GAME_META[rec.gameId];
   return /* @__PURE__ */ React.createElement("div", { style: {
@@ -1281,18 +1281,18 @@ function TodayRecommendCard({ hubData, onPlay }) {
     fontWeight: 700,
     cursor: "pointer",
     flexShrink: 0
-  } }, "\uC2DC\uC791 \u2192")));
+  } }, t("\uC2DC\uC791 \u2192", "Start \u2192"))));
 }
 const QUEST_POOL = [
-  { id: "play_mood", game: "mood", module: "checkin", text: "\uC624\uB298\uC758 \uAC10\uC815 \uAE30\uB85D\uD558\uAE30", emoji: "\u{1F3A8}", exp: 15 },
-  { id: "play_breathing", game: "garden", module: "breathing", text: "\uD638\uD761 \uD6C8\uB828 \uD55C \uBC88 \uC644\uB8CC\uD558\uAE30", emoji: "\u{1F4A7}", exp: 20 },
-  { id: "play_cbt", game: "garden", module: "cbt", text: "\uC0DD\uAC01 \uAD50\uC815 \uD55C \uBC88 \uC644\uB8CC\uD558\uAE30", emoji: "\u{1F331}", exp: 20 },
-  { id: "play_gratitude", game: "gratitude", module: "gratitude_write", text: "\uAC10\uC0AC \uC77C\uAE30 \uC4F0\uAE30", emoji: "\u2B50", exp: 20 },
-  { id: "play_efmt", game: "efmt", module: "efmt_easy", text: "\uAC10\uC815\uAF43 \uCC3E\uAE30 \uD55C \uBC88 \uC644\uB8CC\uD558\uAE30", emoji: "\u{1F338}", exp: 20, minLevel: 2 },
-  { id: "play_burnout", game: "burnout", module: "missions", text: "\uBC88\uC544\uC6C3 \uD68C\uBCF5 \uBBF8\uC158 \uC644\uB8CC\uD558\uAE30", emoji: "\u26A1", exp: 20, minLevel: 2 },
-  { id: "play_tree", game: "tree", module: "roots", text: "\uB0B4\uBA74\uC758 \uB098\uBB34 \uD0D0\uD5D8\uD558\uAE30", emoji: "\u{1F333}", exp: 25, minLevel: 4 },
-  { id: "play_focus", game: "focus", module: "focus_training", text: "\uC9D1\uC911\uB825 \uD6C8\uB828 \uD55C \uBC88 \uC644\uB8CC\uD558\uAE30", emoji: "\u{1F9E0}", exp: 20, minLevel: 3 },
-  { id: "play_any", game: null, module: null, text: "\uC544\uBB34 \uAC8C\uC784\uC774\uB098 \uD55C \uBC88 \uD50C\uB808\uC774\uD558\uAE30", emoji: "\u{1F3AE}", exp: 10 }
+  { id: "play_mood", game: "mood", module: "checkin", text: t("\uC624\uB298\uC758 \uAC10\uC815 \uAE30\uB85D\uD558\uAE30", "Record today's emotion"), emoji: "\u{1F3A8}", exp: 15 },
+  { id: "play_breathing", game: "garden", module: "breathing", text: t("\uD638\uD761 \uD6C8\uB828 \uD55C \uBC88 \uC644\uB8CC\uD558\uAE30", "Complete one breathing training"), emoji: "\u{1F4A7}", exp: 20 },
+  { id: "play_cbt", game: "garden", module: "cbt", text: t("\uC0DD\uAC01 \uAD50\uC815 \uD55C \uBC88 \uC644\uB8CC\uD558\uAE30", "Complete one thought reframing"), emoji: "\u{1F331}", exp: 20 },
+  { id: "play_gratitude", game: "gratitude", module: "gratitude_write", text: t("\uAC10\uC0AC \uC77C\uAE30 \uC4F0\uAE30", "Write a gratitude journal"), emoji: "\u2B50", exp: 20 },
+  { id: "play_efmt", game: "efmt", module: "efmt_easy", text: t("\uAC10\uC815\uAF43 \uCC3E\uAE30 \uD55C \uBC88 \uC644\uB8CC\uD558\uAE30", "Complete one Emotion Flower session"), emoji: "\u{1F338}", exp: 20, minLevel: 2 },
+  { id: "play_burnout", game: "burnout", module: "missions", text: t("\uBC88\uC544\uC6C3 \uD68C\uBCF5 \uBBF8\uC158 \uC644\uB8CC\uD558\uAE30", "Complete a BURNOUT recovery mission"), emoji: "\u26A1", exp: 20, minLevel: 2 },
+  { id: "play_tree", game: "tree", module: "roots", text: t("\uB0B4\uBA74\uC758 \uB098\uBB34 \uD0D0\uD5D8\uD558\uAE30", "Explore the Inner Tree"), emoji: "\u{1F333}", exp: 25, minLevel: 4 },
+  { id: "play_focus", game: "focus", module: "focus_training", text: t("\uC9D1\uC911\uB825 \uD6C8\uB828 \uD55C \uBC88 \uC644\uB8CC\uD558\uAE30", "Complete one focus training session"), emoji: "\u{1F9E0}", exp: 20, minLevel: 3 },
+  { id: "play_any", game: null, module: null, text: t("\uC544\uBB34 \uAC8C\uC784\uC774\uB098 \uD55C \uBC88 \uD50C\uB808\uC774\uD558\uAE30", "Play any game once"), emoji: "\u{1F3AE}", exp: 10 }
 ];
 function getDailyQuests(level = 1, userId = 0) {
   const now = /* @__PURE__ */ new Date();
@@ -1341,7 +1341,7 @@ function DailyQuestCard({ todaySessions = [], level = 1, userId = 0, streakRecov
     padding: "18px 20px",
     marginBottom: 24,
     border: "1px solid rgba(255,255,255,0.6)"
-  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 7 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16 } }, "\u{1F4CB}"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, fontWeight: 700, color: C.dark } }, "\uC624\uB298\uC758 \uD018\uC2A4\uD2B8"), /* @__PURE__ */ React.createElement("span", { style: {
+  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 7 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16 } }, "\u{1F4CB}"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, fontWeight: 700, color: C.dark } }, t("\uC624\uB298\uC758 \uD018\uC2A4\uD2B8", "Today's Quests")), /* @__PURE__ */ React.createElement("span", { style: {
     fontSize: 11,
     fontWeight: 700,
     background: allDone ? `linear-gradient(135deg, ${C.amber}, ${C.amberL})` : C.sagePale,
@@ -1383,7 +1383,7 @@ function DailyQuestCard({ todaySessions = [], level = 1, userId = 0, streakRecov
       fontSize: 11,
       fontWeight: 700,
       cursor: "pointer"
-    } }, "\uC2DC\uC791 \u2192"));
+    } }, t("\uC2DC\uC791 \u2192", "Start \u2192")));
   })));
 }
 function OnboardingOverlay({ onDone }) {
@@ -1391,18 +1391,18 @@ function OnboardingOverlay({ onDone }) {
   const steps = [
     {
       emoji: "\u{1F33F}",
-      title: "\uB9C8\uC74C\uC758 \uC815\uC6D0\uC5D0 \uC624\uC2E0 \uAC83\uC744 \uD658\uC601\uD574\uC694",
+      title: t("\uB9C8\uC74C\uC758 \uC815\uC6D0\uC5D0 \uC624\uC2E0 \uAC83\uC744 \uD658\uC601\uD574\uC694", "Welcome to Mind Garden"),
       body: "The Light of Life\uC758 \uC2EC\uB9AC\uAC80\uC0AC \uACB0\uACFC\uC640 \uC5F0\uB3D9\uD558\uC5EC \uB098\uB9CC\uC758 \uCE58\uC720 \uACF5\uAC04\uC744 \uAC00\uAFB8\uB294 \uAC8C\uC784 \uD50C\uB7AB\uD3FC\uC774\uC5D0\uC694. \uAC8C\uC784\uC744 \uC990\uAE30\uBA70 \uB9C8\uC74C\uC744 \uB3CC\uBCF4\uC138\uC694."
     },
     {
       emoji: "\u{1F331}",
-      title: "\uB808\uBCA8\uC5C5\uC73C\uB85C \uC0C8 \uAC8C\uC784\uC744 \uD574\uAE08\uD574\uC694",
-      body: "\uAC8C\uC784\uC744 \uD50C\uB808\uC774\uD558\uBA74 EXP\uAC00 \uC313\uC5EC \uB808\uBCA8\uC5C5\uD574\uC694. \uB808\uBCA8 2\uBD80\uD130 \uAC10\uC815\uAF43 \uCC3E\uAE30\xB7\uBC88\uC544\uC6C3 \uD68C\uBCF5 \uB4F1 \uB354 \uB9CE\uC740 \uAC8C\uC784\uC774 \uC5F4\uB9BD\uB2C8\uB2E4."
+      title: t("\uB808\uBCA8\uC5C5\uC73C\uB85C \uC0C8 \uAC8C\uC784\uC744 \uD574\uAE08\uD574\uC694", "Level up to unlock new games"),
+      body: t("\uAC8C\uC784\uC744 \uD50C\uB808\uC774\uD558\uBA74 EXP\uAC00 \uC313\uC5EC \uB808\uBCA8\uC5C5\uD574\uC694. \uB808\uBCA8 2\uBD80\uD130 \uAC10\uC815\uAF43 \uCC3E\uAE30\xB7\uBC88\uC544\uC6C3 \uD68C\uBCF5 \uB4F1 \uB354 \uB9CE\uC740 \uAC8C\uC784\uC774 \uC5F4\uB9BD\uB2C8\uB2E4.", "Playing games earns EXP and levels you up. From level 2, more games like Emotion Flower and BURNOUT Recovery unlock.")
     },
     {
       emoji: "\u{1F3A8}",
-      title: "\uBA3C\uC800 \uC624\uB298\uC758 \uAC10\uC815\uC744 \uAE30\uB85D\uD574\uBCFC\uAE4C\uC694?",
-      body: "\uAC10\uC815 \uC218\uCC44\uD654\uB294 \uB9E4\uC77C \uB0B4 \uAC10\uC815\uC744 \uAE30\uB85D\uD558\uB294 \uAE30\uCD08 \uAC8C\uC784\uC774\uC5D0\uC694. \uB808\uBCA8 1\uBD80\uD130 \uBB34\uB8CC\uB85C \uC990\uAE38 \uC218 \uC788\uC5B4\uC694!"
+      title: t("\uBA3C\uC800 \uC624\uB298\uC758 \uAC10\uC815\uC744 \uAE30\uB85D\uD574\uBCFC\uAE4C\uC694?", "Let's record today's emotion first!"),
+      body: t("\uAC10\uC815 \uC218\uCC44\uD654\uB294 \uB9E4\uC77C \uB0B4 \uAC10\uC815\uC744 \uAE30\uB85D\uD558\uB294 \uAE30\uCD08 \uAC8C\uC784\uC774\uC5D0\uC694. \uB808\uBCA8 1\uBD80\uD130 \uBB34\uB8CC\uB85C \uC990\uAE38 \uC218 \uC788\uC5B4\uC694!", "Emotion Watercolor is a basic game to record your daily emotions. Free from level 1!")
     }
   ];
   const isLast = step === steps.length - 1;
@@ -1465,7 +1465,7 @@ function OnboardingOverlay({ onDone }) {
     fontWeight: 700,
     cursor: "pointer",
     boxShadow: `0 8px 24px ${C.sage}44`
-  } }, isLast ? "\u{1F33F} \uC815\uC6D0 \uD0D0\uD5D8 \uC2DC\uC791\uD558\uAE30" : "\uB2E4\uC74C \u2192"), /* @__PURE__ */ React.createElement("button", { onClick: dismiss, style: {
+  } }, isLast ? t("\u{1F33F} \uC815\uC6D0 \uD0D0\uD5D8 \uC2DC\uC791\uD558\uAE30", "\u{1F33F} Start Exploring") : t("\uB2E4\uC74C \u2192", "Next \u2192")), /* @__PURE__ */ React.createElement("button", { onClick: dismiss, style: {
     fontFamily: "'Noto Sans KR', sans-serif",
     background: "none",
     border: "none",
@@ -1476,7 +1476,7 @@ function OnboardingOverlay({ onDone }) {
     padding: "4px 0",
     display: "block",
     width: "100%"
-  } }, "\uAC74\uB108\uB6F0\uAE30")));
+  } }, t("\uAC74\uB108\uB6F0\uAE30", "Skip"))));
 }
 function GameHubApp() {
   const [loading, setLoading] = useState(true);
@@ -1502,8 +1502,8 @@ function GameHubApp() {
         if ((res.data.gameStatus?.total_exp || 0) === 0 && !localStorage.getItem("onboarding_done")) {
           setShowOnboarding(true);
         }
-      } else setError(res.error || "\uB370\uC774\uD130 \uC870\uD68C \uC2E4\uD328");
-    }).catch(() => setError("\uC11C\uBC84 \uC5F0\uACB0 \uC2E4\uD328")).finally(() => {
+      } else setError(res.error || t("\uB370\uC774\uD130 \uC870\uD68C \uC2E4\uD328", "Failed to load data"));
+    }).catch(() => setError(t("\uC11C\uBC84 \uC5F0\uACB0 \uC2E4\uD328", "Server connection failed"))).finally(() => {
       clearTimeout(fallback);
       setLoading(false);
     });
@@ -1572,7 +1572,7 @@ function GameHubApp() {
       } else if (res.errorCode === "insufficient_credits") {
         setCreditModal((prev) => ({ ...prev, balance: res.balance, insufficient: true }));
       } else {
-        alert(res.error || "\uD06C\uB808\uB527 \uCC28\uAC10 \uC2E4\uD328. \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.");
+        alert(res.error || t("\uD06C\uB808\uB527 \uCC28\uAC10 \uC2E4\uD328. \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.", "Credit deduction failed. Please try again."));
       }
     } catch {
       alert("\uB124\uD2B8\uC6CC\uD06C \uC624\uB958. \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.");
@@ -1626,7 +1626,7 @@ function GameHubApp() {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between"
-  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 20 } }, "\u{1F33F}"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16, fontWeight: 700, color: C.dark, fontFamily: "'Noto Serif KR', serif" } }, "\uB9C8\uC74C\uC758 \uC815\uC6D0")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, /* @__PURE__ */ React.createElement("div", { style: {
+  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 20 } }, "\u{1F33F}"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16, fontWeight: 700, color: C.dark, fontFamily: "'Noto Serif KR', serif" } }, t("\uB9C8\uC74C\uC758 \uC815\uC6D0", "Mind Garden"))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, /* @__PURE__ */ React.createElement("div", { style: {
     fontSize: 12,
     fontWeight: 600,
     color: C.sage,
@@ -1673,7 +1673,7 @@ function GameHubApp() {
     display: "flex",
     alignItems: "center",
     gap: 5
-  } }, "\u{1F525} ", gameStatus.streak_days, "\uC77C \uC5F0\uC18D")), /* @__PURE__ */ React.createElement("div", { style: { padding: "16px 20px 20px", display: "flex", flexDirection: "column", gap: 12 } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 18, fontWeight: 700, color: C.dark, marginBottom: 4 } }, "\uC548\uB155\uD558\uC138\uC694, ", user?.nickname || user?.email?.split("@")[0], "\uB2D8 \u{1F44B}", isMaster && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, background: "#6B21A8", color: "white", borderRadius: 6, padding: "2px 8px", fontWeight: 700, marginLeft: 6 } }, "MASTER")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: C.muted } }, gardenTheme.desc)), /* @__PURE__ */ React.createElement(DailyTip, { hubData: data }), /* @__PURE__ */ React.createElement(LevelBar, { levelInfo }), /* @__PURE__ */ React.createElement(
+  } }, "\u{1F525} ", gameStatus.streak_days, "\uC77C \uC5F0\uC18D")), /* @__PURE__ */ React.createElement("div", { style: { padding: "16px 20px 20px", display: "flex", flexDirection: "column", gap: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 18, fontWeight: 700, color: C.dark, marginBottom: 4 } }, t("\uC548\uB155\uD558\uC138\uC694,", "Hello,"), " ", user?.nickname || user?.email?.split("@")[0], t("\uB2D8 \u{1F44B}", " \u{1F44B}"), isMaster && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, background: "#6B21A8", color: "white", borderRadius: 6, padding: "2px 8px", fontWeight: 700, marginLeft: 6 } }, "MASTER")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: C.muted } }, gardenTheme.desc)), /* @__PURE__ */ React.createElement("button", { onClick: toggleGameLang, title: "Language", style: { flexShrink: 0, fontSize: 12, fontWeight: 700, color: C.muted, cursor: "pointer", padding: "5px 10px", borderRadius: 8, border: "1px solid rgba(0,0,0,0.1)", background: "rgba(255,255,255,0.7)" } }, GAME_LANG === "en" ? "\uD55C" : "EN")), /* @__PURE__ */ React.createElement(DailyTip, { hubData: data }), /* @__PURE__ */ React.createElement(LevelBar, { levelInfo }), /* @__PURE__ */ React.createElement(
     StreakCalendar,
     {
       recentPlayDates: data?.recentPlayDates || [],
@@ -1702,7 +1702,7 @@ function GameHubApp() {
         if (res.success) setData(res.data);
       })
     }
-  ), /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 24 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 700, color: C.dark, marginBottom: 16, display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 18 } }, "\u{1F3AE}"), " \uCE58\uC720 \uAC8C\uC784"), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 14 }, className: "game-grid" }, games.map((game, i) => /* @__PURE__ */ React.createElement(GameCard, { key: game.id, game, onPlay: handlePlay, enterDelay: i * 50 })))), /* @__PURE__ */ React.createElement(CampaignSection, { onPlay: handlePlay }), /* @__PURE__ */ React.createElement(GameHistorySection, null), /* @__PURE__ */ React.createElement(GameStatsSection, null), /* @__PURE__ */ React.createElement(
+  ), /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 24 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 700, color: C.dark, marginBottom: 16, display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 18 } }, "\u{1F3AE}"), " ", t("\uCE58\uC720 \uAC8C\uC784", "Healing Games")), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 14 }, className: "game-grid" }, games.map((game, i) => /* @__PURE__ */ React.createElement(GameCard, { key: game.id, game, onPlay: handlePlay, enterDelay: i * 50 })))), /* @__PURE__ */ React.createElement(CampaignSection, { onPlay: handlePlay }), /* @__PURE__ */ React.createElement(GameHistorySection, null), /* @__PURE__ */ React.createElement(GameStatsSection, null), /* @__PURE__ */ React.createElement(
     AchievementPanel,
     {
       earned: achievements || [],
@@ -1726,8 +1726,8 @@ function GameHubApp() {
         fontFamily: "'Noto Sans KR',sans-serif"
       }
     },
-    /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: C.dark, display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16 } }, "\u{1F3C6}"), " \uC815\uC6D0\uC0AC \uC21C\uC704"),
-    /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: C.muted } }, showLeaderboard ? "\uC811\uAE30 \u25B2" : "\uD3BC\uCE58\uAE30 \u25BC")
+    /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: C.dark, display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16 } }, "\u{1F3C6}"), " ", t("\uC815\uC6D0\uC0AC \uC21C\uC704", "Gardener Rankings")),
+    /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: C.muted } }, showLeaderboard ? t("\uC811\uAE30 \u25B2", "Collapse \u25B2") : t("\uD3BC\uCE58\uAE30 \u25BC", "Expand \u25BC"))
   ), showLeaderboard && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 10 } }, /* @__PURE__ */ React.createElement(Leaderboard, { currentUserEmail: user?.email })))), creditModal && /* @__PURE__ */ React.createElement("div", { style: {
     position: "fixed",
     inset: 0,
@@ -1753,12 +1753,12 @@ function GameHubApp() {
     color: "#2C2C20",
     marginBottom: 6,
     fontFamily: "'Noto Serif KR', sans-serif"
-  } }, creditModal.gameName), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: "#8A8A78", lineHeight: 1.6 } }, "\uC774 \uAC8C\uC784\uC740 \uD50C\uB808\uC774 \uC2DC \uD06C\uB808\uB527\uC774 \uCC28\uAC10\uB429\uB2C8\uB2E4")), /* @__PURE__ */ React.createElement("div", { style: {
+  } }, creditModal.gameName), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: "#8A8A78", lineHeight: 1.6 } }, t("\uC774 \uAC8C\uC784\uC740 \uD50C\uB808\uC774 \uC2DC \uD06C\uB808\uB527\uC774 \uCC28\uAC10\uB429\uB2C8\uB2E4", "Credits will be deducted to play this game"))), /* @__PURE__ */ React.createElement("div", { style: {
     background: "#F5EFE0",
     borderRadius: 14,
     padding: "14px 16px",
     marginBottom: 18
-  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 13 } }, /* @__PURE__ */ React.createElement("span", { style: { color: "#8A8A78" } }, "\uD604\uC7AC \uD06C\uB808\uB527"), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, color: "#2C2C20" } }, creditModal.balance, " \uD06C\uB808\uB527")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 13 } }, /* @__PURE__ */ React.createElement("span", { style: { color: "#8A8A78" } }, "\uCC28\uAC10 \uC608\uC815"), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, color: "#D4954A" } }, "- ", creditModal.cost, " \uD06C\uB808\uB527")), /* @__PURE__ */ React.createElement("div", { style: { height: 1, background: "rgba(0,0,0,0.08)", margin: "10px 0" } }), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 14 } }, /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, color: "#2C2C20" } }, "\uCC28\uAC10 \uD6C4 \uC794\uC561"), /* @__PURE__ */ React.createElement("span", { style: {
+  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 13 } }, /* @__PURE__ */ React.createElement("span", { style: { color: "#8A8A78" } }, t("\uD604\uC7AC \uD06C\uB808\uB527", "Current Credits")), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, color: "#2C2C20" } }, creditModal.balance, " \uD06C\uB808\uB527")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 13 } }, /* @__PURE__ */ React.createElement("span", { style: { color: "#8A8A78" } }, t("\uCC28\uAC10 \uC608\uC815", "To be deducted")), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, color: "#D4954A" } }, "- ", creditModal.cost, " \uD06C\uB808\uB527")), /* @__PURE__ */ React.createElement("div", { style: { height: 1, background: "rgba(0,0,0,0.08)", margin: "10px 0" } }), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 14 } }, /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, color: "#2C2C20" } }, t("\uCC28\uAC10 \uD6C4 \uC794\uC561", "Balance after")), /* @__PURE__ */ React.createElement("span", { style: {
     fontWeight: 700,
     color: creditModal.balance >= creditModal.cost ? "#6B21A8" : "#C05050"
   } }, Math.max(0, creditModal.balance - creditModal.cost), " \uD06C\uB808\uB527"))), (creditModal.insufficient || creditModal.balance < creditModal.cost) && /* @__PURE__ */ React.createElement("div", { style: {
@@ -1781,7 +1781,7 @@ function GameHubApp() {
     fontSize: 13,
     fontWeight: 600,
     cursor: "pointer"
-  } }, "\uCDE8\uC18C"), creditModal.balance < creditModal.cost ? /* @__PURE__ */ React.createElement("a", { href: PHYWEB_URL, style: {
+  } }, t("\uCDE8\uC18C", "Cancel")), creditModal.balance < creditModal.cost ? /* @__PURE__ */ React.createElement("a", { href: PHYWEB_URL, style: {
     flex: 2,
     padding: "12px",
     textAlign: "center",
@@ -1797,7 +1797,7 @@ function GameHubApp() {
     alignItems: "center",
     justifyContent: "center",
     fontFamily: "'Noto Sans KR',sans-serif"
-  } }, "\uD06C\uB808\uB527 \uCDA9\uC804\uD558\uAE30 \u2192") : /* @__PURE__ */ React.createElement(
+  } }, t("\uD06C\uB808\uB527 \uCDA9\uC804\uD558\uAE30 \u2192", "Recharge Credits \u2192")) : /* @__PURE__ */ React.createElement(
     "button",
     {
       onClick: handleCreditConfirm,
@@ -1815,7 +1815,7 @@ function GameHubApp() {
         cursor: spendLoading ? "not-allowed" : "pointer"
       }
     },
-    spendLoading ? "\uCC98\uB9AC \uC911..." : `${creditModal.cost} \uD06C\uB808\uB527\uC73C\uB85C \uC2DC\uC791`
+    spendLoading ? t("\uCC98\uB9AC \uC911...", "Processing...") : `${creditModal.cost} \uD06C\uB808\uB527\uC73C\uB85C \uC2DC\uC791`
   )))), newAchievements.length > 0 && /* @__PURE__ */ React.createElement(AchievementToast, { achievements: newAchievements, onDismiss: () => setNewAchievements([]) }), sessionFeedback && /* @__PURE__ */ React.createElement("div", { style: {
     position: "fixed",
     bottom: 80,
@@ -1830,7 +1830,7 @@ function GameHubApp() {
     zIndex: 1e3,
     border: "1px solid rgba(124,58,237,0.15)",
     animation: "fadeUp 0.4s ease"
-  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 12, alignItems: "flex-start" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 24, flexShrink: 0, lineHeight: 1.2 } }, sessionFeedback.emoji), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: "#7C3AED", marginBottom: 4 } }, "\uAC8C\uC784 \uC644\uB8CC! \u{1F389}"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "#374151", lineHeight: 1.6 } }, sessionFeedback.feedback)), /* @__PURE__ */ React.createElement(
+  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 12, alignItems: "flex-start" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 24, flexShrink: 0, lineHeight: 1.2 } }, sessionFeedback.emoji), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: "#7C3AED", marginBottom: 4 } }, t("\uAC8C\uC784 \uC644\uB8CC! \u{1F389}", "Game Complete! \u{1F389}")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "#374151", lineHeight: 1.6 } }, sessionFeedback.feedback)), /* @__PURE__ */ React.createElement(
     "button",
     {
       onClick: () => setSessionFeedback(null),

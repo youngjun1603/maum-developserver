@@ -233,12 +233,12 @@ function CircleTimer({ seconds, total, label, emoji }) {
         <text x="65" y="76" textAnchor="middle" fill="white" fontSize="22" fontWeight="700"
           fontFamily="'Noto Sans KR',sans-serif">{seconds}</text>
         <text x="65" y="92" textAnchor="middle" fill={BT.muted} fontSize="10"
-          fontFamily="'Noto Sans KR',sans-serif">초 남음</text>
+          fontFamily="'Noto Sans KR',sans-serif">{t('초 남음', 'sec left')}</text>
       </svg>
       <div style={{ fontSize:14, fontWeight:700, color:BT.cream,
         fontFamily:"'Noto Sans KR',sans-serif", marginTop:4 }}>{label}</div>
       <div style={{ fontSize:11, color:BT.muted, fontFamily:"'Noto Sans KR',sans-serif", marginTop:2 }}>
-        진행 중 — 편안하게 해보세요
+        {t('진행 중 — 편안하게 해보세요', 'In progress — take it easy')}
       </div>
     </div>
   );
@@ -251,26 +251,26 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
   const { useState, useEffect, useCallback, useRef } = React;
 
   const MISSIONS = {
-    stretch_5:       { label:'5분 스트레칭',        emoji:'🧘', energy:10, duration:5,  desc:'몸의 긴장을 풀어줘요',         category:'body'    },
-    walk_10:         { label:'10분 산책',            emoji:'🚶', energy:20, duration:10, desc:'바깥 공기를 마셔요',           category:'body'    },
-    drink_water:     { label:'물 한 잔 마시기',      emoji:'💧', energy: 8, duration:1,  desc:'지금 바로 할 수 있어요',       category:'body'    },
-    family_time:     { label:'소중한 사람과 대화',   emoji:'💬', energy:25, duration:15, desc:'연결이 에너지예요',             category:'social'  },
-    deep_breath:     { label:'깊은 호흡 3회',        emoji:'🌬️', energy: 6, duration:2,  desc:'지금 여기에 집중해요',         category:'mind'    },
-    meditation:      { label:'5분 명상',             emoji:'🕯️', energy:15, duration:5,  desc:'잠시 고요해져요',               category:'mind'    },
-    gratitude:       { label:'감사 한 줄 쓰기',      emoji:'⭐', energy:12, duration:3,  desc:'작은 것도 괜찮아요',           category:'mind'    },
-    grounding_54321: { label:'5-4-3-2-1 안정화',    emoji:'🌍', energy:18, duration:5,  desc:'불안을 잠재우는 접지 기법',     category:'anxiety' },
-    body_scan:       { label:'바디 스캔',            emoji:'🔍', energy:14, duration:7,  desc:'몸의 긴장 부위를 확인해요',     category:'anxiety' },
-    nature_view:     { label:'자연 사진/풍경 보기',  emoji:'🌿', energy:10, duration:3,  desc:'자연이 스트레스를 줄여줘요',   category:'stress'  },
-    journal_5min:    { label:'5분 감정 일기',        emoji:'📓', energy:16, duration:5,  desc:'감정을 쓰면 마음이 가벼워져요', category:'stress'  },
-    nap_20:          { label:'20분 낮잠',            emoji:'😴', energy:22, duration:20, desc:'짧은 낮잠이 회복력을 높여요',  category:'rest'    },
+    stretch_5:       { label:t('5분 스트레칭',        '5-min Stretch'),        emoji:'🧘', energy:10, duration:5,  desc:t('몸의 긴장을 풀어줘요',         'Release body tension'),         category:'body'    },
+    walk_10:         { label:t('10분 산책',            '10-min Walk'),          emoji:'🚶', energy:20, duration:10, desc:t('바깥 공기를 마셔요',           'Get some fresh air'),           category:'body'    },
+    drink_water:     { label:t('물 한 잔 마시기',      'Drink a Glass of Water'),emoji:'💧', energy: 8, duration:1,  desc:t('지금 바로 할 수 있어요',       'You can do it right now'),      category:'body'    },
+    family_time:     { label:t('소중한 사람과 대화',   'Talk to Someone You Love'),emoji:'💬', energy:25, duration:15, desc:t('연결이 에너지예요',           'Connection is energy'),         category:'social'  },
+    deep_breath:     { label:t('깊은 호흡 3회',        'Deep Breath ×3'),       emoji:'🌬️', energy: 6, duration:2,  desc:t('지금 여기에 집중해요',         'Focus on the present moment'),  category:'mind'    },
+    meditation:      { label:t('5분 명상',             '5-min Meditation'),     emoji:'🕯️', energy:15, duration:5,  desc:t('잠시 고요해져요',              'Find a moment of stillness'),   category:'mind'    },
+    gratitude:       { label:t('감사 한 줄 쓰기',      'Write One Gratitude'),  emoji:'⭐', energy:12, duration:3,  desc:t('작은 것도 괜찮아요',           'Even small things count'),      category:'mind'    },
+    grounding_54321: { label:t('5-4-3-2-1 안정화',    '5-4-3-2-1 Grounding'),  emoji:'🌍', energy:18, duration:5,  desc:t('불안을 잠재우는 접지 기법',    'A grounding technique to calm anxiety'), category:'anxiety' },
+    body_scan:       { label:t('바디 스캔',            'Body Scan'),            emoji:'🔍', energy:14, duration:7,  desc:t('몸의 긴장 부위를 확인해요',    'Check where tension lives'),    category:'anxiety' },
+    nature_view:     { label:t('자연 사진/풍경 보기',  'View Nature Photo/Scene'),emoji:'🌿', energy:10, duration:3,  desc:t('자연이 스트레스를 줄여줘요', 'Nature reduces stress'),        category:'stress'  },
+    journal_5min:    { label:t('5분 감정 일기',        '5-min Emotion Journal'), emoji:'📓', energy:16, duration:5,  desc:t('감정을 쓰면 마음이 가벼워져요','Writing feelings lightens the mind'), category:'stress'  },
+    nap_20:          { label:t('20분 낮잠',            '20-min Nap'),           emoji:'😴', energy:22, duration:20, desc:t('짧은 낮잠이 회복력을 높여요',  'A short nap boosts recovery'),  category:'rest'    },
   };
 
   const CITY_LEVELS = [
-    { level:1, name:'불 꺼진 도시',   minEnergy:  0, color:'#2A4060', desc:'지금 회복을 시작해요' },
-    { level:2, name:'첫 불빛',        minEnergy: 30, color:'#3A5080', desc:'불빛이 켜지기 시작했어요' },
-    { level:3, name:'깨어나는 도시',  minEnergy: 60, color:'#4A70A0', desc:'도시가 살아나고 있어요' },
-    { level:4, name:'활기찬 거리',    minEnergy: 90, color:'#5A90C0', desc:'에너지가 넘쳐나요' },
-    { level:5, name:'빛나는 메트로',  minEnergy:120, color:'#7EB8F7', desc:'완전히 회복되었어요 🎉' },
+    { level:1, name:t('불 꺼진 도시',   'Lights-Out City'),   minEnergy:  0, color:'#2A4060', desc:t('지금 회복을 시작해요',         'Start your recovery now') },
+    { level:2, name:t('첫 불빛',        'First Light'),        minEnergy: 30, color:'#3A5080', desc:t('불빛이 켜지기 시작했어요',     'The lights are beginning to glow') },
+    { level:3, name:t('깨어나는 도시',  'Awakening City'),     minEnergy: 60, color:'#4A70A0', desc:t('도시가 살아나고 있어요',       'The city is coming alive') },
+    { level:4, name:t('활기찬 거리',    'Vibrant Streets'),    minEnergy: 90, color:'#5A90C0', desc:t('에너지가 넘쳐나요',           'Energy is overflowing') },
+    { level:5, name:t('빛나는 메트로',  'Shining Metropolis'), minEnergy:120, color:'#7EB8F7', desc:t('완전히 회복되었어요 🎉',       'Fully recovered 🎉') },
   ];
 
   const burnoutScore  = userTestResults?.BURNOUT ?? 50;
@@ -405,12 +405,12 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
           <div style={{ display:'flex', alignItems:'center', gap:8 }}>
             <span style={{fontSize:18}}>⚡</span>
             <span style={{ fontSize:14, fontWeight:700, color:BT.cream,
-              fontFamily:"'Noto Serif KR',serif" }}>번아웃 회복</span>
+              fontFamily:"'Noto Serif KR',serif" }}>{t('번아웃 회복', 'Burnout Recovery')}</span>
           </div>
           <button onClick={skipMission} style={{ fontFamily:"'Noto Sans KR',sans-serif",
             background:'rgba(255,255,255,0.08)', color:BT.muted, border:'none',
             borderRadius:9, padding:'6px 14px', fontSize:12, cursor:'pointer' }}>
-            건너뛰기
+            {t('건너뛰기', 'Skip')}
           </button>
         </div>
 
@@ -427,7 +427,7 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
             <p style={{ fontSize:13, color:BT.muted, lineHeight:1.7, margin:0,
               fontFamily:"'Noto Sans KR',sans-serif" }}>
               {m.desc}<br/>
-              <span style={{color:BT.electric}}>완료하면 +{m.energy} 에너지</span>
+              <span style={{color:BT.electric}}>{t(`완료하면 +${m.energy} 에너지`, `Complete for +${m.energy} Energy`)}</span>
             </p>
           </div>
 
@@ -461,17 +461,17 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
           <span style={{fontSize:18}}>⚡</span>
           <span style={{ fontSize:14, fontWeight:700, color:BT.cream,
-            fontFamily:"'Noto Serif KR',serif" }}>번아웃 회복</span>
+            fontFamily:"'Noto Serif KR',serif" }}>{t('번아웃 회복', 'Burnout Recovery')}</span>
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
           <div style={{ fontSize:11, color:BT.muted, background:'rgba(126,184,247,0.08)',
             borderRadius:8, padding:'4px 10px', border:'1px solid rgba(126,184,247,0.12)' }}>
-            {completedToday.length}/{initialMissions.length} 완료
+            {completedToday.length}/{initialMissions.length} {t('완료', 'done')}
           </div>
           <button onClick={() => setShowReport(true)} style={{ fontFamily:"'Noto Sans KR',sans-serif",
             background:'rgba(126,184,247,0.1)', color:BT.electricL, border:'1px solid rgba(126,184,247,0.18)',
             borderRadius:9, padding:'6px 12px', fontSize:11, fontWeight:600, cursor:'pointer' }}>
-            리포트
+            {t('리포트', 'Report')}
           </button>
         </div>
       </div>
@@ -500,7 +500,7 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
       <div style={{ padding:'12px 18px 8px', flexShrink:0,
         background:'rgba(8,14,26,0.6)', borderBottom:'1px solid rgba(126,184,247,0.06)' }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
-          <span style={{ fontSize:12, fontWeight:700, color:BT.electricL }}>⚡ 회복 에너지</span>
+          <span style={{ fontSize:12, fontWeight:700, color:BT.electricL }}>⚡ {t('회복 에너지', 'Recovery Energy')}</span>
           <div style={{ display:'flex', alignItems:'center', gap:8 }}>
             <span style={{ fontSize:13, fontWeight:700,
               color: energyPct < 30 ? BT.energyLow : energyPct < 60 ? BT.energyMid : BT.energyFull }}>
@@ -510,7 +510,7 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
             {nextLevel && (
               <span style={{ fontSize:9, color:BT.muted, background:'rgba(255,255,255,0.05)',
                 borderRadius:6, padding:'2px 6px' }}>
-                다음까지 {toNextLevel}
+                {t(`다음까지 ${toNextLevel}`, `${toNextLevel} to next`)}
               </span>
             )}
           </div>
@@ -539,16 +539,16 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
             borderRadius:12, padding:'10px 14px', marginBottom:12, textAlign:'center',
             animation:'bt-fadeUp 0.3s ease', fontSize:13, color:BT.energyFull,
             fontWeight:600 }}>
-            ✅ {MISSIONS[justCompleted].label} 완료! +{MISSIONS[justCompleted].energy} 에너지
+            ✅ {MISSIONS[justCompleted].label} {t('완료!', 'Complete!')} +{MISSIONS[justCompleted].energy} {t('에너지', 'Energy')}
           </div>
         )}
 
         <div style={{ fontSize:12, fontWeight:700, color:BT.muted, marginBottom:10,
           fontFamily:"'Noto Sans KR',sans-serif" }}>
-          오늘의 회복 미션
-          {gad7Score >= 10 && <span style={{ marginLeft:6, fontSize:10, color:BT.amber, background:'rgba(245,200,66,0.12)', borderRadius:6, padding:'2px 7px', border:'1px solid rgba(245,200,66,0.2)' }}>불안 케어</span>}
-          {dass21Score >= 14 && gad7Score < 10 && <span style={{ marginLeft:6, fontSize:10, color:BT.electricL, background:'rgba(126,184,247,0.1)', borderRadius:6, padding:'2px 7px', border:'1px solid rgba(126,184,247,0.2)' }}>스트레스 케어</span>}
-          {burnoutScore >= 60 && gad7Score < 10 && dass21Score < 14 && <span style={{ marginLeft:6, fontSize:10, color:BT.energyLow, background:'rgba(255,107,107,0.1)', borderRadius:6, padding:'2px 7px', border:'1px solid rgba(255,107,107,0.2)' }}>번아웃 집중</span>}
+          {t('오늘의 회복 미션', "Today's Recovery Mission")}
+          {gad7Score >= 10 && <span style={{ marginLeft:6, fontSize:10, color:BT.amber, background:'rgba(245,200,66,0.12)', borderRadius:6, padding:'2px 7px', border:'1px solid rgba(245,200,66,0.2)' }}>{t('불안 케어', 'Anxiety Care')}</span>}
+          {dass21Score >= 14 && gad7Score < 10 && <span style={{ marginLeft:6, fontSize:10, color:BT.electricL, background:'rgba(126,184,247,0.1)', borderRadius:6, padding:'2px 7px', border:'1px solid rgba(126,184,247,0.2)' }}>{t('스트레스 케어', 'Stress Care')}</span>}
+          {burnoutScore >= 60 && gad7Score < 10 && dass21Score < 14 && <span style={{ marginLeft:6, fontSize:10, color:BT.energyLow, background:'rgba(255,107,107,0.1)', borderRadius:6, padding:'2px 7px', border:'1px solid rgba(255,107,107,0.2)' }}>{t('번아웃 집중', 'Burnout Focus')}</span>}
         </div>
 
         <div style={{ display:'flex', flexDirection:'column', gap:9 }}>
@@ -594,7 +594,7 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
                     textDecoration: done ? 'none' : 'none',
                     marginBottom:2 }}>{m.label}</div>
                   <div style={{ fontSize:11, color:BT.muted, lineHeight:1.4 }}>
-                    {m.desc} · {m.duration}분
+                    {m.desc} · {m.duration}{t('분', 'min')}
                   </div>
                 </div>
 
@@ -604,7 +604,7 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
                     <div style={{ fontSize:11, color:BT.energyFull, fontWeight:700,
                       background:'rgba(69,238,136,0.1)', borderRadius:8,
                       padding:'3px 8px', border:'1px solid rgba(69,238,136,0.2)' }}>
-                      완료
+                      {t('완료', 'Done')}
                     </div>
                   ) : (
                     <div style={{ fontSize:12, fontWeight:700,
@@ -627,10 +627,10 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
               border:'1px solid rgba(126,184,247,0.12)',
               borderRadius:16, padding:'14px 16px', marginBottom:12, textAlign:'center' }}>
               <div style={{ fontSize:13, color:BT.electricL, fontWeight:600, marginBottom:4 }}>
-                오늘 +{completedToday.reduce((s,c)=>s+MISSIONS[c].energy,0)} 에너지 회복
+                {t(`오늘 +${completedToday.reduce((s,c)=>s+MISSIONS[c].energy,0)} 에너지 회복`, `+${completedToday.reduce((s,c)=>s+MISSIONS[c].energy,0)} Energy Recovered Today`)}
               </div>
               <div style={{ fontSize:11, color:BT.muted }}>
-                {completedToday.length}개 미션 완료 · 도시에 불이 켜졌어요
+                {t(`${completedToday.length}개 미션 완료 · 도시에 불이 켜졌어요`, `${completedToday.length} mission(s) complete · The city lights are on`)}
               </div>
             </div>
 
@@ -642,7 +642,7 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
                 border:'1px solid rgba(126,184,247,0.2)',
                 boxShadow:'0 4px 16px rgba(126,184,247,0.15)',
                 marginBottom:8, fontSize:14 }}>
-              📊 회복 리포트 보기
+              📊 {t('회복 리포트 보기', 'View Recovery Report')}
             </button>
 
             <button className="bt-btn"
@@ -651,7 +651,7 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
                 background:'rgba(255,255,255,0.05)',
                 color:BT.muted, border:'1px solid rgba(255,255,255,0.08)',
                 fontSize:13 }}>
-              전문 상담사 연결 →
+              {t('전문 상담사 연결 →', 'Connect with a Counselor →')}
             </button>
           </div>
         )}
@@ -674,7 +674,7 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
               </div>
               <div style={{ fontSize:17, fontWeight:700, color:BT.cream,
                 fontFamily:"'Noto Serif KR',serif", marginBottom:4 }}>
-                회복 리포트
+                {t('회복 리포트', 'Recovery Report')}
               </div>
               <div style={{ fontSize:12, color:cityLevel.color }}>{cityLevel.name}</div>
             </div>
@@ -687,9 +687,9 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
             {/* 스탯 */}
             <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:18 }}>
               {[
-                { label:'회복 에너지', value:`${energy}점`, color:BT.energyFull },
-                { label:'완료 미션',   value:`${completedToday.length}개`, color:BT.electric },
-                { label:'에너지 획득', value:`+${completedToday.reduce((s,c)=>s+MISSIONS[c].energy,0)}`, color:BT.amber },
+                { label:t('회복 에너지', 'Recovery Energy'), value:`${energy}${t('점', 'pt')}`, color:BT.energyFull },
+                { label:t('완료 미션',   'Completed Missions'), value:`${completedToday.length}${t('개', '')}`, color:BT.electric },
+                { label:t('에너지 획득', 'Energy Gained'), value:`+${completedToday.reduce((s,c)=>s+MISSIONS[c].energy,0)}`, color:BT.amber },
               ].map(r => (
                 <div key={r.label} style={{ display:'flex', justifyContent:'space-between',
                   alignItems:'center', background:'rgba(255,255,255,0.04)',
@@ -706,7 +706,7 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
               border:'1px solid rgba(126,184,247,0.12)',
               borderRadius:10, padding:'10px 14px', fontSize:11,
               color:BT.muted, textAlign:'center', marginBottom:16, lineHeight:1.6 }}>
-              더 깊은 회복이 필요하면 전문 상담사와 이야기해 보세요.
+              {t('더 깊은 회복이 필요하면 전문 상담사와 이야기해 보세요.', 'If you need deeper recovery, talk to a professional counselor.')}
             </div>
 
             <button className="bt-btn"
@@ -720,7 +720,7 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
                 fontSize:14,
                 boxShadow: completedToday.length > 0
                   ? '0 4px 16px rgba(126,184,247,0.3)' : 'none' }}>
-              {finishing ? '저장 중...' : completedToday.length > 0 ? '✨ 경험치 받기' : '닫기'}
+              {finishing ? t('저장 중...', 'Saving...') : completedToday.length > 0 ? `✨ ${t('경험치 받기', 'Claim EXP')}` : t('닫기', 'Close')}
             </button>
           </div>
         </div>

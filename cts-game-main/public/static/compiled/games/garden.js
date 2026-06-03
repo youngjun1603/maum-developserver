@@ -1,5 +1,5 @@
 const GC = {
-  sage: "#6B21A8",
+  sage: "#4A7C59",
   sageL: "#7BA88A",
   sagePale: "#EAF2EC",
   cream: "#FDFCF7",
@@ -106,36 +106,36 @@ function LakeSVG({ circleSize, currentPhase }) {
 const BREATH_METHODS = [
   {
     id: "box",
-    name: "\uBC15\uC2A4 \uD638\uD761",
+    name: t("\uBC15\uC2A4 \uD638\uD761", "Box Breathing"),
     emoji: "\u2B1C",
-    desc: "\uC9D1\uC911\xB7\uC2A4\uD2B8\uB808\uC2A4 \uD574\uC18C",
+    desc: t("\uC9D1\uC911\xB7\uC2A4\uD2B8\uB808\uC2A4 \uD574\uC18C", "Focus & stress relief"),
     phases: [
-      { id: "inhale", label: "\uB4E4\uC774\uB9C8\uC2DC\uAE30", color: "#5A8AC0", dur: 4 },
-      { id: "hold_in", label: "\uCC38  \uAE30", color: "#6B21A8", dur: 4 },
-      { id: "exhale", label: "\uB0B4  \uC26C\uAE30", color: "#9BA8B0", dur: 4 },
-      { id: "hold_out", label: "\uCC38  \uAE30", color: "#6B8FA8", dur: 4 }
+      { id: "inhale", label: t("\uB4E4\uC774\uB9C8\uC2DC\uAE30", "Inhale"), color: "#5A8AC0", dur: 4 },
+      { id: "hold_in", label: t("\uCC38  \uAE30", "Hold"), color: "#4A7C59", dur: 4 },
+      { id: "exhale", label: t("\uB0B4  \uC26C\uAE30", "Exhale"), color: "#9BA8B0", dur: 4 },
+      { id: "hold_out", label: t("\uCC38  \uAE30", "Hold"), color: "#6B8FA8", dur: 4 }
     ]
   },
   {
     id: "478",
-    name: "4-7-8 \uD638\uD761",
+    name: t("4-7-8 \uD638\uD761", "4-7-8 Breathing"),
     emoji: "\u{1F319}",
-    desc: "\uC218\uBA74\xB7\uAE4A\uC740 \uC774\uC644",
+    desc: t("\uC218\uBA74\xB7\uAE4A\uC740 \uC774\uC644", "Sleep & deep relaxation"),
     phases: [
-      { id: "inhale", label: "\uB4E4\uC774\uB9C8\uC2DC\uAE30", color: "#5A8AC0", dur: 4 },
-      { id: "hold_in", label: "\uCC38  \uAE30", color: "#6B21A8", dur: 7 },
-      { id: "exhale", label: "\uB0B4  \uC26C\uAE30", color: "#9BA8B0", dur: 8 }
+      { id: "inhale", label: t("\uB4E4\uC774\uB9C8\uC2DC\uAE30", "Inhale"), color: "#5A8AC0", dur: 4 },
+      { id: "hold_in", label: t("\uCC38  \uAE30", "Hold"), color: "#4A7C59", dur: 7 },
+      { id: "exhale", label: t("\uB0B4  \uC26C\uAE30", "Exhale"), color: "#9BA8B0", dur: 8 }
     ]
   },
   {
     id: "calm",
-    name: "\uBE60\uB978 \uC548\uC815",
+    name: t("\uBE60\uB978 \uC548\uC815", "Quick Calm"),
     emoji: "\u26A1",
-    desc: "\uBD88\uC548\xB7\uACF5\uD669 \uC2DC \uBE60\uB978 \uC9C4\uC815",
+    desc: t("\uBD88\uC548\xB7\uACF5\uD669 \uC2DC \uBE60\uB978 \uC9C4\uC815", "Fast relief for anxiety & panic"),
     phases: [
-      { id: "inhale", label: "\uB4E4\uC774\uB9C8\uC2DC\uAE30", color: "#5A8AC0", dur: 2 },
-      { id: "hold_in", label: "\uCC38  \uAE30", color: "#6B21A8", dur: 1 },
-      { id: "exhale", label: "\uB0B4  \uC26C\uAE30", color: "#9BA8B0", dur: 4 }
+      { id: "inhale", label: t("\uB4E4\uC774\uB9C8\uC2DC\uAE30", "Inhale"), color: "#5A8AC0", dur: 2 },
+      { id: "hold_in", label: t("\uCC38  \uAE30", "Hold"), color: "#4A7C59", dur: 1 },
+      { id: "exhale", label: t("\uB0B4  \uC26C\uAE30", "Exhale"), color: "#9BA8B0", dur: 4 }
     ]
   }
 ];
@@ -230,13 +230,13 @@ function BreathingModule({ onComplete, onBack }) {
       borderRadius: 10,
       width: "fit-content",
       backdropFilter: "blur(8px)"
-    } }, "\u2190 \uB4A4\uB85C"), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, padding: "20px 20px 0", overflowY: "auto" } }, /* @__PURE__ */ React.createElement("h2", { style: {
+    } }, t("\u2190 \uB4A4\uB85C", "\u2190 Back")), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, padding: "20px 20px 0", overflowY: "auto" } }, /* @__PURE__ */ React.createElement("h2", { style: {
       fontSize: 20,
       fontWeight: 700,
       color: "white",
       marginBottom: 6,
       fontFamily: "'Noto Serif KR', serif"
-    } }, "\uD638\uD761\uBC95 \uC120\uD0DD"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: "rgba(255,255,255,0.55)", marginBottom: 20, lineHeight: 1.7 } }, "\uC624\uB298 \uCEE8\uB514\uC158\uC5D0 \uB9DE\uB294 \uD638\uD761\uBC95\uC744 \uC120\uD0DD\uD558\uC138\uC694."), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 } }, BREATH_METHODS.map((m) => /* @__PURE__ */ React.createElement(
+    } }, t("\uD638\uD761\uBC95 \uC120\uD0DD", "Select Breathing Method")), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: "rgba(255,255,255,0.55)", marginBottom: 20, lineHeight: 1.7 } }, t("\uC624\uB298 \uCEE8\uB514\uC158\uC5D0 \uB9DE\uB294 \uD638\uD761\uBC95\uC744 \uC120\uD0DD\uD558\uC138\uC694.", "Choose a method that suits how you feel today.")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 } }, BREATH_METHODS.map((m) => /* @__PURE__ */ React.createElement(
       "button",
       {
         key: m.id,
@@ -251,8 +251,8 @@ function BreathingModule({ onComplete, onBack }) {
         }
       },
       /* @__PURE__ */ React.createElement("span", { style: { fontSize: 28, lineHeight: 1 } }, m.emoji),
-      /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 700, marginBottom: 3 } }, m.name), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "rgba(255,255,255,0.5)" } }, m.desc), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: GC.dustyL, marginTop: 4, fontWeight: 600 } }, m.phases.map((p) => p.dur).join("-"), " \uBC15\uC790"))
-    ))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.6)", marginBottom: 10 } }, "\uC0AC\uC774\uD074 \uC218 \uC120\uD0DD"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, CYCLE_OPTIONS.map((n) => /* @__PURE__ */ React.createElement(
+      /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 700, marginBottom: 3 } }, m.name), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "rgba(255,255,255,0.5)" } }, m.desc), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: GC.dustyL, marginTop: 4, fontWeight: 600 } }, m.phases.map((p) => p.dur).join("-"), " ", t("\uBC15\uC790", "beats")))
+    ))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.6)", marginBottom: 10 } }, t("\uC0AC\uC774\uD074 \uC218 \uC120\uD0DD", "Select Number of Cycles")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, CYCLE_OPTIONS.map((n) => /* @__PURE__ */ React.createElement(
       "button",
       {
         key: n,
@@ -270,8 +270,11 @@ function BreathingModule({ onComplete, onBack }) {
         }
       },
       n,
-      "\uD68C"
-    ))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 8, textAlign: "center" } }, "\uC57D ", Math.round(BREATH_METHODS[0].phases.reduce((s, p) => s + p.dur, 0) * totalCycles / 60), "~", Math.round(BREATH_METHODS[1].phases.reduce((s, p) => s + p.dur, 0) * totalCycles / 60 + 1), "\uBD84 \uC18C\uC694")));
+      t("\uD68C", "x")
+    ))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 8, textAlign: "center" } }, t(
+      `\uC57D ${Math.round(BREATH_METHODS[0].phases.reduce((s, p) => s + p.dur, 0) * totalCycles / 60)}~${Math.round(BREATH_METHODS[1].phases.reduce((s, p) => s + p.dur, 0) * totalCycles / 60 + 1)}\uBD84 \uC18C\uC694`,
+      `About ${Math.round(BREATH_METHODS[0].phases.reduce((s, p) => s + p.dur, 0) * totalCycles / 60)}\u2013${Math.round(BREATH_METHODS[1].phases.reduce((s, p) => s + p.dur, 0) * totalCycles / 60 + 1)} min`
+    ))));
   }
   if (finished) {
     return /* @__PURE__ */ React.createElement("div", { style: {
@@ -285,20 +288,21 @@ function BreathingModule({ onComplete, onBack }) {
       textAlign: "center",
       color: "white",
       animation: "fadeUp 0.5s ease"
-    } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 64, marginBottom: 16 } }, "\u{1F30A}"), /* @__PURE__ */ React.createElement("h2", { style: { fontSize: 24, fontWeight: 700, marginBottom: 10, fontFamily: "'Noto Serif KR', serif" } }, "\uD638\uD761 \uD6C8\uB828 \uC644\uB8CC"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 14, opacity: 0.8, lineHeight: 1.8, marginBottom: 28 } }, selectedMethod?.name, " \xB7 ", cycles, "\uBC88\uC758 \uC0AC\uC774\uD074\uC744 \uB9C8\uCCE4\uC5B4\uC694.", /* @__PURE__ */ React.createElement("br", null), GameEngine.formatDuration(sessionSec), " \uB3D9\uC548 \uB9C8\uC74C\uC774 \uACE0\uC694\uD574\uC84C\uC2B5\uB2C8\uB2E4."), /* @__PURE__ */ React.createElement("div", { style: {
+    } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 64, marginBottom: 16 } }, "\u{1F30A}"), /* @__PURE__ */ React.createElement("h2", { style: { fontSize: 24, fontWeight: 700, marginBottom: 10, fontFamily: "'Noto Serif KR', serif" } }, t("\uD638\uD761 \uD6C8\uB828 \uC644\uB8CC", "Breathing Session Complete")), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 14, opacity: 0.8, lineHeight: 1.8, marginBottom: 28 } }, selectedMethod?.name, " \xB7 ", t(`${cycles}\uBC88\uC758 \uC0AC\uC774\uD074\uC744 \uB9C8\uCCE4\uC5B4\uC694.`, `${cycles} cycles completed.`), /* @__PURE__ */ React.createElement("br", null), t(`${GameEngine.formatDuration(sessionSec)} \uB3D9\uC548 \uB9C8\uC74C\uC774 \uACE0\uC694\uD574\uC84C\uC2B5\uB2C8\uB2E4.`, `Your mind became calm for ${GameEngine.formatDuration(sessionSec)}.`)), /* @__PURE__ */ React.createElement("div", { style: {
       background: "rgba(255,255,255,0.12)",
       borderRadius: 16,
       padding: "16px 28px",
       marginBottom: 28,
       display: "flex",
       gap: 28
-    } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 24, fontWeight: 700 } }, cycles, "\uD68C"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, opacity: 0.7 } }, "\uC644\uB8CC \uC0AC\uC774\uD074")), /* @__PURE__ */ React.createElement("div", { style: { width: 1, background: "rgba(255,255,255,0.2)" } }), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 24, fontWeight: 700 } }, GameEngine.formatDuration(sessionSec)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, opacity: 0.7 } }, "\uC218\uB828 \uC2DC\uAC04"))), /* @__PURE__ */ React.createElement(
+    } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 24, fontWeight: 700 } }, cycles, t("\uD68C", "x")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, opacity: 0.7 } }, t("\uC644\uB8CC \uC0AC\uC774\uD074", "Cycles Done"))), /* @__PURE__ */ React.createElement("div", { style: { width: 1, background: "rgba(255,255,255,0.2)" } }), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 24, fontWeight: 700 } }, GameEngine.formatDuration(sessionSec)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, opacity: 0.7 } }, t("\uC218\uB828 \uC2DC\uAC04", "Session Time")))), /* @__PURE__ */ React.createElement(
       "button",
       {
         onClick: handleFinish,
         style: { ...gbtn(`linear-gradient(135deg, ${GC.sage}, ${GC.sageL})`), padding: "14px 40px", fontSize: 15 }
       },
-      "\uACBD\uD5D8\uCE58 \uBC1B\uAE30 \u2192"
+      t("\uACBD\uD5D8\uCE58 \uBC1B\uAE30", "Claim EXP"),
+      " \u2192"
     ));
   }
   return /* @__PURE__ */ React.createElement("div", { style: {
@@ -318,7 +322,7 @@ function BreathingModule({ onComplete, onBack }) {
     fontSize: 12,
     borderRadius: 10,
     backdropFilter: "blur(8px)"
-  } }, "\u2190 \uB4A4\uB85C"), /* @__PURE__ */ React.createElement("div", { style: {
+  } }, t("\u2190 \uB4A4\uB85C", "\u2190 Back")), /* @__PURE__ */ React.createElement("div", { style: {
     position: "absolute",
     top: 16,
     right: 16,
@@ -330,7 +334,7 @@ function BreathingModule({ onComplete, onBack }) {
     color: "rgba(255,255,255,0.8)",
     fontSize: 12,
     fontWeight: 600
-  } }, started ? `${cycles} / ${TOTAL_CYCLES} \uC0AC\uC774\uD074` : "\uC228 \uC26C\uB294 \uD638\uC218"), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 24px 20px" } }, /* @__PURE__ */ React.createElement("div", { style: { width: "100%", maxWidth: 320, aspectRatio: "1", position: "relative" } }, /* @__PURE__ */ React.createElement(LakeSVG, { circleSize, currentPhase: current.id }), started && /* @__PURE__ */ React.createElement("div", { style: {
+  } }, started ? `${cycles} / ${TOTAL_CYCLES} ${t("\uC0AC\uC774\uD074", "cycles")}` : t("\uC228 \uC26C\uB294 \uD638\uC218", "Breathing Lake")), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 24px 20px" } }, /* @__PURE__ */ React.createElement("div", { style: { width: "100%", maxWidth: 320, aspectRatio: "1", position: "relative" } }, /* @__PURE__ */ React.createElement(LakeSVG, { circleSize, currentPhase: current.id }), started && /* @__PURE__ */ React.createElement("div", { style: {
     position: "absolute",
     top: "50%",
     left: "50%",
@@ -355,14 +359,14 @@ function BreathingModule({ onComplete, onBack }) {
     backdropFilter: "blur(12px)",
     padding: "20px 24px",
     textAlign: "center"
-  } }, !started ? /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("p", { style: { color: "rgba(255,255,255,0.75)", fontSize: 13, lineHeight: 1.7, marginBottom: 16 } }, "\uD638\uC218\uCC98\uB7FC \uACE0\uC694\uD558\uAC8C.", /* @__PURE__ */ React.createElement("br", null), "4\uCD08 \uB4E4\uC774\uB9C8\uC2DC\uACE0 \xB7 4\uCD08 \uCC38\uACE0 \xB7 4\uCD08 \uB0B4\uC26C\uC5B4\uC694"), /* @__PURE__ */ React.createElement(
+  } }, !started ? /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("p", { style: { color: "rgba(255,255,255,0.75)", fontSize: 13, lineHeight: 1.7, marginBottom: 16 } }, t("\uD638\uC218\uCC98\uB7FC \uACE0\uC694\uD558\uAC8C.", "Be still, like a calm lake."), /* @__PURE__ */ React.createElement("br", null), t("4\uCD08 \uB4E4\uC774\uB9C8\uC2DC\uACE0 \xB7 4\uCD08 \uCC38\uACE0 \xB7 4\uCD08 \uB0B4\uC26C\uC5B4\uC694", "Inhale 4s \xB7 Hold 4s \xB7 Exhale 4s")), /* @__PURE__ */ React.createElement(
     "button",
     {
       onClick: handleStart,
       style: { ...gbtn(`linear-gradient(135deg, ${GC.dusty}, ${GC.dustyL})`), padding: "12px 36px", fontSize: 14, borderRadius: 12 }
     },
-    "\uD638\uD761 \uC2DC\uC791\uD558\uAE30"
-  )) : /* @__PURE__ */ React.createElement("p", { style: { color: "rgba(255,255,255,0.6)", fontSize: 12 } }, "\uB208\uC744 \uAC10\uC544\uB3C4 \uC88B\uC544\uC694 \xB7 ", TOTAL_CYCLES - cycles, "\uC0AC\uC774\uD074 \uB0A8\uC558\uC5B4\uC694")));
+    t("\uD638\uD761 \uC2DC\uC791\uD558\uAE30", "Start Breathing")
+  )) : /* @__PURE__ */ React.createElement("p", { style: { color: "rgba(255,255,255,0.6)", fontSize: 12 } }, t(`\uB208\uC744 \uAC10\uC544\uB3C4 \uC88B\uC544\uC694 \xB7 ${TOTAL_CYCLES - cycles}\uC0AC\uC774\uD074 \uB0A8\uC558\uC5B4\uC694`, `You can close your eyes \xB7 ${TOTAL_CYCLES - cycles} cycles left`))));
 }
 function TreeSVG({ branchCount = 0, totalBranches = 3 }) {
   const FLOWER_POS = [
@@ -452,39 +456,39 @@ function TreeSVG({ branchCount = 0, totalBranches = 3 }) {
 const SEED_THOUGHT_POOLS = {
   anxiety: [
     // GAD7 >= 10
-    "\uBAA8\uB4E0 \uC77C\uC774 \uC798\uBABB\uB420 \uAC83 \uAC19\uB2E4.",
-    "\uB098\uB294 \uD1B5\uC81C\uB825\uC744 \uC783\uC5B4\uAC00\uACE0 \uC788\uB2E4.",
-    "\uAC71\uC815\uC744 \uBA48\uCD9C \uC218\uAC00 \uC5C6\uB2E4.",
-    "\uB098\uB294 \uB298 \uCD5C\uC545\uC744 \uB300\uBE44\uD574\uC57C \uD55C\uB2E4.",
-    "\uAE34\uC7A5\uC744 \uD480\uBA74 \uBB34\uC5B8\uAC00 \uC798\uBABB\uB420 \uAC83 \uAC19\uB2E4.",
-    "\uB098\uB294 \uC544\uBB34\uAC83\uB3C4 \uD655\uC2E4\uD558\uAC8C \uD560 \uC218 \uC5C6\uB2E4."
+    t("\uBAA8\uB4E0 \uC77C\uC774 \uC798\uBABB\uB420 \uAC83 \uAC19\uB2E4.", "Everything seems to go wrong."),
+    t("\uB098\uB294 \uD1B5\uC81C\uB825\uC744 \uC783\uC5B4\uAC00\uACE0 \uC788\uB2E4.", "I feel like I am losing control."),
+    t("\uAC71\uC815\uC744 \uBA48\uCD9C \uC218\uAC00 \uC5C6\uB2E4.", "I cannot stop worrying."),
+    t("\uB098\uB294 \uB298 \uCD5C\uC545\uC744 \uB300\uBE44\uD574\uC57C \uD55C\uB2E4.", "I always have to prepare for the worst."),
+    t("\uAE34\uC7A5\uC744 \uD480\uBA74 \uBB34\uC5B8\uAC00 \uC798\uBABB\uB420 \uAC83 \uAC19\uB2E4.", "If I relax, something will go wrong."),
+    t("\uB098\uB294 \uC544\uBB34\uAC83\uB3C4 \uD655\uC2E4\uD558\uAC8C \uD560 \uC218 \uC5C6\uB2E4.", "I cannot do anything with certainty.")
   ],
   depression_severe: [
     // PHQ9 >= 15
-    "\uB098\uB294 \uD56D\uC0C1 \uC2E4\uD328\uD560 \uAC83\uC774\uB2E4.",
-    "\uC544\uBB34\uAC83\uB3C4 \uB098\uC544\uC9C0\uC9C0 \uC54A\uC744 \uAC83\uC774\uB2E4.",
-    "\uB098\uB294 \uC544\uBB34\uC5D0\uAC8C\uB3C4 \uD544\uC694\uD558\uC9C0 \uC54A\uB2E4.",
-    "\uC774 \uAC10\uC815\uC740 \uC601\uC6D0\uD788 \uB05D\uB098\uC9C0 \uC54A\uC744 \uAC83\uC774\uB2E4.",
-    "\uB098\uB294 \uD63C\uC790\uC11C\uB294 \uC544\uBB34\uAC83\uB3C4 \uD560 \uC218 \uC5C6\uB2E4.",
-    "\uB0B4 \uBBF8\uB798\uB294 \uC5B4\uB461\uB2E4."
+    t("\uB098\uB294 \uD56D\uC0C1 \uC2E4\uD328\uD560 \uAC83\uC774\uB2E4.", "I will always fail."),
+    t("\uC544\uBB34\uAC83\uB3C4 \uB098\uC544\uC9C0\uC9C0 \uC54A\uC744 \uAC83\uC774\uB2E4.", "Nothing will ever get better."),
+    t("\uB098\uB294 \uC544\uBB34\uC5D0\uAC8C\uB3C4 \uD544\uC694\uD558\uC9C0 \uC54A\uB2E4.", "Nobody needs me."),
+    t("\uC774 \uAC10\uC815\uC740 \uC601\uC6D0\uD788 \uB05D\uB098\uC9C0 \uC54A\uC744 \uAC83\uC774\uB2E4.", "This feeling will never end."),
+    t("\uB098\uB294 \uD63C\uC790\uC11C\uB294 \uC544\uBB34\uAC83\uB3C4 \uD560 \uC218 \uC5C6\uB2E4.", "I cannot do anything on my own."),
+    t("\uB0B4 \uBBF8\uB798\uB294 \uC5B4\uB461\uB2E4.", "My future is dark.")
   ],
   depression_mild: [
     // PHQ9 5~14
-    "\uB098\uB294 \uD56D\uC0C1 \uC77C\uC744 \uB9DD\uCE5C\uB2E4.",
-    "\uC544\uBB34\uB3C4 \uB098\uB97C \uC774\uD574\uD558\uC9C0 \uBABB\uD55C\uB2E4.",
-    "\uB098\uB294 \uC4F8\uBAA8\uC5C6\uB294 \uC0AC\uB78C\uC774\uB2E4.",
-    "\uB098\uB294 \uBCC0\uD558\uC9C0 \uBABB\uD560 \uAC83\uC774\uB2E4.",
-    "\uB098\uB294 \uD589\uBCF5\uD560 \uC790\uACA9\uC774 \uC5C6\uB2E4.",
-    "\uBAA8\uB4E0 \uAC83\uC774 \uB0B4 \uD0D3\uC774\uB2E4."
+    t("\uB098\uB294 \uD56D\uC0C1 \uC77C\uC744 \uB9DD\uCE5C\uB2E4.", "I always mess things up."),
+    t("\uC544\uBB34\uB3C4 \uB098\uB97C \uC774\uD574\uD558\uC9C0 \uBABB\uD55C\uB2E4.", "Nobody understands me."),
+    t("\uB098\uB294 \uC4F8\uBAA8\uC5C6\uB294 \uC0AC\uB78C\uC774\uB2E4.", "I am useless."),
+    t("\uB098\uB294 \uBCC0\uD558\uC9C0 \uBABB\uD560 \uAC83\uC774\uB2E4.", "I will never change."),
+    t("\uB098\uB294 \uD589\uBCF5\uD560 \uC790\uACA9\uC774 \uC5C6\uB2E4.", "I do not deserve to be happy."),
+    t("\uBAA8\uB4E0 \uAC83\uC774 \uB0B4 \uD0D3\uC774\uB2E4.", "Everything is my fault.")
   ],
   default: [
     // PHQ9 < 5 또는 검사 없음
-    "\uB098\uB294 \uB354 \uC798\uD560 \uC218 \uC788\uC5C8\uB294\uB370.",
-    "\uC65C \uB098\uB9CC \uC774\uB7F4\uAE4C.",
-    "\uB098\uB294 \uB108\uBB34 \uBBFC\uAC10\uD55C \uAC83 \uAC19\uB2E4.",
-    "\uB2E4\uB978 \uC0AC\uB78C\uB4E4\uC740 \uB2E4 \uC798 \uC0AC\uB294 \uAC83 \uAC19\uB2E4.",
-    "\uB098\uB294 \uAC8C\uC73C\uB978 \uAC83 \uAC19\uB2E4.",
-    "\uB098\uB294 \uC88B\uC740 \uC0AC\uB78C\uC774 \uC544\uB2CC \uAC83 \uAC19\uB2E4."
+    t("\uB098\uB294 \uB354 \uC798\uD560 \uC218 \uC788\uC5C8\uB294\uB370.", "I could have done better."),
+    t("\uC65C \uB098\uB9CC \uC774\uB7F4\uAE4C.", "Why does this only happen to me?"),
+    t("\uB098\uB294 \uB108\uBB34 \uBBFC\uAC10\uD55C \uAC83 \uAC19\uB2E4.", "I think I am too sensitive."),
+    t("\uB2E4\uB978 \uC0AC\uB78C\uB4E4\uC740 \uB2E4 \uC798 \uC0AC\uB294 \uAC83 \uAC19\uB2E4.", "Everyone else seems to be doing fine."),
+    t("\uB098\uB294 \uAC8C\uC73C\uB978 \uAC83 \uAC19\uB2E4.", "I think I am lazy."),
+    t("\uB098\uB294 \uC88B\uC740 \uC0AC\uB78C\uC774 \uC544\uB2CC \uAC83 \uAC19\uB2E4.", "I do not think I am a good person.")
   ]
 };
 function getSeedThoughts(userTestScores) {
@@ -521,7 +525,7 @@ function CBTModule({ onComplete, onBack, userTestScores = {} }) {
   const handleRequestAI = async () => {
     const text = inputText.trim();
     if (!text || text.length < 3) {
-      setAiError("\uC0DD\uAC01\uC744 \uB354 \uC368\uC8FC\uC138\uC694");
+      setAiError(t("\uC0DD\uAC01\uC744 \uB354 \uC368\uC8FC\uC138\uC694", "Please write a bit more"));
       return;
     }
     setAiLoading(true);
@@ -532,10 +536,10 @@ function CBTModule({ onComplete, onBack, userTestScores = {} }) {
         setCurrent({ original: text, transformed: res.data.result, editing: false });
         setStep("transform");
       } else {
-        setAiError(res.error || "AI \uBCC0\uD658 \uC2E4\uD328");
+        setAiError(res.error || t("AI \uBCC0\uD658 \uC2E4\uD328", "AI transformation failed"));
       }
     } catch {
-      setAiError("\uC5F0\uACB0 \uC624\uB958. \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.");
+      setAiError(t("\uC5F0\uACB0 \uC624\uB958. \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.", "Connection error. Please try again."));
     }
     setAiLoading(false);
   };
@@ -577,18 +581,19 @@ function CBTModule({ onComplete, onBack, userTestScores = {} }) {
       background: `linear-gradient(160deg, ${GC.sagePale}, #D4EAD0)`,
       padding: 24,
       animation: "fadeUp 0.5s ease"
-    } }, /* @__PURE__ */ React.createElement("div", { style: { height: 180 } }, /* @__PURE__ */ React.createElement(TreeSVG, { branchCount: TOTAL_BRANCHES })), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", marginBottom: 24 } }, /* @__PURE__ */ React.createElement("h2", { style: { fontSize: 22, fontWeight: 700, color: GC.dark, marginBottom: 8, fontFamily: "'Noto Serif KR', serif" } }, "\uAF43\uC774 \uD53C\uC5C8\uC2B5\uB2C8\uB2E4 \u{1F338}"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: GC.muted, lineHeight: 1.8 } }, TOTAL_BRANCHES, "\uAC1C\uC758 \uC0DD\uAC01\uC744 \uC0C8\uB86D\uAC8C \uBC14\uAFE8\uC5B4\uC694.", /* @__PURE__ */ React.createElement("br", null), "\uC774 \uBCC0\uD654\uAC00 \uB9C8\uC74C\uC5D0 \uC2A4\uBA70\uB4E4\uACE0 \uC788\uC5B4\uC694.")), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 } }, branches.map((b, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: {
+    } }, /* @__PURE__ */ React.createElement("div", { style: { height: 180 } }, /* @__PURE__ */ React.createElement(TreeSVG, { branchCount: TOTAL_BRANCHES })), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", marginBottom: 24 } }, /* @__PURE__ */ React.createElement("h2", { style: { fontSize: 22, fontWeight: 700, color: GC.dark, marginBottom: 8, fontFamily: "'Noto Serif KR', serif" } }, t("\uAF43\uC774 \uD53C\uC5C8\uC2B5\uB2C8\uB2E4 \u{1F338}", "Flowers Have Bloomed \u{1F338}")), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: GC.muted, lineHeight: 1.8 } }, t(`${TOTAL_BRANCHES}\uAC1C\uC758 \uC0DD\uAC01\uC744 \uC0C8\uB86D\uAC8C \uBC14\uAFE8\uC5B4\uC694.`, `You transformed ${TOTAL_BRANCHES} thoughts.`), /* @__PURE__ */ React.createElement("br", null), t("\uC774 \uBCC0\uD654\uAC00 \uB9C8\uC74C\uC5D0 \uC2A4\uBA70\uB4E4\uACE0 \uC788\uC5B4\uC694.", "This change is seeping into your heart."))), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 } }, branches.map((b, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: {
       background: "white",
       borderRadius: 14,
       padding: "14px 16px",
       boxShadow: "0 2px 8px rgba(0,0,0,0.06)"
-    } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: GC.muted, marginBottom: 5 } }, "\uC774\uC804 \uC0DD\uAC01"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: GC.muted, marginBottom: 8, textDecoration: "line-through" } }, b.original), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: GC.sage, marginBottom: 5 } }, "\uC0C8\uB85C\uC6B4 \uC0DD\uAC01 \u2713"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: GC.dark, fontWeight: 500, lineHeight: 1.6 } }, b.transformed)))), /* @__PURE__ */ React.createElement(
+    } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: GC.muted, marginBottom: 5 } }, t("\uC774\uC804 \uC0DD\uAC01", "Previous Thought")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: GC.muted, marginBottom: 8, textDecoration: "line-through" } }, b.original), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: GC.sage, marginBottom: 5 } }, t("\uC0C8\uB85C\uC6B4 \uC0DD\uAC01", "New Thought"), " \u2713"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: GC.dark, fontWeight: 500, lineHeight: 1.6 } }, b.transformed)))), /* @__PURE__ */ React.createElement(
       "button",
       {
         onClick: handleFinish,
         style: { ...gbtn(`linear-gradient(135deg, ${GC.sage}, ${GC.sageL})`), padding: "14px", fontSize: 15, textAlign: "center" }
       },
-      "\uACBD\uD5D8\uCE58 \uBC1B\uAE30 \u2192"
+      t("\uACBD\uD5D8\uCE58 \uBC1B\uAE30", "Claim EXP"),
+      " \u2192"
     ));
   }
   return /* @__PURE__ */ React.createElement("div", { style: {
@@ -609,17 +614,17 @@ function CBTModule({ onComplete, onBack, userTestScores = {} }) {
     ...gbtn("rgba(0,0,0,0.06)", GC.muted, { borderRadius: 9 }),
     padding: "6px 14px",
     fontSize: 12
-  } }, "\u2190 \uB4A4\uB85C"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, Array.from({ length: TOTAL_BRANCHES }).map((_, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: {
+  } }, t("\u2190 \uB4A4\uB85C", "\u2190 Back")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, Array.from({ length: TOTAL_BRANCHES }).map((_, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: {
     width: 10,
     height: 10,
     borderRadius: "50%",
     background: i < branches.length ? GC.sage : "rgba(0,0,0,0.12)",
     transition: "background 0.4s"
-  } }))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: GC.muted, fontWeight: 600 } }, branches.length, "/", TOTAL_BRANCHES, " \uC644\uC131")), /* @__PURE__ */ React.createElement("div", { style: { height: 190, padding: "0 24px", flexShrink: 0 } }, /* @__PURE__ */ React.createElement(TreeSVG, { branchCount: branches.length })), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "0 20px 24px" } }, step === "intro" && /* @__PURE__ */ React.createElement("div", { style: { animation: "fadeUp 0.4s ease" } }, /* @__PURE__ */ React.createElement("h2", { style: { fontSize: 18, fontWeight: 700, color: GC.dark, marginBottom: 8, fontFamily: "'Noto Serif KR', serif" } }, "\uC0DD\uAC01\uC758 \uAC00\uC9C0\uCE58\uAE30"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: GC.muted, lineHeight: 1.75, marginBottom: 20 } }, "\uB9C8\uC74C\uC18D \uBD80\uC815\uC801\uC778 \uC0DD\uAC01\uC744 \uD558\uB098\uC529 \uAEBC\uB0B4\uC5B4", /* @__PURE__ */ React.createElement("br", null), "\uC0C8\uB85C\uC6B4 \uC2DC\uC120\uC73C\uB85C \uBC14\uB77C\uBD10\uC694.", /* @__PURE__ */ React.createElement("br", null), TOTAL_BRANCHES, "\uAC1C\uC758 \uAC00\uC9C0\uC5D0 \uAF43\uC744 \uD53C\uC6CC\uBCF4\uC138\uC694."), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: GC.muted, marginBottom: 10 } }, "\uC790\uC8FC \uB4DC\uB294 \uC0DD\uAC01\uC744 \uC120\uD0DD\uD558\uAC70\uB098"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 } }, SEED_THOUGHTS.slice(0, 4).map((t) => /* @__PURE__ */ React.createElement(
+  } }))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: GC.muted, fontWeight: 600 } }, branches.length, "/", TOTAL_BRANCHES, " ", t("\uC644\uC131", "done"))), /* @__PURE__ */ React.createElement("div", { style: { height: 190, padding: "0 24px", flexShrink: 0 } }, /* @__PURE__ */ React.createElement(TreeSVG, { branchCount: branches.length })), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "0 20px 24px" } }, step === "intro" && /* @__PURE__ */ React.createElement("div", { style: { animation: "fadeUp 0.4s ease" } }, /* @__PURE__ */ React.createElement("h2", { style: { fontSize: 18, fontWeight: 700, color: GC.dark, marginBottom: 8, fontFamily: "'Noto Serif KR', serif" } }, t("\uC0DD\uAC01\uC758 \uAC00\uC9C0\uCE58\uAE30", "Thought Pruning")), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: GC.muted, lineHeight: 1.75, marginBottom: 20 } }, t("\uB9C8\uC74C\uC18D \uBD80\uC815\uC801\uC778 \uC0DD\uAC01\uC744 \uD558\uB098\uC529 \uAEBC\uB0B4\uC5B4", "Bring out your negative thoughts one by one"), /* @__PURE__ */ React.createElement("br", null), t("\uC0C8\uB85C\uC6B4 \uC2DC\uC120\uC73C\uB85C \uBC14\uB77C\uBD10\uC694.", "and see them from a new perspective."), /* @__PURE__ */ React.createElement("br", null), t(`${TOTAL_BRANCHES}\uAC1C\uC758 \uAC00\uC9C0\uC5D0 \uAF43\uC744 \uD53C\uC6CC\uBCF4\uC138\uC694.`, `Let flowers bloom on ${TOTAL_BRANCHES} branches.`)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: GC.muted, marginBottom: 10 } }, t("\uC790\uC8FC \uB4DC\uB294 \uC0DD\uAC01\uC744 \uC120\uD0DD\uD558\uAC70\uB098", "Choose a common thought, or")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 } }, SEED_THOUGHTS.slice(0, 4).map((t2) => /* @__PURE__ */ React.createElement(
     "button",
     {
-      key: t,
-      onClick: () => handleSelectSeed(t),
+      key: t2,
+      onClick: () => handleSelectSeed(t2),
       style: {
         ...gbtn("rgba(255,255,255,0.8)", GC.dark, { fontWeight: 400, textAlign: "left", borderRadius: 12 }),
         padding: "11px 14px",
@@ -630,7 +635,7 @@ function CBTModule({ onComplete, onBack, userTestScores = {} }) {
       }
     },
     '"',
-    t,
+    t2,
     '"'
   ))), /* @__PURE__ */ React.createElement(
     "button",
@@ -641,13 +646,13 @@ function CBTModule({ onComplete, onBack, userTestScores = {} }) {
       },
       style: { ...gbtn(GC.sagePale, GC.sage, { borderRadius: 12 }), padding: "10px 20px", fontSize: 13, width: "100%" }
     },
-    "\uC9C1\uC811 \uC785\uB825\uD558\uAE30"
-  )), step === "input" && /* @__PURE__ */ React.createElement("div", { style: { animation: "fadeUp 0.4s ease" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: GC.dark, marginBottom: 6 } }, branches.length + 1, "\uBC88\uC9F8 \uC0DD\uAC01"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: GC.muted, marginBottom: 14 } }, "\uC9C0\uAE08 \uB9C8\uC74C\uC18D\uC5D0 \uC790\uC8FC \uB5A0\uC624\uB974\uB294 \uBD80\uC815\uC801\uC778 \uC0DD\uAC01\uC744 \uC194\uC9C1\uD558\uAC8C \uC368\uC8FC\uC138\uC694."), /* @__PURE__ */ React.createElement(
+    t("\uC9C1\uC811 \uC785\uB825\uD558\uAE30", "Type your own")
+  )), step === "input" && /* @__PURE__ */ React.createElement("div", { style: { animation: "fadeUp 0.4s ease" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: GC.dark, marginBottom: 6 } }, t(`${branches.length + 1}\uBC88\uC9F8 \uC0DD\uAC01`, `Thought #${branches.length + 1}`)), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: GC.muted, marginBottom: 14 } }, t("\uC9C0\uAE08 \uB9C8\uC74C\uC18D\uC5D0 \uC790\uC8FC \uB5A0\uC624\uB974\uB294 \uBD80\uC815\uC801\uC778 \uC0DD\uAC01\uC744 \uC194\uC9C1\uD558\uAC8C \uC368\uC8FC\uC138\uC694.", "Write down a negative thought that often comes to mind, honestly.")), /* @__PURE__ */ React.createElement(
     "textarea",
     {
       value: inputText,
       onChange: (e) => setInputText(e.target.value),
-      placeholder: "\uC608) \uB098\uB294 \uB298 \uD63C\uC790\uC778 \uAC83 \uAC19\uB2E4.",
+      placeholder: t("\uC608) \uB098\uB294 \uB298 \uD63C\uC790\uC778 \uAC83 \uAC19\uB2E4.", "e.g. I always feel alone."),
       rows: 3,
       style: {
         width: "100%",
@@ -672,7 +677,7 @@ function CBTModule({ onComplete, onBack, userTestScores = {} }) {
       onClick: () => setStep("intro"),
       style: { ...gbtn("rgba(0,0,0,0.07)", GC.muted, { borderRadius: 12, flex: 1 }), padding: "11px" }
     },
-    "\uB2E4\uC2DC \uC120\uD0DD"
+    t("\uB2E4\uC2DC \uC120\uD0DD", "Re-select")
   ), /* @__PURE__ */ React.createElement(
     "button",
     {
@@ -687,20 +692,20 @@ function CBTModule({ onComplete, onBack, userTestScores = {} }) {
         padding: "11px"
       }
     },
-    aiLoading ? "\uBCC0\uD658 \uC911..." : "\u{1F331} AI\uB85C \uC0C8\uB86D\uAC8C \uBCF4\uAE30"
+    aiLoading ? t("\uBCC0\uD658 \uC911...", "Transforming...") : `\u{1F331} ${t("AI\uB85C \uC0C8\uB86D\uAC8C \uBCF4\uAE30", "See it differently with AI")}`
   ))), step === "transform" && /* @__PURE__ */ React.createElement("div", { style: { animation: "fadeUp 0.4s ease" } }, /* @__PURE__ */ React.createElement("div", { style: {
     background: "rgba(0,0,0,0.05)",
     borderRadius: 12,
     padding: "12px 14px",
     marginBottom: 14,
     borderLeft: `3px solid ${GC.muted}`
-  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: GC.muted, marginBottom: 5 } }, "\uC774\uC804 \uC0DD\uAC01"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: GC.muted, lineHeight: 1.6, textDecoration: "line-through" } }, current.original)), /* @__PURE__ */ React.createElement("div", { style: {
+  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: GC.muted, marginBottom: 5 } }, t("\uC774\uC804 \uC0DD\uAC01", "Previous Thought")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: GC.muted, lineHeight: 1.6, textDecoration: "line-through" } }, current.original)), /* @__PURE__ */ React.createElement("div", { style: {
     background: `${GC.sagePale}CC`,
     borderRadius: 12,
     padding: "14px",
     marginBottom: 16,
     border: `1.5px solid ${GC.sage}44`
-  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: GC.sage, marginBottom: 8 } }, "\u{1F338} \uC0C8\uB85C\uC6B4 \uC2DC\uC120"), current.editing ? /* @__PURE__ */ React.createElement(
+  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: GC.sage, marginBottom: 8 } }, "\u{1F338} ", t("\uC0C8\uB85C\uC6B4 \uC2DC\uC120", "New Perspective")), current.editing ? /* @__PURE__ */ React.createElement(
     "textarea",
     {
       value: current.transformed,
@@ -726,7 +731,7 @@ function CBTModule({ onComplete, onBack, userTestScores = {} }) {
       onClick: () => setCurrent((c) => ({ ...c, editing: !c.editing })),
       style: { ...gbtn("rgba(0,0,0,0.07)", GC.muted, { borderRadius: 12, flex: 1 }), padding: "10px", fontSize: 12 }
     },
-    current.editing ? "\uC644\uB8CC" : "\u270F\uFE0F \uC218\uC815"
+    current.editing ? t("\uC644\uB8CC", "Done") : `\u270F\uFE0F ${t("\uC218\uC815", "Edit")}`
   ), /* @__PURE__ */ React.createElement(
     "button",
     {
@@ -736,7 +741,7 @@ function CBTModule({ onComplete, onBack, userTestScores = {} }) {
       },
       style: { ...gbtn(GC.sand, GC.muted, { borderRadius: 12, flex: 1, border: `1px solid rgba(0,0,0,0.08)` }), padding: "10px", fontSize: 12 }
     },
-    "\uB2E4\uC2DC \uC4F0\uAE30"
+    t("\uB2E4\uC2DC \uC4F0\uAE30", "Try Again")
   )), /* @__PURE__ */ React.createElement(
     "button",
     {
@@ -750,8 +755,9 @@ function CBTModule({ onComplete, onBack, userTestScores = {} }) {
         boxShadow: `0 4px 16px ${GC.sage}40`
       }
     },
-    "\uC774 \uC0DD\uAC01\uC744 \uBC1B\uC544\uB4E4\uC774\uAE30 \u{1F338}"
-  ), branches.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: GC.muted, marginBottom: 6 } }, "\uC644\uC131\uB41C \uAC00\uC9C0"), branches.map((b, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: { fontSize: 12, color: GC.sage, marginBottom: 4, paddingLeft: 8, borderLeft: `2px solid ${GC.sageL}` } }, b.transformed))))));
+    t("\uC774 \uC0DD\uAC01\uC744 \uBC1B\uC544\uB4E4\uC774\uAE30", "Accept This Thought"),
+    " \u{1F338}"
+  ), branches.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: GC.muted, marginBottom: 6 } }, t("\uC644\uC131\uB41C \uAC00\uC9C0", "Completed Branches")), branches.map((b, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: { fontSize: 12, color: GC.sage, marginBottom: 4, paddingLeft: 8, borderLeft: `2px solid ${GC.sageL}` } }, b.transformed))))));
 }
 function GardenGame({ onExit, userTestScores = {} }) {
   const { useState } = React;
@@ -760,11 +766,11 @@ function GardenGame({ onExit, userTestScores = {} }) {
   const MODULES = [
     {
       id: "breathing",
-      name: "\uC228 \uC26C\uB294 \uD638\uC218",
+      name: t("\uC228 \uC26C\uB294 \uD638\uC218", "Breathing Lake"),
       emoji: "\u{1F4A7}",
-      desc: "4-4-4 \uBC15\uC2A4 \uD638\uD761\uC73C\uB85C \uBAB8\uACFC \uB9C8\uC74C\uC744 \uACE0\uC694\uD558\uAC8C",
-      duration: "\uC57D 5\uBD84",
-      tags: ["\uC774\uC644", "\uC2A4\uD2B8\uB808\uC2A4"],
+      desc: t("4-4-4 \uBC15\uC2A4 \uD638\uD761\uC73C\uB85C \uBAB8\uACFC \uB9C8\uC74C\uC744 \uACE0\uC694\uD558\uAC8C", "Calm body and mind with 4-4-4 box breathing"),
+      duration: t("\uC57D 5\uBD84", "About 5 min"),
+      tags: [t("\uC774\uC644", "Relax"), t("\uC2A4\uD2B8\uB808\uC2A4", "Stress")],
       color: GC.dusty,
       colorL: GC.dustyL,
       bgFrom: "#1A2A3A",
@@ -772,11 +778,11 @@ function GardenGame({ onExit, userTestScores = {} }) {
     },
     {
       id: "cbt",
-      name: "\uC0DD\uAC01\uC758 \uAC00\uC9C0\uCE58\uAE30",
+      name: t("\uC0DD\uAC01\uC758 \uAC00\uC9C0\uCE58\uAE30", "Thought Pruning"),
       emoji: "\u{1F331}",
-      desc: "\uBD80\uC815\uC801\uC778 \uC0DD\uAC01\uC744 AI\uC640 \uD568\uAED8 \uAE0D\uC815 \uD655\uC5B8\uC73C\uB85C \uBCC0\uD658",
-      duration: "\uC57D 7~10\uBD84",
-      tags: ["\uC778\uC9C0\uAD50\uC815", "CBT"],
+      desc: t("\uBD80\uC815\uC801\uC778 \uC0DD\uAC01\uC744 AI\uC640 \uD568\uAED8 \uAE0D\uC815 \uD655\uC5B8\uC73C\uB85C \uBCC0\uD658", "Transform negative thoughts into positive affirmations with AI"),
+      duration: t("\uC57D 7~10\uBD84", "About 7\u201310 min"),
+      tags: [t("\uC778\uC9C0\uAD50\uC815", "Cognitive"), "CBT"],
       color: GC.sage,
       colorL: GC.sageL,
       bgFrom: "#F0EDE5",
@@ -801,13 +807,14 @@ function GardenGame({ onExit, userTestScores = {} }) {
       background: "rgba(255,255,255,0.75)",
       backdropFilter: "blur(10px)",
       borderBottom: "1px solid rgba(0,0,0,0.06)"
-    } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 20 } }, "\u{1F33F}"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 15, fontWeight: 700, color: GC.dark, fontFamily: "'Noto Serif KR', serif" } }, "\uB9C8\uC74C\uC758 \uC815\uC6D0")), /* @__PURE__ */ React.createElement(
+    } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 20 } }, "\u{1F33F}"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 15, fontWeight: 700, color: GC.dark, fontFamily: "'Noto Serif KR', serif" } }, t("\uB9C8\uC74C\uC758 \uC815\uC6D0", "Mind Garden"))), /* @__PURE__ */ React.createElement(
       "button",
       {
         onClick: onExit,
         style: { ...gbtn("rgba(0,0,0,0.06)", GC.muted, { borderRadius: 9 }), padding: "6px 13px", fontSize: 12 }
       },
-      "\uD5C8\uBE0C\uB85C \u2192"
+      t("\uD5C8\uBE0C\uB85C", "Hub"),
+      " \u2192"
     )), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, padding: "24px 20px", overflowY: "auto" } }, /* @__PURE__ */ React.createElement("div", { style: {
       background: "rgba(255,255,255,0.7)",
       borderRadius: 18,
@@ -815,7 +822,7 @@ function GardenGame({ onExit, userTestScores = {} }) {
       marginBottom: 22,
       backdropFilter: "blur(8px)",
       border: "1px solid rgba(255,255,255,0.6)"
-    } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: GC.muted, marginBottom: 5 } }, "\uC624\uB298\uC758 \uC815\uC6D0"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, color: GC.dark, fontWeight: 500 } }, "\uC5B4\uB5A4 \uD6C8\uB828\uC744 \uD574\uBCFC\uAE4C\uC694?"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: GC.muted, marginTop: 4, lineHeight: 1.6 } }, "\uD638\uD761\uC73C\uB85C \uBAB8\uC744 \uC548\uC815\uC2DC\uD0A4\uAC70\uB098,", /* @__PURE__ */ React.createElement("br", null), "\uC0DD\uAC01\uC744 \uC0C8\uB86D\uAC8C \uAC00\uAFD4\uBCF4\uC138\uC694.")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 14 } }, MODULES.map((m) => /* @__PURE__ */ React.createElement(
+    } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: GC.muted, marginBottom: 5 } }, t("\uC624\uB298\uC758 \uC815\uC6D0", "Today's Garden")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, color: GC.dark, fontWeight: 500 } }, t("\uC5B4\uB5A4 \uD6C8\uB828\uC744 \uD574\uBCFC\uAE4C\uC694?", "Which practice will you try?")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: GC.muted, marginTop: 4, lineHeight: 1.6 } }, t("\uD638\uD761\uC73C\uB85C \uBAB8\uC744 \uC548\uC815\uC2DC\uD0A4\uAC70\uB098,", "Calm your body with breathing,"), /* @__PURE__ */ React.createElement("br", null), t("\uC0DD\uAC01\uC744 \uC0C8\uB86D\uAC8C \uAC00\uAFD4\uBCF4\uC138\uC694.", "or reshape your thoughts."))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 14 } }, MODULES.map((m) => /* @__PURE__ */ React.createElement(
       "button",
       {
         key: m.id,
@@ -832,14 +839,14 @@ function GardenGame({ onExit, userTestScores = {} }) {
         height: 6,
         background: `linear-gradient(90deg, ${m.color}, ${m.colorL})`
       } }),
-      /* @__PURE__ */ React.createElement("div", { style: { padding: "18px 18px 16px", background: "rgba(255,255,255,0.85)" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 32, lineHeight: 1 } }, m.emoji), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 16, fontWeight: 700, color: GC.dark } }, m.name), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: m.color, fontWeight: 600 } }, m.duration))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: GC.muted, lineHeight: 1.6, marginBottom: 10 } }, m.desc), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6 } }, m.tags.map((t) => /* @__PURE__ */ React.createElement("span", { key: t, style: {
+      /* @__PURE__ */ React.createElement("div", { style: { padding: "18px 18px 16px", background: "rgba(255,255,255,0.85)" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 32, lineHeight: 1 } }, m.emoji), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 16, fontWeight: 700, color: GC.dark } }, m.name), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: m.color, fontWeight: 600 } }, m.duration))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: GC.muted, lineHeight: 1.6, marginBottom: 10 } }, m.desc), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6 } }, m.tags.map((t2) => /* @__PURE__ */ React.createElement("span", { key: t2, style: {
         fontSize: 10,
         padding: "2px 9px",
         borderRadius: 100,
         background: `${m.color}18`,
         color: m.color,
         fontWeight: 600
-      } }, t))))
+      } }, t2))))
     )))));
   }
   if (screen === "result") {
@@ -854,7 +861,7 @@ function GardenGame({ onExit, userTestScores = {} }) {
       textAlign: "center",
       background: `linear-gradient(160deg, ${GC.sagePale}, #D4EAD0)`,
       animation: "fadeUp 0.5s ease"
-    } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 72, marginBottom: 16 } }, r.leveledUp ? "\u{1F389}" : "\u{1F33F}"), /* @__PURE__ */ React.createElement("h2", { style: { fontSize: 22, fontWeight: 700, color: GC.dark, marginBottom: 10, fontFamily: "'Noto Serif KR', serif" } }, r.leveledUp ? "\uB808\uBCA8 \uC5C5!" : "\uC624\uB298\uB3C4 \uC218\uACE0\uD588\uC5B4\uC694"), /* @__PURE__ */ React.createElement("div", { style: {
+    } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 72, marginBottom: 16 } }, r.leveledUp ? "\u{1F389}" : "\u{1F33F}"), /* @__PURE__ */ React.createElement("h2", { style: { fontSize: 22, fontWeight: 700, color: GC.dark, marginBottom: 10, fontFamily: "'Noto Serif KR', serif" } }, r.leveledUp ? t("\uB808\uBCA8 \uC5C5!", "Level Up!") : t("\uC624\uB298\uB3C4 \uC218\uACE0\uD588\uC5B4\uC694", "Great work today")), /* @__PURE__ */ React.createElement("div", { style: {
       background: "white",
       borderRadius: 18,
       padding: "20px 32px",
@@ -862,21 +869,21 @@ function GardenGame({ onExit, userTestScores = {} }) {
       marginBottom: 24,
       display: "flex",
       gap: 28
-    } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 26, fontWeight: 700, color: GC.sage } }, "+", r.expGained), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: GC.muted } }, "\uACBD\uD5D8\uCE58")), r.newAchievements?.length > 0 && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { width: 1, background: "rgba(0,0,0,0.08)" } }), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 26, fontWeight: 700, color: GC.amber } }, r.newAchievements.map((id) => GameEngine.getAchievementInfo(id).emoji).join("")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: GC.muted } }, "\uC0C8 \uC5C5\uC801")))), r.newAchievements?.length > 0 && /* @__PURE__ */ React.createElement("div", { style: {
+    } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 26, fontWeight: 700, color: GC.sage } }, "+", r.expGained), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: GC.muted } }, t("\uACBD\uD5D8\uCE58", "EXP"))), r.newAchievements?.length > 0 && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { width: 1, background: "rgba(0,0,0,0.08)" } }), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 26, fontWeight: 700, color: GC.amber } }, r.newAchievements.map((id) => GameEngine.getAchievementInfo(id).emoji).join("")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: GC.muted } }, t("\uC0C8 \uC5C5\uC801", "New Achievement"))))), r.newAchievements?.length > 0 && /* @__PURE__ */ React.createElement("div", { style: {
       background: `${GC.amberL}33`,
       borderRadius: 12,
       padding: "10px 20px",
       marginBottom: 20
     } }, r.newAchievements.map((id) => {
       const a = GameEngine.getAchievementInfo(id);
-      return /* @__PURE__ */ React.createElement("div", { key: id, style: { fontSize: 13, color: GC.amber, fontWeight: 600 } }, a.emoji, " ", a.name, " \uB2EC\uC131!");
+      return /* @__PURE__ */ React.createElement("div", { key: id, style: { fontSize: 13, color: GC.amber, fontWeight: 600 } }, a.emoji, " ", a.name, " ", t("\uB2EC\uC131!", "Unlocked!"));
     })), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, width: "100%", maxWidth: 280 } }, /* @__PURE__ */ React.createElement(
       "button",
       {
         onClick: () => setScreen("select"),
         style: { ...gbtn(GC.sagePale, GC.sage, { borderRadius: 13, flex: 1 }), padding: "12px", fontSize: 13 }
       },
-      "\uD55C \uBC88 \uB354"
+      t("\uD55C \uBC88 \uB354", "Try Again")
     ), /* @__PURE__ */ React.createElement(
       "button",
       {
@@ -889,7 +896,8 @@ function GardenGame({ onExit, userTestScores = {} }) {
           borderRadius: 13
         }
       },
-      "\uD5C8\uBE0C\uB85C \u2192"
+      t("\uD5C8\uBE0C\uB85C", "Hub"),
+      " \u2192"
     )));
   }
   return /* @__PURE__ */ React.createElement("div", { style: { flex: 1, display: "flex", flexDirection: "column" } }, screen === "breathing" && /* @__PURE__ */ React.createElement(

@@ -272,37 +272,37 @@ function CircleTimer({ seconds, total, label, emoji }) {
       fontSize: "10",
       fontFamily: "'Noto Sans KR',sans-serif"
     },
-    "\uCD08 \uB0A8\uC74C"
+    t("\uCD08 \uB0A8\uC74C", "sec left")
   )), /* @__PURE__ */ React.createElement("div", { style: {
     fontSize: 14,
     fontWeight: 700,
     color: BT.cream,
     fontFamily: "'Noto Sans KR',sans-serif",
     marginTop: 4
-  } }, label), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: BT.muted, fontFamily: "'Noto Sans KR',sans-serif", marginTop: 2 } }, "\uC9C4\uD589 \uC911 \u2014 \uD3B8\uC548\uD558\uAC8C \uD574\uBCF4\uC138\uC694"));
+  } }, label), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: BT.muted, fontFamily: "'Noto Sans KR',sans-serif", marginTop: 2 } }, t("\uC9C4\uD589 \uC911 \u2014 \uD3B8\uC548\uD558\uAC8C \uD574\uBCF4\uC138\uC694", "In progress \u2014 take it easy")));
 }
 function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
   const { useState, useEffect, useCallback, useRef } = React;
   const MISSIONS = {
-    stretch_5: { label: "5\uBD84 \uC2A4\uD2B8\uB808\uCE6D", emoji: "\u{1F9D8}", energy: 10, duration: 5, desc: "\uBAB8\uC758 \uAE34\uC7A5\uC744 \uD480\uC5B4\uC918\uC694", category: "body" },
-    walk_10: { label: "10\uBD84 \uC0B0\uCC45", emoji: "\u{1F6B6}", energy: 20, duration: 10, desc: "\uBC14\uAE65 \uACF5\uAE30\uB97C \uB9C8\uC154\uC694", category: "body" },
-    drink_water: { label: "\uBB3C \uD55C \uC794 \uB9C8\uC2DC\uAE30", emoji: "\u{1F4A7}", energy: 8, duration: 1, desc: "\uC9C0\uAE08 \uBC14\uB85C \uD560 \uC218 \uC788\uC5B4\uC694", category: "body" },
-    family_time: { label: "\uC18C\uC911\uD55C \uC0AC\uB78C\uACFC \uB300\uD654", emoji: "\u{1F4AC}", energy: 25, duration: 15, desc: "\uC5F0\uACB0\uC774 \uC5D0\uB108\uC9C0\uC608\uC694", category: "social" },
-    deep_breath: { label: "\uAE4A\uC740 \uD638\uD761 3\uD68C", emoji: "\u{1F32C}\uFE0F", energy: 6, duration: 2, desc: "\uC9C0\uAE08 \uC5EC\uAE30\uC5D0 \uC9D1\uC911\uD574\uC694", category: "mind" },
-    meditation: { label: "5\uBD84 \uBA85\uC0C1", emoji: "\u{1F56F}\uFE0F", energy: 15, duration: 5, desc: "\uC7A0\uC2DC \uACE0\uC694\uD574\uC838\uC694", category: "mind" },
-    gratitude: { label: "\uAC10\uC0AC \uD55C \uC904 \uC4F0\uAE30", emoji: "\u2B50", energy: 12, duration: 3, desc: "\uC791\uC740 \uAC83\uB3C4 \uAD1C\uCC2E\uC544\uC694", category: "mind" },
-    grounding_54321: { label: "5-4-3-2-1 \uC548\uC815\uD654", emoji: "\u{1F30D}", energy: 18, duration: 5, desc: "\uBD88\uC548\uC744 \uC7A0\uC7AC\uC6B0\uB294 \uC811\uC9C0 \uAE30\uBC95", category: "anxiety" },
-    body_scan: { label: "\uBC14\uB514 \uC2A4\uCE94", emoji: "\u{1F50D}", energy: 14, duration: 7, desc: "\uBAB8\uC758 \uAE34\uC7A5 \uBD80\uC704\uB97C \uD655\uC778\uD574\uC694", category: "anxiety" },
-    nature_view: { label: "\uC790\uC5F0 \uC0AC\uC9C4/\uD48D\uACBD \uBCF4\uAE30", emoji: "\u{1F33F}", energy: 10, duration: 3, desc: "\uC790\uC5F0\uC774 \uC2A4\uD2B8\uB808\uC2A4\uB97C \uC904\uC5EC\uC918\uC694", category: "stress" },
-    journal_5min: { label: "5\uBD84 \uAC10\uC815 \uC77C\uAE30", emoji: "\u{1F4D3}", energy: 16, duration: 5, desc: "\uAC10\uC815\uC744 \uC4F0\uBA74 \uB9C8\uC74C\uC774 \uAC00\uBCBC\uC6CC\uC838\uC694", category: "stress" },
-    nap_20: { label: "20\uBD84 \uB0AE\uC7A0", emoji: "\u{1F634}", energy: 22, duration: 20, desc: "\uC9E7\uC740 \uB0AE\uC7A0\uC774 \uD68C\uBCF5\uB825\uC744 \uB192\uC5EC\uC694", category: "rest" }
+    stretch_5: { label: t("5\uBD84 \uC2A4\uD2B8\uB808\uCE6D", "5-min Stretch"), emoji: "\u{1F9D8}", energy: 10, duration: 5, desc: t("\uBAB8\uC758 \uAE34\uC7A5\uC744 \uD480\uC5B4\uC918\uC694", "Release body tension"), category: "body" },
+    walk_10: { label: t("10\uBD84 \uC0B0\uCC45", "10-min Walk"), emoji: "\u{1F6B6}", energy: 20, duration: 10, desc: t("\uBC14\uAE65 \uACF5\uAE30\uB97C \uB9C8\uC154\uC694", "Get some fresh air"), category: "body" },
+    drink_water: { label: t("\uBB3C \uD55C \uC794 \uB9C8\uC2DC\uAE30", "Drink a Glass of Water"), emoji: "\u{1F4A7}", energy: 8, duration: 1, desc: t("\uC9C0\uAE08 \uBC14\uB85C \uD560 \uC218 \uC788\uC5B4\uC694", "You can do it right now"), category: "body" },
+    family_time: { label: t("\uC18C\uC911\uD55C \uC0AC\uB78C\uACFC \uB300\uD654", "Talk to Someone You Love"), emoji: "\u{1F4AC}", energy: 25, duration: 15, desc: t("\uC5F0\uACB0\uC774 \uC5D0\uB108\uC9C0\uC608\uC694", "Connection is energy"), category: "social" },
+    deep_breath: { label: t("\uAE4A\uC740 \uD638\uD761 3\uD68C", "Deep Breath \xD73"), emoji: "\u{1F32C}\uFE0F", energy: 6, duration: 2, desc: t("\uC9C0\uAE08 \uC5EC\uAE30\uC5D0 \uC9D1\uC911\uD574\uC694", "Focus on the present moment"), category: "mind" },
+    meditation: { label: t("5\uBD84 \uBA85\uC0C1", "5-min Meditation"), emoji: "\u{1F56F}\uFE0F", energy: 15, duration: 5, desc: t("\uC7A0\uC2DC \uACE0\uC694\uD574\uC838\uC694", "Find a moment of stillness"), category: "mind" },
+    gratitude: { label: t("\uAC10\uC0AC \uD55C \uC904 \uC4F0\uAE30", "Write One Gratitude"), emoji: "\u2B50", energy: 12, duration: 3, desc: t("\uC791\uC740 \uAC83\uB3C4 \uAD1C\uCC2E\uC544\uC694", "Even small things count"), category: "mind" },
+    grounding_54321: { label: t("5-4-3-2-1 \uC548\uC815\uD654", "5-4-3-2-1 Grounding"), emoji: "\u{1F30D}", energy: 18, duration: 5, desc: t("\uBD88\uC548\uC744 \uC7A0\uC7AC\uC6B0\uB294 \uC811\uC9C0 \uAE30\uBC95", "A grounding technique to calm anxiety"), category: "anxiety" },
+    body_scan: { label: t("\uBC14\uB514 \uC2A4\uCE94", "Body Scan"), emoji: "\u{1F50D}", energy: 14, duration: 7, desc: t("\uBAB8\uC758 \uAE34\uC7A5 \uBD80\uC704\uB97C \uD655\uC778\uD574\uC694", "Check where tension lives"), category: "anxiety" },
+    nature_view: { label: t("\uC790\uC5F0 \uC0AC\uC9C4/\uD48D\uACBD \uBCF4\uAE30", "View Nature Photo/Scene"), emoji: "\u{1F33F}", energy: 10, duration: 3, desc: t("\uC790\uC5F0\uC774 \uC2A4\uD2B8\uB808\uC2A4\uB97C \uC904\uC5EC\uC918\uC694", "Nature reduces stress"), category: "stress" },
+    journal_5min: { label: t("5\uBD84 \uAC10\uC815 \uC77C\uAE30", "5-min Emotion Journal"), emoji: "\u{1F4D3}", energy: 16, duration: 5, desc: t("\uAC10\uC815\uC744 \uC4F0\uBA74 \uB9C8\uC74C\uC774 \uAC00\uBCBC\uC6CC\uC838\uC694", "Writing feelings lightens the mind"), category: "stress" },
+    nap_20: { label: t("20\uBD84 \uB0AE\uC7A0", "20-min Nap"), emoji: "\u{1F634}", energy: 22, duration: 20, desc: t("\uC9E7\uC740 \uB0AE\uC7A0\uC774 \uD68C\uBCF5\uB825\uC744 \uB192\uC5EC\uC694", "A short nap boosts recovery"), category: "rest" }
   };
   const CITY_LEVELS = [
-    { level: 1, name: "\uBD88 \uAEBC\uC9C4 \uB3C4\uC2DC", minEnergy: 0, color: "#2A4060", desc: "\uC9C0\uAE08 \uD68C\uBCF5\uC744 \uC2DC\uC791\uD574\uC694" },
-    { level: 2, name: "\uCCAB \uBD88\uBE5B", minEnergy: 30, color: "#3A5080", desc: "\uBD88\uBE5B\uC774 \uCF1C\uC9C0\uAE30 \uC2DC\uC791\uD588\uC5B4\uC694" },
-    { level: 3, name: "\uAE68\uC5B4\uB098\uB294 \uB3C4\uC2DC", minEnergy: 60, color: "#4A70A0", desc: "\uB3C4\uC2DC\uAC00 \uC0B4\uC544\uB098\uACE0 \uC788\uC5B4\uC694" },
-    { level: 4, name: "\uD65C\uAE30\uCC2C \uAC70\uB9AC", minEnergy: 90, color: "#5A90C0", desc: "\uC5D0\uB108\uC9C0\uAC00 \uB118\uCCD0\uB098\uC694" },
-    { level: 5, name: "\uBE5B\uB098\uB294 \uBA54\uD2B8\uB85C", minEnergy: 120, color: "#7EB8F7", desc: "\uC644\uC804\uD788 \uD68C\uBCF5\uB418\uC5C8\uC5B4\uC694 \u{1F389}" }
+    { level: 1, name: t("\uBD88 \uAEBC\uC9C4 \uB3C4\uC2DC", "Lights-Out City"), minEnergy: 0, color: "#2A4060", desc: t("\uC9C0\uAE08 \uD68C\uBCF5\uC744 \uC2DC\uC791\uD574\uC694", "Start your recovery now") },
+    { level: 2, name: t("\uCCAB \uBD88\uBE5B", "First Light"), minEnergy: 30, color: "#3A5080", desc: t("\uBD88\uBE5B\uC774 \uCF1C\uC9C0\uAE30 \uC2DC\uC791\uD588\uC5B4\uC694", "The lights are beginning to glow") },
+    { level: 3, name: t("\uAE68\uC5B4\uB098\uB294 \uB3C4\uC2DC", "Awakening City"), minEnergy: 60, color: "#4A70A0", desc: t("\uB3C4\uC2DC\uAC00 \uC0B4\uC544\uB098\uACE0 \uC788\uC5B4\uC694", "The city is coming alive") },
+    { level: 4, name: t("\uD65C\uAE30\uCC2C \uAC70\uB9AC", "Vibrant Streets"), minEnergy: 90, color: "#5A90C0", desc: t("\uC5D0\uB108\uC9C0\uAC00 \uB118\uCCD0\uB098\uC694", "Energy is overflowing") },
+    { level: 5, name: t("\uBE5B\uB098\uB294 \uBA54\uD2B8\uB85C", "Shining Metropolis"), minEnergy: 120, color: "#7EB8F7", desc: t("\uC644\uC804\uD788 \uD68C\uBCF5\uB418\uC5C8\uC5B4\uC694 \u{1F389}", "Fully recovered \u{1F389}") }
   ];
   const burnoutScore = userTestResults?.BURNOUT ?? 50;
   const gad7Score = userTestResults?.GAD7 ?? 0;
@@ -342,14 +342,14 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
   useEffect(() => {
     if (!running || timer <= 0) return;
     intervalRef.current = setInterval(() => {
-      setTimer((t) => {
-        if (t <= 1) {
+      setTimer((t2) => {
+        if (t2 <= 1) {
           clearInterval(intervalRef.current);
           setRunning(false);
           completeMission(activeMission);
           return 0;
         }
-        return t - 1;
+        return t2 - 1;
       });
     }, 1e3);
     return () => clearInterval(intervalRef.current);
@@ -432,7 +432,7 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
       fontWeight: 700,
       color: BT.cream,
       fontFamily: "'Noto Serif KR',serif"
-    } }, "\uBC88\uC544\uC6C3 \uD68C\uBCF5")), /* @__PURE__ */ React.createElement("button", { onClick: skipMission, style: {
+    } }, t("\uBC88\uC544\uC6C3 \uD68C\uBCF5", "Burnout Recovery"))), /* @__PURE__ */ React.createElement("button", { onClick: skipMission, style: {
       fontFamily: "'Noto Sans KR',sans-serif",
       background: "rgba(255,255,255,0.08)",
       color: BT.muted,
@@ -441,7 +441,7 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
       padding: "6px 14px",
       fontSize: 12,
       cursor: "pointer"
-    } }, "\uAC74\uB108\uB6F0\uAE30")), /* @__PURE__ */ React.createElement("div", { style: {
+    } }, t("\uAC74\uB108\uB6F0\uAE30", "Skip"))), /* @__PURE__ */ React.createElement("div", { style: {
       flex: 1,
       display: "flex",
       flexDirection: "column",
@@ -470,7 +470,7 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
       lineHeight: 1.7,
       margin: 0,
       fontFamily: "'Noto Sans KR',sans-serif"
-    } }, m.desc, /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { style: { color: BT.electric } }, "\uC644\uB8CC\uD558\uBA74 +", m.energy, " \uC5D0\uB108\uC9C0"))), /* @__PURE__ */ React.createElement("div", { style: {
+    } }, m.desc, /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { style: { color: BT.electric } }, t(`\uC644\uB8CC\uD558\uBA74 +${m.energy} \uC5D0\uB108\uC9C0`, `Complete for +${m.energy} Energy`)))), /* @__PURE__ */ React.createElement("div", { style: {
       marginTop: 24,
       width: "100%",
       maxWidth: 320,
@@ -509,14 +509,14 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
     fontWeight: 700,
     color: BT.cream,
     fontFamily: "'Noto Serif KR',serif"
-  } }, "\uBC88\uC544\uC6C3 \uD68C\uBCF5")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("div", { style: {
+  } }, t("\uBC88\uC544\uC6C3 \uD68C\uBCF5", "Burnout Recovery"))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("div", { style: {
     fontSize: 11,
     color: BT.muted,
     background: "rgba(126,184,247,0.08)",
     borderRadius: 8,
     padding: "4px 10px",
     border: "1px solid rgba(126,184,247,0.12)"
-  } }, completedToday.length, "/", initialMissions.length, " \uC644\uB8CC"), /* @__PURE__ */ React.createElement("button", { onClick: () => setShowReport(true), style: {
+  } }, completedToday.length, "/", initialMissions.length, " ", t("\uC644\uB8CC", "done")), /* @__PURE__ */ React.createElement("button", { onClick: () => setShowReport(true), style: {
     fontFamily: "'Noto Sans KR',sans-serif",
     background: "rgba(126,184,247,0.1)",
     color: BT.electricL,
@@ -526,7 +526,7 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
     fontSize: 11,
     fontWeight: 600,
     cursor: "pointer"
-  } }, "\uB9AC\uD3EC\uD2B8"))), /* @__PURE__ */ React.createElement("div", { style: { position: "relative", height: 160, flexShrink: 0 } }, /* @__PURE__ */ React.createElement(CitySVG, { energyPct, completedCount: completedToday.length }), /* @__PURE__ */ React.createElement("div", { style: {
+  } }, t("\uB9AC\uD3EC\uD2B8", "Report")))), /* @__PURE__ */ React.createElement("div", { style: { position: "relative", height: 160, flexShrink: 0 } }, /* @__PURE__ */ React.createElement(CitySVG, { energyPct, completedCount: completedToday.length }), /* @__PURE__ */ React.createElement("div", { style: {
     position: "absolute",
     bottom: 10,
     left: 0,
@@ -551,7 +551,7 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
     flexShrink: 0,
     background: "rgba(8,14,26,0.6)",
     borderBottom: "1px solid rgba(126,184,247,0.06)"
-  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: BT.electricL } }, "\u26A1 \uD68C\uBCF5 \uC5D0\uB108\uC9C0"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("span", { style: {
+  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: BT.electricL } }, "\u26A1 ", t("\uD68C\uBCF5 \uC5D0\uB108\uC9C0", "Recovery Energy")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("span", { style: {
     fontSize: 13,
     fontWeight: 700,
     color: energyPct < 30 ? BT.energyLow : energyPct < 60 ? BT.energyMid : BT.energyFull
@@ -561,7 +561,7 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
     background: "rgba(255,255,255,0.05)",
     borderRadius: 6,
     padding: "2px 6px"
-  } }, "\uB2E4\uC74C\uAE4C\uC9C0 ", toNextLevel))), /* @__PURE__ */ React.createElement("div", { style: { height: 6, background: "rgba(255,255,255,0.07)", borderRadius: 99, overflow: "hidden" } }, /* @__PURE__ */ React.createElement("div", { style: {
+  } }, t(`\uB2E4\uC74C\uAE4C\uC9C0 ${toNextLevel}`, `${toNextLevel} to next`)))), /* @__PURE__ */ React.createElement("div", { style: { height: 6, background: "rgba(255,255,255,0.07)", borderRadius: 99, overflow: "hidden" } }, /* @__PURE__ */ React.createElement("div", { style: {
     height: "100%",
     width: `${energyPct}%`,
     background: energyColor,
@@ -584,13 +584,13 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
     fontSize: 13,
     color: BT.energyFull,
     fontWeight: 600
-  } }, "\u2705 ", MISSIONS[justCompleted].label, " \uC644\uB8CC! +", MISSIONS[justCompleted].energy, " \uC5D0\uB108\uC9C0"), /* @__PURE__ */ React.createElement("div", { style: {
+  } }, "\u2705 ", MISSIONS[justCompleted].label, " ", t("\uC644\uB8CC!", "Complete!"), " +", MISSIONS[justCompleted].energy, " ", t("\uC5D0\uB108\uC9C0", "Energy")), /* @__PURE__ */ React.createElement("div", { style: {
     fontSize: 12,
     fontWeight: 700,
     color: BT.muted,
     marginBottom: 10,
     fontFamily: "'Noto Sans KR',sans-serif"
-  } }, "\uC624\uB298\uC758 \uD68C\uBCF5 \uBBF8\uC158", gad7Score >= 10 && /* @__PURE__ */ React.createElement("span", { style: { marginLeft: 6, fontSize: 10, color: BT.amber, background: "rgba(245,200,66,0.12)", borderRadius: 6, padding: "2px 7px", border: "1px solid rgba(245,200,66,0.2)" } }, "\uBD88\uC548 \uCF00\uC5B4"), dass21Score >= 14 && gad7Score < 10 && /* @__PURE__ */ React.createElement("span", { style: { marginLeft: 6, fontSize: 10, color: BT.electricL, background: "rgba(126,184,247,0.1)", borderRadius: 6, padding: "2px 7px", border: "1px solid rgba(126,184,247,0.2)" } }, "\uC2A4\uD2B8\uB808\uC2A4 \uCF00\uC5B4"), burnoutScore >= 60 && gad7Score < 10 && dass21Score < 14 && /* @__PURE__ */ React.createElement("span", { style: { marginLeft: 6, fontSize: 10, color: BT.energyLow, background: "rgba(255,107,107,0.1)", borderRadius: 6, padding: "2px 7px", border: "1px solid rgba(255,107,107,0.2)" } }, "\uBC88\uC544\uC6C3 \uC9D1\uC911")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 9 } }, initialMissions.map((code) => {
+  } }, t("\uC624\uB298\uC758 \uD68C\uBCF5 \uBBF8\uC158", "Today's Recovery Mission"), gad7Score >= 10 && /* @__PURE__ */ React.createElement("span", { style: { marginLeft: 6, fontSize: 10, color: BT.amber, background: "rgba(245,200,66,0.12)", borderRadius: 6, padding: "2px 7px", border: "1px solid rgba(245,200,66,0.2)" } }, t("\uBD88\uC548 \uCF00\uC5B4", "Anxiety Care")), dass21Score >= 14 && gad7Score < 10 && /* @__PURE__ */ React.createElement("span", { style: { marginLeft: 6, fontSize: 10, color: BT.electricL, background: "rgba(126,184,247,0.1)", borderRadius: 6, padding: "2px 7px", border: "1px solid rgba(126,184,247,0.2)" } }, t("\uC2A4\uD2B8\uB808\uC2A4 \uCF00\uC5B4", "Stress Care")), burnoutScore >= 60 && gad7Score < 10 && dass21Score < 14 && /* @__PURE__ */ React.createElement("span", { style: { marginLeft: 6, fontSize: 10, color: BT.energyLow, background: "rgba(255,107,107,0.1)", borderRadius: 6, padding: "2px 7px", border: "1px solid rgba(255,107,107,0.2)" } }, t("\uBC88\uC544\uC6C3 \uC9D1\uC911", "Burnout Focus"))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 9 } }, initialMissions.map((code) => {
     const m = MISSIONS[code];
     const done = completedToday.includes(code);
     const isActive = activeMission === code;
@@ -626,7 +626,7 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
         color: done ? BT.energyFull : BT.cream,
         textDecoration: done ? "none" : "none",
         marginBottom: 2
-      } }, m.label), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: BT.muted, lineHeight: 1.4 } }, m.desc, " \xB7 ", m.duration, "\uBD84")),
+      } }, m.label), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: BT.muted, lineHeight: 1.4 } }, m.desc, " \xB7 ", m.duration, t("\uBD84", "min"))),
       /* @__PURE__ */ React.createElement("div", { style: { flexShrink: 0, textAlign: "center" } }, done ? /* @__PURE__ */ React.createElement("div", { style: {
         fontSize: 11,
         color: BT.energyFull,
@@ -635,7 +635,7 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
         borderRadius: 8,
         padding: "3px 8px",
         border: "1px solid rgba(69,238,136,0.2)"
-      } }, "\uC644\uB8CC") : /* @__PURE__ */ React.createElement("div", { style: {
+      } }, t("\uC644\uB8CC", "Done")) : /* @__PURE__ */ React.createElement("div", { style: {
         fontSize: 12,
         fontWeight: 700,
         color: BT.amber,
@@ -652,7 +652,7 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
     padding: "14px 16px",
     marginBottom: 12,
     textAlign: "center"
-  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: BT.electricL, fontWeight: 600, marginBottom: 4 } }, "\uC624\uB298 +", completedToday.reduce((s, c) => s + MISSIONS[c].energy, 0), " \uC5D0\uB108\uC9C0 \uD68C\uBCF5"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: BT.muted } }, completedToday.length, "\uAC1C \uBBF8\uC158 \uC644\uB8CC \xB7 \uB3C4\uC2DC\uC5D0 \uBD88\uC774 \uCF1C\uC84C\uC5B4\uC694")), /* @__PURE__ */ React.createElement(
+  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: BT.electricL, fontWeight: 600, marginBottom: 4 } }, t(`\uC624\uB298 +${completedToday.reduce((s, c) => s + MISSIONS[c].energy, 0)} \uC5D0\uB108\uC9C0 \uD68C\uBCF5`, `+${completedToday.reduce((s, c) => s + MISSIONS[c].energy, 0)} Energy Recovered Today`)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: BT.muted } }, t(`${completedToday.length}\uAC1C \uBBF8\uC158 \uC644\uB8CC \xB7 \uB3C4\uC2DC\uC5D0 \uBD88\uC774 \uCF1C\uC84C\uC5B4\uC694`, `${completedToday.length} mission(s) complete \xB7 The city lights are on`))), /* @__PURE__ */ React.createElement(
     "button",
     {
       className: "bt-btn",
@@ -668,7 +668,8 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
         fontSize: 14
       }
     },
-    "\u{1F4CA} \uD68C\uBCF5 \uB9AC\uD3EC\uD2B8 \uBCF4\uAE30"
+    "\u{1F4CA} ",
+    t("\uD68C\uBCF5 \uB9AC\uD3EC\uD2B8 \uBCF4\uAE30", "View Recovery Report")
   ), /* @__PURE__ */ React.createElement(
     "button",
     {
@@ -683,7 +684,7 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
         fontSize: 13
       }
     },
-    "\uC804\uBB38 \uC0C1\uB2F4\uC0AC \uC5F0\uACB0 \u2192"
+    t("\uC804\uBB38 \uC0C1\uB2F4\uC0AC \uC5F0\uACB0 \u2192", "Connect with a Counselor \u2192")
   ))), showReport && /* @__PURE__ */ React.createElement("div", { style: {
     position: "fixed",
     inset: 0,
@@ -709,10 +710,10 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
     color: BT.cream,
     fontFamily: "'Noto Serif KR',serif",
     marginBottom: 4
-  } }, "\uD68C\uBCF5 \uB9AC\uD3EC\uD2B8"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: cityLevel.color } }, cityLevel.name)), /* @__PURE__ */ React.createElement("div", { style: { height: 90, borderRadius: 12, overflow: "hidden", marginBottom: 16 } }, /* @__PURE__ */ React.createElement(CitySVG, { energyPct, completedCount: completedToday.length })), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8, marginBottom: 18 } }, [
-    { label: "\uD68C\uBCF5 \uC5D0\uB108\uC9C0", value: `${energy}\uC810`, color: BT.energyFull },
-    { label: "\uC644\uB8CC \uBBF8\uC158", value: `${completedToday.length}\uAC1C`, color: BT.electric },
-    { label: "\uC5D0\uB108\uC9C0 \uD68D\uB4DD", value: `+${completedToday.reduce((s, c) => s + MISSIONS[c].energy, 0)}`, color: BT.amber }
+  } }, t("\uD68C\uBCF5 \uB9AC\uD3EC\uD2B8", "Recovery Report")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: cityLevel.color } }, cityLevel.name)), /* @__PURE__ */ React.createElement("div", { style: { height: 90, borderRadius: 12, overflow: "hidden", marginBottom: 16 } }, /* @__PURE__ */ React.createElement(CitySVG, { energyPct, completedCount: completedToday.length })), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8, marginBottom: 18 } }, [
+    { label: t("\uD68C\uBCF5 \uC5D0\uB108\uC9C0", "Recovery Energy"), value: `${energy}${t("\uC810", "pt")}`, color: BT.energyFull },
+    { label: t("\uC644\uB8CC \uBBF8\uC158", "Completed Missions"), value: `${completedToday.length}${t("\uAC1C", "")}`, color: BT.electric },
+    { label: t("\uC5D0\uB108\uC9C0 \uD68D\uB4DD", "Energy Gained"), value: `+${completedToday.reduce((s, c) => s + MISSIONS[c].energy, 0)}`, color: BT.amber }
   ].map((r) => /* @__PURE__ */ React.createElement("div", { key: r.label, style: {
     display: "flex",
     justifyContent: "space-between",
@@ -731,7 +732,7 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
     textAlign: "center",
     marginBottom: 16,
     lineHeight: 1.6
-  } }, "\uB354 \uAE4A\uC740 \uD68C\uBCF5\uC774 \uD544\uC694\uD558\uBA74 \uC804\uBB38 \uC0C1\uB2F4\uC0AC\uC640 \uC774\uC57C\uAE30\uD574 \uBCF4\uC138\uC694."), /* @__PURE__ */ React.createElement(
+  } }, t("\uB354 \uAE4A\uC740 \uD68C\uBCF5\uC774 \uD544\uC694\uD558\uBA74 \uC804\uBB38 \uC0C1\uB2F4\uC0AC\uC640 \uC774\uC57C\uAE30\uD574 \uBCF4\uC138\uC694.", "If you need deeper recovery, talk to a professional counselor.")), /* @__PURE__ */ React.createElement(
     "button",
     {
       className: "bt-btn",
@@ -749,6 +750,6 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
         boxShadow: completedToday.length > 0 ? "0 4px 16px rgba(126,184,247,0.3)" : "none"
       }
     },
-    finishing ? "\uC800\uC7A5 \uC911..." : completedToday.length > 0 ? "\u2728 \uACBD\uD5D8\uCE58 \uBC1B\uAE30" : "\uB2EB\uAE30"
+    finishing ? t("\uC800\uC7A5 \uC911...", "Saving...") : completedToday.length > 0 ? `\u2728 ${t("\uACBD\uD5D8\uCE58 \uBC1B\uAE30", "Claim EXP")}` : t("\uB2EB\uAE30", "Close")
   ))));
 }

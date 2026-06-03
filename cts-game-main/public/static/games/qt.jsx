@@ -257,7 +257,7 @@ const QTGame = ({ onExit }) => {
               fontFamily:"'Noto Sans KR',sans-serif",
             }}
           >
-            {saving ? '저장 중...' : '✅ QT 완료하기'}
+            {saving ? t('저장 중...', 'Saving...') : '✅ QT 완료하기'}
           </button>
         </div>
       </div>
@@ -301,7 +301,7 @@ const QTGame = ({ onExit }) => {
           </div>
 
           <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:4,marginBottom:8}}>
-            {['일','월','화','수','목','금','토'].map(d => (
+            {[t('일', 'd'),'월','화','수','목','금','토'].map(d => (
               <div key={d} style={{textAlign:'center',fontSize:11,fontWeight:700,color:'#7C3AED',padding:'4px 0'}}>{d}</div>
             ))}
           </div>

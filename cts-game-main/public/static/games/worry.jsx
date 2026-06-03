@@ -191,7 +191,7 @@ const WorryGame = ({ onExit }) => {
             fontFamily: "'Noto Sans KR',sans-serif",
             background: 'rgba(0,0,0,0.06)', color: '#666',
             border: 'none', borderRadius: 9, padding: '6px 12px', fontSize: 12, cursor: 'pointer',
-          }}>허브로 →</button>
+          }}>{t('허브로 →', 'Hub →')}</button>
         }
       />
 
@@ -222,7 +222,7 @@ const WorryGame = ({ onExit }) => {
           {[
             { emoji: '✍️', text: '지금 마음의 짐 1~3가지를 적어요' },
             { emoji: '🫧', text: '걱정들을 풍선에 담아 주님께 올려드립니다' },
-            { emoji: '💥', text: '클릭해서 하나씩 터뜨려요' },
+            { emoji: '💥', text: t('클릭해서 하나씩 터뜨려요', 'Click to pop them one by one') },
           ].map((s, i) => (
             <div key={i} style={{
               display: 'flex', alignItems: 'center', gap: 12,
@@ -243,7 +243,7 @@ const WorryGame = ({ onExit }) => {
           cursor: 'pointer',
           boxShadow: '0 4px 16px rgba(91,126,200,0.4)',
           width: '100%', maxWidth: 300,
-        }}>시작하기</button>
+        }}>{t('시작하기', 'Start')}</button>
       </div>
     </div>
   );
@@ -258,20 +258,20 @@ const WorryGame = ({ onExit }) => {
       height: '100%',
     }}>
       <WBHeader
-        title="걱정 적기"
+        title={t('걱정 적기', 'Enter your worry')}
         left={
           <button onClick={() => setScreen('intro')} style={{
             fontFamily: "'Noto Sans KR',sans-serif",
             background: 'none', color: '#5A6A7A',
             border: 'none', fontSize: 13, cursor: 'pointer', padding: '4px 0',
-          }}>← 돌아가기</button>
+          }}>{t('← 돌아가기', '← Back')}</button>
         }
       />
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px 0' }}>
         <div style={{ textAlign: 'center', marginBottom: 22 }}>
           <div style={{ fontSize: 16, fontWeight: 600, color: '#2C3E50', fontFamily: "'Noto Serif KR',serif" }}>
-            지금 마음을 무겁게 하는 것들은?
+            {t('지금 마음을 무겁게 하는 것들은?', 'What\'s weighing on your mind right now?')}
           </div>
           <div style={{ fontSize: 12, color: '#8A9AB0', marginTop: 5 }}>
             아주 작은 마음의 짐도 괜찮아요 · 최소 1개 이상
@@ -290,7 +290,7 @@ const WorryGame = ({ onExit }) => {
                   fontSize: 11, color: 'white', fontWeight: 700, flexShrink: 0,
                 }}>{i + 1}</div>
                 <span style={{ fontSize: 12, color: '#8A9AB0' }}>
-                  걱정 {i + 1}{i > 0 ? ' (선택)' : ''}
+                  {t('걱정', 'Worry')} {i + 1}{i > 0 ? t(' (선택)', ' (optional)') : ''}
                 </span>
               </div>
               <input
@@ -324,7 +324,7 @@ const WorryGame = ({ onExit }) => {
           borderRadius: 12, padding: '10px 16px',
           fontSize: 12, color: '#8A9AB0',
           cursor: 'pointer', width: '100%', marginTop: 2,
-        }}>✨ 예시로 채워보기</button>
+        }}>{t('✨ 예시로 채워보기', '✨ Fill with examples')}</button>
       </div>
 
       <div style={{ padding: '16px 24px 32px' }}>
@@ -344,7 +344,7 @@ const WorryGame = ({ onExit }) => {
             boxShadow: canStart ? '0 4px 14px rgba(91,126,200,0.4)' : 'none',
             transition: 'all 0.2s',
           }}
-        >풍선 만들기 🫧</button>
+        >{t('풍선 만들기 🫧', 'Make bubbles 🫧')}</button>
       </div>
     </div>
   );
@@ -363,14 +363,14 @@ const WorryGame = ({ onExit }) => {
         height: '100%', overflow: 'hidden',
       }}>
         <WBHeader
-          title={saving ? '저장 중...' : `${poppedCount === totalCount ? '🎉' : '🫧'} ${poppedCount}/${totalCount} 터뜨렸어요`}
+          title={saving ? t('저장 중...', 'Saving...') : `${poppedCount === totalCount ? '🎉' : '🫧'} ${poppedCount}/${totalCount} 터뜨렸어요`}
           left={
             !saving && (
               <button onClick={() => setScreen('input')} style={{
                 fontFamily: "'Noto Sans KR',sans-serif",
                 background: 'none', color: '#7A8A9A',
                 border: 'none', fontSize: 12, cursor: 'pointer',
-              }}>← 다시 입력</button>
+              }}>{t('← 다시 입력', '← Re-enter')}</button>
             )
           }
           right={
@@ -396,7 +396,7 @@ const WorryGame = ({ onExit }) => {
               textAlign: 'center', pointerEvents: 'none', zIndex: 0,
               color: 'rgba(90,106,122,0.45)', fontSize: 13,
             }}>
-              풍선을 눌러서 터뜨려 보세요 💥
+              {t('풍선을 눌러서 터뜨려 보세요 💥', 'Tap a bubble to pop it 💥')}
             </div>
           )}
 
@@ -484,7 +484,7 @@ const WorryGame = ({ onExit }) => {
             fontFamily: "'Noto Sans KR',sans-serif",
             background: 'rgba(0,0,0,0.06)', color: '#666',
             border: 'none', borderRadius: 9, padding: '6px 12px', fontSize: 12, cursor: 'pointer',
-          }}>허브로 →</button>
+          }}>{t('허브로 →', 'Hub →')}</button>
         }
       />
 
@@ -517,12 +517,12 @@ const WorryGame = ({ onExit }) => {
           }}>
             <div>
               <div style={{ fontSize: 24, fontWeight: 800, color: '#5B7EC8' }}>{doneData.score}</div>
-              <div style={{ fontSize: 11, color: '#8A9AB0', marginTop: 2 }}>점수</div>
+              <div style={{ fontSize: 11, color: '#8A9AB0', marginTop: 2 }}>{t('점수', 'Score')}</div>
             </div>
             <div style={{ width: 1, background: 'rgba(0,0,0,0.07)' }} />
             <div>
               <div style={{ fontSize: 24, fontWeight: 800, color: '#4A8A5A' }}>+{doneData.expGained}</div>
-              <div style={{ fontSize: 11, color: '#8A9AB0', marginTop: 2 }}>경험치</div>
+              <div style={{ fontSize: 11, color: '#8A9AB0', marginTop: 2 }}>{t('경험치', 'EXP')}</div>
             </div>
           </div>
         )}
@@ -533,7 +533,7 @@ const WorryGame = ({ onExit }) => {
             borderRadius: 12, padding: '10px 20px',
             fontSize: 14, fontWeight: 700, color: 'white',
             animation: 'wbAppear 0.5s ease',
-          }}>🎉 레벨 업!</div>
+          }}>{t('🎉 레벨 업!', '🎉 Level Up!')}</div>
         )}
 
         {/* 내려놓은 걱정 목록 */}
@@ -543,7 +543,7 @@ const WorryGame = ({ onExit }) => {
           animation: 'wbFadeUp 0.5s ease 0.35s both',
         }}>
           <div style={{ fontSize: 12, color: '#8A9AB0', marginBottom: 10, textAlign: 'center' }}>
-            오늘 내려놓은 걱정들 🌿
+            {t('오늘 내려놓은 걱정들 🌿', 'Today\'s released worries 🌿')}
           </div>
           {bubbles.map((b, i) => (
             <div key={i} style={{
@@ -577,7 +577,7 @@ const WorryGame = ({ onExit }) => {
             fontFamily: "'Noto Sans KR',sans-serif",
             flex: 1, background: 'rgba(0,0,0,0.06)', color: '#5A6A7A',
             border: 'none', borderRadius: 12, padding: '12px', fontSize: 13, cursor: 'pointer',
-          }}>다시 하기</button>
+          }}>{t('다시 하기', 'Play again')}</button>
           <button onClick={() => onExit(doneData)} style={{
             fontFamily: "'Noto Sans KR',sans-serif",
             flex: 2,
@@ -585,7 +585,7 @@ const WorryGame = ({ onExit }) => {
             color: 'white', border: 'none', borderRadius: 12,
             padding: '12px', fontSize: 14, fontWeight: 700, cursor: 'pointer',
             boxShadow: '0 4px 12px rgba(91,126,200,0.4)',
-          }}>정원으로 돌아가기 🌿</button>
+          }}>{t('정원으로 돌아가기 🌿', 'Back to hub 🌿')}</button>
         </div>
       </div>
     </div>

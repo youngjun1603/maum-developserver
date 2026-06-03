@@ -1,6 +1,6 @@
 const GE = {
   // 팔레트
-  sage: "#6B21A8",
+  sage: "#4A7C59",
   sageL: "#7BA88A",
   sagePale: "#EAF2EC",
   cream: "#FDFCF7",
@@ -13,18 +13,18 @@ const GE = {
 };
 const EMOTIONS = {
   happy: {
-    name: "\uAE30\uC068",
-    label: "\uAE30\uC05C \uAF43",
+    name: t("\uAE30\uC068", "Joy"),
+    label: t("\uAE30\uC05C \uAF43", "Happy Flower"),
     petalColor: "#FCD34D",
     centerColor: "#F59E0B",
-    stemColor: "#6B21A8",
+    stemColor: "#4A7C59",
     face: "happy",
     // 위로 굽은 미소
     isTarget: true
   },
   sad: {
-    name: "\uC2AC\uD514",
-    label: "\uC2AC\uD508 \uAF43",
+    name: t("\uC2AC\uD514", "Sadness"),
+    label: t("\uC2AC\uD508 \uAF43", "Sad Flower"),
     petalColor: "#93C5FD",
     centerColor: "#3B82F6",
     stemColor: "#5A7A9A",
@@ -33,8 +33,8 @@ const EMOTIONS = {
     isTarget: false
   },
   anxious: {
-    name: "\uBD88\uC548",
-    label: "\uBD88\uC548\uD55C \uAF43",
+    name: t("\uBD88\uC548", "Anxiety"),
+    label: t("\uBD88\uC548\uD55C \uAF43", "Anxious Flower"),
     petalColor: "#C4B5FD",
     centerColor: "#7C3AED",
     stemColor: "#6B5A8A",
@@ -43,8 +43,8 @@ const EMOTIONS = {
     isTarget: false
   },
   angry: {
-    name: "\uD654\uB0A8",
-    label: "\uD654\uB09C \uAF43",
+    name: t("\uD654\uB0A8", "Anger"),
+    label: t("\uD654\uB09C \uAF43", "Angry Flower"),
     petalColor: "#FCA5A5",
     centerColor: "#EF4444",
     stemColor: "#8A4A4A",
@@ -53,8 +53,8 @@ const EMOTIONS = {
     isTarget: false
   },
   neutral: {
-    name: "\uBB34\uD45C\uC815",
-    label: "\uBB34\uD45C\uC815 \uAF43",
+    name: t("\uBB34\uD45C\uC815", "Neutral"),
+    label: t("\uBB34\uD45C\uC815 \uAF43", "Neutral Flower"),
     petalColor: "#D1D5DB",
     centerColor: "#9CA3AF",
     stemColor: "#7A7A6A",
@@ -198,10 +198,10 @@ function calcDifficulty(phq9Score = null) {
   return "very_hard";
 }
 const DIFFICULTY_CONFIG = {
-  easy: { grid: 4, targetRatio: 0.4, roundSec: 35, rounds: 3, label: "\uAE30\uCD08", desc: "4\xD74 \xB7 35\uCD08 \xB7 \uBAA9\uD45C 40%" },
-  medium: { grid: 4, targetRatio: 0.28, roundSec: 28, rounds: 3, label: "\uBCF4\uD1B5", desc: "4\xD74 \xB7 28\uCD08 \xB7 \uBAA9\uD45C 28%" },
-  hard: { grid: 5, targetRatio: 0.2, roundSec: 25, rounds: 3, label: "\uC2EC\uD654", desc: "5\xD75 \xB7 25\uCD08 \xB7 \uBAA9\uD45C 20%" },
-  very_hard: { grid: 5, targetRatio: 0.15, roundSec: 20, rounds: 3, label: "\uB3C4\uC804", desc: "5\xD75 \xB7 20\uCD08 \xB7 \uBAA9\uD45C 15%" }
+  easy: { grid: 4, targetRatio: 0.4, roundSec: 35, rounds: 3, label: t("\uAE30\uCD08", "Basic"), desc: t("4\xD74 \xB7 35\uCD08 \xB7 \uBAA9\uD45C 40%", "4\xD74 \xB7 35s \xB7 Target 40%") },
+  medium: { grid: 4, targetRatio: 0.28, roundSec: 28, rounds: 3, label: t("\uBCF4\uD1B5", "Normal"), desc: t("4\xD74 \xB7 28\uCD08 \xB7 \uBAA9\uD45C 28%", "4\xD74 \xB7 28s \xB7 Target 28%") },
+  hard: { grid: 5, targetRatio: 0.2, roundSec: 25, rounds: 3, label: t("\uC2EC\uD654", "Advanced"), desc: t("5\xD75 \xB7 25\uCD08 \xB7 \uBAA9\uD45C 20%", "5\xD75 \xB7 25s \xB7 Target 20%") },
+  very_hard: { grid: 5, targetRatio: 0.15, roundSec: 20, rounds: 3, label: t("\uB3C4\uC804", "Challenge"), desc: t("5\xD75 \xB7 20\uCD08 \xB7 \uBAA9\uD45C 15%", "5\xD75 \xB7 20s \xB7 Target 15%") }
 };
 function generateGrid(gridSize, targetRatio) {
   const total = gridSize * gridSize;
@@ -245,10 +245,6 @@ function EFMTGame({ onExit }) {
   const sessionRef = useRef(Date.now());
   const comboRef = useRef(0);
   const maxComboRef = useRef(0);
-  const correctRef = useRef(0);
-  const incorrectRef = useRef(0);
-  const totalTargetsRef = useRef(0);
-  const reactionTimesRef = useRef([]);
   const cfg = DIFFICULTY_CONFIG[difficulty];
   useEffect(() => {
     GameEngine.getGameStats().then((r) => {
@@ -265,14 +261,10 @@ function EFMTGame({ onExit }) {
     const targets = grid.filter((g) => EMOTIONS[g.emotion].isTarget).length;
     setCells(grid);
     setTotalTargets(targets);
-    totalTargetsRef.current = targets;
     setTimeLeft(c.roundSec);
     setCorrect(0);
     setIncorrect(0);
     setReactionTimes([]);
-    correctRef.current = 0;
-    incorrectRef.current = 0;
-    reactionTimesRef.current = [];
     setRoundStartTime(Date.now());
     comboRef.current = 0;
     maxComboRef.current = 0;
@@ -283,31 +275,27 @@ function EFMTGame({ onExit }) {
   useEffect(() => {
     if (screen !== "round") return;
     timerRef.current = setInterval(() => {
-      setTimeLeft((t) => {
-        if (t <= 1) {
+      setTimeLeft((t2) => {
+        if (t2 <= 1) {
           clearInterval(timerRef.current);
           endRound();
           return 0;
         }
-        return t - 1;
+        return t2 - 1;
       });
     }, 1e3);
     return () => clearInterval(timerRef.current);
   }, [screen, round]);
   const endRound = useCallback(() => {
     clearInterval(timerRef.current);
-    const _correct = correctRef.current;
-    const _incorrect = incorrectRef.current;
-    const _totalTargets = totalTargetsRef.current;
-    const _reactionTimes = reactionTimesRef.current;
     setRoundStats((prev) => {
       const stat = {
         round,
-        correct: _correct,
-        incorrect: _incorrect,
-        totalTargets: _totalTargets,
-        avgReaction: _reactionTimes.length > 0 ? Math.round(_reactionTimes.reduce((a, b) => a + b, 0) / _reactionTimes.length) : 0,
-        missedTargets: Math.max(0, _totalTargets - _correct),
+        correct,
+        incorrect,
+        totalTargets,
+        avgReaction: reactionTimes.length > 0 ? Math.round(reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length) : 0,
+        missedTargets: Math.max(0, totalTargets - correct),
         maxCombo: maxComboRef.current
       };
       const next = [...prev, stat];
@@ -330,7 +318,7 @@ function EFMTGame({ onExit }) {
       }
       return next;
     });
-  }, [round, cfg.rounds]);
+  }, [round, correct, incorrect, totalTargets, reactionTimes, cfg.rounds]);
   const handleFlowerClick = useCallback((cellId) => {
     const cell = cells.find((c) => c.id === cellId);
     if (!cell || cell.state !== "idle") return;
@@ -340,15 +328,8 @@ function EFMTGame({ onExit }) {
       (c) => c.id === cellId ? { ...c, state: isTarget ? "blooming" : "wilting" } : c
     ));
     if (isTarget) {
-      setCorrect((n) => {
-        correctRef.current = n + 1;
-        return n + 1;
-      });
-      setReactionTimes((prev) => {
-        const next = [...prev, rt];
-        reactionTimesRef.current = next;
-        return next;
-      });
+      setCorrect((n) => n + 1);
+      setReactionTimes((prev) => [...prev, rt]);
       const prevTier = comboRef.current >= 10 ? 3 : comboRef.current >= 5 ? 2 : comboRef.current >= 3 ? 1 : 0;
       comboRef.current += 1;
       if (comboRef.current > maxComboRef.current) maxComboRef.current = comboRef.current;
@@ -365,10 +346,7 @@ function EFMTGame({ onExit }) {
         ));
       }, 400);
     } else {
-      setIncorrect((n) => {
-        incorrectRef.current = n + 1;
-        return n + 1;
-      });
+      setIncorrect((n) => n + 1);
       comboRef.current = 0;
       setComboDisplay(0);
       setTimeout(() => {
@@ -426,7 +404,7 @@ function EFMTGame({ onExit }) {
     background: "rgba(255,255,255,0.75)",
     backdropFilter: "blur(8px)",
     borderBottom: "1px solid rgba(0,0,0,0.06)"
-  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 20 } }, "\u{1F338}"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 15, fontWeight: 700, color: GE.dark, fontFamily: "'Noto Serif KR',serif" } }, "\uAC10\uC815\uAF43 \uCC3E\uAE30")), /* @__PURE__ */ React.createElement("button", { onClick: () => onExit(null), style: {
+  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 20 } }, "\u{1F338}"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 15, fontWeight: 700, color: GE.dark, fontFamily: "'Noto Serif KR',serif" } }, t("\uAC10\uC815\uAF43 \uCC3E\uAE30", "Emotion Flower Hunt"))), /* @__PURE__ */ React.createElement("button", { onClick: () => onExit(null), style: {
     fontFamily: "'Noto Sans KR',sans-serif",
     background: "rgba(0,0,0,0.06)",
     color: GE.muted,
@@ -435,14 +413,14 @@ function EFMTGame({ onExit }) {
     padding: "6px 13px",
     fontSize: 12,
     cursor: "pointer"
-  } }, "\uD5C8\uBE0C\uB85C \u2192")), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, padding: "24px 20px", overflowY: "auto" } }, /* @__PURE__ */ React.createElement("div", { style: {
+  } }, t("\uD5C8\uBE0C\uB85C \u2192", "Hub \u2192"))), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, padding: "24px 20px", overflowY: "auto" } }, /* @__PURE__ */ React.createElement("div", { style: {
     background: "rgba(255,255,255,0.8)",
     borderRadius: 20,
     padding: "20px",
     marginBottom: 22,
     backdropFilter: "blur(8px)",
     border: "1px solid rgba(255,255,255,0.7)"
-  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: GE.muted, marginBottom: 12, textAlign: "center" } }, "\uAE30\uC05C \uAF43\uB9CC \uBE60\uB974\uAC8C \uD074\uB9AD\uD558\uC138\uC694"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "center", gap: 14, flexWrap: "wrap" } }, Object.entries(EMOTIONS).map(([key, e]) => /* @__PURE__ */ React.createElement("div", { key, style: { textAlign: "center" } }, /* @__PURE__ */ React.createElement(FlowerSVG, { emotion: key, size: 56, disabled: true }), /* @__PURE__ */ React.createElement("div", { style: {
+  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: GE.muted, marginBottom: 12, textAlign: "center" } }, t("\uAE30\uC05C \uAF43\uB9CC \uBE60\uB974\uAC8C \uD074\uB9AD\uD558\uC138\uC694", "Click only the happy flowers quickly")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "center", gap: 14, flexWrap: "wrap" } }, Object.entries(EMOTIONS).map(([key, e]) => /* @__PURE__ */ React.createElement("div", { key, style: { textAlign: "center" } }, /* @__PURE__ */ React.createElement(FlowerSVG, { emotion: key, size: 56, disabled: true }), /* @__PURE__ */ React.createElement("div", { style: {
     fontSize: 10,
     fontWeight: 700,
     marginTop: 4,
@@ -450,7 +428,7 @@ function EFMTGame({ onExit }) {
     background: e.isTarget ? GE.sagePale : "transparent",
     padding: "2px 6px",
     borderRadius: 100
-  } }, e.name, e.isTarget ? " \u2713" : ""))))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: GE.muted, marginBottom: 10 } }, "\uB09C\uC774\uB3C4 \uC120\uD0DD"), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9, marginBottom: 22 } }, Object.entries(DIFFICULTY_CONFIG).map(([key, d]) => /* @__PURE__ */ React.createElement(
+  } }, e.name, e.isTarget ? " \u2713" : ""))))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: GE.muted, marginBottom: 10 } }, t("\uB09C\uC774\uB3C4 \uC120\uD0DD", "Difficulty")), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9, marginBottom: 22 } }, Object.entries(DIFFICULTY_CONFIG).map(([key, d]) => /* @__PURE__ */ React.createElement(
     "button",
     {
       key,
@@ -477,7 +455,10 @@ function EFMTGame({ onExit }) {
     background: "rgba(255,255,255,0.6)",
     borderRadius: 12,
     padding: "12px 14px"
-  } }, "\u{1F4A1} PHQ-9 \uC810\uC218\uAC00 \uB192\uC744\uC218\uB85D \uC2EC\uD654 \uB09C\uC774\uB3C4\uB97C \uAD8C\uC7A5\uD574\uC694.", /* @__PURE__ */ React.createElement("br", null), "\uC2AC\uD508\xB7\uBD88\uC548\uD55C \uAF43\uC774 \uB9CE\uC774 \uBCF4\uC5EC\uB3C4 \uAE30\uC05C \uAF43\uC744 \uCC3E\uB294 \uC5F0\uC2B5\uC774", /* @__PURE__ */ React.createElement("br", null), "\uAC10\uC815 \uC778\uC2DD \uB2A5\uB825\uC744 \uD0A4\uC6CC\uC90D\uB2C8\uB2E4."), personalBest !== null && /* @__PURE__ */ React.createElement("div", { style: {
+  } }, t(
+    /* @__PURE__ */ React.createElement(React.Fragment, null, "\u{1F4A1} PHQ-9 \uC810\uC218\uAC00 \uB192\uC744\uC218\uB85D \uC2EC\uD654 \uB09C\uC774\uB3C4\uB97C \uAD8C\uC7A5\uD574\uC694.", /* @__PURE__ */ React.createElement("br", null), "\uC2AC\uD508\xB7\uBD88\uC548\uD55C \uAF43\uC774 \uB9CE\uC774 \uBCF4\uC5EC\uB3C4 \uAE30\uC05C \uAF43\uC744 \uCC3E\uB294 \uC5F0\uC2B5\uC774", /* @__PURE__ */ React.createElement("br", null), "\uAC10\uC815 \uC778\uC2DD \uB2A5\uB825\uC744 \uD0A4\uC6CC\uC90D\uB2C8\uB2E4."),
+    /* @__PURE__ */ React.createElement(React.Fragment, null, "\u{1F4A1} Higher PHQ-9 scores recommend Advanced difficulty.", /* @__PURE__ */ React.createElement("br", null), "Even when sad or anxious flowers surround you,", /* @__PURE__ */ React.createElement("br", null), "finding the happy flower trains your emotional awareness.")
+  )), personalBest !== null && /* @__PURE__ */ React.createElement("div", { style: {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -487,7 +468,7 @@ function EFMTGame({ onExit }) {
     background: `linear-gradient(135deg, ${GE.amber}15, ${GE.amber}08)`,
     borderRadius: 12,
     border: `1px solid ${GE.amber}33`
-  } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16 } }, "\u{1F3C6}"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, fontWeight: 700, color: GE.amber } }, "\uB0B4 \uCD5C\uACE0 \uAE30\uB85D: ", personalBest.toLocaleString(), "\uC810")), /* @__PURE__ */ React.createElement(
+  } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16 } }, "\u{1F3C6}"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, fontWeight: 700, color: GE.amber } }, t(`\uB0B4 \uCD5C\uACE0 \uAE30\uB85D: ${personalBest ? personalBest.toLocaleString() : 0}\uC810`, `Best: ${personalBest ? personalBest.toLocaleString() : 0} pts`))), /* @__PURE__ */ React.createElement(
     "button",
     {
       onClick: () => startRound(1, difficulty),
@@ -505,7 +486,7 @@ function EFMTGame({ onExit }) {
         boxShadow: `0 4px 16px ${GE.amber}44`
       }
     },
-    "\uC2DC\uC791\uD558\uAE30 \u{1F338}"
+    t("\uC2DC\uC791\uD558\uAE30 \u{1F338}", "Start \u{1F338}")
   )));
   if (screen === "round") {
     const remaining = cells.filter((c) => EMOTIONS[c.emotion].isTarget && c.state !== "found").length;
@@ -526,7 +507,7 @@ function EFMTGame({ onExit }) {
       background: "rgba(255,255,255,0.85)",
       backdropFilter: "blur(8px)",
       borderBottom: `1px solid ${isCritical ? "#FCA5A555" : "rgba(0,0,0,0.06)"}`
-    } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: GE.dark } }, "\uB77C\uC6B4\uB4DC ", round, " / ", cfg.rounds), comboDisplay >= 3 && /* @__PURE__ */ React.createElement("div", { style: {
+    } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: GE.dark } }, t(`\uB77C\uC6B4\uB4DC ${round} / ${cfg.rounds}`, `Round ${round} / ${cfg.rounds}`)), comboDisplay >= 3 && /* @__PURE__ */ React.createElement("div", { style: {
       fontSize: 12,
       fontWeight: 800,
       color: comboColor,
@@ -537,7 +518,7 @@ function EFMTGame({ onExit }) {
       display: "flex",
       alignItems: "center",
       gap: 4
-    } }, comboDisplay >= 10 ? "\u{1F525}\u{1F525}\u{1F525}" : comboDisplay >= 5 ? "\u{1F525}\u{1F525}" : "\u{1F525}", comboDisplay, " \uCF64\uBCF4", comboMultiplier && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, opacity: 0.8 } }, comboMultiplier))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 14, fontSize: 13 } }, /* @__PURE__ */ React.createElement("span", { style: { color: GE.sage, fontWeight: 700 } }, "\u2713 ", correct), /* @__PURE__ */ React.createElement("span", { style: { color: GE.warn, fontWeight: 700 } }, "\u2717 ", incorrect), /* @__PURE__ */ React.createElement("span", { style: {
+    } }, comboDisplay >= 10 ? "\u{1F525}\u{1F525}\u{1F525}" : comboDisplay >= 5 ? "\u{1F525}\u{1F525}" : "\u{1F525}", comboDisplay, " ", t("\uCF64\uBCF4", "Combo"), comboMultiplier && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, opacity: 0.8 } }, comboMultiplier))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 14, fontSize: 13 } }, /* @__PURE__ */ React.createElement("span", { style: { color: GE.sage, fontWeight: 700 } }, "\u2713 ", correct), /* @__PURE__ */ React.createElement("span", { style: { color: GE.warn, fontWeight: 700 } }, "\u2717 ", incorrect), /* @__PURE__ */ React.createElement("span", { style: {
       color: timerColor,
       fontWeight: 700,
       minWidth: 28,
@@ -557,7 +538,7 @@ function EFMTGame({ onExit }) {
       color: isCritical ? GE.warn : GE.muted,
       fontWeight: 600,
       transition: "color 0.3s"
-    } }, isCritical ? "\u23F0 \uC11C\uB458\uB7EC\uC694!" : `\uAE30\uC05C \uAF43 ${remaining}\uAC1C \uB0A8\uC558\uC5B4\uC694 \xB7 \uB2E4\uB978 \uAF43\uC740 \uD074\uB9AD\uD558\uC9C0 \uB9C8\uC138\uC694`), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "8px 12px", position: "relative" } }, comboTierAnim && /* @__PURE__ */ React.createElement("div", { style: {
+    } }, isCritical ? t("\u23F0 \uC11C\uB458\uB7EC\uC694!", "\u23F0 Hurry up!") : t(`\uAE30\uC05C \uAF43 ${remaining}\uAC1C \uB0A8\uC558\uC5B4\uC694 \xB7 \uB2E4\uB978 \uAF43\uC740 \uD074\uB9AD\uD558\uC9C0 \uB9C8\uC138\uC694`, `${remaining} happy flower${remaining !== 1 ? "s" : ""} left \xB7 Don't click the others`)), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "8px 12px", position: "relative" } }, comboTierAnim && /* @__PURE__ */ React.createElement("div", { style: {
       position: "absolute",
       top: "10%",
       left: "50%",
@@ -574,7 +555,7 @@ function EFMTGame({ onExit }) {
       animation: "fadeUp 0.4s ease, pulse 0.6s ease 0.4s",
       fontFamily: "'Noto Sans KR',sans-serif",
       whiteSpace: "nowrap"
-    } }, "\u{1F525} \uCF64\uBCF4 ", comboTierAnim), /* @__PURE__ */ React.createElement("div", { style: {
+    } }, "\u{1F525} ", t("\uCF64\uBCF4", "Combo"), " ", comboTierAnim), /* @__PURE__ */ React.createElement("div", { style: {
       display: "grid",
       gridTemplateColumns: `repeat(${gs}, ${flowerSize}px)`,
       gap: gs === 4 ? 8 : 5
@@ -611,7 +592,7 @@ function EFMTGame({ onExit }) {
       textAlign: "center",
       background: `linear-gradient(160deg, #FFF8E8, ${GE.cream})`,
       animation: "fadeUp 0.4s ease"
-    } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 52, marginBottom: 12 } }, acc >= 80 ? "\u{1F31F}" : acc >= 50 ? "\u{1F338}" : "\u{1F33C}"), /* @__PURE__ */ React.createElement("h3", { style: { fontSize: 20, fontWeight: 700, color: GE.dark, marginBottom: 8, fontFamily: "'Noto Serif KR',serif" } }, "\uB77C\uC6B4\uB4DC ", last.round, " \uC644\uB8CC"), /* @__PURE__ */ React.createElement("div", { style: {
+    } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 52, marginBottom: 12 } }, acc >= 80 ? "\u{1F31F}" : acc >= 50 ? "\u{1F338}" : "\u{1F33C}"), /* @__PURE__ */ React.createElement("h3", { style: { fontSize: 20, fontWeight: 700, color: GE.dark, marginBottom: 8, fontFamily: "'Noto Serif KR',serif" } }, t(`\uB77C\uC6B4\uB4DC ${last.round} \uC644\uB8CC`, `Round ${last.round} Complete`)), /* @__PURE__ */ React.createElement("div", { style: {
       display: "flex",
       gap: 20,
       marginBottom: 24,
@@ -619,7 +600,7 @@ function EFMTGame({ onExit }) {
       borderRadius: 16,
       padding: "16px 24px",
       boxShadow: "0 2px 12px rgba(0,0,0,0.07)"
-    } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 22, fontWeight: 700, color: GE.sage } }, last.correct), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: GE.muted } }, "\uBC1C\uACAC")), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 22, fontWeight: 700, color: GE.warn } }, last.missed), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: GE.muted } }, "\uB193\uCE68")), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 22, fontWeight: 700, color: GE.amber } }, acc, "%"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: GE.muted } }, "\uC815\uD655\uB3C4")), last.avgReaction > 0 && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 22, fontWeight: 700, color: GE.dusty } }, (last.avgReaction / 1e3).toFixed(1), "s"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: GE.muted } }, "\uBC18\uC751\uC18D\uB3C4"))), /* @__PURE__ */ React.createElement(
+    } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 22, fontWeight: 700, color: GE.sage } }, last.correct), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: GE.muted } }, t("\uBC1C\uACAC", "Found"))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 22, fontWeight: 700, color: GE.warn } }, last.missed), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: GE.muted } }, t("\uB193\uCE68", "Missed"))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 22, fontWeight: 700, color: GE.amber } }, acc, "%"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: GE.muted } }, t("\uC815\uD655\uB3C4", "Accuracy"))), last.avgReaction > 0 && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 22, fontWeight: 700, color: GE.dusty } }, (last.avgReaction / 1e3).toFixed(1), "s"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: GE.muted } }, t("\uBC18\uC751\uC18D\uB3C4", "Reaction")))), /* @__PURE__ */ React.createElement(
       "button",
       {
         onClick: () => startRound(round + 1, difficulty),
@@ -635,7 +616,7 @@ function EFMTGame({ onExit }) {
           cursor: "pointer"
         }
       },
-      "\uB2E4\uC74C \uB77C\uC6B4\uB4DC \u2192"
+      t("\uB2E4\uC74C \uB77C\uC6B4\uB4DC \u2192", "Next Round \u2192")
     ));
   }
   if (screen === "done") {
@@ -652,7 +633,7 @@ function EFMTGame({ onExit }) {
       padding: 24,
       background: `linear-gradient(160deg, #FFF8E8, #F0FAF0)`,
       animation: "fadeUp 0.5s ease"
-    } }, /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", marginBottom: 20 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 60, marginBottom: 10 } }, "\u{1F33A}"), /* @__PURE__ */ React.createElement("h2", { style: { fontSize: 22, fontWeight: 700, color: GE.dark, fontFamily: "'Noto Serif KR',serif" } }, "\uAC10\uC815 \uD6C8\uB828 \uC644\uB8CC!"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 10 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 28, fontWeight: 900, color: GE.amber } }, computedScore.toLocaleString(), "\uC810"), isNewRecord && /* @__PURE__ */ React.createElement("span", { style: {
+    } }, /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", marginBottom: 20 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 60, marginBottom: 10 } }, "\u{1F33A}"), /* @__PURE__ */ React.createElement("h2", { style: { fontSize: 22, fontWeight: 700, color: GE.dark, fontFamily: "'Noto Serif KR',serif" } }, t("\uAC10\uC815 \uD6C8\uB828 \uC644\uB8CC!", "Training Complete!")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 10 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 28, fontWeight: 900, color: GE.amber } }, computedScore.toLocaleString(), t("\uC810", " pts")), isNewRecord && /* @__PURE__ */ React.createElement("span", { style: {
       fontSize: 12,
       fontWeight: 800,
       color: "white",
@@ -660,17 +641,17 @@ function EFMTGame({ onExit }) {
       borderRadius: 100,
       padding: "3px 10px",
       animation: "pulse 0.6s ease"
-    } }, "\u{1F3C6} \uC2E0\uAE30\uB85D!")), personalBest !== null && !isNewRecord && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: GE.muted, marginTop: 4 } }, "\uCD5C\uACE0 \uAE30\uB85D ", personalBest.toLocaleString(), "\uC810", computedScore > 0 && ` \xB7 \uCC28\uC774 ${(personalBest - computedScore).toLocaleString()}\uC810`), personalBest === null && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: GE.sage, marginTop: 4 } }, "\uCCAB \uAE30\uB85D\uC774\uC5D0\uC694! \u{1F389}")), /* @__PURE__ */ React.createElement("div", { style: {
+    } }, t("\u{1F3C6} \uC2E0\uAE30\uB85D!", "\u{1F3C6} New Record!"))), personalBest !== null && !isNewRecord && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: GE.muted, marginTop: 4 } }, t(`\uCD5C\uACE0 \uAE30\uB85D ${personalBest.toLocaleString()}\uC810`, `Best ${personalBest.toLocaleString()} pts`), computedScore > 0 && t(` \xB7 \uCC28\uC774 ${(personalBest - computedScore).toLocaleString()}\uC810`, ` \xB7 Gap ${(personalBest - computedScore).toLocaleString()} pts`)), personalBest === null && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: GE.sage, marginTop: 4 } }, t("\uCCAB \uAE30\uB85D\uC774\uC5D0\uC694! \u{1F389}", "First record! \u{1F389}"))), /* @__PURE__ */ React.createElement("div", { style: {
       background: "white",
       borderRadius: 18,
       padding: "18px 20px",
       marginBottom: 16,
       boxShadow: "0 4px 16px rgba(0,0,0,0.07)"
-    } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: GE.muted, marginBottom: 12 } }, "\uD6C8\uB828 \uACB0\uACFC"), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 20px" } }, [
-      { label: "\uAE30\uC05C \uAF43 \uBC1C\uACAC", val: `${totalC}\uAC1C`, color: GE.sage },
-      { label: "\uC804\uCCB4 \uC815\uD655\uB3C4", val: `${avgAcc}%`, color: avgAcc >= 90 ? GE.sage : avgAcc >= 75 ? GE.amber : GE.warn },
-      { label: "\uC624\uD074\uB9AD", val: `${totalW}\uD68C`, color: GE.warn },
-      { label: "\uCD5C\uB300 \uCF64\uBCF4", val: `${bestCombo}\uC5F0\uC18D`, color: bestCombo >= 10 ? "#E53E3E" : bestCombo >= 5 ? GE.rose : GE.amber }
+    } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: GE.muted, marginBottom: 12 } }, t("\uD6C8\uB828 \uACB0\uACFC", "Results")), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 20px" } }, [
+      { label: t("\uAE30\uC05C \uAF43 \uBC1C\uACAC", "Happy Flowers Found"), val: t(`${totalC}\uAC1C`, `${totalC}`), color: GE.sage },
+      { label: t("\uC804\uCCB4 \uC815\uD655\uB3C4", "Accuracy Rate"), val: `${avgAcc}%`, color: avgAcc >= 90 ? GE.sage : avgAcc >= 75 ? GE.amber : GE.warn },
+      { label: t("\uC624\uD074\uB9AD", "Incorrect"), val: t(`${totalW}\uD68C`, `${totalW}`), color: GE.warn },
+      { label: t("\uCD5C\uB300 \uCF64\uBCF4", "Max Combo"), val: t(`${bestCombo}\uC5F0\uC18D`, `${bestCombo}`), color: bestCombo >= 10 ? "#E53E3E" : bestCombo >= 5 ? GE.rose : GE.amber }
     ].map(({ label, val, color }) => /* @__PURE__ */ React.createElement("div", { key: label }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: GE.muted, marginBottom: 3 } }, label), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 20, fontWeight: 700, color } }, val)))), (bestCombo >= 3 || avgAcc >= 75) && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(0,0,0,0.06)", display: "flex", gap: 8, flexWrap: "wrap" } }, bestCombo >= 3 && /* @__PURE__ */ React.createElement("span", { style: {
       fontSize: 11,
       color: GE.amber,
@@ -678,14 +659,14 @@ function EFMTGame({ onExit }) {
       background: GE.amber + "15",
       borderRadius: 6,
       padding: "2px 8px"
-    } }, "\u{1F525} \uCF64\uBCF4 \uBCF4\uB108\uC2A4 +", bestCombo >= 10 ? bestCombo * 15 : bestCombo >= 5 ? bestCombo * 10 : bestCombo * 6, "\uC810"), avgAcc >= 75 && /* @__PURE__ */ React.createElement("span", { style: {
+    } }, t(`\u{1F525} \uCF64\uBCF4 \uBCF4\uB108\uC2A4 +${bestCombo >= 10 ? bestCombo * 15 : bestCombo >= 5 ? bestCombo * 10 : bestCombo * 6}\uC810`, `\u{1F525} Combo Bonus +${bestCombo >= 10 ? bestCombo * 15 : bestCombo >= 5 ? bestCombo * 10 : bestCombo * 6} pts`)), avgAcc >= 75 && /* @__PURE__ */ React.createElement("span", { style: {
       fontSize: 11,
       color: GE.sage,
       fontWeight: 700,
       background: GE.sage + "15",
       borderRadius: 6,
       padding: "2px 8px"
-    } }, "\u{1F3AF} \uC815\uD655\uB3C4 \uBCF4\uB108\uC2A4 +", avgAcc >= 90 ? 30 : 15, "\uC810"))), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, overflowY: "auto", marginBottom: 16 } }, roundStats.map((s) => /* @__PURE__ */ React.createElement("div", { key: s.round, style: {
+    } }, t(`\u{1F3AF} \uC815\uD655\uB3C4 \uBCF4\uB108\uC2A4 +${avgAcc >= 90 ? 30 : 15}\uC810`, `\u{1F3AF} Accuracy Bonus +${avgAcc >= 90 ? 30 : 15} pts`)))), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, overflowY: "auto", marginBottom: 16 } }, roundStats.map((s) => /* @__PURE__ */ React.createElement("div", { key: s.round, style: {
       display: "flex",
       alignItems: "center",
       gap: 10,
@@ -693,7 +674,7 @@ function EFMTGame({ onExit }) {
       marginBottom: 8,
       background: "rgba(255,255,255,0.7)",
       borderRadius: 12
-    } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 20 } }, s.correct >= s.totalTargets * 0.8 ? "\u2B50" : s.correct >= s.totalTargets * 0.5 ? "\u{1F338}" : "\u{1F33C}"), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 600, color: GE.dark } }, "\uB77C\uC6B4\uB4DC ", s.round), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: GE.muted } }, s.correct, "/", s.totalTargets, " \uBC1C\uACAC \xB7 \uC624\uD074\uB9AD ", s.incorrect, "\uD68C", s.avgReaction > 0 && ` \xB7 ${(s.avgReaction / 1e3).toFixed(1)}s`)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: GE.sage } }, s.totalTargets > 0 ? Math.round(s.correct / s.totalTargets * 100) : 0, "%")))), /* @__PURE__ */ React.createElement(
+    } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 20 } }, s.correct >= s.totalTargets * 0.8 ? "\u2B50" : s.correct >= s.totalTargets * 0.5 ? "\u{1F338}" : "\u{1F33C}"), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 600, color: GE.dark } }, t(`\uB77C\uC6B4\uB4DC ${s.round}`, `Round ${s.round}`)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: GE.muted } }, t(`${s.correct}/${s.totalTargets} \uBC1C\uACAC \xB7 \uC624\uD074\uB9AD ${s.incorrect}\uD68C`, `${s.correct}/${s.totalTargets} found \xB7 ${s.incorrect} miss`), s.avgReaction > 0 && ` \xB7 ${(s.avgReaction / 1e3).toFixed(1)}s`)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: GE.sage } }, s.totalTargets > 0 ? Math.round(s.correct / s.totalTargets * 100) : 0, "%")))), /* @__PURE__ */ React.createElement(
       "button",
       {
         onClick: handleFinish,
@@ -709,7 +690,7 @@ function EFMTGame({ onExit }) {
           cursor: "pointer"
         }
       },
-      "\uACBD\uD5D8\uCE58 \uBC1B\uAE30 \u2192"
+      t("\uACBD\uD5D8\uCE58 \uBC1B\uAE30 \u2192", "Claim EXP \u2192")
     ));
   }
   return null;

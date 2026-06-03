@@ -6,7 +6,7 @@ const GV = {
   starL: "#FFF5C8",
   rose: "#C97B8A",
   rosePale: "#FCF0F2",
-  sage: "#6B21A8",
+  sage: "#4A7C59",
   sagePale: "#EAF2EC",
   cream: "#FDFCF7",
   muted: "#8A8A78",
@@ -17,19 +17,19 @@ const GV = {
 };
 const QUESTION_POOL = [
   [
-    { id: "q1", prompt: "\uC624\uB298 \uC791\uC740 \uAE30\uC068\uC744 \uC900 \uAC83\uC740?", placeholder: "\uB530\uB73B\uD55C \uCEE4\uD53C \uD55C \uC794, \uB9D1\uC740 \uD558\uB298... \uC544\uC8FC \uC791\uC544\uB3C4 \uC88B\uC544\uC694", emoji: "\u2615" },
-    { id: "q2", prompt: "\uB098\uC5D0\uAC8C \uAC10\uC0AC\uD55C \uB0B4 \uBAA8\uC2B5\uC740?", placeholder: "\uB05D\uAE4C\uC9C0 \uD3EC\uAE30\uD558\uC9C0 \uC54A\uC558\uB358 \uAC83, \uC798 \uACAC\uB38C\uB0B8 \uAC83...", emoji: "\u{1F4AA}" },
-    { id: "q3", prompt: "\uB0B4\uC77C \uAE30\uB300\uB418\uB294 \uD55C \uAC00\uC9C0\uB294?", placeholder: "\uC544\uC8FC \uC791\uC740 \uAC83\uB3C4 \uAD1C\uCC2E\uC544\uC694", emoji: "\u{1F305}" }
+    { id: "q1", prompt: t("\uC624\uB298 \uC791\uC740 \uAE30\uC068\uC744 \uC900 \uAC83\uC740?", "What brought you a small joy today?"), placeholder: t("\uB530\uB73B\uD55C \uCEE4\uD53C \uD55C \uC794, \uB9D1\uC740 \uD558\uB298... \uC544\uC8FC \uC791\uC544\uB3C4 \uC88B\uC544\uC694", "A warm cup of coffee, a clear sky\u2026 even the tiniest thing counts"), emoji: "\u2615" },
+    { id: "q2", prompt: t("\uB098\uC5D0\uAC8C \uAC10\uC0AC\uD55C \uB0B4 \uBAA8\uC2B5\uC740?", "What about yourself are you grateful for?"), placeholder: t("\uB05D\uAE4C\uC9C0 \uD3EC\uAE30\uD558\uC9C0 \uC54A\uC558\uB358 \uAC83, \uC798 \uACAC\uB38C\uB0B8 \uAC83...", "Not giving up, holding on through the day\u2026"), emoji: "\u{1F4AA}" },
+    { id: "q3", prompt: t("\uB0B4\uC77C \uAE30\uB300\uB418\uB294 \uD55C \uAC00\uC9C0\uB294?", "What is one thing you look forward to tomorrow?"), placeholder: t("\uC544\uC8FC \uC791\uC740 \uAC83\uB3C4 \uAD1C\uCC2E\uC544\uC694", "Even the smallest thing is perfectly fine"), emoji: "\u{1F305}" }
   ],
   [
-    { id: "q1", prompt: "\uC624\uB298 \uB098\uB97C \uBBF8\uC18C \uC9D3\uAC8C \uD55C \uAC83\uC740?", placeholder: "\uC5B4\uB5A4 \uC21C\uAC04\uC774\uB4E0 \uC88B\uC544\uC694", emoji: "\u{1F60A}" },
-    { id: "q2", prompt: "\uC624\uB298 \uB0B4\uAC00 \uC798\uD55C \uD55C \uAC00\uC9C0\uB294?", placeholder: "\uC544\uBB34\uB9AC \uC791\uC544\uB3C4 \uC9C4\uC9DC \uC798\uD55C \uAC70\uC608\uC694", emoji: "\u2728" },
-    { id: "q3", prompt: "\uB098\uC758 \uC0B6\uC5D0 \uC788\uC5B4\uC11C \uAC10\uC0AC\uD55C \uAC83\uC740?", placeholder: "\uC0AC\uB78C, \uACF5\uAC04, \uC0C1\uD669... \uBB34\uC5C7\uC774\uB4E0", emoji: "\u{1F64F}" }
+    { id: "q1", prompt: t("\uC624\uB298 \uB098\uB97C \uBBF8\uC18C \uC9D3\uAC8C \uD55C \uAC83\uC740?", "What made you smile today?"), placeholder: t("\uC5B4\uB5A4 \uC21C\uAC04\uC774\uB4E0 \uC88B\uC544\uC694", "Any moment is welcome"), emoji: "\u{1F60A}" },
+    { id: "q2", prompt: t("\uC624\uB298 \uB0B4\uAC00 \uC798\uD55C \uD55C \uAC00\uC9C0\uB294?", "What is one thing you did well today?"), placeholder: t("\uC544\uBB34\uB9AC \uC791\uC544\uB3C4 \uC9C4\uC9DC \uC798\uD55C \uAC70\uC608\uC694", "No matter how small, it truly counts"), emoji: "\u2728" },
+    { id: "q3", prompt: t("\uB098\uC758 \uC0B6\uC5D0 \uC788\uC5B4\uC11C \uAC10\uC0AC\uD55C \uAC83\uC740?", "What are you grateful for in your life?"), placeholder: t("\uC0AC\uB78C, \uACF5\uAC04, \uC0C1\uD669... \uBB34\uC5C7\uC774\uB4E0", "A person, a place, a situation\u2026 anything"), emoji: "\u{1F64F}" }
   ],
   [
-    { id: "q1", prompt: "\uC624\uB298 \uB098\uC5D0\uAC8C \uCE5C\uC808\uD588\uB358 \uAC83\uC740?", placeholder: "\uB098 \uC790\uC2E0\uC774\uAC70\uB098 \uB2E4\uB978 \uB204\uAD70\uAC00", emoji: "\u{1F499}" },
-    { id: "q2", prompt: "\uD798\uB4E4\uC5C8\uC9C0\uB9CC \uBC84\uD168\uB0B8 \uAC83\uC774 \uC788\uB2E4\uBA74?", placeholder: "\uB2F9\uC2E0\uC740 \uC774\uBBF8 \uC798\uD558\uACE0 \uC788\uC5B4\uC694", emoji: "\u{1F33F}" },
-    { id: "q3", prompt: "\uC9C0\uAE08 \uC774 \uC21C\uAC04 \uB290\uB07C\uB294 \uC88B\uC740 \uAC10\uAC01\uC740?", placeholder: "\uB530\uB73B\uD568, \uC870\uC6A9\uD568, \uD3B8\uC548\uD568...", emoji: "\u{1F343}" }
+    { id: "q1", prompt: t("\uC624\uB298 \uB098\uC5D0\uAC8C \uCE5C\uC808\uD588\uB358 \uAC83\uC740?", "What was kind to you today?"), placeholder: t("\uB098 \uC790\uC2E0\uC774\uAC70\uB098 \uB2E4\uB978 \uB204\uAD70\uAC00", "Yourself or someone else"), emoji: "\u{1F499}" },
+    { id: "q2", prompt: t("\uD798\uB4E4\uC5C8\uC9C0\uB9CC \uBC84\uD168\uB0B8 \uAC83\uC774 \uC788\uB2E4\uBA74?", "Is there something hard you pushed through?"), placeholder: t("\uB2F9\uC2E0\uC740 \uC774\uBBF8 \uC798\uD558\uACE0 \uC788\uC5B4\uC694", "You are already doing great"), emoji: "\u{1F33F}" },
+    { id: "q3", prompt: t("\uC9C0\uAE08 \uC774 \uC21C\uAC04 \uB290\uB07C\uB294 \uC88B\uC740 \uAC10\uAC01\uC740?", "What good sensation do you feel right now?"), placeholder: t("\uB530\uB73B\uD568, \uC870\uC6A9\uD568, \uD3B8\uC548\uD568...", "Warmth, stillness, comfort\u2026"), emoji: "\u{1F343}" }
   ]
 ];
 function Star({ x, y, r, opacity = 1, twinkle = false, color = GV.star }) {
@@ -127,7 +127,7 @@ function NightSky({ litStars = 0, width = 320, height = 200 }) {
         fill: GV.starL,
         style: { fontSize: 9, fontFamily: "'Noto Sans KR',sans-serif", fontWeight: 600 }
       },
-      i === 0 ? "\uAE30\uC068" : i === 1 ? "\uB098" : "\uB0B4\uC77C"
+      i === 0 ? t("\uAE30\uC068", "Joy") : i === 1 ? t("\uB098", "Me") : t("\uB0B4\uC77C", "Tomorrow")
     )
   )), litStars >= 3 && /* @__PURE__ */ React.createElement("g", { opacity: "0.15" }, Array.from({ length: 20 }, (_, i) => /* @__PURE__ */ React.createElement(
     "circle",
@@ -153,10 +153,10 @@ function GratitudeGame({ onExit }) {
   const questions = QUESTION_POOL[dayIdx];
   useEffect(() => {
     if (screen !== "writing") return;
-    const t = setInterval(() => {
+    const t2 = setInterval(() => {
       setSessionSec(Math.round((Date.now() - startRef.current) / 1e3));
     }, 1e3);
-    return () => clearInterval(t);
+    return () => clearInterval(t2);
   }, [screen]);
   const handleAnswer = (qIdx, val) => {
     setAnswers((prev) => ({ ...prev, [questions[qIdx].id]: val }));
@@ -205,13 +205,21 @@ function GratitudeGame({ onExit }) {
   };
   function shareGratitude() {
     const lines = questions.map((q) => answers[q.id]?.trim()).filter(Boolean).map((a, i) => `${questions[i].emoji} ${a}`);
-    const text = `\u2B50 \uC624\uB298\uC758 \uAC10\uC0AC \uC77C\uAE30
+    const text = t(
+      `\u2B50 \uC624\uB298\uC758 \uAC10\uC0AC \uC77C\uAE30
 
 ${lines.join("\n")}
 
 \uB9C8\uC74C\uAC8C\uC784\uC5D0\uC11C \uD568\uAED8\uD574\uC694 \u{1F495}
-https://game.maumful.com`;
-    navigator.share ? navigator.share({ title: "\uC624\uB298\uC758 \uAC10\uC0AC \uC77C\uAE30", text }).catch(() => {
+https://game.maumful.com`,
+      `\u2B50 Today's Gratitude Journal
+
+${lines.join("\n")}
+
+Join us on Maum Game \u{1F495}
+https://game.maumful.com`
+    );
+    navigator.share ? navigator.share({ title: t("\uC624\uB298\uC758 \uAC10\uC0AC \uC77C\uAE30", "Today's Gratitude Journal"), text }).catch(() => {
     }) : navigator.clipboard?.writeText(text).catch(() => {
     });
   }
@@ -228,7 +236,7 @@ https://game.maumful.com`;
     background: "rgba(0,0,0,0.2)",
     backdropFilter: "blur(8px)",
     borderBottom: "1px solid rgba(255,255,255,0.08)"
-  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 20 } }, "\u2B50"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 15, fontWeight: 700, color: "white", fontFamily: "'Noto Serif KR',serif" } }, "\uBCC4\uBE5B \uAC10\uC0AC \uC77C\uAE30")), /* @__PURE__ */ React.createElement("button", { onClick: () => onExit(null), style: {
+  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 20 } }, "\u2B50"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 15, fontWeight: 700, color: "white", fontFamily: "'Noto Serif KR',serif" } }, t("\uBCC4\uBE5B \uAC10\uC0AC \uC77C\uAE30", "Starlight Gratitude Journal"))), /* @__PURE__ */ React.createElement("button", { onClick: () => onExit(null), style: {
     fontFamily: "'Noto Sans KR',sans-serif",
     background: "rgba(255,255,255,0.1)",
     color: "rgba(255,255,255,0.7)",
@@ -237,7 +245,7 @@ https://game.maumful.com`;
     padding: "6px 13px",
     fontSize: 12,
     cursor: "pointer"
-  } }, "\uD5C8\uBE0C\uB85C \u2192")), /* @__PURE__ */ React.createElement("div", { style: { height: 200 } }, /* @__PURE__ */ React.createElement(NightSky, { litStars: 0 })), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, padding: "24px 20px", overflowY: "auto" } }, /* @__PURE__ */ React.createElement("h2", { style: { fontSize: 20, fontWeight: 700, color: "white", marginBottom: 10, fontFamily: "'Noto Serif KR',serif" } }, "\uC624\uB298\uC758 \uBCC4\uC744 \uBC1D\uD600\uC694"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 14, color: "rgba(255,255,255,0.7)", lineHeight: 1.8, marginBottom: 24 } }, "3\uAC00\uC9C0 \uC9C8\uBB38\uC5D0 \uC194\uC9C1\uD558\uAC8C \uB2F5\uD558\uBA74", /* @__PURE__ */ React.createElement("br", null), "\uBC24\uD558\uB298\uC5D0 \uAC10\uC0AC\uC758 \uBCC4 3\uAC1C\uAC00 \uBE5B\uB098\uC694.", /* @__PURE__ */ React.createElement("br", null), "\uC544\uC8FC \uC791\uC740 \uAC83\uB3C4 \uCDA9\uBD84\uD574\uC694."), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 } }, questions.map((q, i) => /* @__PURE__ */ React.createElement("div", { key: q.id, style: {
+  } }, t("\uD5C8\uBE0C\uB85C \u2192", "Hub \u2192"))), /* @__PURE__ */ React.createElement("div", { style: { height: 200 } }, /* @__PURE__ */ React.createElement(NightSky, { litStars: 0 })), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, padding: "24px 20px", overflowY: "auto" } }, /* @__PURE__ */ React.createElement("h2", { style: { fontSize: 20, fontWeight: 700, color: "white", marginBottom: 10, fontFamily: "'Noto Serif KR',serif" } }, t("\uC624\uB298\uC758 \uBCC4\uC744 \uBC1D\uD600\uC694", "Light today's stars")), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 14, color: "rgba(255,255,255,0.7)", lineHeight: 1.8, marginBottom: 24 } }, t("3\uAC00\uC9C0 \uC9C8\uBB38\uC5D0 \uC194\uC9C1\uD558\uAC8C \uB2F5\uD558\uBA74", "Answer 3 questions honestly"), /* @__PURE__ */ React.createElement("br", null), t("\uBC24\uD558\uB298\uC5D0 \uAC10\uC0AC\uC758 \uBCC4 3\uAC1C\uAC00 \uBE5B\uB098\uC694.", "3 gratitude stars will light up the night sky."), /* @__PURE__ */ React.createElement("br", null), t("\uC544\uC8FC \uC791\uC740 \uAC83\uB3C4 \uCDA9\uBD84\uD574\uC694.", "Even the smallest thing is enough.")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 } }, questions.map((q, i) => /* @__PURE__ */ React.createElement("div", { key: q.id, style: {
     display: "flex",
     alignItems: "center",
     gap: 12,
@@ -266,7 +274,7 @@ https://game.maumful.com`;
         boxShadow: `0 4px 16px rgba(107,143,168,0.4)`
       }
     },
-    "\uBCC4 \uBC1D\uD788\uAE30 \uC2DC\uC791 \u2B50"
+    t("\uBCC4 \uBC1D\uD788\uAE30 \uC2DC\uC791 \u2B50", "Start lighting stars \u2B50")
   )));
   if (screen === "writing") return /* @__PURE__ */ React.createElement("div", { style: {
     flex: 1,
@@ -358,7 +366,7 @@ https://game.maumful.com`;
           transition: "all 0.2s"
         }
       },
-      i === questions.length - 1 ? "\uB9C8\uC9C0\uB9C9 \uBCC4 \uBC1D\uD788\uAE30 \u2B50" : "\uBCC4 \uBC1D\uD788\uAE30 \u2B50"
+      i === questions.length - 1 ? t("\uB9C8\uC9C0\uB9C9 \uBCC4 \uBC1D\uD788\uAE30 \u2B50", "Light the last star \u2B50") : t("\uBCC4 \uBC1D\uD788\uAE30 \u2B50", "Light a star \u2B50")
     )), isDone && /* @__PURE__ */ React.createElement("div", { style: { padding: "10px 16px 12px", fontSize: 13, color: "rgba(255,224,138,0.8)", lineHeight: 1.6, fontStyle: "italic" } }, '"', answers[q.id], '"'));
   })));
   if (screen === "done") return /* @__PURE__ */ React.createElement("div", { style: {
@@ -367,7 +375,7 @@ https://game.maumful.com`;
     flexDirection: "column",
     background: `linear-gradient(160deg, ${GV.night}, ${GV.nightM})`,
     animation: "fadeUp 0.5s ease"
-  } }, /* @__PURE__ */ React.createElement("div", { style: { height: 200 } }, /* @__PURE__ */ React.createElement(NightSky, { litStars: 3 })), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, padding: "24px 20px", overflowY: "auto" } }, /* @__PURE__ */ React.createElement("h2", { style: { fontSize: 22, fontWeight: 700, color: "white", marginBottom: 8, fontFamily: "'Noto Serif KR',serif", textAlign: "center" } }, "\uBC24\uD558\uB298\uC5D0 \uBCC4 3\uAC1C\uAC00 \uB5B4\uC5B4\uC694 \u2B50"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.8, marginBottom: 22, textAlign: "center" } }, "\uAC10\uC0AC\uD55C \uB9C8\uC74C\uC774 \uBC24\uD558\uB298\uC744 \uC218\uB193\uC558\uC5B4\uC694.", /* @__PURE__ */ React.createElement("br", null), "\uC624\uB298\uB3C4 \uC218\uACE0 \uB9CE\uC73C\uC168\uC5B4\uC694."), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 } }, questions.map((q, i) => /* @__PURE__ */ React.createElement("div", { key: q.id, style: {
+  } }, /* @__PURE__ */ React.createElement("div", { style: { height: 200 } }, /* @__PURE__ */ React.createElement(NightSky, { litStars: 3 })), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, padding: "24px 20px", overflowY: "auto" } }, /* @__PURE__ */ React.createElement("h2", { style: { fontSize: 22, fontWeight: 700, color: "white", marginBottom: 8, fontFamily: "'Noto Serif KR',serif", textAlign: "center" } }, t("\uBC24\uD558\uB298\uC5D0 \uBCC4 3\uAC1C\uAC00 \uB5B4\uC5B4\uC694 \u2B50", "3 stars shine in the night sky \u2B50")), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.8, marginBottom: 22, textAlign: "center" } }, t("\uAC10\uC0AC\uD55C \uB9C8\uC74C\uC774 \uBC24\uD558\uB298\uC744 \uC218\uB193\uC558\uC5B4\uC694.", "Your gratitude has lit up the night sky."), /* @__PURE__ */ React.createElement("br", null), t("\uC624\uB298\uB3C4 \uC218\uACE0 \uB9CE\uC73C\uC168\uC5B4\uC694.", "You did great today.")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 } }, questions.map((q, i) => /* @__PURE__ */ React.createElement("div", { key: q.id, style: {
     background: "rgba(255,224,138,0.08)",
     borderRadius: 14,
     border: "1px solid rgba(255,224,138,0.2)",
@@ -390,7 +398,7 @@ https://game.maumful.com`;
         marginBottom: 10
       }
     },
-    "\u{1F495} \uD30C\uD2B8\uB108\uC640 \uACF5\uC720\uD558\uAE30"
+    t("\u{1F495} \uD30C\uD2B8\uB108\uC640 \uACF5\uC720\uD558\uAE30", "\u{1F495} Share with partner")
   ), /* @__PURE__ */ React.createElement(
     "button",
     {
@@ -408,7 +416,7 @@ https://game.maumful.com`;
         cursor: "pointer"
       }
     },
-    "\uACBD\uD5D8\uCE58 \uBC1B\uAE30 \u2192"
+    t("\uACBD\uD5D8\uCE58 \uBC1B\uAE30 \u2192", "Claim EXP \u2192")
   )));
   return null;
 }

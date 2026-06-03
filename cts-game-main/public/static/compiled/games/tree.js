@@ -59,44 +59,44 @@ const TREE_STYLE = `
 const STAGES = [
   {
     id: "roots",
-    title: "\uBFCC\uB9AC \u2014 \uD604\uC7AC \uC21C\uAC04",
+    title: t("\uBFCC\uB9AC \u2014 \uD604\uC7AC \uC21C\uAC04", "Roots \u2014 Present Moment"),
     emoji: "\u{1F331}",
     color: "#7B5F4A",
     accent: "#C8A882",
     bg: "rgba(107,79,58,0.14)",
     border: "rgba(200,168,130,0.25)",
-    desc: "\uC9C0\uAE08 \uC774 \uC21C\uAC04\uC5D0 \uB2FF\uC544\uC788\uC5B4\uC694.",
+    desc: t("\uC9C0\uAE08 \uC774 \uC21C\uAC04\uC5D0 \uB2FF\uC544\uC788\uC5B4\uC694.", "Touching the present moment."),
     questions: [
-      { id: "r1", prompt: "\uC9C0\uAE08 \uC774 \uC21C\uAC04, \uBAB8\uC5D0\uC11C \uB290\uAEF4\uC9C0\uB294 \uAC10\uAC01\uC740?", placeholder: "\uB530\uB73B\uD568, \uAE34\uC7A5, \uD638\uD761\uC758 \uB9AC\uB4EC...", hint: "\uB208\uC744 \uAC10\uACE0 10\uCD08\uB9CC \uB290\uAEF4\uBCF4\uC138\uC694" },
-      { id: "r2", prompt: "\uC9C0\uAE08 \uB0B4 \uB9C8\uC74C\uC18D\uC5D0 \uC788\uB294 \uAC10\uC815\uC740?", placeholder: "\uBD88\uC548, \uD3C9\uC628, \uAE30\uB300, \uADF8\uB9AC\uC6C0...", hint: "\uC88B\uC740 \uAC10\uC815\uC774 \uC544\uB2C8\uC5B4\uB3C4 \uAD1C\uCC2E\uC544\uC694" }
+      { id: "r1", prompt: t("\uC9C0\uAE08 \uC774 \uC21C\uAC04, \uBAB8\uC5D0\uC11C \uB290\uAEF4\uC9C0\uB294 \uAC10\uAC01\uC740?", "What sensations do you feel in your body right now?"), placeholder: t("\uB530\uB73B\uD568, \uAE34\uC7A5, \uD638\uD761\uC758 \uB9AC\uB4EC...", "Warmth, tension, the rhythm of your breath..."), hint: t("\uB208\uC744 \uAC10\uACE0 10\uCD08\uB9CC \uB290\uAEF4\uBCF4\uC138\uC694", "Close your eyes and feel for just 10 seconds") },
+      { id: "r2", prompt: t("\uC9C0\uAE08 \uB0B4 \uB9C8\uC74C\uC18D\uC5D0 \uC788\uB294 \uAC10\uC815\uC740?", "What emotion is in your heart right now?"), placeholder: t("\uBD88\uC548, \uD3C9\uC628, \uAE30\uB300, \uADF8\uB9AC\uC6C0...", "Anxiety, peace, anticipation, longing..."), hint: t("\uC88B\uC740 \uAC10\uC815\uC774 \uC544\uB2C8\uC5B4\uB3C4 \uAD1C\uCC2E\uC544\uC694", "It's okay if it's not a positive emotion") }
     ]
   },
   {
     id: "trunk",
-    title: "\uC904\uAE30 \u2014 \uB098\uC758 \uAC00\uCE58",
+    title: t("\uC904\uAE30 \u2014 \uB098\uC758 \uAC00\uCE58", "Trunk \u2014 My Values"),
     emoji: "\u{1F333}",
     color: "#2D6A3A",
     accent: "#88D4A0",
     bg: "rgba(45,106,58,0.12)",
     border: "rgba(136,212,160,0.2)",
-    desc: "\uB0B4\uAC00 \uC18C\uC911\uD788 \uC5EC\uAE30\uB294 \uAC83\uB4E4\uB85C \uC774\uB8E8\uC5B4\uC838\uC694.",
+    desc: t("\uB0B4\uAC00 \uC18C\uC911\uD788 \uC5EC\uAE30\uB294 \uAC83\uB4E4\uB85C \uC774\uB8E8\uC5B4\uC838\uC694.", "Made of what matters most to me."),
     questions: [
-      { id: "t1", prompt: "\uB0B4\uAC00 \uAC00\uC7A5 \uC18C\uC911\uD558\uAC8C \uC5EC\uAE30\uB294 \uAC00\uCE58\uB294?", placeholder: "\uAD00\uACC4, \uC131\uC7A5, \uC790\uC720, \uCC3D\uC758, \uC815\uC9C1...", hint: "\uC9C0\uAE08 \uAC00\uC7A5 \uBA3C\uC800 \uB5A0\uC624\uB974\uB294 \uAC83" },
-      { id: "t2", prompt: "\uBBF8\uB798\uC758 \uB098\uC5D0\uAC8C \uC804\uD558\uACE0 \uC2F6\uC740 \uD55C \uB9C8\uB514\uB294?", placeholder: "\uD3EC\uAE30\uD558\uC9C0 \uB9C8, \uB10C \uCDA9\uBD84\uD574, \uC26C\uC5B4\uB3C4 \uB3FC...", hint: "\uC9C4\uC2EC\uC744 \uB2F4\uC544 \uC368\uBCF4\uC138\uC694" }
+      { id: "t1", prompt: t("\uB0B4\uAC00 \uAC00\uC7A5 \uC18C\uC911\uD558\uAC8C \uC5EC\uAE30\uB294 \uAC00\uCE58\uB294?", "What value do I cherish the most?"), placeholder: t("\uAD00\uACC4, \uC131\uC7A5, \uC790\uC720, \uCC3D\uC758, \uC815\uC9C1...", "Relationships, growth, freedom, creativity, honesty..."), hint: t("\uC9C0\uAE08 \uAC00\uC7A5 \uBA3C\uC800 \uB5A0\uC624\uB974\uB294 \uAC83", "The first thing that comes to mind") },
+      { id: "t2", prompt: t("\uBBF8\uB798\uC758 \uB098\uC5D0\uAC8C \uC804\uD558\uACE0 \uC2F6\uC740 \uD55C \uB9C8\uB514\uB294?", "What one message do I want to send to my future self?"), placeholder: t("\uD3EC\uAE30\uD558\uC9C0 \uB9C8, \uB10C \uCDA9\uBD84\uD574, \uC26C\uC5B4\uB3C4 \uB3FC...", "Don't give up, you're enough, it's okay to rest..."), hint: t("\uC9C4\uC2EC\uC744 \uB2F4\uC544 \uC368\uBCF4\uC138\uC694", "Write it with sincerity") }
     ]
   },
   {
     id: "branches",
-    title: "\uAC00\uC9C0 \u2014 \uB098\uC758 \uD589\uB3D9",
+    title: t("\uAC00\uC9C0 \u2014 \uB098\uC758 \uD589\uB3D9", "Branches \u2014 My Actions"),
     emoji: "\u{1F33F}",
     color: "#2D6A3A",
     accent: "#B8E8C4",
     bg: "rgba(45,106,58,0.09)",
     border: "rgba(184,232,196,0.2)",
-    desc: "\uAC00\uCE58\uB97C \uD5A5\uD55C \uAD6C\uCCB4\uC801\uC778 \uD55C \uAC78\uC74C\uC774\uC5D0\uC694.",
+    desc: t("\uAC00\uCE58\uB97C \uD5A5\uD55C \uAD6C\uCCB4\uC801\uC778 \uD55C \uAC78\uC74C\uC774\uC5D0\uC694.", "A concrete step toward my values."),
     questions: [
-      { id: "b1", prompt: "\uC624\uB298 \uC2E4\uCC9C\uD560 \uC218 \uC788\uB294 \uC791\uC740 \uD589\uB3D9\uC740?", placeholder: "5\uBD84 \uC0B0\uCC45, \uBB3C \uD55C \uC794, \uC88B\uC544\uD558\uB294 \uC74C\uC545...", hint: "\uC544\uC8FC \uC791\uC544\uB3C4 \uAD1C\uCC2E\uC544\uC694" },
-      { id: "b2", prompt: "\uC774\uBC88 \uC8FC \uB098\uC5D0\uAC8C \uC8FC\uACE0 \uC2F6\uC740 \uC120\uBB3C\uC740?", placeholder: "\uCDA9\uBD84\uD55C \uC7A0, \uB9DB\uC788\uB294 \uAC83, \uD63C\uC790\uB9CC\uC758 \uC2DC\uAC04...", hint: "\uB098\uB97C \uC704\uD55C \uC120\uBB3C" }
+      { id: "b1", prompt: t("\uC624\uB298 \uC2E4\uCC9C\uD560 \uC218 \uC788\uB294 \uC791\uC740 \uD589\uB3D9\uC740?", "What small action can I take today?"), placeholder: t("5\uBD84 \uC0B0\uCC45, \uBB3C \uD55C \uC794, \uC88B\uC544\uD558\uB294 \uC74C\uC545...", "A 5-min walk, a glass of water, favorite music..."), hint: t("\uC544\uC8FC \uC791\uC544\uB3C4 \uAD1C\uCC2E\uC544\uC694", "Even something very small is okay") },
+      { id: "b2", prompt: t("\uC774\uBC88 \uC8FC \uB098\uC5D0\uAC8C \uC8FC\uACE0 \uC2F6\uC740 \uC120\uBB3C\uC740?", "What gift do I want to give myself this week?"), placeholder: t("\uCDA9\uBD84\uD55C \uC7A0, \uB9DB\uC788\uB294 \uAC83, \uD63C\uC790\uB9CC\uC758 \uC2DC\uAC04...", "Enough sleep, something delicious, time alone..."), hint: t("\uB098\uB97C \uC704\uD55C \uC120\uBB3C", "A gift for myself") }
     ]
   }
 ];
@@ -200,8 +200,8 @@ function TreeGame({ onExit }) {
   }, []);
   useEffect(() => {
     if (screen !== "writing") return;
-    const t = setInterval(() => setSessionSec(Math.round((Date.now() - startRef.current) / 1e3)), 1e3);
-    return () => clearInterval(t);
+    const t2 = setInterval(() => setSessionSec(Math.round((Date.now() - startRef.current) / 1e3)), 1e3);
+    return () => clearInterval(t2);
   }, [screen]);
   const currentStage = STAGES[stageIdx];
   const currentQ = currentStage?.questions[qIdx];
@@ -258,7 +258,7 @@ function TreeGame({ onExit }) {
     color: GT.cream,
     fontFamily: "'Noto Serif KR',serif",
     letterSpacing: "-0.3px"
-  } }, "\uB0B4\uBA74\uC758 \uB098\uBB34")), /* @__PURE__ */ React.createElement("button", { onClick: () => onExit(null), style: {
+  } }, t("\uB0B4\uBA74\uC758 \uB098\uBB34", "Inner Tree"))), /* @__PURE__ */ React.createElement("button", { onClick: () => onExit(null), style: {
     fontFamily: "'Noto Sans KR',sans-serif",
     background: "rgba(136,212,160,0.1)",
     color: GT.skyGlow,
@@ -268,7 +268,7 @@ function TreeGame({ onExit }) {
     fontSize: 12,
     fontWeight: 500,
     cursor: "pointer"
-  } }, "\uD5C8\uBE0C\uB85C \u2192"));
+  } }, t("\uD5C8\uBE0C\uB85C \u2192", "Hub \u2192")));
   if (screen === "intro") return /* @__PURE__ */ React.createElement("div", { style: { flex: 1, display: "flex", flexDirection: "column", background: GT.dawnDeep, overflow: "hidden" } }, /* @__PURE__ */ React.createElement(Header, null), /* @__PURE__ */ React.createElement("div", { style: { position: "relative", height: 195, flexShrink: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", inset: 0 } }, /* @__PURE__ */ React.createElement(ForestBg, { stage: 0 })), /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", inset: 0 } }, /* @__PURE__ */ React.createElement(MainTreeSVG, { stage: 0, answers: {}, animated: false })), /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", bottom: 14, left: 0, right: 0, textAlign: "center" } }, /* @__PURE__ */ React.createElement("div", { style: {
     display: "inline-block",
     background: "rgba(10,24,14,0.72)",
@@ -277,7 +277,7 @@ function TreeGame({ onExit }) {
     padding: "7px 18px",
     border: "1px solid rgba(136,212,160,0.18)",
     animation: "fadeUp 0.6s ease"
-  } }, /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11, color: GT.leafGlow, margin: 0, fontFamily: "'Noto Sans KR',sans-serif", fontWeight: 500 } }, "\uC0C8\uBCBD \uC232\uC5D0\uC11C \uB098\uB97C \uB9CC\uB098\uB294 \uC2DC\uAC04 \u{1F33F}")))), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "18px 18px 28px" } }, /* @__PURE__ */ React.createElement("div", { style: {
+  } }, /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11, color: GT.leafGlow, margin: 0, fontFamily: "'Noto Sans KR',sans-serif", fontWeight: 500 } }, t("\uC0C8\uBCBD \uC232\uC5D0\uC11C \uB098\uB97C \uB9CC\uB098\uB294 \uC2DC\uAC04 \u{1F33F}", "A time to meet myself in the dawn forest \u{1F33F}"))))), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "18px 18px 28px" } }, /* @__PURE__ */ React.createElement("div", { style: {
     background: "rgba(45,106,58,0.14)",
     border: "1px solid rgba(136,212,160,0.18)",
     borderRadius: 18,
@@ -291,7 +291,7 @@ function TreeGame({ onExit }) {
     fontFamily: "'Noto Serif KR',serif",
     marginBottom: 6,
     lineHeight: 1.45
-  } }, "\uB0B4 \uB9C8\uC74C\uC758 \uB098\uBB34\uB97C \uAC00\uAFB8\uC5B4\uC694"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: GT.muted, lineHeight: 1.8, margin: 0, fontFamily: "'Noto Sans KR',sans-serif" } }, "3\uB2E8\uACC4\uB97C \uB530\uB77C \uBFCC\uB9AC\xB7\uC904\uAE30\xB7\uAC00\uC9C0\uB97C \uC644\uC131\uD558\uBA70", /* @__PURE__ */ React.createElement("br", null), "\uB098\uB9CC\uC758 \uB0B4\uBA74\uC758 \uB098\uBB34\uB97C \uD0A4\uC6CC\uBCF4\uC138\uC694.")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 9, marginBottom: 22 } }, STAGES.map((s, i) => /* @__PURE__ */ React.createElement("div", { key: s.id, style: {
+  } }, t("\uB0B4 \uB9C8\uC74C\uC758 \uB098\uBB34\uB97C \uAC00\uAFB8\uC5B4\uC694", "Grow the tree of your mind")), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: GT.muted, lineHeight: 1.8, margin: 0, fontFamily: "'Noto Sans KR',sans-serif" } }, t("3\uB2E8\uACC4\uB97C \uB530\uB77C \uBFCC\uB9AC\xB7\uC904\uAE30\xB7\uAC00\uC9C0\uB97C \uC644\uC131\uD558\uBA70", "Follow 3 steps to complete roots, trunk, and branches"), /* @__PURE__ */ React.createElement("br", null), t("\uB098\uB9CC\uC758 \uB0B4\uBA74\uC758 \uB098\uBB34\uB97C \uD0A4\uC6CC\uBCF4\uC138\uC694.", "and grow your own inner tree."))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 9, marginBottom: 22 } }, STAGES.map((s, i) => /* @__PURE__ */ React.createElement("div", { key: s.id, style: {
     display: "flex",
     alignItems: "center",
     gap: 14,
@@ -348,7 +348,8 @@ function TreeGame({ onExit }) {
         boxShadow: "0 6px 20px rgba(45,106,58,0.42)"
       }
     },
-    "\u{1F331} \uB098\uBB34 \uAC00\uAFB8\uAE30 \uC2DC\uC791"
+    "\u{1F331} ",
+    t("\uB098\uBB34 \uAC00\uAFB8\uAE30 \uC2DC\uC791", "Start growing the tree")
   )));
   if (screen === "writing") {
     const totalQ = STAGES.reduce((s, st) => s + st.questions.length, 0);
@@ -379,7 +380,7 @@ function TreeGame({ onExit }) {
         color: isActive ? s.accent : isDone ? GT.muted : "rgba(255,255,255,0.25)",
         fontFamily: "'Noto Sans KR',sans-serif",
         transition: "color 0.3s"
-      } }, s.id === "roots" ? "\uBFCC\uB9AC" : s.id === "trunk" ? "\uC904\uAE30" : "\uAC00\uC9C0"));
+      } }, s.id === "roots" ? t("\uBFCC\uB9AC", "Roots") : s.id === "trunk" ? t("\uC904\uAE30", "Trunk") : t("\uAC00\uC9C0", "Branches")));
     })), /* @__PURE__ */ React.createElement(
       "div",
       {
@@ -450,7 +451,7 @@ function TreeGame({ onExit }) {
         color: GT.muted,
         marginBottom: 5,
         fontFamily: "'Noto Sans KR',sans-serif"
-      } }, "\uC774\uC804 \uB2F5\uBCC0"), Object.entries(answers).filter(([k, v]) => v?.trim() && k !== currentQ?.id).map(([k, v], i) => {
+      } }, t("\uC774\uC804 \uB2F5\uBCC0", "Previous answers")), Object.entries(answers).filter(([k, v]) => v?.trim() && k !== currentQ?.id).map(([k, v], i) => {
         const si = STAGES.findIndex((s) => s.questions.some((q) => q.id === k));
         const st = STAGES[si];
         return /* @__PURE__ */ React.createElement("div", { key: k, className: "answer-card", style: {
@@ -478,7 +479,7 @@ function TreeGame({ onExit }) {
             boxShadow: canNext ? "0 6px 20px rgba(45,106,58,0.35)" : "none"
           }
         },
-        stageIdx === STAGES.length - 1 && qIdx === currentStage.questions.length - 1 ? "\u{1F333} \uB098\uBB34 \uC644\uC131\uD558\uAE30" : "\uB2E4\uC74C \u2192"
+        stageIdx === STAGES.length - 1 && qIdx === currentStage.questions.length - 1 ? `\u{1F333} ${t("\uB098\uBB34 \uC644\uC131\uD558\uAE30", "Complete the tree")}` : t("\uB2E4\uC74C \u2192", "Next \u2192")
       )
     ));
   }
@@ -508,14 +509,14 @@ function TreeGame({ onExit }) {
     fontWeight: 700,
     color: GT.leafGlow,
     fontFamily: "'Noto Serif KR',serif"
-  } }, "\uB0B4\uBA74\uC758 \uB098\uBB34 \uC644\uC131!")))), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "18px 18px 28px" } }, /* @__PURE__ */ React.createElement("p", { style: {
+  } }, t("\uB0B4\uBA74\uC758 \uB098\uBB34 \uC644\uC131!", "Inner Tree Complete!"))))), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "18px 18px 28px" } }, /* @__PURE__ */ React.createElement("p", { style: {
     fontSize: 12,
     color: GT.muted,
     lineHeight: 1.8,
     marginBottom: 18,
     textAlign: "center",
     fontFamily: "'Noto Sans KR',sans-serif"
-  } }, "\uBFCC\uB9AC\xB7\uC904\uAE30\xB7\uAC00\uC9C0\uB97C \uBAA8\uB450 \uCC44\uC6E0\uC5B4\uC694.", /* @__PURE__ */ React.createElement("br", null), "\uC774 \uAE00\uB4E4\uC774 \uB2F9\uC2E0\uC758 \uB9C8\uC74C \uC9C0\uB3C4\uAC00 \uB418\uAE38 \uBC14\uB78D\uB2C8\uB2E4."), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 11, marginBottom: 22 } }, STAGES.map((s, si) => /* @__PURE__ */ React.createElement("div", { key: s.id, style: {
+  } }, t("\uBFCC\uB9AC\xB7\uC904\uAE30\xB7\uAC00\uC9C0\uB97C \uBAA8\uB450 \uCC44\uC6E0\uC5B4\uC694.", "You have filled in roots, trunk, and branches."), /* @__PURE__ */ React.createElement("br", null), t("\uC774 \uAE00\uB4E4\uC774 \uB2F9\uC2E0\uC758 \uB9C8\uC74C \uC9C0\uB3C4\uAC00 \uB418\uAE38 \uBC14\uB78D\uB2C8\uB2E4.", "May these words become a map of your heart.")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 11, marginBottom: 22 } }, STAGES.map((s, si) => /* @__PURE__ */ React.createElement("div", { key: s.id, style: {
     background: "rgba(30,60,40,0.2)",
     border: `1px solid ${s.border}`,
     borderRadius: 15,
@@ -547,7 +548,7 @@ function TreeGame({ onExit }) {
         marginBottom: 10
       }
     },
-    finishing ? "\uC800\uC7A5 \uC911..." : "\u2728 \uACBD\uD5D8\uCE58 \uBC1B\uAE30"
+    finishing ? t("\uC800\uC7A5 \uC911...", "Saving...") : `\u2728 ${t("\uACBD\uD5D8\uCE58 \uBC1B\uAE30", "Claim EXP")}`
   ), /* @__PURE__ */ React.createElement(
     "button",
     {
@@ -555,7 +556,7 @@ function TreeGame({ onExit }) {
       onClick: () => onExit(null),
       style: { border: "1px solid rgba(136,212,160,0.18)", color: GT.muted }
     },
-    "\uACBD\uD5D8\uCE58 \uC5C6\uC774 \uD5C8\uBE0C\uB85C \u2192"
+    t("\uACBD\uD5D8\uCE58 \uC5C6\uC774 \uD5C8\uBE0C\uB85C \u2192", "Back to Hub without EXP \u2192")
   )));
   return null;
 }

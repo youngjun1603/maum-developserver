@@ -268,7 +268,7 @@ const QTGame = ({ onExit }) => {
           fontFamily: "'Noto Sans KR',sans-serif"
         }
       },
-      saving ? "\uC800\uC7A5 \uC911..." : "\u2705 QT \uC644\uB8CC\uD558\uAE30"
+      saving ? t("\uC800\uC7A5 \uC911...", "Saving...") : "\u2705 QT \uC644\uB8CC\uD558\uAE30"
     )));
   }
   if (screen === "calendar") {
@@ -296,7 +296,7 @@ const QTGame = ({ onExit }) => {
         style: { background: "none", border: "none", color: "rgba(255,255,255,0.8)", fontSize: 20, cursor: "pointer" }
       },
       "\u2190"
-    ), /* @__PURE__ */ React.createElement("div", { style: { color: "white", fontWeight: 700, fontSize: 17 } }, "\u{1F4C5} QT \uB2EC\uB825")), /* @__PURE__ */ React.createElement("div", { style: { maxWidth: 480, margin: "0 auto", padding: "24px 20px" } }, /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", marginBottom: 20 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 18, fontWeight: 700, color: "#4C1D95" } }, year, "\uB144 ", month + 1, "\uC6D4"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "#7C3AED", marginTop: 4 } }, "\uC774\uBC88 \uB2EC ", history.filter((h) => h.date.startsWith(`${year}-${String(month + 1).padStart(2, "0")}`)).length, "\uD68C QT \uC644\uB8CC")), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4, marginBottom: 8 } }, ["\uC77C", "\uC6D4", "\uD654", "\uC218", "\uBAA9", "\uAE08", "\uD1A0"].map((d) => /* @__PURE__ */ React.createElement("div", { key: d, style: { textAlign: "center", fontSize: 11, fontWeight: 700, color: "#7C3AED", padding: "4px 0" } }, d))), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4 } }, monthDates.map((d, i) => {
+    ), /* @__PURE__ */ React.createElement("div", { style: { color: "white", fontWeight: 700, fontSize: 17 } }, "\u{1F4C5} QT \uB2EC\uB825")), /* @__PURE__ */ React.createElement("div", { style: { maxWidth: 480, margin: "0 auto", padding: "24px 20px" } }, /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", marginBottom: 20 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 18, fontWeight: 700, color: "#4C1D95" } }, year, "\uB144 ", month + 1, "\uC6D4"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "#7C3AED", marginTop: 4 } }, "\uC774\uBC88 \uB2EC ", history.filter((h) => h.date.startsWith(`${year}-${String(month + 1).padStart(2, "0")}`)).length, "\uD68C QT \uC644\uB8CC")), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4, marginBottom: 8 } }, [t("\uC77C", "d"), "\uC6D4", "\uD654", "\uC218", "\uBAA9", "\uAE08", "\uD1A0"].map((d) => /* @__PURE__ */ React.createElement("div", { key: d, style: { textAlign: "center", fontSize: 11, fontWeight: 700, color: "#7C3AED", padding: "4px 0" } }, d))), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4 } }, monthDates.map((d, i) => {
       if (!d) return /* @__PURE__ */ React.createElement("div", { key: i });
       const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
       const done = history.some((h) => h.date === dateKey);

@@ -70,12 +70,12 @@ const SLOT_POSITIONS = [
   [68, 62]
 ];
 function buildBubbles(texts) {
-  return texts.map((t, i) => ({
+  return texts.map((t2, i) => ({
     id: i,
-    text: t.trim(),
+    text: t2.trim(),
     xPct: SLOT_POSITIONS[i % 5][0] + (Math.random() - 0.5) * 6,
     yPct: SLOT_POSITIONS[i % 5][1] + (Math.random() - 0.5) * 6,
-    size: Math.min(128, Math.max(92, 92 + t.length * 1.5)),
+    size: Math.min(128, Math.max(92, 92 + t2.length * 1.5)),
     dur: `${8 + Math.random() * 5}s`,
     delay: `${-(Math.random() * 7)}s`,
     colorIdx: i % WB_COLORS.length
@@ -102,7 +102,7 @@ const WorryGame = ({ onExit }) => {
   const [doneData, setDoneData] = React.useState(null);
   const [startTime] = React.useState(Date.now());
   function handleStart() {
-    const valid = inputs.filter((t) => t.trim());
+    const valid = inputs.filter((t2) => t2.trim());
     if (!valid.length) return;
     setBubbles(buildBubbles(inputs));
     setPoppedIds(/* @__PURE__ */ new Set());
@@ -145,7 +145,7 @@ const WorryGame = ({ onExit }) => {
     const shuffled = [...EXAMPLE_WORRIES].sort(() => Math.random() - 0.5);
     setInputs([shuffled[0], shuffled[1], shuffled[2]]);
   }
-  const canStart = inputs.some((t) => t.trim());
+  const canStart = inputs.some((t2) => t2.trim());
   if (screen === "intro") return /* @__PURE__ */ React.createElement("div", { style: {
     flex: 1,
     display: "flex",
@@ -165,7 +165,7 @@ const WorryGame = ({ onExit }) => {
         padding: "6px 12px",
         fontSize: 12,
         cursor: "pointer"
-      } }, "\uD5C8\uBE0C\uB85C \u2192")
+      } }, t("\uD5C8\uBE0C\uB85C \u2192", "Hub \u2192"))
     }
   ), /* @__PURE__ */ React.createElement("div", { style: {
     flex: 1,
@@ -191,7 +191,7 @@ const WorryGame = ({ onExit }) => {
   } }, [
     { emoji: "\u270D\uFE0F", text: "\uC9C0\uAE08 \uB9C8\uC74C\uC758 \uC9D0 1~3\uAC00\uC9C0\uB97C \uC801\uC5B4\uC694" },
     { emoji: "\u{1FAE7}", text: "\uAC71\uC815\uB4E4\uC744 \uD48D\uC120\uC5D0 \uB2F4\uC544 \uC8FC\uB2D8\uAED8 \uC62C\uB824\uB4DC\uB9BD\uB2C8\uB2E4" },
-    { emoji: "\u{1F4A5}", text: "\uD074\uB9AD\uD574\uC11C \uD558\uB098\uC529 \uD130\uB728\uB824\uC694" }
+    { emoji: "\u{1F4A5}", text: t("\uD074\uB9AD\uD574\uC11C \uD558\uB098\uC529 \uD130\uB728\uB824\uC694", "Click to pop them one by one") }
   ].map((s, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: {
     display: "flex",
     alignItems: "center",
@@ -211,7 +211,7 @@ const WorryGame = ({ onExit }) => {
     boxShadow: "0 4px 16px rgba(91,126,200,0.4)",
     width: "100%",
     maxWidth: 300
-  } }, "\uC2DC\uC791\uD558\uAE30")));
+  } }, t("\uC2DC\uC791\uD558\uAE30", "Start"))));
   if (screen === "input") return /* @__PURE__ */ React.createElement("div", { style: {
     flex: 1,
     display: "flex",
@@ -221,7 +221,7 @@ const WorryGame = ({ onExit }) => {
   } }, /* @__PURE__ */ React.createElement(
     WBHeader,
     {
-      title: "\uAC71\uC815 \uC801\uAE30",
+      title: t("\uAC71\uC815 \uC801\uAE30", "Enter your worry"),
       left: /* @__PURE__ */ React.createElement("button", { onClick: () => setScreen("intro"), style: {
         fontFamily: "'Noto Sans KR',sans-serif",
         background: "none",
@@ -230,9 +230,9 @@ const WorryGame = ({ onExit }) => {
         fontSize: 13,
         cursor: "pointer",
         padding: "4px 0"
-      } }, "\u2190 \uB3CC\uC544\uAC00\uAE30")
+      } }, t("\u2190 \uB3CC\uC544\uAC00\uAE30", "\u2190 Back"))
     }
-  ), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "20px 24px 0" } }, /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", marginBottom: 22 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 16, fontWeight: 600, color: "#2C3E50", fontFamily: "'Noto Serif KR',serif" } }, "\uC9C0\uAE08 \uB9C8\uC74C\uC744 \uBB34\uAC81\uAC8C \uD558\uB294 \uAC83\uB4E4\uC740?"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "#8A9AB0", marginTop: 5 } }, "\uC544\uC8FC \uC791\uC740 \uB9C8\uC74C\uC758 \uC9D0\uB3C4 \uAD1C\uCC2E\uC544\uC694 \xB7 \uCD5C\uC18C 1\uAC1C \uC774\uC0C1")), inputs.map((val, i) => {
+  ), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "20px 24px 0" } }, /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", marginBottom: 22 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 16, fontWeight: 600, color: "#2C3E50", fontFamily: "'Noto Serif KR',serif" } }, t("\uC9C0\uAE08 \uB9C8\uC74C\uC744 \uBB34\uAC81\uAC8C \uD558\uB294 \uAC83\uB4E4\uC740?", "What's weighing on your mind right now?")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "#8A9AB0", marginTop: 5 } }, "\uC544\uC8FC \uC791\uC740 \uB9C8\uC74C\uC758 \uC9D0\uB3C4 \uAD1C\uCC2E\uC544\uC694 \xB7 \uCD5C\uC18C 1\uAC1C \uC774\uC0C1")), inputs.map((val, i) => {
     const c = WB_COLORS[i];
     return /* @__PURE__ */ React.createElement("div", { key: i, style: { marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 5 } }, /* @__PURE__ */ React.createElement("div", { style: {
       width: 22,
@@ -246,7 +246,7 @@ const WorryGame = ({ onExit }) => {
       color: "white",
       fontWeight: 700,
       flexShrink: 0
-    } }, i + 1), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: "#8A9AB0" } }, "\uAC71\uC815 ", i + 1, i > 0 ? " (\uC120\uD0DD)" : "")), /* @__PURE__ */ React.createElement(
+    } }, i + 1), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: "#8A9AB0" } }, t("\uAC71\uC815", "Worry"), " ", i + 1, i > 0 ? t(" (\uC120\uD0DD)", " (optional)") : "")), /* @__PURE__ */ React.createElement(
       "input",
       {
         type: "text",
@@ -285,7 +285,7 @@ const WorryGame = ({ onExit }) => {
     cursor: "pointer",
     width: "100%",
     marginTop: 2
-  } }, "\u2728 \uC608\uC2DC\uB85C \uCC44\uC6CC\uBCF4\uAE30")), /* @__PURE__ */ React.createElement("div", { style: { padding: "16px 24px 32px" } }, /* @__PURE__ */ React.createElement(
+  } }, t("\u2728 \uC608\uC2DC\uB85C \uCC44\uC6CC\uBCF4\uAE30", "\u2728 Fill with examples"))), /* @__PURE__ */ React.createElement("div", { style: { padding: "16px 24px 32px" } }, /* @__PURE__ */ React.createElement(
     "button",
     {
       onClick: handleStart,
@@ -305,7 +305,7 @@ const WorryGame = ({ onExit }) => {
         transition: "all 0.2s"
       }
     },
-    "\uD48D\uC120 \uB9CC\uB4E4\uAE30 \u{1FAE7}"
+    t("\uD48D\uC120 \uB9CC\uB4E4\uAE30 \u{1FAE7}", "Make bubbles \u{1FAE7}")
   )));
   if (screen === "pop") {
     const totalCount = bubbles.length;
@@ -320,7 +320,7 @@ const WorryGame = ({ onExit }) => {
     } }, /* @__PURE__ */ React.createElement(
       WBHeader,
       {
-        title: saving ? "\uC800\uC7A5 \uC911..." : `${poppedCount === totalCount ? "\u{1F389}" : "\u{1FAE7}"} ${poppedCount}/${totalCount} \uD130\uB728\uB838\uC5B4\uC694`,
+        title: saving ? t("\uC800\uC7A5 \uC911...", "Saving...") : `${poppedCount === totalCount ? "\u{1F389}" : "\u{1FAE7}"} ${poppedCount}/${totalCount} \uD130\uB728\uB838\uC5B4\uC694`,
         left: !saving && /* @__PURE__ */ React.createElement("button", { onClick: () => setScreen("input"), style: {
           fontFamily: "'Noto Sans KR',sans-serif",
           background: "none",
@@ -328,7 +328,7 @@ const WorryGame = ({ onExit }) => {
           border: "none",
           fontSize: 12,
           cursor: "pointer"
-        } }, "\u2190 \uB2E4\uC2DC \uC785\uB825"),
+        } }, t("\u2190 \uB2E4\uC2DC \uC785\uB825", "\u2190 Re-enter")),
         right: /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 5, alignItems: "center" } }, bubbles.map((b) => /* @__PURE__ */ React.createElement("div", { key: b.id, style: {
           width: 9,
           height: 9,
@@ -347,7 +347,7 @@ const WorryGame = ({ onExit }) => {
       zIndex: 0,
       color: "rgba(90,106,122,0.45)",
       fontSize: 13
-    } }, "\uD48D\uC120\uC744 \uB20C\uB7EC\uC11C \uD130\uB728\uB824 \uBCF4\uC138\uC694 \u{1F4A5}"), saving && /* @__PURE__ */ React.createElement("div", { style: {
+    } }, t("\uD48D\uC120\uC744 \uB20C\uB7EC\uC11C \uD130\uB728\uB824 \uBCF4\uC138\uC694 \u{1F4A5}", "Tap a bubble to pop it \u{1F4A5}")), saving && /* @__PURE__ */ React.createElement("div", { style: {
       position: "absolute",
       inset: 0,
       zIndex: 20,
@@ -434,7 +434,7 @@ const WorryGame = ({ onExit }) => {
         padding: "6px 12px",
         fontSize: 12,
         cursor: "pointer"
-      } }, "\uD5C8\uBE0C\uB85C \u2192")
+      } }, t("\uD5C8\uBE0C\uB85C \u2192", "Hub \u2192"))
     }
   ), /* @__PURE__ */ React.createElement("div", { style: {
     flex: 1,
@@ -459,7 +459,7 @@ const WorryGame = ({ onExit }) => {
     gap: 28,
     textAlign: "center",
     animation: "wbFadeUp 0.5s ease 0.2s both"
-  } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 24, fontWeight: 800, color: "#5B7EC8" } }, doneData.score), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "#8A9AB0", marginTop: 2 } }, "\uC810\uC218")), /* @__PURE__ */ React.createElement("div", { style: { width: 1, background: "rgba(0,0,0,0.07)" } }), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 24, fontWeight: 800, color: "#4A8A5A" } }, "+", doneData.expGained), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "#8A9AB0", marginTop: 2 } }, "\uACBD\uD5D8\uCE58"))), doneData?.leveledUp && /* @__PURE__ */ React.createElement("div", { style: {
+  } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 24, fontWeight: 800, color: "#5B7EC8" } }, doneData.score), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "#8A9AB0", marginTop: 2 } }, t("\uC810\uC218", "Score"))), /* @__PURE__ */ React.createElement("div", { style: { width: 1, background: "rgba(0,0,0,0.07)" } }), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 24, fontWeight: 800, color: "#4A8A5A" } }, "+", doneData.expGained), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "#8A9AB0", marginTop: 2 } }, t("\uACBD\uD5D8\uCE58", "EXP")))), doneData?.leveledUp && /* @__PURE__ */ React.createElement("div", { style: {
     background: "linear-gradient(135deg, #FFD700, #FFA500)",
     borderRadius: 12,
     padding: "10px 20px",
@@ -467,14 +467,14 @@ const WorryGame = ({ onExit }) => {
     fontWeight: 700,
     color: "white",
     animation: "wbAppear 0.5s ease"
-  } }, "\u{1F389} \uB808\uBCA8 \uC5C5!"), /* @__PURE__ */ React.createElement("div", { style: {
+  } }, t("\u{1F389} \uB808\uBCA8 \uC5C5!", "\u{1F389} Level Up!")), /* @__PURE__ */ React.createElement("div", { style: {
     background: "rgba(255,255,255,0.7)",
     borderRadius: 16,
     padding: "14px 18px",
     width: "100%",
     maxWidth: 320,
     animation: "wbFadeUp 0.5s ease 0.35s both"
-  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "#8A9AB0", marginBottom: 10, textAlign: "center" } }, "\uC624\uB298 \uB0B4\uB824\uB193\uC740 \uAC71\uC815\uB4E4 \u{1F33F}"), bubbles.map((b, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: {
+  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "#8A9AB0", marginBottom: 10, textAlign: "center" } }, t("\uC624\uB298 \uB0B4\uB824\uB193\uC740 \uAC71\uC815\uB4E4 \u{1F33F}", "Today's released worries \u{1F33F}")), bubbles.map((b, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: {
     display: "flex",
     alignItems: "center",
     gap: 8,
@@ -511,7 +511,7 @@ const WorryGame = ({ onExit }) => {
     padding: "12px",
     fontSize: 13,
     cursor: "pointer"
-  } }, "\uB2E4\uC2DC \uD558\uAE30"), /* @__PURE__ */ React.createElement("button", { onClick: () => onExit(doneData), style: {
+  } }, t("\uB2E4\uC2DC \uD558\uAE30", "Play again")), /* @__PURE__ */ React.createElement("button", { onClick: () => onExit(doneData), style: {
     fontFamily: "'Noto Sans KR',sans-serif",
     flex: 2,
     background: "linear-gradient(135deg, #7B9ED9, #5B7EC8)",
@@ -523,6 +523,6 @@ const WorryGame = ({ onExit }) => {
     fontWeight: 700,
     cursor: "pointer",
     boxShadow: "0 4px 12px rgba(91,126,200,0.4)"
-  } }, "\uC815\uC6D0\uC73C\uB85C \uB3CC\uC544\uAC00\uAE30 \u{1F33F}"))));
+  } }, t("\uC815\uC6D0\uC73C\uB85C \uB3CC\uC544\uAC00\uAE30 \u{1F33F}", "Back to hub \u{1F33F}")))));
   return null;
 };

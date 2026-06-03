@@ -47,26 +47,26 @@ const TREE_STYLE = `
 `;
 
 const STAGES = [
-  { id:'roots', title:'뿌리 — 현재 순간', emoji:'🌱',
+  { id:'roots', title:t('뿌리 — 현재 순간','Roots — Present Moment'), emoji:'🌱',
     color:'#7B5F4A', accent:'#C8A882', bg:'rgba(107,79,58,0.14)', border:'rgba(200,168,130,0.25)',
-    desc:'지금 이 순간에 닿아있어요.',
+    desc:t('지금 이 순간에 닿아있어요.','Touching the present moment.'),
     questions:[
-      {id:'r1',prompt:'지금 이 순간, 몸에서 느껴지는 감각은?',placeholder:'따뜻함, 긴장, 호흡의 리듬...',hint:'눈을 감고 10초만 느껴보세요'},
-      {id:'r2',prompt:'지금 내 마음속에 있는 감정은?',placeholder:'불안, 평온, 기대, 그리움...',hint:'좋은 감정이 아니어도 괜찮아요'},
+      {id:'r1',prompt:t('지금 이 순간, 몸에서 느껴지는 감각은?','What sensations do you feel in your body right now?'),placeholder:t('따뜻함, 긴장, 호흡의 리듬...','Warmth, tension, the rhythm of your breath...'),hint:t('눈을 감고 10초만 느껴보세요','Close your eyes and feel for just 10 seconds')},
+      {id:'r2',prompt:t('지금 내 마음속에 있는 감정은?','What emotion is in your heart right now?'),placeholder:t('불안, 평온, 기대, 그리움...','Anxiety, peace, anticipation, longing...'),hint:t('좋은 감정이 아니어도 괜찮아요','It\'s okay if it\'s not a positive emotion')},
     ]},
-  { id:'trunk', title:'줄기 — 나의 가치', emoji:'🌳',
+  { id:'trunk', title:t('줄기 — 나의 가치','Trunk — My Values'), emoji:'🌳',
     color:'#2D6A3A', accent:'#88D4A0', bg:'rgba(45,106,58,0.12)', border:'rgba(136,212,160,0.2)',
-    desc:'내가 소중히 여기는 것들로 이루어져요.',
+    desc:t('내가 소중히 여기는 것들로 이루어져요.','Made of what matters most to me.'),
     questions:[
-      {id:'t1',prompt:'내가 가장 소중하게 여기는 가치는?',placeholder:'관계, 성장, 자유, 창의, 정직...',hint:'지금 가장 먼저 떠오르는 것'},
-      {id:'t2',prompt:'미래의 나에게 전하고 싶은 한 마디는?',placeholder:'포기하지 마, 넌 충분해, 쉬어도 돼...',hint:'진심을 담아 써보세요'},
+      {id:'t1',prompt:t('내가 가장 소중하게 여기는 가치는?','What value do I cherish the most?'),placeholder:t('관계, 성장, 자유, 창의, 정직...','Relationships, growth, freedom, creativity, honesty...'),hint:t('지금 가장 먼저 떠오르는 것','The first thing that comes to mind')},
+      {id:'t2',prompt:t('미래의 나에게 전하고 싶은 한 마디는?','What one message do I want to send to my future self?'),placeholder:t('포기하지 마, 넌 충분해, 쉬어도 돼...','Don\'t give up, you\'re enough, it\'s okay to rest...'),hint:t('진심을 담아 써보세요','Write it with sincerity')},
     ]},
-  { id:'branches', title:'가지 — 나의 행동', emoji:'🌿',
+  { id:'branches', title:t('가지 — 나의 행동','Branches — My Actions'), emoji:'🌿',
     color:'#2D6A3A', accent:'#B8E8C4', bg:'rgba(45,106,58,0.09)', border:'rgba(184,232,196,0.2)',
-    desc:'가치를 향한 구체적인 한 걸음이에요.',
+    desc:t('가치를 향한 구체적인 한 걸음이에요.','A concrete step toward my values.'),
     questions:[
-      {id:'b1',prompt:'오늘 실천할 수 있는 작은 행동은?',placeholder:'5분 산책, 물 한 잔, 좋아하는 음악...',hint:'아주 작아도 괜찮아요'},
-      {id:'b2',prompt:'이번 주 나에게 주고 싶은 선물은?',placeholder:'충분한 잠, 맛있는 것, 혼자만의 시간...',hint:'나를 위한 선물'},
+      {id:'b1',prompt:t('오늘 실천할 수 있는 작은 행동은?','What small action can I take today?'),placeholder:t('5분 산책, 물 한 잔, 좋아하는 음악...','A 5-min walk, a glass of water, favorite music...'),hint:t('아주 작아도 괜찮아요','Even something very small is okay')},
+      {id:'b2',prompt:t('이번 주 나에게 주고 싶은 선물은?','What gift do I want to give myself this week?'),placeholder:t('충분한 잠, 맛있는 것, 혼자만의 시간...','Enough sleep, something delicious, time alone...'),hint:t('나를 위한 선물','A gift for myself')},
     ]},
 ];
 
@@ -336,13 +336,13 @@ function TreeGame({ onExit }) {
       <div style={{ display:'flex', alignItems:'center', gap:10 }}>
         <span style={{fontSize:20}}>🌳</span>
         <span style={{ fontSize:15, fontWeight:700, color:GT.cream,
-          fontFamily:"'Noto Serif KR',serif", letterSpacing:'-0.3px' }}>내면의 나무</span>
+          fontFamily:"'Noto Serif KR',serif", letterSpacing:'-0.3px' }}>{t('내면의 나무','Inner Tree')}</span>
       </div>
       <button onClick={()=>onExit(null)} style={{ fontFamily:"'Noto Sans KR',sans-serif",
         background:'rgba(136,212,160,0.1)', color:GT.skyGlow,
         border:'1px solid rgba(136,212,160,0.18)', borderRadius:10,
         padding:'6px 14px', fontSize:12, fontWeight:500, cursor:'pointer' }}>
-        허브로 →
+        {t('허브로 →','Hub →')}
       </button>
     </div>
   );
@@ -361,7 +361,7 @@ function TreeGame({ onExit }) {
             backdropFilter:'blur(8px)', borderRadius:12, padding:'7px 18px',
             border:'1px solid rgba(136,212,160,0.18)', animation:'fadeUp 0.6s ease' }}>
             <p style={{ fontSize:11, color:GT.leafGlow, margin:0, fontFamily:"'Noto Sans KR',sans-serif", fontWeight:500 }}>
-              새벽 숲에서 나를 만나는 시간 🌿
+              {t('새벽 숲에서 나를 만나는 시간 🌿','A time to meet myself in the dawn forest 🌿')}
             </p>
           </div>
         </div>
@@ -372,9 +372,9 @@ function TreeGame({ onExit }) {
           borderRadius:18, padding:'16px 18px', marginBottom:14,
           animation:'fadeUp 0.5s ease 0.1s both' }}>
           <h2 style={{ fontSize:16, fontWeight:700, color:GT.cream, fontFamily:"'Noto Serif KR',serif",
-            marginBottom:6, lineHeight:1.45 }}>내 마음의 나무를 가꾸어요</h2>
+            marginBottom:6, lineHeight:1.45 }}>{t('내 마음의 나무를 가꾸어요','Grow the tree of your mind')}</h2>
           <p style={{ fontSize:12, color:GT.muted, lineHeight:1.8, margin:0, fontFamily:"'Noto Sans KR',sans-serif" }}>
-            3단계를 따라 뿌리·줄기·가지를 완성하며<br/>나만의 내면의 나무를 키워보세요.
+            {t('3단계를 따라 뿌리·줄기·가지를 완성하며','Follow 3 steps to complete roots, trunk, and branches')}<br/>{t('나만의 내면의 나무를 키워보세요.','and grow your own inner tree.')}
           </p>
         </div>
 
@@ -407,7 +407,7 @@ function TreeGame({ onExit }) {
           onClick={()=>{ startRef.current=Date.now(); setScreen('writing'); }}
           style={{ background:`linear-gradient(135deg,#5CAF6A,#2D6A3A)`, color:'white',
             boxShadow:'0 6px 20px rgba(45,106,58,0.42)' }}>
-          🌱 나무 가꾸기 시작
+          🌱 {t('나무 가꾸기 시작','Start growing the tree')}
         </button>
       </div>
     </div>
@@ -458,7 +458,7 @@ function TreeGame({ onExit }) {
                 <div style={{ fontSize:9, fontWeight:isActive?700:400,
                   color:isActive?s.accent:isDone?GT.muted:'rgba(255,255,255,0.25)',
                   fontFamily:"'Noto Sans KR',sans-serif", transition:'color 0.3s' }}>
-                  {s.id==='roots'?'뿌리':s.id==='trunk'?'줄기':'가지'}
+                  {s.id==='roots'?t('뿌리','Roots'):s.id==='trunk'?t('줄기','Trunk'):t('가지','Branches')}
                 </div>
               </div>
             );
@@ -513,7 +513,7 @@ function TreeGame({ onExit }) {
           {Object.entries(answers).filter(([k,v])=>v?.trim()&&k!==currentQ?.id).length>0 && (
             <div style={{marginBottom:14}}>
               <div style={{ fontSize:10, color:GT.muted, marginBottom:5,
-                fontFamily:"'Noto Sans KR',sans-serif" }}>이전 답변</div>
+                fontFamily:"'Noto Sans KR',sans-serif" }}>{t('이전 답변','Previous answers')}</div>
               {Object.entries(answers).filter(([k,v])=>v?.trim()&&k!==currentQ?.id).map(([k,v],i)=>{
                 const si  = STAGES.findIndex(s=>s.questions.some(q=>q.id===k));
                 const st  = STAGES[si];
@@ -535,7 +535,7 @@ function TreeGame({ onExit }) {
             style={{ background:canNext?`linear-gradient(135deg,#5CAF6A,${currentStage.color})`:'rgba(255,255,255,0.07)',
               color:canNext?'white':'rgba(255,255,255,0.28)',
               boxShadow:canNext?'0 6px 20px rgba(45,106,58,0.35)':'none' }}>
-            {stageIdx===STAGES.length-1&&qIdx===currentStage.questions.length-1?'🌳 나무 완성하기':'다음 →'}
+            {stageIdx===STAGES.length-1&&qIdx===currentStage.questions.length-1?`🌳 ${t('나무 완성하기','Complete the tree')}`:t('다음 →','Next →')}
           </button>
         </div>
       </div>
@@ -559,7 +559,7 @@ function TreeGame({ onExit }) {
             border:'1px solid rgba(136,212,160,0.28)', animation:'fadeUp 0.6s ease' }}>
             <div style={{fontSize:22,marginBottom:2}}>🌳</div>
             <div style={{ fontSize:14, fontWeight:700, color:GT.leafGlow,
-              fontFamily:"'Noto Serif KR',serif" }}>내면의 나무 완성!</div>
+              fontFamily:"'Noto Serif KR',serif" }}>{t('내면의 나무 완성!','Inner Tree Complete!')}</div>
           </div>
         </div>
       </div>
@@ -567,7 +567,7 @@ function TreeGame({ onExit }) {
       <div style={{ flex:1, overflowY:'auto', padding:'18px 18px 28px' }}>
         <p style={{ fontSize:12, color:GT.muted, lineHeight:1.8, marginBottom:18,
           textAlign:'center', fontFamily:"'Noto Sans KR',sans-serif" }}>
-          뿌리·줄기·가지를 모두 채웠어요.<br/>이 글들이 당신의 마음 지도가 되길 바랍니다.
+          {t('뿌리·줄기·가지를 모두 채웠어요.','You have filled in roots, trunk, and branches.')}<br/>{t('이 글들이 당신의 마음 지도가 되길 바랍니다.','May these words become a map of your heart.')}
         </p>
 
         <div style={{ display:'flex', flexDirection:'column', gap:11, marginBottom:22 }}>
@@ -594,11 +594,11 @@ function TreeGame({ onExit }) {
         <button className="tree-btn" onClick={handleFinish} disabled={finishing}
           style={{ background:finishing?'rgba(255,255,255,0.08)':`linear-gradient(135deg,#5CAF6A,#2D6A3A)`,
             color:'white', boxShadow:'0 6px 20px rgba(45,106,58,0.42)', marginBottom:10 }}>
-          {finishing?'저장 중...':'✨ 경험치 받기'}
+          {finishing?t('저장 중...','Saving...'):`✨ ${t('경험치 받기','Claim EXP')}`}
         </button>
         <button className="tree-btn-ghost" onClick={()=>onExit(null)}
           style={{ border:'1px solid rgba(136,212,160,0.18)', color:GT.muted }}>
-          경험치 없이 허브로 →
+          {t('경험치 없이 허브로 →','Back to Hub without EXP →')}
         </button>
       </div>
     </div>
