@@ -24,6 +24,12 @@ const C = {
 // ── 언어 설정 및 번역 헬퍼 ───────────────────────────────
 const COUPLE_LANG = new URLSearchParams(location.search).get('lang') || 'ko';
 const tl = (ko, en) => COUPLE_LANG === 'en' ? en : ko;
+// 언어 토글: lang 파라미터만 바꿔 리로드(로그인은 localStorage couple_token으로 유지). ?t=·invite 등 기존 파라미터 보존
+const toggleCoupleLang = () => {
+  const u = new URL(location.href);
+  u.searchParams.set('lang', COUPLE_LANG === 'en' ? 'ko' : 'en');
+  location.href = u.toString();
+};
 
 // ── 상수 ──────────────────────────────────────────────────
 const TOKEN_KEY   = 'couple_token';
@@ -587,8 +593,9 @@ function LoginGate() {
       minHeight: '100vh', display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
       background: `linear-gradient(160deg, ${C.rosePale}, ${C.cream}, ${C.lavPale})`,
-      padding: 24, textAlign: 'center',
+      padding: 24, textAlign: 'center', position: 'relative',
     }}>
+      <button onClick={toggleCoupleLang} title="Language" style={{ position: 'absolute', top: 16, right: 16, fontSize: 12, fontWeight: 700, color: C.muted, cursor: 'pointer', padding: '4px 10px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.08)', background: 'rgba(255,255,255,0.6)' }}>{COUPLE_LANG === 'en' ? '한' : 'EN'}</button>
       <div style={{ fontSize: 72, marginBottom: 20, animation: 'heartbeat 2s ease-in-out infinite' }}>{SERVICE_ICON}</div>
       <h1 style={{
         fontSize: 28, fontWeight: 700, color: C.dark, marginBottom: 10,
@@ -3599,6 +3606,7 @@ useEffect(() => {
           <div style={{ fontSize: 12, fontWeight: 700, color: C.rose, background: C.rosePale, padding: '4px 12px', borderRadius: 100, border: `1px solid ${C.roseL}44` }}>
             ✦ {user?.credits ?? 0}
           </div>
+          <button onClick={toggleCoupleLang} title="Language" style={{ fontSize: 12, fontWeight: 700, color: C.muted, cursor: 'pointer', padding: '4px 10px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.08)', background: 'rgba(255,255,255,0.6)' }}>{COUPLE_LANG === 'en' ? '한' : 'EN'}</button>
           <a href={MAUMFUL_URL} style={{ fontSize: 12, color: C.muted, textDecoration: 'none', padding: '4px 10px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.08)', background: 'rgba(255,255,255,0.6)' }}>{BACK_LABEL}</a>
         </div>
       </nav>
