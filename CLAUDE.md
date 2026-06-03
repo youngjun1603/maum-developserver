@@ -130,6 +130,16 @@ npm run deploy:cts       # lightoflife-couple (wrangler.lightoflife.toml) 배포
 - **결과 레벨:** calc의 `level` 한글값 유지(`levelConfig[level]` 조회 키), 표시만 `tLevel(ko)` 매핑(LEVEL_EN + `||ko` 폴백)
 - **⚠️ 섀도잉 함정:** `.map(t => ...)` 파라미터 `t`가 번역 헬퍼 `t`를 가림 → 내부 `t('..','..')` 호출 시 런타임 크래시. map 파라미터를 `tt`/`s`로 rename할 것
 
+#### 성경 말씀 영어화 — 웹 영어성경(WEB) 사전 저장 방식
+
+**원칙: 성경 본문은 직접 번역하지 않는다.** 웹 정식 영어역본(WEB, World English Bible, 공개도메인)을 미리 받아 정적 맵으로 저장 후 노출. (사용자 결정)
+
+- **생성 스크립트:** `node scripts/gen_bible_en.mjs` — `migrations/0015_bible_verses.sql`의 전체 출처(78구절)를 `bible-api.com?translation=web`에서 수집해 `public/static/compiled/cts_bible_en.js` 생성. 재개 가능(기존분 유지)·429 백오프 내장.
+- **데이터 파일(`cts_bible_en.js`):** `window.CTS_BIBLE_EN`(한글출처→영어본문)·`CTS_BIBLE_BOOK_EN`·`CTS_BIBLE_THEME_EN` + `ctsBibleRefEn/ThemeEn/TextEn` 헬퍼. `src/index.tsx`에서 **다른 컴파일 스크립트보다 먼저** `<script>`로 로드(전역 공유).
+- **사용처:** `app.jsx`의 `CtsVerseText`, `landing.jsx`의 `vText/vTheme/vRef` — 런타임 fetch 없이 `window.ctsBible*` **동기 조회**, 영어 매핑 없으면 한글 폴백. 본문만 영어성경, 출처(책이름)·테마는 맵으로 영어화.
+- **⚠️ 새 말씀(출처) 추가 시:** 마이그레이션에 구절 추가 후 **반드시 `node scripts/gen_bible_en.mjs` 재실행** → 빌드·배포. 누락 시 새 구절은 영어 모드에서 한글로 폴백됨.
+- WEB는 "여호와"를 `Yahweh`로 표기(역본 특성, 정상).
+
 ---
 
 ## 주요 기능 구현 현황
