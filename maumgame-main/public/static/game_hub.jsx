@@ -2494,11 +2494,14 @@ function GameHubApp() {
 
           {/* 인사 + 레벨바 + streak + AI 팁 */}
           <div style={{ padding:'16px 20px 20px', display:'flex', flexDirection:'column', gap:12 }}>
-            <div>
-              <div style={{ fontSize:18, fontWeight:700, color:C.dark, marginBottom:4 }}>
-                {t(`안녕하세요, ${user?.nickname || user?.email?.split('@')[0]}님 👋`, `Hello, ${user?.nickname || user?.email?.split('@')[0]} 👋`)}{isMaster && <span style={{fontSize:11,background:'#2D6A4F',color:'white',borderRadius:6,padding:'2px 8px',fontWeight:700,marginLeft:6}}>MASTER</span>}
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:8 }}>
+              <div>
+                <div style={{ fontSize:18, fontWeight:700, color:C.dark, marginBottom:4 }}>
+                  {t(`안녕하세요, ${user?.nickname || user?.email?.split('@')[0]}님 👋`, `Hello, ${user?.nickname || user?.email?.split('@')[0]} 👋`)}{isMaster && <span style={{fontSize:11,background:'#2D6A4F',color:'white',borderRadius:6,padding:'2px 8px',fontWeight:700,marginLeft:6}}>MASTER</span>}
+                </div>
+                <div style={{ fontSize:13, color:C.muted }}>{gardenTheme.desc}</div>
               </div>
-              <div style={{ fontSize:13, color:C.muted }}>{gardenTheme.desc}</div>
+              <button onClick={toggleGameLang} title="Language" style={{ flexShrink:0, fontSize:12, fontWeight:700, color:C.muted, cursor:'pointer', padding:'5px 10px', borderRadius:8, border:'1px solid rgba(0,0,0,0.1)', background:'rgba(255,255,255,0.7)' }}>{GAME_LANG === 'en' ? '한' : 'EN'}</button>
             </div>
             <DailyTip hubData={data} />
             <LevelBar levelInfo={levelInfo} />

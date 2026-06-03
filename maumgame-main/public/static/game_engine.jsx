@@ -6,6 +6,12 @@
 // ── 언어 설정 (전역 — game_registry · game_hub · 각 게임 파일이 참조) ──
 const GAME_LANG = new URLSearchParams(location.search).get('lang') || 'ko';
 const t = (ko, en) => GAME_LANG === 'en' ? en : ko;
+// 언어 토글: lang 파라미터만 바꿔 리로드(로그인은 localStorage game_token으로 유지). ?t= 등 기존 파라미터 보존
+const toggleGameLang = () => {
+  const u = new URL(location.href);
+  u.searchParams.set('lang', GAME_LANG === 'en' ? 'ko' : 'en');
+  location.href = u.toString();
+};
 
 const GameEngine = (() => {
   const TOKEN_KEY = 'game_token';

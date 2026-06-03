@@ -1,5 +1,10 @@
 const GAME_LANG = new URLSearchParams(location.search).get("lang") || "ko";
 const t = (ko, en) => GAME_LANG === "en" ? en : ko;
+const toggleGameLang = () => {
+  const u = new URL(location.href);
+  u.searchParams.set("lang", GAME_LANG === "en" ? "ko" : "en");
+  location.href = u.toString();
+};
 const GameEngine = (() => {
   const TOKEN_KEY = "game_token";
   function authHeader() {
