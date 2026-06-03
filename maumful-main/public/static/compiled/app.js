@@ -1863,10 +1863,12 @@ function PsychologicalTestSystem() {
       const data = await res.json();
       const token = data.success ? data.coupleToken : tokenStore.getAccess();
       const codeParam = inviteCode ? `&code=${encodeURIComponent(inviteCode)}` : "";
-      window.open(`${base}${token ? "?t=" + encodeURIComponent(token) + codeParam : ""}`, "_blank", "noopener noreferrer");
+      const langParam = lang === "en" ? "&lang=en" : "";
+      window.open(`${base}${token ? "?t=" + encodeURIComponent(token) + codeParam + langParam : ""}`, "_blank", "noopener noreferrer");
     } catch {
       const token = tokenStore.getAccess();
-      window.open(`${base}${token ? "?t=" + encodeURIComponent(token) : ""}`, "_blank", "noopener noreferrer");
+      const langParam = lang === "en" ? "&lang=en" : "";
+      window.open(`${base}${token ? "?t=" + encodeURIComponent(token) + langParam : ""}`, "_blank", "noopener noreferrer");
     }
   }
   async function openMaumGame(gameKey = null) {
