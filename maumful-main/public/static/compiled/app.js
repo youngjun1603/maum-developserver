@@ -3838,6 +3838,7 @@ Visit Maumful and take the same test again to compare your progress.`));
   }, credits, regionConfig }));
   function ChargeView({ onClose, credits: credits2, regionConfig: regionConfig2 }) {
     const { useState: useS, useEffect: useE } = React;
+    const PAYMENT_LIVE = false;
     const isKorea = !regionConfig2 || regionConfig2.pg === "toss";
     const currency = isKorea ? "KRW" : "USD";
     const PACKAGES_KR = [
@@ -4161,23 +4162,23 @@ Visit Maumful and take the same test again to compare your progress.`));
       } }, errMsg), /* @__PURE__ */ React.createElement(
         "button",
         {
-          onClick: handlePay,
-          disabled: loading || !selPkg,
+          onClick: PAYMENT_LIVE ? handlePay : void 0,
+          disabled: !PAYMENT_LIVE || loading || !selPkg,
           style: {
             width: "100%",
             padding: "14px",
             borderRadius: 13,
             border: "none",
-            cursor: loading || !selPkg ? "default" : "pointer",
-            background: loading || !selPkg ? "#D1FAE5" : "linear-gradient(135deg,#2D6A4F,#40916C)",
-            color: "white",
+            cursor: !PAYMENT_LIVE ? "not-allowed" : loading || !selPkg ? "default" : "pointer",
+            background: !PAYMENT_LIVE ? "#E5E7EB" : loading || !selPkg ? "#D1FAE5" : "linear-gradient(135deg,#2D6A4F,#40916C)",
+            color: !PAYMENT_LIVE ? "#9CA3AF" : "white",
             fontSize: 15,
             fontWeight: 800,
             fontFamily: F,
-            opacity: loading || !selPkg ? 0.7 : 1
+            opacity: !PAYMENT_LIVE ? 1 : loading || !selPkg ? 0.7 : 1
           }
         },
-        loading ? t("\uACB0\uC81C \uC900\uBE44 \uC911...", "Processing...") : selPkg ? t(`${selPkg.label} \xB7 \u2726 ${selPkg.credits} \uD06C\uB808\uB527 \uACB0\uC81C\uD558\uAE30`, `Pay \xB7 \u2726 ${selPkg.credits} Credits`) : t("\uD328\uD0A4\uC9C0\uB97C \uC120\uD0DD\uD558\uC138\uC694", "Select a package")
+        !PAYMENT_LIVE ? t("\u{1F527} \uACB0\uC81C \uC900\uBE44 \uC911\uC785\uB2C8\uB2E4", "\u{1F527} Payment coming soon") : loading ? t("\uACB0\uC81C \uC900\uBE44 \uC911...", "Processing...") : selPkg ? t(`${selPkg.label} \xB7 \u2726 ${selPkg.credits} \uD06C\uB808\uB527 \uACB0\uC81C\uD558\uAE30`, `Pay \xB7 \u2726 ${selPkg.credits} Credits`) : t("\uD328\uD0A4\uC9C0\uB97C \uC120\uD0DD\uD558\uC138\uC694", "Select a package")
       )))
     );
   }

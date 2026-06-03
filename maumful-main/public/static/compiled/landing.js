@@ -267,16 +267,7 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
       fontWeight: 700,
       color: "#1A1A1A",
       letterSpacing: "-0.3px"
-    } }, "\uB9C8\uC74C\uD480"),
-    /* @__PURE__ */ React.createElement("span", { style: {
-      fontSize: 11,
-      fontWeight: 600,
-      color: "#2D6A4F",
-      background: "#D8F3DC",
-      padding: "2px 7px",
-      borderRadius: 100,
-      letterSpacing: "0.3px"
-    } }, "BETA")
+    } }, "\uB9C8\uC74C\uD480")
   ), /* @__PURE__ */ React.createElement("div", { className: "nav-desktop-links", style: { display: "flex", alignItems: "center", gap: 2 } }, navItems.map((item) => /* @__PURE__ */ React.createElement(
     "button",
     {

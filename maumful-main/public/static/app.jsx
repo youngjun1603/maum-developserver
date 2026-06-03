@@ -4712,6 +4712,8 @@ function PsychologicalTestSystem() {
   // ============================================================
   function ChargeView({ onClose, credits, regionConfig }) {
     const { useState: useS, useEffect: useE } = React;
+    // 결제 준비중 플래그 — 토스 정식 결제 승인 후 true로 변경하면 결제 버튼 활성화
+    const PAYMENT_LIVE = false;
     const isKorea   = !regionConfig || regionConfig.pg === 'toss';
     const currency  = isKorea ? 'KRW' : 'USD';
 
@@ -5001,17 +5003,19 @@ function PsychologicalTestSystem() {
                   {errMsg}
                 </div>
               )}
-              <button onClick={handlePay} disabled={loading || !selPkg}
+              <button onClick={PAYMENT_LIVE ? handlePay : undefined} disabled={!PAYMENT_LIVE || loading || !selPkg}
                 style={{ width:'100%', padding:'14px', borderRadius:13, border:'none',
-                  cursor: loading||!selPkg ? 'default' : 'pointer',
-                  background: loading||!selPkg ? '#D1FAE5' : 'linear-gradient(135deg,#2D6A4F,#40916C)',
-                  color:'white', fontSize:15, fontWeight:800, fontFamily:F,
-                  opacity: loading||!selPkg ? 0.7 : 1 }}>
-                {loading
-                  ? t('결제 준비 중...', 'Processing...')
-                  : selPkg
-                    ? t(`${selPkg.label} · ✦ ${selPkg.credits} 크레딧 결제하기`, `Pay · ✦ ${selPkg.credits} Credits`)
-                    : t('패키지를 선택하세요', 'Select a package')}
+                  cursor: !PAYMENT_LIVE ? 'not-allowed' : (loading||!selPkg ? 'default' : 'pointer'),
+                  background: !PAYMENT_LIVE ? '#E5E7EB' : (loading||!selPkg ? '#D1FAE5' : 'linear-gradient(135deg,#2D6A4F,#40916C)'),
+                  color: !PAYMENT_LIVE ? '#9CA3AF' : 'white', fontSize:15, fontWeight:800, fontFamily:F,
+                  opacity: !PAYMENT_LIVE ? 1 : (loading||!selPkg ? 0.7 : 1) }}>
+                {!PAYMENT_LIVE
+                  ? t('🔧 결제 준비 중입니다', '🔧 Payment coming soon')
+                  : loading
+                    ? t('결제 준비 중...', 'Processing...')
+                    : selPkg
+                      ? t(`${selPkg.label} · ✦ ${selPkg.credits} 크레딧 결제하기`, `Pay · ✦ ${selPkg.credits} Credits`)
+                      : t('패키지를 선택하세요', 'Select a package')}
               </button>
             </div>
           )}
