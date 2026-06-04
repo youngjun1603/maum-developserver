@@ -8053,7 +8053,7 @@ function PsychologicalTestSystem() {
     const recommendations = [];
     if (allText.includes("힘들") || allText.includes("어렵") || allText.includes("갈등")) {
       recommendations.push("• 정기적인 심리 상담을 통한 감정 표현 및 해소");
-      recommendations.push("• 인지행동치료(CBT) 기법을 통한 사고 패턴 개선");
+      recommendations.push("• 인지행동(CBT) 관점에서 사고 패턴 돌아보기");
     }
     if (allText.includes("불안") || allText.includes("걱정") || allText.includes("두렵")) {
       recommendations.push("• 이완 훈련 및 마음챙김 명상 실천");
@@ -8294,7 +8294,7 @@ function PsychologicalTestSystem() {
     }
     
     if (total < 120) {
-      recommendations.push("[상담 접근법]\n• Bowen 가족치료 기법 활용\n• 자아분화 향상 프로그램 참여\n• 정서 조절 기술 훈련\n• 가족 관계 재구조화 작업");
+      recommendations.push("[전문 상담 시 참고할 수 있는 접근]\n• Bowen 가족체계 관점\n• 자아분화 이해 높이기\n• 정서 조절 연습\n• 관계 패턴 돌아보기");
     }
     
     if (strongAreas.length > 0) {
