@@ -181,8 +181,8 @@ const GAME_REGISTRY = [
     emoji: "\u{1FAE7}",
     tagline: t("\uAC71\uC815\uC744 \uD48D\uC120\uC5D0 \uB2F4\uC544 \uB0A0\uB824 \uBCF4\uB0B4\uC694", "Put your worries in bubbles and let them go"),
     description: t(
-      "ACT(\uC218\uC6A9\uC804\uB150\uCE58\uB8CC) \uAE30\uBC18 \uC778\uC9C0 \uD0C8\uC735\uD569 \uD6C8\uB828. \uC9C0\uAE08 \uB9C8\uC74C\uC744 \uBB34\uAC81\uAC8C \uD558\uB294 \uAC71\uC815\uB4E4\uC744 \uD48D\uC120\uC5D0 \uB2F4\uACE0 \uD558\uB098\uC529 \uD130\uB728\uB9AC\uBA70 \uB0B4\uB824\uB193\uB294 \uC5F0\uC2B5\uC744 \uD574\uC694. \uAC71\uC815\uC740 \uC0DD\uAC01\uC77C \uBFD0\uC774\uC5D0\uC694.",
-      "ACT-based cognitive defusion training. Place your worries into bubbles and pop them one by one \u2014 practicing letting go. Worry is just a thought."
+      "\uC218\uC6A9\uC804\uB150(ACT) \uC6D0\uB9AC\uC5D0\uC11C \uCC29\uC548\uD55C \uB9C8\uC74C \uB0B4\uB824\uB193\uAE30 \uC5F0\uC2B5. \uC9C0\uAE08 \uB9C8\uC74C\uC744 \uBB34\uAC81\uAC8C \uD558\uB294 \uAC71\uC815\uB4E4\uC744 \uD48D\uC120\uC5D0 \uB2F4\uACE0 \uD558\uB098\uC529 \uD130\uB728\uB9AC\uBA70 \uB0B4\uB824\uB193\uC544 \uBCF4\uC138\uC694. \uAC71\uC815\uC740 \uC0DD\uAC01\uC77C \uBFD0\uC774\uC5D0\uC694.",
+      "A letting-go exercise inspired by ACT (acceptance & commitment) principles. Place your worries into bubbles and pop them one by one. Worry is just a thought."
     ),
     tags: [t("\uC774\uC644", "Relaxation"), t("\uC2A4\uD2B8\uB808\uC2A4\uD574\uC18C", "Stress Relief"), "ACT", t("\uB9C8\uC74C\uCC59\uAE40", "Mindfulness")],
     requiredTests: [],
