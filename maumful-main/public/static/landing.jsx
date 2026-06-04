@@ -511,7 +511,7 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
             </h1>
 
             <p style={{ fontSize: 17, color: '#5A5A5A', lineHeight: 1.8, marginBottom: 36 }}>
-              {tl(<>임상에서 검증된 표준 심리검사를 온라인에서 간편하게.<br />검사 후 AI 상담으로 나의 결과를 깊이 이해하세요.</>, <>Clinically validated assessments — easily accessible online.<br />Understand your results deeply through AI counseling after each test.</>)}
+              {tl(<>전문가들이 널리 활용하는 표준 심리검사를 온라인에서 간편하게.<br />검사 후 AI 상담으로 나의 결과를 깊이 이해하세요.</>, <>Standardized self-assessments widely used by professionals — easily accessible online.<br />Understand your results deeply through AI counseling after each test.</>)}
             </p>
 
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -668,7 +668,7 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
               {tl(<>10가지 전문 <span style={{ color: '#2D6A4F' }}>심리·진로 검사</span></>, <>10 Professional <span style={{ color: '#2D6A4F' }}>Assessments</span></>)}
             </h2>
             <p style={{ fontSize: 16, color: '#5A5A5A', maxWidth: 480, margin: '0 auto' }}>
-              {tl("정신건강 전문가들이 실제 임상에서 사용하는 표준화된 검사 도구를 제공합니다", "Standardized assessment tools used by mental health professionals in real clinical settings")}
+              {tl("정신건강 분야에서 널리 활용되는 표준화된 자가점검 도구를 제공합니다", "Standardized self-check tools widely used in the mental wellness field")}
             </p>
           </div>
 
@@ -755,9 +755,9 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }} className="features-grid">
             {[
               {
-                icon: '🏥', bg: '#D8F3DC',
-                title: tl('임상 표준화 검사', 'Clinically Validated'),
-                desc: tl('PHQ-9, GAD-7 등 실제 병원·상담센터에서 사용하는 국제 표준 도구를 동일하게 제공합니다. 전문가가 신뢰하는 기준입니다.', 'We offer the same international standard tools used in real hospitals and counseling centers — the benchmarks trusted by professionals.'),
+                icon: '📋', bg: '#D8F3DC',
+                title: tl('표준화 심리검사', 'Standardized Tools'),
+                desc: tl('PHQ-9, GAD-7 등 국제적으로 널리 쓰이는 표준 자가점검 문항을 바탕으로 구성했습니다. 전문가들이 신뢰하는 문항 기준을 따릅니다.', 'Built on internationally recognized standard self-check items such as PHQ-9 and GAD-7 — following criteria trusted by professionals.'),
               },
               {
                 icon: '🤖', bg: '#EEF0FF',
@@ -1275,7 +1275,7 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
                 {tl(<>마음을 가꾸는<br /><span style={{ color: '#2D6A4F' }}>치유 게임</span></>, <>Games that<br /><span style={{ color: '#2D6A4F' }}>heal your mind</span></>)}
               </h2>
               <p style={{ fontSize: 16, color: '#5A5A5A', lineHeight: 1.8, marginBottom: 28 }}>
-                {tl(<>심리검사 결과와 연동된 치유 게임으로<br />일상 속에서 마음 건강을 회복하세요.</>, <>Healing games linked to your test results — restore your mental wellness in everyday life.</>)}
+                {tl(<>심리검사 결과와 연동된 마음 돌봄 게임으로<br />일상 속에서 나의 마음을 돌보세요.</>, <>Mind-care games linked to your test results — take care of your mind in everyday life.</>)}
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
                 {tl([
@@ -1424,7 +1424,7 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
                 {tl([
                   { icon: '💕', text: 'BIG5 궁합 분석 — 성격 차이를 강점으로 전환' },
                   { icon: '🤖', text: 'AI 커플 리포트 — 파트너와 함께 분석 (무료)' },
-                  { icon: '📊', text: '관계 건강도 체크인 — 월 1회 무료 진단' },
+                  { icon: '📊', text: '관계 건강도 체크인 — 월 1회 무료' },
                   { icon: '🗓️', text: '데이트 코스 추천 — 취향 기반 AI 개인화' },
                 ], [
                   { icon: '💕', text: 'BIG5 Compatibility — Turn personality differences into strengths' },
