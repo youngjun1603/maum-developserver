@@ -8005,7 +8005,7 @@ function PsychologicalTestSystem() {
       if (allText.includes("없") || allText.includes("괜찮")) {
         analysis = "불안 수준이 낮고 심리적 안정감이 양호합니다. 현재의 대처 방식을 유지하는 것이 좋습니다.";
       } else if (allText.includes("실패") || allText.includes("거절") || allText.includes("혼자")) {
-        analysis = "특정 영역에 대한 불안감이 관찰됩니다. 이는 자존감과 연결될 수 있으며, 인지행동치료적 접근이 도움이 될 수 있습니다.";
+        analysis = "특정 영역에 대한 불안감이 나타날 수 있습니다. 이는 자존감과 연결될 수 있으며, 인지행동(CBT) 기반 접근이 도움이 될 수 있습니다.";
       } else {
         analysis = "다양한 두려움 요인이 나타납니다. 불안 관리 기법을 학습하고 대처 자원을 강화하는 것이 권장됩니다.";
       }

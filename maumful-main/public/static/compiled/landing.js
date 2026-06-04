@@ -1018,11 +1018,11 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
     justifyContent: "center",
     fontSize: 18
   } }, "\u{1F916}"), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 600, color: "white" } }, tl("\uB9C8\uC74C\uC774 (AI \uC0C1\uB2F4)", "Maumi (AI Counselor)")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "rgba(255,255,255,0.45)" } }, "\u25CF ", tl("\uC628\uB77C\uC778", "Online")))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } }, tl([
-    { type: "ai", text: "PHQ-9 \uACB0\uACFC\uB97C \uD655\uC778\uD588\uC5B4\uC694. \uC911\uB4F1\uB3C4 \uC218\uC900\uC758 \uC6B0\uC6B8 \uC99D\uC0C1\uC774 \uB098\uD0C0\uB0AC\uB294\uB370, \uD2B9\uD788 \uC218\uBA74\uACFC \uC9D1\uC911\uB825 \uBD80\uBD84\uC774 \uB208\uC5D0 \uB744\uB124\uC694. \uC880 \uB354 \uC774\uC57C\uAE30\uD574\uBCFC\uAE4C\uC694?" },
+    { type: "ai", text: "PHQ-9 \uACB0\uACFC\uB97C \uD655\uC778\uD588\uC5B4\uC694. \uC9C0\uB09C 2\uC8FC\uAC04 \uC6B0\uC6B8\uAC10\uC774 \uB2E4\uC18C \uB192\uAC8C \uB098\uD0C0\uB0AC\uB294\uB370, \uD2B9\uD788 \uC218\uBA74\uACFC \uC9D1\uC911\uB825 \uBD80\uBD84\uC774 \uB208\uC5D0 \uB744\uB124\uC694. \uC880 \uB354 \uC774\uC57C\uAE30\uD574\uBCFC\uAE4C\uC694?" },
     { type: "user", text: "\uB124, \uC694\uC998 \uC7A0\uC744 \uC798 \uBABB \uC790\uACE0 \uC788\uC5B4\uC694" },
     { type: "ai", text: "\uC218\uBA74 \uC5B4\uB824\uC6C0\uC774 \uC5BC\uB9C8\uB098 \uB410\uB294\uC9C0 \uC54C \uC218 \uC788\uC744\uAE4C\uC694? \uCD5C\uADFC\uC5D0 \uD2B9\uBCC4\uD788 \uC2A4\uD2B8\uB808\uC2A4\uBC1B\uB294 \uC77C\uC774 \uC788\uC5C8\uB098\uC694?" }
   ], [
-    { type: "ai", text: "I've reviewed your PHQ-9 results. You're showing moderate depression symptoms \u2014 particularly around sleep and concentration. Want to talk more about it?" },
+    { type: "ai", text: "I've looked at your PHQ-9 results. Your mood has been somewhat low over the past two weeks \u2014 sleep and concentration stand out in particular. Want to talk more about it?" },
     { type: "user", text: "Yes, I've been having a hard time sleeping lately." },
     { type: "ai", text: "How long have you been struggling with sleep? Has anything particularly stressful been happening recently?" }
   ]).map((msg, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: {
@@ -1114,13 +1114,13 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
   } }, "\u{1F33F}"), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 16, fontWeight: 700, color: "#1A1A1A" } }, tl("\uB9C8\uC74C\uD480 AI \uC0C1\uB2F4", "Maumful AI Counseling")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "#52B788" } }, tl("\uC2EC\uB9AC\uAC80\uC0AC \uAE30\uBC18 \uC9C0\uC18D \uAD00\uB9AC", "Assessment-based continuous care")))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12 } }, tl([
     "PHQ-9, GAD-7 \uB4F1 \uAC80\uC0AC \uACB0\uACFC\uB97C \uC774\uBBF8 \uC54C\uACE0 \uB300\uD654",
     "\uC774\uC804 \uAC80\uC0AC \uC774\uB825\xB7\uAC10\uC815 \uAE30\uB85D\uC744 \uAE30\uC5B5\uD574 \uB9E5\uB77D \uC720\uC9C0",
-    "\uB0B4 \uC810\uC218\uC640 \uC99D\uC0C1 \uD328\uD134 \uAE30\uBC18 \uAC1C\uC778\uD654 \uC0C1\uB2F4",
+    "\uB0B4 \uC810\uC218\uC640 \uC751\uB2F5 \uD328\uD134 \uAE30\uBC18 \uAC1C\uC778\uD654 \uC0C1\uB2F4",
     "\uC2DC\uAC04 \uACBD\uACFC\uC5D0 \uB530\uB978 \uC2EC\uB9AC \uBCC0\uD654 \uD2B8\uB80C\uB4DC \uCD94\uC801",
     "\uB098\uB9CC\uC758 \uB370\uC774\uD130 \uD504\uB85C\uD544\uB85C \uC815\uBC00\uD55C \uC778\uC0AC\uC774\uD2B8"
   ], [
     "Already knows your PHQ-9, GAD-7 results when you chat",
     "Maintains context from your past test history and mood logs",
-    "Personalized counseling based on your scores and symptom patterns",
+    "Personalized counseling based on your scores and response patterns",
     "Tracks your psychological changes and trends over time",
     "Precise insights powered by your personal data profile"
   ]).map((t) => /* @__PURE__ */ React.createElement("div", { key: t, style: { display: "flex", alignItems: "center", gap: 10 } }, /* @__PURE__ */ React.createElement("span", { style: { color: "#52B788", fontSize: 16, flexShrink: 0 } }, "\u2713"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, color: "#3A3A3A" } }, t)))))), /* @__PURE__ */ React.createElement("div", { style: {
@@ -1394,7 +1394,7 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
       padding: "5px 14px",
       borderRadius: 100,
       marginBottom: 20
-    } }, "Healing Games"), /* @__PURE__ */ React.createElement("h2", { style: { fontSize: 36, fontWeight: 700, lineHeight: 1.3, marginBottom: 16 } }, tl(/* @__PURE__ */ React.createElement(React.Fragment, null, "\uB9C8\uC74C\uC744 \uAC00\uAFB8\uB294", /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { style: { color: "#2D6A4F" } }, "\uCE58\uC720 \uAC8C\uC784")), /* @__PURE__ */ React.createElement(React.Fragment, null, "Games that", /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { style: { color: "#2D6A4F" } }, "heal your mind")))), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 16, color: "#5A5A5A", lineHeight: 1.8, marginBottom: 28 } }, tl(/* @__PURE__ */ React.createElement(React.Fragment, null, "\uC2EC\uB9AC\uAC80\uC0AC \uACB0\uACFC\uC640 \uC5F0\uB3D9\uB41C \uB9C8\uC74C \uB3CC\uBD04 \uAC8C\uC784\uC73C\uB85C", /* @__PURE__ */ React.createElement("br", null), "\uC77C\uC0C1 \uC18D\uC5D0\uC11C \uB098\uC758 \uB9C8\uC74C\uC744 \uB3CC\uBCF4\uC138\uC694."), /* @__PURE__ */ React.createElement(React.Fragment, null, "Mind-care games linked to your test results \u2014 take care of your mind in everyday life."))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12, marginBottom: 32 } }, tl([
+    } }, "Healing Games"), /* @__PURE__ */ React.createElement("h2", { style: { fontSize: 36, fontWeight: 700, lineHeight: 1.3, marginBottom: 16 } }, tl(/* @__PURE__ */ React.createElement(React.Fragment, null, "\uB9C8\uC74C\uC744 \uAC00\uAFB8\uB294", /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { style: { color: "#2D6A4F" } }, "\uCE58\uC720 \uAC8C\uC784")), /* @__PURE__ */ React.createElement(React.Fragment, null, "Games that", /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { style: { color: "#2D6A4F" } }, "nurture your mind")))), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 16, color: "#5A5A5A", lineHeight: 1.8, marginBottom: 28 } }, tl(/* @__PURE__ */ React.createElement(React.Fragment, null, "\uC2EC\uB9AC\uAC80\uC0AC \uACB0\uACFC\uC640 \uC5F0\uB3D9\uB41C \uB9C8\uC74C \uB3CC\uBD04 \uAC8C\uC784\uC73C\uB85C", /* @__PURE__ */ React.createElement("br", null), "\uC77C\uC0C1 \uC18D\uC5D0\uC11C \uB098\uC758 \uB9C8\uC74C\uC744 \uB3CC\uBCF4\uC138\uC694."), /* @__PURE__ */ React.createElement(React.Fragment, null, "Mind-care games linked to your test results \u2014 take care of your mind in everyday life."))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12, marginBottom: 32 } }, tl([
       { icon: "\u{1F33F}", text: "\uB9C8\uC74C\uC758 \uC815\uC6D0 \u2014 \uD638\uD761 \uD6C8\uB828 + \uC778\uC9C0 \uAD50\uC815 (\uBB34\uB8CC)" },
       { icon: "\u{1F338}", text: "\uAC10\uC815\uAF43 \uCC3E\uAE30 \u2014 \uAC10\uC815 \uC778\uC2DD \uD6C8\uB828" },
       { icon: "\u2B50", text: "\uBCC4\uBE5B \uAC10\uC0AC \uC77C\uAE30 \u2014 \uAE0D\uC815\uC2EC\uB9AC\uD559 \uB8E8\uD2F4" },
@@ -1569,7 +1569,7 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
     ], [
       { icon: "\u{1F495}", text: "BIG5 Compatibility \u2014 Turn personality differences into strengths" },
       { icon: "\u{1F916}", text: "AI Couple Report \u2014 Analyze together with your partner (Free)" },
-      { icon: "\u{1F4CA}", text: "Relationship Check-In \u2014 Free monthly diagnosis" },
+      { icon: "\u{1F4CA}", text: "Relationship Check-In \u2014 Free, once a month" },
       { icon: "\u{1F5D3}\uFE0F", text: "Date Ideas \u2014 AI-personalized for your tastes" }
     ]).map((item) => /* @__PURE__ */ React.createElement("div", { key: item.text, style: { display: "flex", alignItems: "center", gap: 10 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 18 } }, item.icon), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, color: "#5A5A5A" } }, item.text)))), /* @__PURE__ */ React.createElement(
       "button",

@@ -867,11 +867,11 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {tl([
-                  { type: 'ai', text: 'PHQ-9 결과를 확인했어요. 중등도 수준의 우울 증상이 나타났는데, 특히 수면과 집중력 부분이 눈에 띄네요. 좀 더 이야기해볼까요?' },
+                  { type: 'ai', text: 'PHQ-9 결과를 확인했어요. 지난 2주간 우울감이 다소 높게 나타났는데, 특히 수면과 집중력 부분이 눈에 띄네요. 좀 더 이야기해볼까요?' },
                   { type: 'user', text: '네, 요즘 잠을 잘 못 자고 있어요' },
                   { type: 'ai', text: '수면 어려움이 얼마나 됐는지 알 수 있을까요? 최근에 특별히 스트레스받는 일이 있었나요?' },
                 ], [
-                  { type: 'ai', text: "I've reviewed your PHQ-9 results. You're showing moderate depression symptoms — particularly around sleep and concentration. Want to talk more about it?" },
+                  { type: 'ai', text: "I've looked at your PHQ-9 results. Your mood has been somewhat low over the past two weeks — sleep and concentration stand out in particular. Want to talk more about it?" },
                   { type: 'user', text: "Yes, I've been having a hard time sleeping lately." },
                   { type: 'ai', text: "How long have you been struggling with sleep? Has anything particularly stressful been happening recently?" },
                 ]).map((msg, i) => (
@@ -986,13 +986,13 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
                 {tl([
                   'PHQ-9, GAD-7 등 검사 결과를 이미 알고 대화',
                   '이전 검사 이력·감정 기록을 기억해 맥락 유지',
-                  '내 점수와 증상 패턴 기반 개인화 상담',
+                  '내 점수와 응답 패턴 기반 개인화 상담',
                   '시간 경과에 따른 심리 변화 트렌드 추적',
                   '나만의 데이터 프로필로 정밀한 인사이트',
                 ], [
                   'Already knows your PHQ-9, GAD-7 results when you chat',
                   'Maintains context from your past test history and mood logs',
-                  'Personalized counseling based on your scores and symptom patterns',
+                  'Personalized counseling based on your scores and response patterns',
                   'Tracks your psychological changes and trends over time',
                   'Precise insights powered by your personal data profile',
                 ]).map(t => (
@@ -1272,7 +1272,7 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
                 textTransform: 'uppercase', padding: '5px 14px', borderRadius: 100, marginBottom: 20,
               }}>Healing Games</div>
               <h2 style={{ fontSize: 36, fontWeight: 700, lineHeight: 1.3, marginBottom: 16 }}>
-                {tl(<>마음을 가꾸는<br /><span style={{ color: '#2D6A4F' }}>치유 게임</span></>, <>Games that<br /><span style={{ color: '#2D6A4F' }}>heal your mind</span></>)}
+                {tl(<>마음을 가꾸는<br /><span style={{ color: '#2D6A4F' }}>치유 게임</span></>, <>Games that<br /><span style={{ color: '#2D6A4F' }}>nurture your mind</span></>)}
               </h2>
               <p style={{ fontSize: 16, color: '#5A5A5A', lineHeight: 1.8, marginBottom: 28 }}>
                 {tl(<>심리검사 결과와 연동된 마음 돌봄 게임으로<br />일상 속에서 나의 마음을 돌보세요.</>, <>Mind-care games linked to your test results — take care of your mind in everyday life.</>)}
@@ -1429,7 +1429,7 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
                 ], [
                   { icon: '💕', text: 'BIG5 Compatibility — Turn personality differences into strengths' },
                   { icon: '🤖', text: 'AI Couple Report — Analyze together with your partner (Free)' },
-                  { icon: '📊', text: 'Relationship Check-In — Free monthly diagnosis' },
+                  { icon: '📊', text: 'Relationship Check-In — Free, once a month' },
                   { icon: '🗓️', text: 'Date Ideas — AI-personalized for your tastes' },
                 ]).map(item => (
                   <div key={item.text} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
