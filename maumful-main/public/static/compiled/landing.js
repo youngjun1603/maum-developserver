@@ -515,7 +515,7 @@ function MfSnsFooter({ tl }) {
     const k = window.Kakao;
     if (!k) return;
     if (!k.isInitialized()) k.init(window.KAKAO_APP_KEY);
-    k.Share.sendDefault({ objectType: "feed", content: { title: ttl, description: "\uB9C8\uC74C\uC758 \uBB34\uAC8C\uB97C \uAC00\uBCCD\uAC8C.", imageUrl: url + "/static/icon-512.png", link: { mobileWebUrl: url, webUrl: url } }, buttons: [{ title: tl("\uBB34\uB8CC\uB85C \uC2DC\uC791\uD558\uAE30", "Get Started"), link: { mobileWebUrl: url, webUrl: url } }] });
+    k.Share.sendDefault({ objectType: "feed", content: { title: ttl, description: "\uB9C8\uC74C\uC758 \uBB34\uAC8C\uB97C \uAC00\uBCCD\uAC8C.", imageUrl: url + "/static/og-share.png", link: { mobileWebUrl: url, webUrl: url } }, buttons: [{ title: tl("\uBB34\uB8CC\uB85C \uC2DC\uC791\uD558\uAE30", "Get Started"), link: { mobileWebUrl: url, webUrl: url } }] });
   };
   const S = { width: 20, height: 20, flexShrink: 0 };
   const IG = "linear-gradient(45deg,#f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%)";
