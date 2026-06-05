@@ -493,7 +493,7 @@ function MfSnsHeroBtn({ tl }) {
     if (!k.isInitialized()) k.init(window.KAKAO_APP_KEY);
     k.Share.sendDefault({
       objectType: "feed",
-      content: { title: "\uB9C8\uC74C\uD480 \u2014 \uC2EC\uB9AC\uAC80\uC0AC \xB7 AI\uC0C1\uB2F4 \xB7 \uCE58\uC720\uAC8C\uC784", description: "\uB9C8\uC74C\uC758 \uBB34\uAC8C\uB97C \uAC00\uBCCD\uAC8C.", imageUrl: window.location.origin + "/static/og-share.png?v=2", link: { mobileWebUrl: window.location.origin, webUrl: window.location.origin } },
+      content: { title: "\uB9C8\uC74C\uD480 \u2014 \uC2EC\uB9AC\uAC80\uC0AC \xB7 AI\uC0C1\uB2F4 \xB7 \uCE58\uC720\uAC8C\uC784", description: "\uB9C8\uC74C\uC758 \uBB34\uAC8C\uB97C \uAC00\uBCCD\uAC8C.", imageUrl: window.location.origin + "/static/og-share.png?v=3", link: { mobileWebUrl: window.location.origin, webUrl: window.location.origin } },
       buttons: [{ title: tl("\uBB34\uB8CC\uB85C \uC2DC\uC791\uD558\uAE30", "Get Started"), link: { mobileWebUrl: window.location.origin, webUrl: window.location.origin } }]
     });
   };
@@ -515,7 +515,7 @@ function MfSnsFooter({ tl }) {
     const k = window.Kakao;
     if (!k) return;
     if (!k.isInitialized()) k.init(window.KAKAO_APP_KEY);
-    k.Share.sendDefault({ objectType: "feed", content: { title: ttl, description: "\uB9C8\uC74C\uC758 \uBB34\uAC8C\uB97C \uAC00\uBCCD\uAC8C.", imageUrl: url + "/static/og-share.png?v=2", link: { mobileWebUrl: url, webUrl: url } }, buttons: [{ title: tl("\uBB34\uB8CC\uB85C \uC2DC\uC791\uD558\uAE30", "Get Started"), link: { mobileWebUrl: url, webUrl: url } }] });
+    k.Share.sendDefault({ objectType: "feed", content: { title: ttl, description: "\uB9C8\uC74C\uC758 \uBB34\uAC8C\uB97C \uAC00\uBCCD\uAC8C.", imageUrl: url + "/static/og-share.png?v=3", link: { mobileWebUrl: url, webUrl: url } }, buttons: [{ title: tl("\uBB34\uB8CC\uB85C \uC2DC\uC791\uD558\uAE30", "Get Started"), link: { mobileWebUrl: url, webUrl: url } }] });
   };
   const S = { width: 20, height: 20, flexShrink: 0 };
   const IG = "linear-gradient(45deg,#f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%)";

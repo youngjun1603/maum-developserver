@@ -3465,14 +3465,14 @@ app.get('/', (c) => {
   <meta property="og:type" content="website">
   <meta property="og:url" content="${siteUrl}/">
   <meta property="og:image" content="${siteUrl}/static/og-share.png">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
+  <meta property="og:image:width" content="1080">
+  <meta property="og:image:height" content="1080">
   <meta property="og:image:alt" content="마음풀 — 마음의 무게를 가볍게">
   <meta property="og:locale" content="ko_KR">
   <meta property="og:site_name" content="마음풀">
 
   <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="마음풀 — 온라인 심리검사 & AI 마음 상담">
   <meta name="twitter:description" content="PHQ-9·Big5 등 8종 심리검사. 가입 즉시 20 크레딧 무료.">
   <meta name="twitter:image" content="${siteUrl}/static/og-share.png">
