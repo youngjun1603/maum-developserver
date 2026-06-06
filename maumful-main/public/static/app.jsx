@@ -4157,17 +4157,17 @@ function PsychologicalTestSystem() {
       if (mode === 'single') body.count = parseInt(count, 10) || 1;
       else { if (code.trim()) body.code = code.trim(); if (maxR) body.max_redemptions = parseInt(maxR, 10); }
       try {
-        const d = await fetch('/api/admin/coupon/create', { method: 'POST', headers: { 'Content-Type': 'application/json', ...api._authHeader() }, body: JSON.stringify(body) }).then(r => r.json());
+        const d = await adminFetch('/api/admin/coupon/create', { method: 'POST', body: JSON.stringify(body) });
         setResult(d); if (d.success) loadBatches();
       } catch { setResult({ success: false, error: '네트워크 오류' }); }
       finally { setBusy(false); }
     };
     const loadBatches = async () => {
-      try { const d = await fetch('/api/admin/coupon/list', { headers: api._authHeader() }).then(r => r.json()); if (d.success) setBatches(d.batches); } catch {}
+      try { const d = await adminFetch('/api/admin/coupon/list'); if (d.success) setBatches(d.batches); } catch {}
     };
     const downloadCsv = async (batch) => {
       try {
-        const r = await fetch(`/api/admin/coupon/list?csv=1&batch=${encodeURIComponent(batch)}`, { headers: api._authHeader() });
+        const r = await fetch(`/api/admin/coupon/list?csv=1&batch=${encodeURIComponent(batch)}`, { headers: { 'Authorization': 'Bearer ' + adminSecretInput } });
         const blob = await r.blob(); const u = URL.createObjectURL(blob);
         const a = document.createElement('a'); a.href = u; a.download = `coupons_${batch}.csv`; a.click(); URL.revokeObjectURL(u);
       } catch {}
@@ -4175,7 +4175,7 @@ function PsychologicalTestSystem() {
     const inp = "px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-400";
     return (
       <div className="bg-white rounded-2xl p-5 mb-5 border-2 border-purple-100">
-        <div className="text-sm font-bold text-purple-700 mb-3">🛠️ 쿠폰 발행 (마스터)</div>
+        <div className="text-sm font-bold text-purple-700 mb-3">🎟️ 쿠폰 발행·관리</div>
         <div className="grid grid-cols-2 gap-2 mb-2">
           <select value={mode} onChange={e => setMode(e.target.value)} className={inp}>
             <option value="single">1회용 고유코드 N개</option>
@@ -4248,9 +4248,8 @@ function PsychologicalTestSystem() {
           </div>
         </div>
 
-        {/* 🎟️ 쿠폰 등록 */}
+        {/* 🎟️ 쿠폰 등록 (사용자) */}
         <CouponCard />
-        {currentUser?.email?.toLowerCase() === 'limyj007@gmail.com' && <MasterCouponPanel />}
 
         {/* 탭 */}
         <div className="flex gap-2 mb-5">
@@ -10660,11 +10659,13 @@ function PsychologicalTestSystem() {
             </div>
           )}
           <div className="flex gap-2 mb-6 flex-wrap">
-            {[['overview','📊 개요'],['users','👥 사용자'],['payments','💳 결제'],['tests','📋 검사']].map(([tab, label]) => (
+            {[['overview','📊 개요'],['users','👥 사용자'],['payments','💳 결제'],['tests','📋 검사'],['coupons','🎟️ 쿠폰']].map(([tab, label]) => (
               <button key={tab} onClick={() => { setAdminTab(tab); if(tab==='overview') loadAdminOverview(); else if(tab==='users') loadAdminUsers(); else if(tab==='payments') loadAdminPayments(); }}
                 className={S.tabBtn(adminTab===tab)}>{label}</button>
             ))}
           </div>
+
+          {adminTab === 'coupons' && <MasterCouponPanel />}
 
           {adminTab === 'overview' && adminStats && (
             <div>

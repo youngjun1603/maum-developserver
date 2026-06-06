@@ -3422,13 +3422,6 @@ function genCouponCode(len = 10): string {
   for (let i = 0; i < len; i++) s += A[buf[i] % A.length]
   return s
 }
-async function requireMaster(c: any): Promise<{ ok: boolean; userId?: number }> {
-  const userId = await getAuthUserId(c.req.raw, c.env.KV)
-  if (!userId) return { ok: false }
-  const u = await c.env.DB.prepare('SELECT email FROM users WHERE id=?').bind(userId).first<{ email: string }>()
-  return { ok: isMasterAccount(u?.email), userId }
-}
-
 // 사용자: 쿠폰 등록(사용)
 app.post('/api/coupon/redeem', async (c) => {
   const { DB, KV } = c.env
@@ -3475,11 +3468,11 @@ app.post('/api/coupon/redeem', async (c) => {
   return c.json({ success: true, credits: cp.value, balance, message: `🎟️ ${cp.value} 크레딧이 지급되었습니다!` })
 })
 
-// 관리자(마스터): 쿠폰 발행
+// 관리자: 쿠폰 발행 (관리자 패널 — adminGuard로 기존 admin과 동일 인증)
 app.post('/api/admin/coupon/create', async (c) => {
   const { DB } = c.env
-  const m = await requireMaster(c)
-  if (!m.ok) return c.json({ success: false, error: 'forbidden' }, 403)
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
 
   const b = await c.req.json().catch(() => ({} as any))
   const value = parseInt(b.value, 10)
@@ -3494,7 +3487,7 @@ app.post('/api/admin/coupon/create', async (c) => {
     const maxR = b.max_redemptions != null ? (parseInt(b.max_redemptions, 10) || null) : null
     try {
       await DB.prepare('INSERT INTO coupons (code,type,value,max_redemptions,valid_until,source,batch_id,created_by) VALUES (?,?,?,?,?,?,?,?)')
-        .bind(code, 'credit', value, maxR, validUntil, source, batchId, m.userId ?? null).run()
+        .bind(code, 'credit', value, maxR, validUntil, source, batchId, null).run()
     } catch {
       return c.json({ success: false, error: '이미 존재하는 코드입니다. 다른 코드를 입력하세요.' }, 409)
     }
@@ -3509,7 +3502,7 @@ app.post('/api/admin/coupon/create', async (c) => {
       const code = genCouponCode(10)
       try {
         await DB.prepare('INSERT INTO coupons (code,type,value,max_redemptions,valid_until,source,batch_id,created_by) VALUES (?,?,?,1,?,?,?,?)')
-          .bind(code, 'credit', value, validUntil, source, batchId, m.userId ?? null).run()
+          .bind(code, 'credit', value, validUntil, source, batchId, null).run()
         codes.push(code)
         break
       } catch { /* 코드 충돌 → 재생성 */ }
@@ -3518,11 +3511,11 @@ app.post('/api/admin/coupon/create', async (c) => {
   return c.json({ success: true, mode, count: codes.length, codes, batchId })
 })
 
-// 관리자(마스터): 발행 배치 목록 / CSV 내보내기
+// 관리자: 발행 배치 목록 / CSV 내보내기
 app.get('/api/admin/coupon/list', async (c) => {
   const { DB } = c.env
-  const m = await requireMaster(c)
-  if (!m.ok) return c.json({ success: false, error: 'forbidden' }, 403)
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
 
   const batch = c.req.query('batch')
   if (c.req.query('csv') && batch) {
