@@ -519,6 +519,7 @@ function PsychologicalTestSystem() {
   const [adminSecretInput, setAdminSecretInput] = useState("");
   const [adminAuthenticated, setAdminAuthenticated] = useState(false);
   const [adminLoading, setAdminLoading] = useState(false);
+  const [adminAuthError, setAdminAuthError] = useState("");
   const [adminMsg, setAdminMsg] = useState({ type: "", text: "" });
   const [creditGrantForm, setCreditGrantForm] = useState({ userId: "", amount: "", type: "gain", reason: "admin_grant" });
   const [userInfo, setUserInfo] = useState({ phone: "", password: "" });
@@ -2097,6 +2098,28 @@ function PsychologicalTestSystem() {
         ...opts.headers || {}
       }
     }).then((r) => r.json());
+  }
+  async function tryAdminLogin() {
+    if (!adminSecretInput.trim() || adminLoading) {
+      if (!adminSecretInput.trim()) setAdminAuthError("\uBE44\uBC00\uBC88\uD638\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.");
+      return;
+    }
+    setAdminAuthError("");
+    setAdminLoading(true);
+    try {
+      const r = await adminFetch("/api/admin/stats");
+      if (r && r.success) {
+        setAdminStats(r.data);
+        setAdminAuthenticated(true);
+        loadAdminOverview();
+      } else {
+        setAdminAuthError("\uBE44\uBC00\uBC88\uD638\uAC00 \uC62C\uBC14\uB974\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.");
+      }
+    } catch {
+      setAdminAuthError("\uB124\uD2B8\uC6CC\uD06C \uC624\uB958. \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.");
+    } finally {
+      setAdminLoading(false);
+    }
   }
   async function loadAdminOverview() {
     setAdminLoading(true);
@@ -8055,20 +8078,21 @@ Tested on Maumful! https://maumful.com`), testLabel: t("LOST \uD589\uB3D9 \uC6B4
           type: "password",
           placeholder: "\uAD00\uB9AC\uC790 \uBE44\uBC00\uBC88\uD638",
           value: adminSecretInput,
-          onChange: (e) => setAdminSecretInput(e.target.value),
-          onKeyDown: (e) => e.key === "Enter" && (setAdminAuthenticated(true), loadAdminOverview()),
-          className: "w-full border border-gray-200 rounded-xl px-4 py-3 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+          onChange: (e) => {
+            setAdminSecretInput(e.target.value);
+            if (adminAuthError) setAdminAuthError("");
+          },
+          onKeyDown: (e) => e.key === "Enter" && tryAdminLogin(),
+          className: `w-full border rounded-xl px-4 py-3 text-sm mb-2 focus:outline-none focus:ring-2 ${adminAuthError ? "border-red-300 focus:ring-red-200" : "border-gray-200 focus:ring-indigo-300"}`
         }
-      ), /* @__PURE__ */ React.createElement(
+      ), adminAuthError && /* @__PURE__ */ React.createElement("div", { className: "text-xs text-red-500 font-semibold mb-3" }, adminAuthError), /* @__PURE__ */ React.createElement(
         "button",
         {
-          onClick: () => {
-            setAdminAuthenticated(true);
-            loadAdminOverview();
-          },
-          className: "w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold transition"
+          onClick: tryAdminLogin,
+          disabled: adminLoading,
+          className: "w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white py-3 rounded-xl font-bold transition mt-2"
         },
-        "\uB85C\uADF8\uC778"
+        adminLoading ? "\uD655\uC778 \uC911..." : "\uB85C\uADF8\uC778"
       ), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("memberDashboard"), className: "w-full text-sm text-gray-400 hover:text-gray-600 mt-3 text-center" }, "\u2190 \uB3CC\uC544\uAC00\uAE30")));
     }
     return /* @__PURE__ */ React.createElement("div", { className: "min-h-screen bg-gray-50" }, /* @__PURE__ */ React.createElement("header", { className: "bg-white border-b border-gray-200 sticky top-0 z-10" }, /* @__PURE__ */ React.createElement("div", { className: "max-w-5xl mx-auto px-4 py-3 flex items-center justify-between" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3" }, /* @__PURE__ */ React.createElement("span", { className: "text-2xl" }, "\u{1F6E0}\uFE0F"), /* @__PURE__ */ React.createElement("span", { className: "font-bold text-gray-800" }, "\uB9C8\uC74C\uD480 \uAD00\uB9AC\uC790")), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, adminLoading && /* @__PURE__ */ React.createElement("div", { className: "w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" }), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("memberDashboard"), className: "text-sm text-gray-500 hover:text-gray-700 px-3 py-1.5 bg-gray-100 rounded-lg" }, "\u2190 \uB300\uC2DC\uBCF4\uB4DC")))), /* @__PURE__ */ React.createElement("main", { className: "max-w-5xl mx-auto px-4 py-6" }, adminMsg.text && /* @__PURE__ */ React.createElement("div", { className: `mb-4 px-4 py-3 rounded-xl text-sm font-medium ${adminMsg.type === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}` }, adminMsg.text, /* @__PURE__ */ React.createElement("button", { onClick: () => setAdminMsg({ type: "", text: "" }), className: "ml-3 opacity-60 hover:opacity-100" }, "\u2715")), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mb-6 flex-wrap" }, [["overview", "\u{1F4CA} \uAC1C\uC694"], ["users", "\u{1F465} \uC0AC\uC6A9\uC790"], ["payments", "\u{1F4B3} \uACB0\uC81C"], ["tests", "\u{1F4CB} \uAC80\uC0AC"], ["coupons", "\u{1F39F}\uFE0F \uCFE0\uD3F0"]].map(([tab, label]) => /* @__PURE__ */ React.createElement(

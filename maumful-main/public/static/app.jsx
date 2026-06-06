@@ -428,6 +428,7 @@ function PsychologicalTestSystem() {
   const [adminSecretInput, setAdminSecretInput] = useState('');
   const [adminAuthenticated, setAdminAuthenticated] = useState(false);
   const [adminLoading, setAdminLoading]   = useState(false);
+  const [adminAuthError, setAdminAuthError] = useState('');
   const [adminMsg, setAdminMsg]           = useState({ type: '', text: '' });
   const [creditGrantForm, setCreditGrantForm] = useState({ userId: '', amount: '', type: 'gain', reason: 'admin_grant' });
 
@@ -2097,6 +2098,24 @@ function PsychologicalTestSystem() {
         ...(opts.headers || {}),
       },
     }).then(r => r.json());
+  }
+
+  // 관리자 로그인 — 입력한 비밀번호로 실제 검증 후 통과 (틀리면 에러, 패널 안 열림)
+  async function tryAdminLogin() {
+    if (!adminSecretInput.trim() || adminLoading) { if (!adminSecretInput.trim()) setAdminAuthError('비밀번호를 입력해주세요.'); return; }
+    setAdminAuthError(''); setAdminLoading(true);
+    try {
+      const r = await adminFetch('/api/admin/stats');
+      if (r && r.success) {
+        setAdminStats(r.data);
+        setAdminAuthenticated(true);
+        loadAdminOverview();
+      } else {
+        setAdminAuthError('비밀번호가 올바르지 않습니다.');
+      }
+    } catch {
+      setAdminAuthError('네트워크 오류. 다시 시도해주세요.');
+    } finally { setAdminLoading(false); }
   }
 
   async function loadAdminOverview() {
@@ -10625,12 +10644,13 @@ function PsychologicalTestSystem() {
               <h1 className="text-xl font-bold text-gray-800">관리자 로그인</h1>
             </div>
             <input type="password" placeholder="관리자 비밀번호"
-              value={adminSecretInput} onChange={e => setAdminSecretInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && (setAdminAuthenticated(true), loadAdminOverview())}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-            <button onClick={() => { setAdminAuthenticated(true); loadAdminOverview(); }}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold transition">
-              로그인
+              value={adminSecretInput} onChange={e => { setAdminSecretInput(e.target.value); if (adminAuthError) setAdminAuthError(''); }}
+              onKeyDown={e => e.key === 'Enter' && tryAdminLogin()}
+              className={`w-full border rounded-xl px-4 py-3 text-sm mb-2 focus:outline-none focus:ring-2 ${adminAuthError ? 'border-red-300 focus:ring-red-200' : 'border-gray-200 focus:ring-indigo-300'}`} />
+            {adminAuthError && <div className="text-xs text-red-500 font-semibold mb-3">{adminAuthError}</div>}
+            <button onClick={tryAdminLogin} disabled={adminLoading}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white py-3 rounded-xl font-bold transition mt-2">
+              {adminLoading ? '확인 중...' : '로그인'}
             </button>
             <button onClick={() => setView('memberDashboard')} className="w-full text-sm text-gray-400 hover:text-gray-600 mt-3 text-center">← 돌아가기</button>
           </div>
