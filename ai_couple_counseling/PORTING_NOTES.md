@@ -11,6 +11,9 @@
 | 커플 스타일 퀴즈 (10문항, A/B/C/D) | `/quiz` | `src/app/quiz/page.tsx`, `src/data/coupleQuiz.ts` |
 | 오늘의 대화 질문 (60개 풀) | `/daily` | `src/app/daily/page.tsx`, `src/data/dailyQuestions.ts` |
 | AI 데이트 코스 추천 | `/date-course` | `src/app/date-course/page.tsx`, `src/app/api/date-course/route.ts` |
+| LOST 행동유형 검사 + 커플 궁합 분석 | `/lost` | `src/app/lost/page.tsx`, `src/data/lost.ts` |
+
+> LOST는 60문항 단독 검사 → 16유형 판정 후, **상대 유형을 선택**해 궁합(match/conflict + 축 일치도)을 client-side로 분석. 실시간 페어링 없이 동작. 결과는 `localStorage(maumkyeol_lost)` 저장. DB 도입 시 "상대 유형 선택"을 실제 커플 페어링으로 대체하면 정교해짐.
 
 - 홈(`src/app/page.tsx`) 기능 그리드에 4개 카드 추가.
 - 디자인은 기존 앱 컨벤션(Tailwind 토큰 · `Card`/`Button` · framer-motion)으로 재작성. 원본의 인라인 스타일/`COUPLE_LANG` i18n은 가져오지 않음(현재 앱은 한국어 단일).
