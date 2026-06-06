@@ -3520,9 +3520,12 @@ app.get('/api/admin/coupon/list', async (c) => {
   const batch = c.req.query('batch')
   if (c.req.query('csv') && batch) {
     const rows = await DB.prepare('SELECT code,value,redeemed_count,max_redemptions,source,valid_until,active FROM coupons WHERE batch_id=? ORDER BY code').bind(batch).all()
-    const esc = (v: any) => v == null ? '' : String(v)
+    const esc = (v: any) => {
+      const s = v == null ? '' : String(v)
+      return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s   // CSV 이스케이프(쉼표·따옴표·줄바꿈)
+    }
     const lines = ['code,value,redeemed,max,source,valid_until,active',
-      ...(rows.results as any[]).map(r => [r.code, r.value, r.redeemed_count, esc(r.max_redemptions), esc(r.source), esc(r.valid_until), r.active].join(','))]
+      ...(rows.results as any[]).map(r => [esc(r.code), r.value, r.redeemed_count, esc(r.max_redemptions), esc(r.source), esc(r.valid_until), r.active].join(','))]
     return new Response(lines.join('\n'), { headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': `attachment; filename="coupons_${batch}.csv"` } })
   }
 
