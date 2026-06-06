@@ -3408,6 +3408,139 @@ app.get('/api/admin/test-ai', async (c) => {
 </body></html>`)
 })
 
+// ============================================================
+// 쿠폰 시스템 (크레딧 지급 쿠폰: 1회용 고유코드 + 공용 캠페인코드)
+// 전부 신규 엔드포인트 — 기존 기능 무영향. gainCredits 재사용.
+// ============================================================
+function normalizeCoupon(s: unknown): string {
+  return String(s ?? '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '')
+}
+function genCouponCode(len = 10): string {
+  const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // 혼동문자 O,0,I,1 제외
+  const buf = crypto.getRandomValues(new Uint8Array(len))
+  let s = ''
+  for (let i = 0; i < len; i++) s += A[buf[i] % A.length]
+  return s
+}
+async function requireMaster(c: any): Promise<{ ok: boolean; userId?: number }> {
+  const userId = await getAuthUserId(c.req.raw, c.env.KV)
+  if (!userId) return { ok: false }
+  const u = await c.env.DB.prepare('SELECT email FROM users WHERE id=?').bind(userId).first<{ email: string }>()
+  return { ok: isMasterAccount(u?.email), userId }
+}
+
+// 사용자: 쿠폰 등록(사용)
+app.post('/api/coupon/redeem', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false, error: '로그인이 필요합니다.' }, 401)
+
+  // 무차별 대입 방지: 사용자+IP 분당 5회
+  const ip = c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For') || 'unknown'
+  const rl = await checkRateLimit(KV, `coupon:${userId}:${ip}`, 5, 60)
+  if (!rl.allowed) return c.json({ success: false, error: '시도가 너무 많습니다. 잠시 후 다시 시도해주세요.' }, 429)
+
+  const body = await c.req.json().catch(() => ({} as any))
+  const code = normalizeCoupon(body.code)
+  if (!code || code.length < 4) return c.json({ success: false, error: '쿠폰 코드를 입력해주세요.' }, 400)
+
+  const cp = await DB.prepare('SELECT * FROM coupons WHERE code=?').bind(code).first<any>()
+  if (!cp || cp.active !== 1) return c.json({ success: false, error: '유효하지 않은 쿠폰입니다.' }, 404)
+
+  const nowIso = new Date().toISOString()
+  if (cp.valid_from && nowIso < cp.valid_from) return c.json({ success: false, error: '아직 사용할 수 없는 쿠폰입니다.' }, 400)
+  if (cp.valid_until && nowIso > cp.valid_until) return c.json({ success: false, error: '유효기간이 지난 쿠폰입니다.' }, 400)
+
+  // 1인 1회 사전 체크 (최종 보장은 UNIQUE(code,user_id))
+  const dup = await DB.prepare('SELECT 1 FROM coupon_redemptions WHERE code=? AND user_id=?').bind(code, userId).first()
+  if (dup) return c.json({ success: false, error: '이미 등록한 쿠폰입니다.' }, 409)
+
+  // 전체 한도 원자적 차감 (조건부 UPDATE)
+  if (cp.max_redemptions != null) {
+    const upd = await DB.prepare('UPDATE coupons SET redeemed_count = redeemed_count + 1 WHERE code=? AND redeemed_count < max_redemptions').bind(code).run()
+    if (!((upd as any).meta?.changes)) return c.json({ success: false, error: '쿠폰이 모두 소진되었습니다.' }, 409)
+  } else {
+    await DB.prepare('UPDATE coupons SET redeemed_count = redeemed_count + 1 WHERE code=?').bind(code).run()
+  }
+
+  // 사용 기록 (동시중복 시 UNIQUE 위반 → 한도 롤백)
+  try {
+    await DB.prepare('INSERT INTO coupon_redemptions (code,user_id,credits_granted) VALUES (?,?,?)').bind(code, userId, cp.value).run()
+  } catch {
+    if (cp.max_redemptions != null) await DB.prepare('UPDATE coupons SET redeemed_count = redeemed_count - 1 WHERE code=?').bind(code).run()
+    return c.json({ success: false, error: '이미 등록한 쿠폰입니다.' }, 409)
+  }
+
+  const balance = await gainCredits(DB, userId, cp.value, `coupon:${code}`, code)
+  return c.json({ success: true, credits: cp.value, balance, message: `🎟️ ${cp.value} 크레딧이 지급되었습니다!` })
+})
+
+// 관리자(마스터): 쿠폰 발행
+app.post('/api/admin/coupon/create', async (c) => {
+  const { DB } = c.env
+  const m = await requireMaster(c)
+  if (!m.ok) return c.json({ success: false, error: 'forbidden' }, 403)
+
+  const b = await c.req.json().catch(() => ({} as any))
+  const value = parseInt(b.value, 10)
+  if (!value || value < 1) return c.json({ success: false, error: '지급 크레딧(value)이 필요합니다.' }, 400)
+  const source = (typeof b.source === 'string' ? b.source : '').slice(0, 80) || null
+  const validUntil = typeof b.valid_until === 'string' && b.valid_until ? b.valid_until : null
+  const batchId = 'B' + Date.now().toString(36).toUpperCase()
+  const mode = b.mode === 'campaign' ? 'campaign' : 'single'
+
+  if (mode === 'campaign') {
+    const code = normalizeCoupon(b.code) || genCouponCode(8)
+    const maxR = b.max_redemptions != null ? (parseInt(b.max_redemptions, 10) || null) : null
+    try {
+      await DB.prepare('INSERT INTO coupons (code,type,value,max_redemptions,valid_until,source,batch_id,created_by) VALUES (?,?,?,?,?,?,?,?)')
+        .bind(code, 'credit', value, maxR, validUntil, source, batchId, m.userId ?? null).run()
+    } catch {
+      return c.json({ success: false, error: '이미 존재하는 코드입니다. 다른 코드를 입력하세요.' }, 409)
+    }
+    return c.json({ success: true, mode, codes: [code], batchId })
+  }
+
+  // single: 1회용 고유코드 N개 일괄
+  const count = Math.min(Math.max(parseInt(b.count, 10) || 1, 1), 1000)
+  const codes: string[] = []
+  for (let i = 0; i < count; i++) {
+    for (let t = 0; t < 4; t++) {
+      const code = genCouponCode(10)
+      try {
+        await DB.prepare('INSERT INTO coupons (code,type,value,max_redemptions,valid_until,source,batch_id,created_by) VALUES (?,?,?,1,?,?,?,?)')
+          .bind(code, 'credit', value, validUntil, source, batchId, m.userId ?? null).run()
+        codes.push(code)
+        break
+      } catch { /* 코드 충돌 → 재생성 */ }
+    }
+  }
+  return c.json({ success: true, mode, count: codes.length, codes, batchId })
+})
+
+// 관리자(마스터): 발행 배치 목록 / CSV 내보내기
+app.get('/api/admin/coupon/list', async (c) => {
+  const { DB } = c.env
+  const m = await requireMaster(c)
+  if (!m.ok) return c.json({ success: false, error: 'forbidden' }, 403)
+
+  const batch = c.req.query('batch')
+  if (c.req.query('csv') && batch) {
+    const rows = await DB.prepare('SELECT code,value,redeemed_count,max_redemptions,source,valid_until,active FROM coupons WHERE batch_id=? ORDER BY code').bind(batch).all()
+    const esc = (v: any) => v == null ? '' : String(v)
+    const lines = ['code,value,redeemed,max,source,valid_until,active',
+      ...(rows.results as any[]).map(r => [r.code, r.value, r.redeemed_count, esc(r.max_redemptions), esc(r.source), esc(r.valid_until), r.active].join(','))]
+    return new Response(lines.join('\n'), { headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': `attachment; filename="coupons_${batch}.csv"` } })
+  }
+
+  const batches = await DB.prepare(
+    `SELECT batch_id, MAX(source) source, MAX(value) value, COUNT(*) total,
+            SUM(redeemed_count) redeemed, MIN(created_at) created_at, MAX(valid_until) valid_until
+     FROM coupons GROUP BY batch_id ORDER BY created_at DESC LIMIT 100`
+  ).all()
+  return c.json({ success: true, batches: batches.results })
+})
+
 // ── TWA 도메인 인증 (Android 앱 연동) ─────────────────────
 // SHA256 fingerprint는 Play Console 앱 서명 설정에서 확인 후 업데이트
 app.get('/.well-known/assetlinks.json', (c) => {

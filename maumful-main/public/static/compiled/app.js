@@ -391,7 +391,7 @@ function NaverLoginBtn({ onLogin }) {
   );
 }
 function PsychologicalTestSystem() {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m;
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [regionConfig, setRegionConfig] = useState(null);
@@ -3494,6 +3494,112 @@ Visit Maumful and take the same test again to compare your progress.`));
       }
     }, credits, regionConfig }));
   }
+  function CouponCard() {
+    const [code, setCode] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [msg, setMsg] = useState(null);
+    const submit = async () => {
+      const cc = code.trim();
+      if (!cc || loading) return;
+      setLoading(true);
+      setMsg(null);
+      try {
+        const r = await fetch("/api/coupon/redeem", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...api._authHeader() },
+          body: JSON.stringify({ code: cc })
+        });
+        const d = await r.json();
+        if (d.success) {
+          setMsg({ type: "success", text: d.message || t(`\u{1F39F}\uFE0F ${d.credits} \uD06C\uB808\uB527\uC774 \uC9C0\uAE09\uB418\uC5C8\uC2B5\uB2C8\uB2E4!`, `\u{1F39F}\uFE0F ${d.credits} credits added!`) });
+          setCode("");
+          refreshCredits();
+        } else {
+          setMsg({ type: "error", text: d.error || t("\uCFE0\uD3F0 \uB4F1\uB85D\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.", "Failed to redeem coupon.") });
+        }
+      } catch {
+        setMsg({ type: "error", text: t("\uB124\uD2B8\uC6CC\uD06C \uC624\uB958. \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.", "Network error. Please try again.") });
+      } finally {
+        setLoading(false);
+      }
+    };
+    return /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl p-5 mb-5 border border-gray-100" }, /* @__PURE__ */ React.createElement("div", { className: "text-sm font-bold text-gray-700 mb-1" }, "\u{1F39F}\uFE0F ", t("\uCFE0\uD3F0 \uB4F1\uB85D", "Redeem Coupon")), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 mb-3" }, t("\uBC1B\uC73C\uC2E0 \uCFE0\uD3F0 \uCF54\uB4DC\uB97C \uC785\uB825\uD558\uBA74 \uD06C\uB808\uB527\uC774 \uC9C0\uAE09\uB429\uB2C8\uB2E4.", "Enter your coupon code to receive credits.")), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" }, /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        value: code,
+        onChange: (e) => setCode(e.target.value.toUpperCase()),
+        onKeyDown: (e) => e.key === "Enter" && submit(),
+        placeholder: t("\uCFE0\uD3F0 \uCF54\uB4DC \uC785\uB825", "Enter coupon code"),
+        maxLength: 20,
+        className: "flex-1 px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-green-400 tracking-widest"
+      }
+    ), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        onClick: submit,
+        disabled: loading || !code.trim(),
+        className: "px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-200 disabled:text-gray-400 transition whitespace-nowrap"
+      },
+      loading ? t("\uD655\uC778 \uC911...", "...") : t("\uB4F1\uB85D", "Redeem")
+    )), msg && /* @__PURE__ */ React.createElement("div", { className: `mt-2 text-xs font-semibold ${msg.type === "success" ? "text-green-600" : "text-red-500"}` }, msg.text));
+  }
+  function MasterCouponPanel() {
+    var _a2;
+    const [mode, setMode] = useState("single");
+    const [value, setValue] = useState(50);
+    const [count, setCount] = useState(10);
+    const [code, setCode] = useState("");
+    const [maxR, setMaxR] = useState("");
+    const [source, setSource] = useState("");
+    const [until, setUntil] = useState("");
+    const [busy, setBusy] = useState(false);
+    const [result, setResult] = useState(null);
+    const [batches, setBatches] = useState(null);
+    const create = async () => {
+      if (busy) return;
+      setBusy(true);
+      setResult(null);
+      const body = { mode, value: parseInt(value, 10) };
+      if (source.trim()) body.source = source.trim();
+      if (until) body.valid_until = (/* @__PURE__ */ new Date(until + "T23:59:59")).toISOString();
+      if (mode === "single") body.count = parseInt(count, 10) || 1;
+      else {
+        if (code.trim()) body.code = code.trim();
+        if (maxR) body.max_redemptions = parseInt(maxR, 10);
+      }
+      try {
+        const d = await fetch("/api/admin/coupon/create", { method: "POST", headers: { "Content-Type": "application/json", ...api._authHeader() }, body: JSON.stringify(body) }).then((r) => r.json());
+        setResult(d);
+        if (d.success) loadBatches();
+      } catch {
+        setResult({ success: false, error: "\uB124\uD2B8\uC6CC\uD06C \uC624\uB958" });
+      } finally {
+        setBusy(false);
+      }
+    };
+    const loadBatches = async () => {
+      try {
+        const d = await fetch("/api/admin/coupon/list", { headers: api._authHeader() }).then((r) => r.json());
+        if (d.success) setBatches(d.batches);
+      } catch {
+      }
+    };
+    const downloadCsv = async (batch) => {
+      try {
+        const r = await fetch(`/api/admin/coupon/list?csv=1&batch=${encodeURIComponent(batch)}`, { headers: api._authHeader() });
+        const blob = await r.blob();
+        const u = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = u;
+        a.download = `coupons_${batch}.csv`;
+        a.click();
+        URL.revokeObjectURL(u);
+      } catch {
+      }
+    };
+    const inp = "px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-400";
+    return /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl p-5 mb-5 border-2 border-purple-100" }, /* @__PURE__ */ React.createElement("div", { className: "text-sm font-bold text-purple-700 mb-3" }, "\u{1F6E0}\uFE0F \uCFE0\uD3F0 \uBC1C\uD589 (\uB9C8\uC2A4\uD130)"), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-2 mb-2" }, /* @__PURE__ */ React.createElement("select", { value: mode, onChange: (e) => setMode(e.target.value), className: inp }, /* @__PURE__ */ React.createElement("option", { value: "single" }, "1\uD68C\uC6A9 \uACE0\uC720\uCF54\uB4DC N\uAC1C"), /* @__PURE__ */ React.createElement("option", { value: "campaign" }, "\uACF5\uC6A9 \uCEA0\uD398\uC778\uCF54\uB4DC 1\uAC1C")), /* @__PURE__ */ React.createElement("input", { type: "number", value, onChange: (e) => setValue(e.target.value), placeholder: "\uC9C0\uAE09 \uD06C\uB808\uB527", className: inp }), mode === "single" ? /* @__PURE__ */ React.createElement("input", { type: "number", value: count, onChange: (e) => setCount(e.target.value), placeholder: "\uBC1C\uD589 \uAC1C\uC218", className: inp }) : /* @__PURE__ */ React.createElement("input", { value: code, onChange: (e) => setCode(e.target.value.toUpperCase()), placeholder: "\uCF54\uB4DC(\uBE48\uCE78=\uC790\uB3D9)", className: inp }), mode === "campaign" && /* @__PURE__ */ React.createElement("input", { type: "number", value: maxR, onChange: (e) => setMaxR(e.target.value), placeholder: "\uC804\uCCB4 \uD55C\uB3C4(\uBE48\uCE78=\uBB34\uC81C\uD55C)", className: inp }), /* @__PURE__ */ React.createElement("input", { value: source, onChange: (e) => setSource(e.target.value), placeholder: "\uBC30\uD3EC\uCC98/\uCEA0\uD398\uC778 \uB77C\uBCA8", className: inp }), /* @__PURE__ */ React.createElement("input", { type: "date", value: until, onChange: (e) => setUntil(e.target.value), title: "\uC720\uD6A8\uAE30\uAC04(\uC885\uB8CC)", className: inp })), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" }, /* @__PURE__ */ React.createElement("button", { onClick: create, disabled: busy, className: "px-4 py-2 rounded-lg text-sm font-bold text-white bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300" }, busy ? "\uBC1C\uD589 \uC911..." : "\uBC1C\uD589"), /* @__PURE__ */ React.createElement("button", { onClick: loadBatches, className: "px-4 py-2 rounded-lg text-sm font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100" }, "\uBAA9\uB85D \uBD88\uB7EC\uC624\uAE30")), result && (result.success ? /* @__PURE__ */ React.createElement("div", { className: "mt-3 text-xs text-green-700 bg-green-50 rounded-lg p-3 break-all" }, "\u2705 ", result.count ?? ((_a2 = result.codes) == null ? void 0 : _a2.length), "\uAC1C \uBC1C\uD589 (batch ", result.batchId, ")", /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { className: "text-gray-600" }, (result.codes || []).join(", "))) : /* @__PURE__ */ React.createElement("div", { className: "mt-2 text-xs text-red-500" }, result.error)), batches && /* @__PURE__ */ React.createElement("div", { className: "mt-3 border-t border-gray-100 pt-3" }, /* @__PURE__ */ React.createElement("div", { className: "text-xs font-bold text-gray-500 mb-2" }, "\uBC1C\uD589 \uBC30\uCE58"), batches.length === 0 && /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400" }, "\uC544\uC9C1 \uBC1C\uD589 \uB0B4\uC5ED\uC774 \uC5C6\uC2B5\uB2C8\uB2E4."), batches.map((b) => /* @__PURE__ */ React.createElement("div", { key: b.batch_id, className: "flex items-center justify-between text-xs py-1.5 border-b border-gray-50" }, /* @__PURE__ */ React.createElement("span", { className: "text-gray-700" }, b.source || b.batch_id, " \xB7 ", b.value, "cr \xB7 ", b.redeemed, "/", b.total, " \uC0AC\uC6A9"), /* @__PURE__ */ React.createElement("button", { onClick: () => downloadCsv(b.batch_id), className: "text-purple-600 font-semibold hover:underline" }, "CSV")))));
+  }
   if (isLoggedIn && view === "myPage") return /* @__PURE__ */ React.createElement("div", { className: "min-h-screen bg-gradient-to-br from-slate-50 to-green-50" }, /* @__PURE__ */ React.createElement("header", { className: "bg-white border-b border-gray-100 sticky top-0 z-10" }, /* @__PURE__ */ React.createElement("div", { className: "max-w-2xl mx-auto px-4 py-3 flex items-center justify-between" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setView("memberDashboard"), className: "text-gray-500 hover:text-gray-700 flex items-center gap-1 text-sm" }, t("\u2190 \uB4A4\uB85C", "\u2190 Back")), /* @__PURE__ */ React.createElement("span", { className: "font-bold text-gray-800" }, t("\uB9C8\uC774\uD398\uC774\uC9C0", "My Page")), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement(
     "button",
     {
@@ -3510,7 +3616,7 @@ Visit Maumful and take the same test again to compare your progress.`));
       title: "\uB9C8\uC74C\uCEE4\uD50C"
     },
     "\u{1F495}"
-  ), /* @__PURE__ */ React.createElement(CreditBadge, null)))), /* @__PURE__ */ React.createElement("main", { className: "max-w-2xl mx-auto px-4 py-6" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl p-5 mb-5 border border-gray-100" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-4" }, /* @__PURE__ */ React.createElement("div", { className: "w-14 h-14 bg-green-100 rounded-full flex items-center justify-center text-2xl" }, "\u{1F464}"), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "font-bold text-gray-800" }, (currentUser == null ? void 0 : currentUser.nickname) || t("\uD68C\uC6D0", "member")), /* @__PURE__ */ React.createElement("div", { className: "text-sm text-gray-500 mt-0.5" }, "\u{1F4E7} ", t("\uACC4\uC815 \uC774\uBA54\uC77C", "Account email"), " \xB7 ", /* @__PURE__ */ React.createElement("span", { className: "text-gray-700 font-medium" }, currentUser == null ? void 0 : currentUser.email))))), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mb-5" }, [[`credits`, t("\uD06C\uB808\uB527 \uB0B4\uC5ED", "Credits")], [`history`, t("\uAC80\uC0AC \uC774\uB825", "History")], [`appointments`, t("\uC0C1\uB2F4 \uC608\uC57D", "Sessions")], [`referral`, t("\uCE5C\uAD6C \uCD08\uB300", "Referral")], [`settings`, t("\uC124\uC815", "Settings")]].map(([tab, label]) => /* @__PURE__ */ React.createElement(
+  ), /* @__PURE__ */ React.createElement(CreditBadge, null)))), /* @__PURE__ */ React.createElement("main", { className: "max-w-2xl mx-auto px-4 py-6" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl p-5 mb-5 border border-gray-100" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-4" }, /* @__PURE__ */ React.createElement("div", { className: "w-14 h-14 bg-green-100 rounded-full flex items-center justify-center text-2xl" }, "\u{1F464}"), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "font-bold text-gray-800" }, (currentUser == null ? void 0 : currentUser.nickname) || t("\uD68C\uC6D0", "member")), /* @__PURE__ */ React.createElement("div", { className: "text-sm text-gray-500 mt-0.5" }, "\u{1F4E7} ", t("\uACC4\uC815 \uC774\uBA54\uC77C", "Account email"), " \xB7 ", /* @__PURE__ */ React.createElement("span", { className: "text-gray-700 font-medium" }, currentUser == null ? void 0 : currentUser.email))))), /* @__PURE__ */ React.createElement(CouponCard, null), ((_a = currentUser == null ? void 0 : currentUser.email) == null ? void 0 : _a.toLowerCase()) === "limyj007@gmail.com" && /* @__PURE__ */ React.createElement(MasterCouponPanel, null), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mb-5" }, [[`credits`, t("\uD06C\uB808\uB527 \uB0B4\uC5ED", "Credits")], [`history`, t("\uAC80\uC0AC \uC774\uB825", "History")], [`appointments`, t("\uC0C1\uB2F4 \uC608\uC57D", "Sessions")], [`referral`, t("\uCE5C\uAD6C \uCD08\uB300", "Referral")], [`settings`, t("\uC124\uC815", "Settings")]].map(([tab, label]) => /* @__PURE__ */ React.createElement(
     "button",
     {
       key: tab,
@@ -7979,10 +8085,10 @@ Tested on Maumful! https://maumful.com`), testLabel: t("LOST \uD589\uB3D9 \uC6B4
       },
       label
     ))), adminTab === "overview" && adminStats && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" }, [
-      { label: "\uCD1D \uAC00\uC785\uC790", val: (_b = (_a = adminStats.users) == null ? void 0 : _a.total) == null ? void 0 : _b.toLocaleString(), sub: `\uC624\uB298 +${(_c = adminStats.users) == null ? void 0 : _c.today}`, color: "text-indigo-600" },
-      { label: "\uC774\uBC88\uB2EC \uB9E4\uCD9C", val: `\u20A9${(_e = (_d = adminStats.revenue) == null ? void 0 : _d.monthly) == null ? void 0 : _e.toLocaleString()}`, sub: `\uACB0\uC81C ${(_f = adminStats.payments) == null ? void 0 : _f.monthly}\uAC74`, color: "text-emerald-600" },
-      { label: "\uCD1D \uAC80\uC0AC \uC218", val: (_h = (_g = adminStats.tests) == null ? void 0 : _g.total) == null ? void 0 : _h.toLocaleString(), sub: `\uC624\uB298 ${(_i = adminStats.tests) == null ? void 0 : _i.today}\uAC74`, color: "text-orange-600" },
-      { label: "AI \uC0C1\uB2F4", val: (_k = (_j = adminStats.chats) == null ? void 0 : _j.total) == null ? void 0 : _k.toLocaleString(), sub: `\uC624\uB298 ${(_l = adminStats.chats) == null ? void 0 : _l.today}\uAC74`, color: "text-purple-600" }
+      { label: "\uCD1D \uAC00\uC785\uC790", val: (_c = (_b = adminStats.users) == null ? void 0 : _b.total) == null ? void 0 : _c.toLocaleString(), sub: `\uC624\uB298 +${(_d = adminStats.users) == null ? void 0 : _d.today}`, color: "text-indigo-600" },
+      { label: "\uC774\uBC88\uB2EC \uB9E4\uCD9C", val: `\u20A9${(_f = (_e = adminStats.revenue) == null ? void 0 : _e.monthly) == null ? void 0 : _f.toLocaleString()}`, sub: `\uACB0\uC81C ${(_g = adminStats.payments) == null ? void 0 : _g.monthly}\uAC74`, color: "text-emerald-600" },
+      { label: "\uCD1D \uAC80\uC0AC \uC218", val: (_i = (_h = adminStats.tests) == null ? void 0 : _h.total) == null ? void 0 : _i.toLocaleString(), sub: `\uC624\uB298 ${(_j = adminStats.tests) == null ? void 0 : _j.today}\uAC74`, color: "text-orange-600" },
+      { label: "AI \uC0C1\uB2F4", val: (_l = (_k = adminStats.chats) == null ? void 0 : _k.total) == null ? void 0 : _l.toLocaleString(), sub: `\uC624\uB298 ${(_m = adminStats.chats) == null ? void 0 : _m.today}\uAC74`, color: "text-purple-600" }
     ].map((c) => /* @__PURE__ */ React.createElement("div", { key: c.label, className: S.card }, /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 mb-1" }, c.label), /* @__PURE__ */ React.createElement("div", { className: `text-2xl font-black ${c.color}` }, c.val ?? "\u2014"), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 mt-1" }, c.sub)))), /* @__PURE__ */ React.createElement("div", { className: S.card + " mb-4" }, /* @__PURE__ */ React.createElement("h3", { className: "font-bold text-gray-700 mb-3 text-sm" }, "\uD06C\uB808\uB527 \uC9C0\uAE09"), /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap gap-2" }, [["userId", "\uC0AC\uC6A9\uC790 ID"], ["amount", "\uAE08\uC561"]].map(([key, ph]) => /* @__PURE__ */ React.createElement(
       "input",
       {

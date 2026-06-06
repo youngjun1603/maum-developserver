@@ -4091,6 +4091,130 @@ function PsychologicalTestSystem() {
   // ============================================================
   // 뷰: 마이페이지
   // ============================================================
+  // 🎟️ 쿠폰 등록 카드 (마이페이지) — 신규, 기존 로직 미변경
+  function CouponCard() {
+    const [code, setCode] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [msg, setMsg] = useState(null);
+    const submit = async () => {
+      const cc = code.trim();
+      if (!cc || loading) return;
+      setLoading(true); setMsg(null);
+      try {
+        const r = await fetch('/api/coupon/redeem', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+          body: JSON.stringify({ code: cc }),
+        });
+        const d = await r.json();
+        if (d.success) {
+          setMsg({ type: 'success', text: d.message || t(`🎟️ ${d.credits} 크레딧이 지급되었습니다!`, `🎟️ ${d.credits} credits added!`) });
+          setCode('');
+          refreshCredits();
+        } else {
+          setMsg({ type: 'error', text: d.error || t('쿠폰 등록에 실패했습니다.', 'Failed to redeem coupon.') });
+        }
+      } catch {
+        setMsg({ type: 'error', text: t('네트워크 오류. 다시 시도해주세요.', 'Network error. Please try again.') });
+      } finally { setLoading(false); }
+    };
+    return (
+      <div className="bg-white rounded-2xl p-5 mb-5 border border-gray-100">
+        <div className="text-sm font-bold text-gray-700 mb-1">🎟️ {t('쿠폰 등록', 'Redeem Coupon')}</div>
+        <div className="text-xs text-gray-400 mb-3">{t('받으신 쿠폰 코드를 입력하면 크레딧이 지급됩니다.', 'Enter your coupon code to receive credits.')}</div>
+        <div className="flex gap-2">
+          <input value={code} onChange={e => setCode(e.target.value.toUpperCase())} onKeyDown={e => e.key === 'Enter' && submit()}
+            placeholder={t('쿠폰 코드 입력', 'Enter coupon code')} maxLength={20}
+            className="flex-1 px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-green-400 tracking-widest" />
+          <button onClick={submit} disabled={loading || !code.trim()}
+            className="px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-200 disabled:text-gray-400 transition whitespace-nowrap">
+            {loading ? t('확인 중...', '...') : t('등록', 'Redeem')}
+          </button>
+        </div>
+        {msg && <div className={`mt-2 text-xs font-semibold ${msg.type === 'success' ? 'text-green-600' : 'text-red-500'}`}>{msg.text}</div>}
+      </div>
+    );
+  }
+
+  // 🎟️ 마스터 전용 쿠폰 발행·관리 패널 (마이페이지) — 신규
+  function MasterCouponPanel() {
+    const [mode, setMode] = useState('single');
+    const [value, setValue] = useState(50);
+    const [count, setCount] = useState(10);
+    const [code, setCode] = useState('');
+    const [maxR, setMaxR] = useState('');
+    const [source, setSource] = useState('');
+    const [until, setUntil] = useState('');
+    const [busy, setBusy] = useState(false);
+    const [result, setResult] = useState(null);
+    const [batches, setBatches] = useState(null);
+
+    const create = async () => {
+      if (busy) return; setBusy(true); setResult(null);
+      const body = { mode, value: parseInt(value, 10) };
+      if (source.trim()) body.source = source.trim();
+      if (until) body.valid_until = new Date(until + 'T23:59:59').toISOString();
+      if (mode === 'single') body.count = parseInt(count, 10) || 1;
+      else { if (code.trim()) body.code = code.trim(); if (maxR) body.max_redemptions = parseInt(maxR, 10); }
+      try {
+        const d = await fetch('/api/admin/coupon/create', { method: 'POST', headers: { 'Content-Type': 'application/json', ...api._authHeader() }, body: JSON.stringify(body) }).then(r => r.json());
+        setResult(d); if (d.success) loadBatches();
+      } catch { setResult({ success: false, error: '네트워크 오류' }); }
+      finally { setBusy(false); }
+    };
+    const loadBatches = async () => {
+      try { const d = await fetch('/api/admin/coupon/list', { headers: api._authHeader() }).then(r => r.json()); if (d.success) setBatches(d.batches); } catch {}
+    };
+    const downloadCsv = async (batch) => {
+      try {
+        const r = await fetch(`/api/admin/coupon/list?csv=1&batch=${encodeURIComponent(batch)}`, { headers: api._authHeader() });
+        const blob = await r.blob(); const u = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = u; a.download = `coupons_${batch}.csv`; a.click(); URL.revokeObjectURL(u);
+      } catch {}
+    };
+    const inp = "px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-400";
+    return (
+      <div className="bg-white rounded-2xl p-5 mb-5 border-2 border-purple-100">
+        <div className="text-sm font-bold text-purple-700 mb-3">🛠️ 쿠폰 발행 (마스터)</div>
+        <div className="grid grid-cols-2 gap-2 mb-2">
+          <select value={mode} onChange={e => setMode(e.target.value)} className={inp}>
+            <option value="single">1회용 고유코드 N개</option>
+            <option value="campaign">공용 캠페인코드 1개</option>
+          </select>
+          <input type="number" value={value} onChange={e => setValue(e.target.value)} placeholder="지급 크레딧" className={inp} />
+          {mode === 'single'
+            ? <input type="number" value={count} onChange={e => setCount(e.target.value)} placeholder="발행 개수" className={inp} />
+            : <input value={code} onChange={e => setCode(e.target.value.toUpperCase())} placeholder="코드(빈칸=자동)" className={inp} />}
+          {mode === 'campaign' && <input type="number" value={maxR} onChange={e => setMaxR(e.target.value)} placeholder="전체 한도(빈칸=무제한)" className={inp} />}
+          <input value={source} onChange={e => setSource(e.target.value)} placeholder="배포처/캠페인 라벨" className={inp} />
+          <input type="date" value={until} onChange={e => setUntil(e.target.value)} title="유효기간(종료)" className={inp} />
+        </div>
+        <div className="flex gap-2">
+          <button onClick={create} disabled={busy} className="px-4 py-2 rounded-lg text-sm font-bold text-white bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300">{busy ? '발행 중...' : '발행'}</button>
+          <button onClick={loadBatches} className="px-4 py-2 rounded-lg text-sm font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100">목록 불러오기</button>
+        </div>
+        {result && (result.success
+          ? <div className="mt-3 text-xs text-green-700 bg-green-50 rounded-lg p-3 break-all">
+              ✅ {result.count ?? result.codes?.length}개 발행 (batch {result.batchId})<br />
+              <span className="text-gray-600">{(result.codes || []).join(', ')}</span>
+            </div>
+          : <div className="mt-2 text-xs text-red-500">{result.error}</div>)}
+        {batches && (
+          <div className="mt-3 border-t border-gray-100 pt-3">
+            <div className="text-xs font-bold text-gray-500 mb-2">발행 배치</div>
+            {batches.length === 0 && <div className="text-xs text-gray-400">아직 발행 내역이 없습니다.</div>}
+            {batches.map(b => (
+              <div key={b.batch_id} className="flex items-center justify-between text-xs py-1.5 border-b border-gray-50">
+                <span className="text-gray-700">{b.source || b.batch_id} · {b.value}cr · {b.redeemed}/{b.total} 사용</span>
+                <button onClick={() => downloadCsv(b.batch_id)} className="text-purple-600 font-semibold hover:underline">CSV</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   if (isLoggedIn && view === 'myPage') return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-green-50">
       <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
@@ -4123,6 +4247,10 @@ function PsychologicalTestSystem() {
             </div>
           </div>
         </div>
+
+        {/* 🎟️ 쿠폰 등록 */}
+        <CouponCard />
+        {currentUser?.email?.toLowerCase() === 'limyj007@gmail.com' && <MasterCouponPanel />}
 
         {/* 탭 */}
         <div className="flex gap-2 mb-5">
