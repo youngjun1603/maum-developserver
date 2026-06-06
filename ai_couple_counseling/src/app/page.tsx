@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { Brain, Heart, MessageCircleHeart, FileText, Sparkles, Shield, Languages, Swords, HeartHandshake, Target, Map, MessageCircle } from "lucide-react";
+import { Brain, Heart, MessageCircleHeart, FileText, Sparkles, Shield, Languages, Swords, HeartHandshake, Target, Map, MessageCircle, Compass } from "lucide-react";
 
 const features = [
   {
@@ -59,6 +59,15 @@ const features = [
     desc: "두 사람 모두를 위한 화해 가이드",
     color: "#FFB347",
     bgColor: "#FFF8EE",
+  },
+  {
+    href: "/lost",
+    icon: Compass,
+    emoji: "🧭",
+    title: "LOST 행동유형 검사",
+    desc: "60문항 행동유형 + 커플 궁합 분석",
+    color: "#9B8EF0",
+    bgColor: "#F0EEFF",
   },
   {
     href: "/love-type",
