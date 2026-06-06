@@ -4119,7 +4119,7 @@ function PsychologicalTestSystem() {
             <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center text-2xl">👤</div>
             <div>
               <div className="font-bold text-gray-800">{currentUser?.nickname || t('회원','member')}</div>
-              <div className="text-sm text-gray-400">{currentUser?.email}</div>
+              <div className="text-sm text-gray-500 mt-0.5">📧 {t('계정 이메일','Account email')} · <span className="text-gray-700 font-medium">{currentUser?.email}</span></div>
             </div>
           </div>
         </div>
