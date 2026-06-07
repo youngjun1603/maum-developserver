@@ -28,6 +28,10 @@
 - 마음풀과 다른 점: bible_verses, ai_config, organizations 테이블 추가
 - 배포: `wrangler.toml`(프로덕션) / `wrangler.dev.toml`(스테이징)
 - **프로덕션 도메인: `jesusmaum.com`** — `lightoflife.limyj007.workers.dev` 비활성화됨 (workers.dev 서브도메인 꺼짐)
+- **소셜 로그인: 마음풀과 별개 앱으로 분리** (2026-06) — 동의화면 브랜딩 "예수님마음" 독립
+  - 네이버: CTS 전용 앱(`NAVER_CLIENT_ID`/`SECRET` 시크릿), 콜백 `https://jesusmaum.com/api/auth/naver/callback`
+  - 구글: CTS 전용 OAuth 클라이언트(`wrangler.toml [vars] GOOGLE_CLIENT_ID`, GSI 토큰 방식, JS원본 jesusmaum.com)
+  - → 마음풀 소셜 앱(client_id 다름)은 절대 건드리지 말 것. 상세 메모리 `project_cts_naver_login`
 
 ---
 
@@ -400,3 +404,16 @@ npx wrangler secret put TOSS_SECRET_KEY   # test_sk_... 또는 live_sk_...
 [cts] 예약 시스템 원복
 [공통] CLAUDE.md 버전관리 원칙 추가
 ```
+
+### ⚠️ GitHub 계정 2개 — push 실패 시 가장 먼저 확인
+
+이 PC에는 GitHub 계정이 **2개** 등록돼 있다: **`youngjun1603`(레포 소유주)** 와 `shine184280-hue`.
+활성 계정이 `shine184280-hue`이면 private 레포(`lightoflife-cts` 등) push가 **"Repository not found"(404)** 로 실패한다. (부모 레포 `maum-developserver`는 같은 자격증명으로도 되어 헷갈리니 주의.)
+
+**push가 "Repository not found"면 토큰 만료로 오해 말고 계정부터 전환:**
+```bash
+gh auth status                      # Active account 확인
+gh auth switch --user youngjun1603  # 소유 계정으로 전환
+gh auth setup-git                   # gh를 git 자격증명 헬퍼로(GCM 캐시 우회)
+```
+→ 메모리 `feedback_github_account`
