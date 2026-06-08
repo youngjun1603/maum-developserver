@@ -1637,7 +1637,29 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
     justifyContent: "center",
     gap: 8,
     flexWrap: "wrap"
-  } }, /* @__PURE__ */ React.createElement("span", null, "\u{1F198}"), /* @__PURE__ */ React.createElement("strong", null, tl("\uC790\uC0B4\uC608\uBC29\uC0C1\uB2F4\uC804\uD654", "Suicide Prevention Hotline"), " 109"), /* @__PURE__ */ React.createElement("span", null, "\xB7"), /* @__PURE__ */ React.createElement("strong", null, tl("\uC815\uC2E0\uAC74\uAC15\uC704\uAE30\uC0C1\uB2F4\uC804\uD654", "Mental Health Crisis Line"), " 1577-0199"), /* @__PURE__ */ React.createElement("span", null, "\u2014"), /* @__PURE__ */ React.createElement("span", null, tl("24\uC2DC\uAC04 \uBB34\uB8CC \xB7 \uBCF4\uAC74\uBCF5\uC9C0\uBD80", "24/7 Free \xB7 Ministry of Health and Welfare (Korea)"))), /* @__PURE__ */ React.createElement("footer", { className: "landing-footer", style: { background: "#141414", color: "rgba(255,255,255,0.55)", padding: "56px 40px 32px" } }, /* @__PURE__ */ React.createElement("div", { style: { maxWidth: 1200, margin: "0 auto" } }, /* @__PURE__ */ React.createElement(
+  } }, /* @__PURE__ */ React.createElement("span", null, "\u{1F198}"), /* @__PURE__ */ React.createElement("strong", null, tl("\uC790\uC0B4\uC608\uBC29\uC0C1\uB2F4\uC804\uD654", "Suicide Prevention Hotline"), " 109"), /* @__PURE__ */ React.createElement("span", null, "\xB7"), /* @__PURE__ */ React.createElement("strong", null, tl("\uC815\uC2E0\uAC74\uAC15\uC704\uAE30\uC0C1\uB2F4\uC804\uD654", "Mental Health Crisis Line"), " 1577-0199"), /* @__PURE__ */ React.createElement("span", null, "\u2014"), /* @__PURE__ */ React.createElement("span", null, tl("24\uC2DC\uAC04 \uBB34\uB8CC \xB7 \uBCF4\uAC74\uBCF5\uC9C0\uBD80", "24/7 Free \xB7 Ministry of Health and Welfare (Korea)"))), /* @__PURE__ */ React.createElement("section", { style: { background: "#FAFAF7", padding: "48px 24px", borderTop: "1px solid #ECEAE3" } }, /* @__PURE__ */ React.createElement("div", { style: { maxWidth: 880, margin: "0 auto" } }, /* @__PURE__ */ React.createElement("h3", { style: { textAlign: "center", fontSize: 18, fontWeight: 700, color: "#2C2C2C", marginBottom: 6, fontFamily: "'Noto Sans KR', sans-serif" } }, tl("\uD568\uAED8\uD558\uBA74 \uC88B\uC740 \uB9C8\uC74C \uC11C\uBE44\uC2A4", "Related Services")), /* @__PURE__ */ React.createElement("p", { style: { textAlign: "center", fontSize: 13, color: "#8A8A82", marginBottom: 28 } }, tl("\uB9C8\uC74C\uD480\uACFC \uD568\uAED8 \uC774\uC6A9\uD558\uBA74 \uC88B\uC740 \uC11C\uBE44\uC2A4\uB4E4\uC774\uC5D0\uC694", "Services that pair well with Maumful")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 16, flexWrap: "wrap", justifyContent: "center" } }, [
+    { emoji: "\u271D\uFE0F", name: "The Light of Life", desc: tl("\uC131\uACBD\uC801 \uC0C1\uB2F4\xB7\uC2EC\uB9AC\uAC80\uC0AC", "Biblical counseling & assessments"), url: "https://jesusmaum.com", domain: "jesusmaum.com", accent: "#0F2044" },
+    { emoji: "\u{1F3E2}", name: "phyweb", desc: tl("\uAE30\uC5C5\xB7\uAE30\uAD00 \uC804\uBB38 \uC2EC\uB9AC\uAC80\uC0AC", "Assessments for organizations"), url: "https://phyweb.pages.dev", domain: "phyweb.pages.dev", accent: "#2E7D6B" }
+  ].map((s) => /* @__PURE__ */ React.createElement(
+    "a",
+    {
+      key: s.domain,
+      href: s.url,
+      target: "_blank",
+      rel: "noopener noreferrer",
+      style: { flex: "1 1 320px", maxWidth: 400, display: "flex", alignItems: "center", gap: 14, padding: "18px 20px", background: "white", border: "1px solid #ECEAE3", borderRadius: 16, textDecoration: "none", transition: "all 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" },
+      onMouseEnter: (e) => {
+        e.currentTarget.style.transform = "translateY(-3px)";
+        e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.08)";
+      },
+      onMouseLeave: (e) => {
+        e.currentTarget.style.transform = "none";
+        e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.04)";
+      }
+    },
+    /* @__PURE__ */ React.createElement("div", { style: { width: 44, height: 44, borderRadius: 12, background: s.accent + "14", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 } }, s.emoji),
+    /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 700, color: "#2C2C2C", fontFamily: "'Noto Sans KR', sans-serif" } }, s.name), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: "#8A8A82", marginTop: 2 } }, s.desc), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: s.accent, marginTop: 4, fontWeight: 600 } }, s.domain, " \u2192"))
+  ))))), /* @__PURE__ */ React.createElement("footer", { className: "landing-footer", style: { background: "#141414", color: "rgba(255,255,255,0.55)", padding: "56px 40px 32px" } }, /* @__PURE__ */ React.createElement("div", { style: { maxWidth: 1200, margin: "0 auto" } }, /* @__PURE__ */ React.createElement(
     "div",
     {
       style: { display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 48, marginBottom: 40 },
