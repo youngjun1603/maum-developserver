@@ -2961,6 +2961,7 @@ function PsychologicalTestSystem() {
         </button>
         {(window.KAKAO_APP_KEY || window.GOOGLE_CLIENT_ID || window.NAVER_CLIENT_ID) && (
           <div className="space-y-2 mb-4">
+            {window.KAKAO_APP_KEY && <KakaoLoginBtn onLogin={handleKakaoLogin} />}
             {window.NAVER_CLIENT_ID && <NaverLoginBtn onLogin={handleNaverLogin} />}
             {window.GOOGLE_CLIENT_ID && <GoogleSignInBtn onLogin={handleGoogleLogin} btnText="signin_with" />}
           </div>
@@ -3154,6 +3155,7 @@ function PsychologicalTestSystem() {
               <div className="relative flex justify-center"><span className="px-3 bg-white text-gray-400 text-xs">{t("또는 소셜 계정으로 시작","or continue with social")}</span></div>
             </div>
             <div className="space-y-2">
+              {window.KAKAO_APP_KEY && <KakaoLoginBtn onLogin={handleKakaoLogin} />}
               {window.NAVER_CLIENT_ID && <NaverLoginBtn onLogin={handleNaverLogin} />}
               {window.GOOGLE_CLIENT_ID && <GoogleSignInBtn onLogin={handleGoogleLogin} btnText="signup_with" />}
             </div>
