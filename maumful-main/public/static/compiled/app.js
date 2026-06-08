@@ -3967,7 +3967,7 @@ Visit Maumful and take the same test again to compare your progress.`));
   }, credits, regionConfig }));
   function ChargeView({ onClose, credits: credits2, regionConfig: regionConfig2 }) {
     const { useState: useS, useEffect: useE } = React;
-    const PAYMENT_LIVE = false;
+    const PAYMENT_LIVE = true;
     const isKorea = !regionConfig2 || regionConfig2.pg === "toss";
     const currency = isKorea ? "KRW" : "USD";
     const PACKAGES_KR = [

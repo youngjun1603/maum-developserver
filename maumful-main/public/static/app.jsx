@@ -4860,8 +4860,8 @@ function PsychologicalTestSystem() {
   // ============================================================
   function ChargeView({ onClose, credits, regionConfig }) {
     const { useState: useS, useEffect: useE } = React;
-    // 결제 준비중 플래그 — 토스 정식 결제 승인 후 true로 변경하면 결제 버튼 활성화
-    const PAYMENT_LIVE = false;
+    // 결제 준비중 플래그 — 토스 정식 결제 승인 완료, 결제 버튼 활성화
+    const PAYMENT_LIVE = true;
     const isKorea   = !regionConfig || regionConfig.pg === 'toss';
     const currency  = isKorea ? 'KRW' : 'USD';
 
