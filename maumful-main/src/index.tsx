@@ -287,7 +287,8 @@ app.get('/api/config/region', (c) => {
   const isKorea = country === 'KR' || lang === 'ko'
 
   const globalTests = ['PHQ9', 'GAD7', 'DASS21', 'BIG5', 'LOST', 'RIASEC', 'VALUES']
-  const koreaTests  = ['SCT', 'DSI', ...globalTests, 'BURNOUT']
+  // 무료검사(PHQ9·GAD7)를 맨 앞에 배치
+  const koreaTests  = ['PHQ9', 'GAD7', 'DASS21', 'BIG5', 'LOST', 'SCT', 'DSI', 'BURNOUT', 'RIASEC', 'VALUES']
 
   return c.json({
     country,

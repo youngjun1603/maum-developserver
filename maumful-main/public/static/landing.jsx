@@ -31,14 +31,14 @@ const TEST_META = [
     name: '성격 5요인 검사', nameEn: 'Big Five Personality',
     desc: '개방성·성실성·외향성·친화성·신경증 5가지 성격 차원을 과학적으로 분석합니다.',
     descEn: 'Scientifically analyzes 5 personality dimensions: Openness, Conscientiousness, Extraversion, Agreeableness, and Neuroticism.',
-    time: '15분', timeEn: '15 min', count: '60문항', countEn: '60 items',
+    time: '15분', timeEn: '15 min', count: '50문항', countEn: '50 items',
   },
   {
     id: 'LOST', label: 'LOST', icon: '🧭', color: 'amber', free: false,
     name: '행동 운영체계 검사', nameEn: 'Behavioral Style Assessment',
-    desc: '나의 행동 패턴과 동기 시스템(BIS/BAS)을 파악하여 일상 행동을 이해합니다.',
-    descEn: 'Understand your daily behavior by identifying your behavioral patterns and motivational system (BIS/BAS).',
-    time: '10분', timeEn: '10 min', count: '24문항', countEn: '24 items',
+    desc: '에너지 방향·의사결정·행동 방식·관계 성향 등 6가지 축으로 나의 행동 유형을 16가지 중 하나로 파악합니다.',
+    descEn: 'Identifies your behavioral type among 16 styles across 6 axes — energy direction, decision-making, action style, relationship orientation, and more.',
+    time: '15분', timeEn: '15 min', count: '60문항', countEn: '60 items',
   },
   {
     id: 'SCT', label: 'SRCI', icon: '✍️', color: 'coral', free: false,
@@ -59,7 +59,7 @@ const TEST_META = [
     name: '번아웃 자가점검', nameEn: 'Burnout Screening',
     desc: '정서적 고갈·냉소·효능감 3가지 소진 신호를 체크합니다. 직장인·의료진·교육자에게 특화된 자가점검입니다.',
     descEn: 'Checks 3 burnout signals: emotional exhaustion, cynicism, and efficacy. Specialized for workers, medical staff, and educators.',
-    time: '10분', timeEn: '10 min', count: '22문항', countEn: '22 items',
+    time: '15분', timeEn: '15 min', count: '50문항', countEn: '50 items',
   },
   {
     id: 'RIASEC', label: 'Holland RIASEC', icon: '🔍', color: 'violet', free: false,
@@ -1761,7 +1761,7 @@ function TestsIntroPage({ setView, isLoggedIn, lang }) {
                     {tm.id === 'GAD7' && tl('불안감 · 걱정 조절 어려움 · 여러 걱정 · 긴장감 · 안절부절 · 과민함 · 나쁜 일에 대한 두려움', 'Anxiety · Uncontrollable worry · Multiple worries · Tension · Restlessness · Irritability · Fear of something bad happening')}
                     {tm.id === 'DASS21' && tl('우울(D) — 무기력·절망·자기비하 / 불안(A) — 자율신경 각성·상황불안 / 스트레스(S) — 만성적 각성·긴장', 'Depression (D) — hopelessness, self-deprecation / Anxiety (A) — autonomic arousal, situational anxiety / Stress (S) — chronic arousal, tension')}
                     {tm.id === 'BIG5' && tl('개방성(O) · 성실성(C) · 외향성(E) · 친화성(A) · 신경증(N) — 5가지 성격 핵심 차원', 'Openness (O) · Conscientiousness (C) · Extraversion (E) · Agreeableness (A) · Neuroticism (N) — 5 core personality dimensions')}
-                    {tm.id === 'LOST' && tl('행동억제체계(BIS) · 행동활성화체계(BAS) — 추동·재미추구·보상반응성 4하위척도', 'Behavioral Inhibition System (BIS) · Behavioral Activation System (BAS) — Drive, Fun-Seeking, Reward Responsiveness — 4 subscales')}
+                    {tm.id === 'LOST' && tl('에너지 방향 · 의사결정 방식 · 행동 속도 · 안정성 · 관계 민감도 · 스트레스 반응 — 6가지 축으로 16가지 행동유형을 파악합니다', 'Energy direction · Decision style · Action speed · Stability · Relationship sensitivity · Stress response — identifies 16 behavioral types across 6 axes')}
                     {tm.id === 'SCT' && tl('자기입장 유지 · 정서반응성 · 정서적 단절 · 융합·관계의존 등 4개 영역의 자기반응 패턴을 문장완성으로 탐색합니다', 'Explores 4 domains of self-response patterns through sentence completion: self-position, emotional reactivity, emotional cutoff, and fusion/dependency')}
                     {tm.id === 'DSI' && tl('자기입장 유지 · 정서반응성 · 정서적 단절 · 융합·관계의존 — 4개 소척도 평정형 25문항으로 자기분화 수준을 측정합니다', 'Self-position · Emotional reactivity · Emotional cutoff · Fusion/dependency — 4 subscales, 25 rating items measuring self-differentiation')}
                     {tm.id === 'BURNOUT' && tl('정서적 고갈 · 냉소 · 효능감 저하 3가지 소진 신호 자가점검 — 직장인·교육·서비스직 특화', 'Emotional exhaustion · Cynicism · Reduced efficacy — 3 burnout signals, specialized for workers, educators, and service professionals')}
