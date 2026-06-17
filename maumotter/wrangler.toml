@@ -8,11 +8,17 @@ compatibility_flags = ["nodejs_compat"]
 directory = "./public"
 binding = "ASSETS"
 
-# MVP: 단일 D1에 users + 도메인 테이블. (마음곁 합류 시 users → 공용 maum-auth 로 분리)
+# 도메인 D1 (children/sessions/utterances/reports)
 [[d1_databases]]
 binding = "DB"
 database_name = "maumotter-db"
-database_id = "PUT_D1_ID_HERE"   # 대시보드에서 D1 생성 후 ID 기입
+database_id = "PUT_MAUMOTTER_DB_ID_HERE"   # 대시보드에서 D1 생성 후 ID 기입
+
+# 공용 인증 D1 (마음 시리즈 공유 — 마음곁도 동일 maum-auth 바인딩)
+[[d1_databases]]
+binding = "AUTH_DB"
+database_name = "maum-auth"
+database_id = "PUT_MAUM_AUTH_DB_ID_HERE"   # maum-auth D1 생성 후 ID 기입 (_shared/maum-auth-schema.sql 적용)
 
 [[kv_namespaces]]
 binding = "KV"

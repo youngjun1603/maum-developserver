@@ -1,12 +1,15 @@
 // 마음수달 (MaumOtter) — Worker (Hono). MVP.
+// 계정/인증은 공용 maum-auth(AUTH_DB) + 공유 모듈 ./auth (마음곁과 동일 사본).
 // 안전원칙(단정금지·의료용어금지·비밀거짓말금지·위기 보수판정)은 docs/ 준수.
 import { Hono } from 'hono';
+import { registerUser, loginUser, getUser, issueToken, requireAuth } from './auth';
 
 type Bindings = {
-  DB: D1Database;
+  DB: D1Database;          // 마음수달 도메인 (children/sessions/utterances/reports)
+  AUTH_DB: D1Database;     // 공용 maum-auth (users) — 마음곁과 공유
   KV: KVNamespace;
   ASSETS: Fetcher;
-  JWT_SECRET: string;
+  JWT_SECRET: string;      // 마음 시리즈 공유
   ANTHROPIC_API_KEY: string;
 };
 
@@ -35,68 +38,6 @@ app.options('/api/*', (c) => {
   if (ALLOWED.includes(origin)) { h['Access-Control-Allow-Origin'] = origin; h['Access-Control-Allow-Credentials'] = 'true'; }
   return new Response(null, { status: 204, headers: h });
 });
-
-// ── JWT (crypto.subtle, _shared 2장 — btoa(payload)는 금지 패턴 아님: 헤더/페이로드 base64url) ──
-const b64url = (bytes: Uint8Array) =>
-  btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-const b64urlStr = (obj: object) => b64url(new TextEncoder().encode(JSON.stringify(obj)));
-const fromB64url = (s: string) => {
-  const pad = s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4);
-  return Uint8Array.from(atob(pad), (ch) => ch.charCodeAt(0));
-};
-
-async function hmacKey(secret: string) {
-  return crypto.subtle.importKey('raw', new TextEncoder().encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
-}
-async function createJWT(payload: object, secret: string): Promise<string> {
-  const headerB64 = b64urlStr({ alg: 'HS256', typ: 'JWT' });
-  const payloadB64 = b64urlStr(payload);
-  const input = `${headerB64}.${payloadB64}`;
-  const key = await hmacKey(secret);
-  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(input));
-  return `${input}.${b64url(new Uint8Array(sig))}`;
-}
-async function verifyJWT(token: string, secret: string): Promise<any | null> {
-  const parts = token.split('.');
-  if (parts.length !== 3) return null;
-  const [h, p, s] = parts;
-  const key = await hmacKey(secret);
-  const ok = await crypto.subtle.verify('HMAC', key, fromB64url(s), new TextEncoder().encode(`${h}.${p}`));
-  if (!ok) return null;
-  try {
-    const payload = JSON.parse(new TextDecoder().decode(fromB64url(p)));
-    if (payload.exp && Math.floor(Date.now() / 1000) > payload.exp) return null;
-    return payload;
-  } catch { return null; }
-}
-
-// ── 비밀번호 해시 (PBKDF2 / crypto.subtle) ────────────────────
-const toHex = (b: ArrayBuffer) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, '0')).join('');
-async function hashPassword(pw: string): Promise<string> {
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  const baseKey = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveBits']);
-  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, baseKey, 256);
-  return `${toHex(salt.buffer)}:${toHex(bits)}`;
-}
-async function verifyPassword(pw: string, stored: string): Promise<boolean> {
-  const [saltHex, hashHex] = stored.split(':');
-  if (!saltHex || !hashHex) return false;
-  const salt = Uint8Array.from(saltHex.match(/.{2}/g)!.map((x) => parseInt(x, 16)));
-  const baseKey = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveBits']);
-  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, baseKey, 256);
-  return toHex(bits) === hashHex;
-}
-
-// ── 인증 미들웨어 ──────────────────────────────────────────────
-async function requireAuth(c: any, next: any) {
-  const auth = c.req.header('Authorization') || '';
-  const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
-  const payload = token ? await verifyJWT(token, c.env.JWT_SECRET) : null;
-  if (!payload?.maum_user_id) return c.json({ error: '로그인이 필요해요' }, 401);
-  c.set('uid', payload.maum_user_id as number);
-  await next();
-}
 
 // ── Anthropic 호출 ────────────────────────────────────────────
 async function callClaude(env: Bindings, opts: { model: string; system: string; messages: any[]; max_tokens: number; temperature?: number }) {
@@ -136,36 +77,30 @@ const MED_TERMS = ['진단', '치료', '처방', '장애', '증상', '우울증'
 // ════════════════════ API ════════════════════
 app.get('/api/health', (c) => c.json({ ok: true }));
 
-// 회원가입(부모)
+// ── 인증 (공용 maum-auth) ──
 app.post('/api/auth/register', async (c) => {
   const { email, password, name } = await c.req.json().catch(() => ({}));
   if (!email || !password || String(password).length < 8) return c.json({ error: '이메일과 8자 이상 비밀번호가 필요해요' }, 400);
-  const exists = await c.env.DB.prepare('SELECT id FROM users WHERE email=?').bind(String(email).toLowerCase()).first();
-  if (exists) return c.json({ error: '이미 가입된 이메일이에요' }, 409);
-  const hash = await hashPassword(password);
-  const r = await c.env.DB.prepare('INSERT INTO users (email,password_hash,name) VALUES (?,?,?)')
-    .bind(String(email).toLowerCase(), hash, name ?? null).run();
-  const uid = r.meta.last_row_id as number;
-  const token = await createJWT({ maum_user_id: uid, email: String(email).toLowerCase(), iss: 'maum', exp: Math.floor(Date.now() / 1000) + 30 * 86400 }, c.env.JWT_SECRET);
-  return c.json({ token, user: { id: uid, email, name } });
+  try {
+    const user = await registerUser(c.env.AUTH_DB, { email, password, name });
+    return c.json({ token: await issueToken(c.env.JWT_SECRET, user), user });
+  } catch (e: any) {
+    if (e?.message === 'DUPLICATE_EMAIL') return c.json({ error: '이미 가입된 이메일이에요' }, 409);
+    return c.json({ error: '가입 처리 중 문제가 생겼어요' }, 500);
+  }
 });
-
-// 로그인
 app.post('/api/auth/login', async (c) => {
   const { email, password } = await c.req.json().catch(() => ({}));
   if (!email || !password) return c.json({ error: '이메일과 비밀번호를 입력해주세요' }, 400);
-  const u = await c.env.DB.prepare('SELECT * FROM users WHERE email=?').bind(String(email).toLowerCase()).first<any>();
-  if (!u || !(await verifyPassword(password, u.password_hash))) return c.json({ error: '이메일 또는 비밀번호가 맞지 않아요' }, 401);
-  const token = await createJWT({ maum_user_id: u.id, email: u.email, iss: 'maum', exp: Math.floor(Date.now() / 1000) + 30 * 86400 }, c.env.JWT_SECRET);
-  return c.json({ token, user: { id: u.id, email: u.email, name: u.name } });
+  const user = await loginUser(c.env.AUTH_DB, { email, password });
+  if (!user) return c.json({ error: '이메일 또는 비밀번호가 맞지 않아요' }, 401);
+  return c.json({ token: await issueToken(c.env.JWT_SECRET, user), user });
 });
-
 app.get('/api/auth/me', requireAuth, async (c) => {
-  const u = await c.env.DB.prepare('SELECT id,email,name FROM users WHERE id=?').bind(c.get('uid')).first();
-  return c.json({ user: u });
+  return c.json({ user: await getUser(c.env.AUTH_DB, c.get('uid')) });
 });
 
-// 아이 목록 / 등록
+// ── 아이 목록 / 등록 (도메인 DB) ──
 app.get('/api/children', requireAuth, async (c) => {
   const { results } = await c.env.DB.prepare('SELECT * FROM children WHERE maum_user_id=? ORDER BY id').bind(c.get('uid')).all();
   return c.json({ children: results });
@@ -178,20 +113,19 @@ app.post('/api/children', requireAuth, async (c) => {
   return c.json({ id: r.meta.last_row_id });
 });
 
-// 세션 시작 (부모 인증 후 아이 모드 진입)
+// ── 세션 시작 (부모 인증 후 아이 모드) ──
 app.post('/api/session/start', requireAuth, async (c) => {
   const { child_id } = await c.req.json().catch(() => ({}));
   const child = await c.env.DB.prepare('SELECT * FROM children WHERE id=? AND maum_user_id=?').bind(child_id, c.get('uid')).first<any>();
   if (!child) return c.json({ error: '아이를 찾을 수 없어요' }, 404);
   const r = await c.env.DB.prepare('INSERT INTO sessions (child_id,maum_user_id) VALUES (?,?)').bind(child_id, c.get('uid')).run();
   const sid = r.meta.last_row_id as number;
-  // 또또 첫 인사
   const greeting = `안녕! 오늘도 또또랑 이야기하러 와줘서 고마워 🦦 오늘 하루는 어땠어?`;
   await c.env.DB.prepare('INSERT INTO utterances (session_id,role,content) VALUES (?,?,?)').bind(sid, 'otter', greeting).run();
   return c.json({ session_id: sid, greeting, child: { name: child.name, age: child.age } });
 });
 
-// 아이 발화 → 또또 응답
+// ── 아이 발화 → 또또 응답 ──
 app.post('/api/session/:id/utterance', requireAuth, async (c) => {
   const sid = Number(c.req.param('id'));
   const { content } = await c.req.json().catch(() => ({}));
@@ -212,7 +146,7 @@ app.post('/api/session/:id/utterance', requireAuth, async (c) => {
   return c.json({ reply });
 });
 
-// 세션 종료 → 통역 리포트 생성
+// ── 세션 종료 → 통역 리포트 ──
 app.post('/api/session/:id/end', requireAuth, async (c) => {
   const sid = Number(c.req.param('id'));
   const s = await c.env.DB.prepare('SELECT * FROM sessions WHERE id=? AND maum_user_id=?').bind(sid, c.get('uid')).first<any>();
@@ -234,11 +168,8 @@ app.post('/api/session/:id/end', requireAuth, async (c) => {
       let raw = await callClaude(c.env, { model: REPORT_MODEL, system: TRANSLATE_SYSTEM, messages: [{ role: 'user', content: userMsg }], max_tokens: 900, temperature: 0 });
       raw = raw.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
       const parsed = JSON.parse(raw);
-      // 의료용어 후처리 검증
-      const flat = JSON.stringify(parsed);
-      if (!MED_TERMS.some((t) => flat.includes(t))) report = parsed;
+      if (!MED_TERMS.some((t) => JSON.stringify(parsed).includes(t))) report = parsed;
       else {
-        // 재시도 1회
         let raw2 = await callClaude(c.env, { model: REPORT_MODEL, system: TRANSLATE_SYSTEM + '\n(이전 출력에 금지된 의료용어가 있었습니다. 절대 사용하지 마세요.)', messages: [{ role: 'user', content: userMsg }], max_tokens: 900, temperature: 0 });
         raw2 = raw2.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
         try { const p2 = JSON.parse(raw2); if (!MED_TERMS.some((t) => JSON.stringify(p2).includes(t))) report = p2; } catch {}
@@ -253,7 +184,7 @@ app.post('/api/session/:id/end', requireAuth, async (c) => {
   return c.json({ report, report_id: r.meta.last_row_id });
 });
 
-// 리포트 목록 / 상세
+// ── 리포트 ──
 app.get('/api/reports', requireAuth, async (c) => {
   const childId = c.req.query('child_id');
   const q = childId

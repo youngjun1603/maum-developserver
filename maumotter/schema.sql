@@ -1,16 +1,8 @@
--- 마음수달 D1 스키마 (MVP)
+-- 마음수달 도메인 D1 스키마 (MVP) — DB 바인딩(maumotter-db)
 -- 적용: Cloudflare 대시보드 → D1 → maumotter-db → Console 에 붙여넣기 실행.
 -- ⚠️ 운영 중 변경은 ALTER TABLE ADD COLUMN 만 (DROP/RENAME/타입변경 불가).
--- MVP는 users 를 이 DB에 둠. 마음곁 합류 시 users → 공용 maum-auth 로 분리(maum_user_id 유지).
-
--- 계정(부모) — maum_user_id = users.id (JWT payload), 향후 maum-auth 로 이관
-CREATE TABLE IF NOT EXISTS users (
-  id           INTEGER PRIMARY KEY AUTOINCREMENT,
-  email        TEXT NOT NULL UNIQUE,
-  password_hash TEXT NOT NULL,           -- PBKDF2(salt:hash) hex
-  name         TEXT,
-  created_at   TEXT DEFAULT (datetime('now'))
-);
+-- ※ 계정(users)은 이 DB에 없음 → 공용 maum-auth D1(AUTH_DB) 사용. `_shared/maum-auth-schema.sql` 참조.
+--   여기 테이블들은 maum_user_id(= maum-auth.users.id)로 부모를 참조.
 
 -- 아이 프로필 (부모 계정 종속)
 CREATE TABLE IF NOT EXISTS children (
