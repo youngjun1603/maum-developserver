@@ -1,419 +1,58 @@
-# 마음풀 프로젝트
+# 마음(maum) 프로젝트 — 루트 공통 규칙
 
-## 서비스 구성 (2개)
+> 이 파일은 **maum 폴더 전 서비스에 공통**으로 적용되는 최소 규칙만 담는다.
+> **각 서비스의 상세 규칙은 해당 폴더의 CLAUDE.md를 따른다** (아래 라우터 참조). 서비스 간 규칙을 섞지 말 것.
 
-### 1. 마음풀 서비스
-심리검사·AI상담·전문상담 연결·치유게임 통합 플랫폼
+## 서비스 구성 & CLAUDE.md 라우터
 
-| 폴더 | Worker | 역할 |
-|------|--------|------|
-| `maumful-main/` | `maumful` | 메인 플랫폼 (maumful.com) |
-| `maumgame-main/` | `maumgame` | 치유 게임 (game.maumful.com) |
-| `package/maumcouple/` | `maumcouple` | 커플 분석 (couple.maumful.com) |
+| 폴더 | 서비스 | 작업 시 읽을 규칙 |
+|------|--------|------------------|
+| `maumful-main/` | 마음풀 메인 (maumful.com) | `maumful-main/CLAUDE.md` (마음풀 + 트윈 공통) |
+| `maumgame-main/` | 마음풀 게임 (game.maumful.com) | `maumful-main/CLAUDE.md` |
+| `package/maumcouple/` | 마음커플 (couple.maumful.com) | `maumful-main/CLAUDE.md` |
+| `cts-maum-main/` | CTS 메인 (jesusmaum.com) *submodule* | `cts-maum-main/CLAUDE.md` (+ 공통은 maumful-main) |
+| `cts-game-main/` | CTS 게임 | `cts-maum-main/CLAUDE.md` (+ maumful-main) |
+| `maumotter/` | 마음수달 (아이 정서 통역) *신규* | `maumotter/CLAUDE.md` + `_shared/` |
+| `maumgyeot/` | 마음곁 (반려동물 통역) *신규* | `maumgyeot/CLAUDE.md` + `_shared/` |
+| `_shared/` | 마음 시리즈 공유규약(인증·JWT·브랜드) | `_shared/maum-shared-spec.md` |
+| `_assets/` | 이미지·디자인·문서 자산 | — |
 
-- DB: `maumful-db` (D1: f8046693)
-- 결제: 토스페이먼츠(KRW) + Stripe(USD), 크레딧 기반
-- 검사 12종: SCT, DSI, PHQ-9, GAD-7, DASS-21, BIG5, K-MBI+, LOST, SRCI, SDRI, RBC, SDI
-- 게임 8종: garden, efmt, gratitude, tree, burnout, mood, focus, worry
+- **마음풀·CTS는 트윈**(~90% 동일). 공통 개발규칙은 `maumful-main/CLAUDE.md`에 두고 CTS는 차이점만 관리.
+- **마음 시리즈(수달·곁)는 별개 스택**(React CDN·no-build·GitHub 웹UI 배포) — 마음풀/CTS 규칙을 끌어오지 말 것.
 
-### 2. CTS 서비스 (트윈 개발)
-마음풀과 동일 아키텍처, 성경적 상담 기능 추가한 고객 맞춤 버전
-
-| 폴더 | Worker | 역할 |
-|------|--------|------|
-| `cts-maum-main/` | `lightoflife` | CTS 메인 플랫폼 |
-| `cts-game-main/` | `lightoflife-game` | CTS 치유 게임 |
-
-- DB: `lightoflife-db` (D1: 662b3fb9)
-- 마음풀과 다른 점: bible_verses, ai_config, organizations 테이블 추가
-- 배포: `wrangler.toml`(프로덕션) / `wrangler.dev.toml`(스테이징)
-- **프로덕션 도메인: `jesusmaum.com`** — `lightoflife.limyj007.workers.dev` 비활성화됨 (workers.dev 서브도메인 꺼짐)
-- **소셜 로그인: 마음풀과 별개 앱으로 분리** (2026-06) — 동의화면 브랜딩 "예수님마음" 독립
-  - 네이버: CTS 전용 앱(`NAVER_CLIENT_ID`/`SECRET` 시크릿), 콜백 `https://jesusmaum.com/api/auth/naver/callback`
-  - 구글: CTS 전용 OAuth 클라이언트(`wrangler.toml [vars] GOOGLE_CLIENT_ID`, GSI 토큰 방식, JS원본 jesusmaum.com)
-  - → 마음풀 소셜 앱(client_id 다름)은 절대 건드리지 말 것. 상세 메모리 `project_cts_naver_login`
+## 공통 기술 스택
+- 마음풀·CTS·게임·커플: Hono + Cloudflare Workers + D1 + KV, React(esbuild 사전컴파일), Anthropic Claude
+- 마음 시리즈(수달·곁): 동일 백엔드(Workers+Hono+D1+KV) + React **CDN(unpkg)·빌드 없음**
 
 ---
 
-## 기술 스택 (공통)
-
-- **백엔드:** Hono.js (TypeScript) + Cloudflare Workers
-- **프론트엔드:** React 18 (esbuild 사전 컴파일 — `@babel/standalone` 제거 완료)
-- **DB:** Cloudflare D1 (SQLite) + KV
-- **AI:** Anthropic Claude API
-
----
-
-## 주요 명령어
-
-```bash
-# 로컬 개발
-npx wrangler dev
-
-# 배포 (포그라운드 실행 필수 — 백그라운드 시 인증 실패)
-npx wrangler deploy
-
-# CTS 스테이징 배포
-npx wrangler deploy --config wrangler.dev.toml
-
-# DB 마이그레이션 (마음풀·CTS)
-npx wrangler d1 migrations apply maumful-db
-npx wrangler d1 migrations apply lightoflife-db
-
-# 시크릿 설정
-npx wrangler secret put ANTHROPIC_API_KEY
-```
-
----
-
-## 배포 원칙
-
-- **마음풀·CTS:** 변경 사항 모아서 한꺼번에 배포 / CTS는 즉시 배포
-- `wrangler deploy`는 반드시 포그라운드 실행
-- 배포 전 TypeScript 에러 확인 필수
-
----
-
-## 프론트엔드 빌드
-
-**모든 서비스 공통:** `@babel/standalone` 제거, esbuild 사전 컴파일 방식. `npm run deploy`에 build:jsx 포함됨.
-
-### maumful-main (메인 플랫폼)
-
-```bash
-npm run build:jsx
-# → public/static/compiled/{app,landing,counseling,counseling_admin}.js
-```
-
-- 4개 파일 모두 **일반 `<script>`로 동일 전역 스코프** 공유
-  - 전역 `const` 이름 충돌 시 `SyntaxError` 발생
-  - 예: `counseling.jsx`와 `counseling_admin.jsx`의 동일명 변수 → 한쪽 rename 필요
-
-### maumgame-main / cts-game-main (치유 게임)
-
-```bash
-npm run build:jsx   # → public/static/compiled/game_engine.js, game_registry.js, game_hub.js, games/*.js
-npm run deploy      # build:jsx + wrangler deploy 통합 실행
-```
-
-- **`--tsconfig-raw={"compilerOptions":{"jsx":"react"}}` 필수** — `tsconfig.json`의 `"jsx":"react-jsx"` 설정이 esbuild 플래그를 override해서 `import { jsx } from "react/jsx-runtime"` 생성 → 일반 `<script>` 환경에서 실패
-- **SSO 인라인 스크립트 순서 주의:** 컴파일 스크립트 로드 전에 실행 필수 (React 마운트 전 토큰 처리)
-- `game_engine.js`가 `GAME_LANG`, `t()`, `GameEngine` 전역 정의 → 다른 게임 파일이 참조
-- `GameHubApp`에 10초 폴백 타임아웃 추가: `getMe()` fetch hang 시 무한 스켈레톤 방지
-
-### package/maumcouple (커플 분석)
-
-```bash
-npm run build:jsx        # couple_hub.jsx → compiled/couple_hub.js
-npm run deploy           # maumcouple (couple.maumful.com) 배포
-npm run deploy:cts       # lightoflife-couple (wrangler.lightoflife.toml) 배포
-```
-
-- **빌드 없이 직접 서빙 불가** — esbuild 사전 컴파일 후 배포
-
----
-
-## 다국어(i18n) 구현
-
-- **패턴:** `t(ko, en)` 헬퍼 — `lang === 'en' ? en : ko`
-- `t`는 `PsychologicalTestSystem` 클로저 내부에 정의 — **`app.jsx` 컴포넌트만 사용 가능**
-- `landing.jsx` · `counseling.jsx`는 컴포넌트별로 `tl` 헬퍼를 독립 정의해 사용
-- 검사 문항 배열에 영어 필드 추가 방식: `{ content:'한국어', en:'English', scale:'척도', scaleEn:'Scale' }`
-- `CounselingPage`는 `lang` prop을 `app.jsx`에서 받아야 함 (기본값 없음)
-
-### CTS 영어 서비스 ✅ 완료 (jesusmaum.com)
-
-마음풀과 동일 `t(ko,en)` 패턴으로 CTS 전체 영어화 완료. EN 토글로 전 동선 전환.
-
-- **헬퍼(파일별 — 전역 스코프 충돌 방지):**
-  - `app.jsx`: 컴포넌트 스코프 `const t`, `lang = langOverride || currentUser?.locale || 'ko'`, 토글 `updateLang()`→`localStorage.cts_lang`
-  - `landing.jsx`: 컴포넌트별 `const tl` 로컬 정의 (lang prop)
-  - `counseling.jsx`: **모듈 레벨 `const ctsTl`** (고유명 — 전역 충돌 회피). `SESSION_TYPES`는 `get label()` getter로 동적 전환
-- **검사 문항 8종(~250문항):** 각 항목에 `en` 필드(+SRCI는 `promptEn`), 렌더는 `t(q.content, q.en || q.content)` 폴백
-- **⚠️ 채점 키 보존:** `scale`·`factor`·`axis`·`dir`·`rev`·`domain`은 calc 그룹핑 키 → 한글값 절대 변경 금지(`en`/`scaleEn`은 추가 필드만)
-- **결과 레벨:** calc의 `level` 한글값 유지(`levelConfig[level]` 조회 키), 표시만 `tLevel(ko)` 매핑(LEVEL_EN + `||ko` 폴백)
-- **⚠️ 섀도잉 함정:** `.map(t => ...)` 파라미터 `t`가 번역 헬퍼 `t`를 가림 → 내부 `t('..','..')` 호출 시 런타임 크래시. map 파라미터를 `tt`/`s`로 rename할 것
-
-#### 성경 말씀 영어화 — 웹 영어성경(WEB) 사전 저장 방식
-
-**원칙: 성경 본문은 직접 번역하지 않는다.** 웹 정식 영어역본(WEB, World English Bible, 공개도메인)을 미리 받아 정적 맵으로 저장 후 노출. (사용자 결정)
-
-- **생성 스크립트:** `node scripts/gen_bible_en.mjs` — `migrations/0015_bible_verses.sql`의 전체 출처(78구절)를 `bible-api.com?translation=web`에서 수집해 `public/static/compiled/cts_bible_en.js` 생성. 재개 가능(기존분 유지)·429 백오프 내장.
-- **데이터 파일(`cts_bible_en.js`):** `window.CTS_BIBLE_EN`(한글출처→영어본문)·`CTS_BIBLE_BOOK_EN`·`CTS_BIBLE_THEME_EN` + `ctsBibleRefEn/ThemeEn/TextEn` 헬퍼. `src/index.tsx`에서 **다른 컴파일 스크립트보다 먼저** `<script>`로 로드(전역 공유).
-- **사용처:** `app.jsx`의 `CtsVerseText`, `landing.jsx`의 `vText/vTheme/vRef` — 런타임 fetch 없이 `window.ctsBible*` **동기 조회**, 영어 매핑 없으면 한글 폴백. 본문만 영어성경, 출처(책이름)·테마는 맵으로 영어화.
-- **⚠️ 새 말씀(출처) 추가 시:** 마이그레이션에 구절 추가 후 **반드시 `node scripts/gen_bible_en.mjs` 재실행** → 빌드·배포. 누락 시 새 구절은 영어 모드에서 한글로 폴백됨.
-- WEB는 "여호와"를 `Yahweh`로 표기(역본 특성, 정상).
-
----
-
-## 주요 기능 구현 현황
-
-### AI 감정 추적 (Mood Logging)
-- AI 응답에 `[MOOD:N]` 태그 삽입 (N = 0~100)
-- `ChatBox` processStream done 블록에서 추출·제거 후 `/api/chat/mood-log` POST
-- DB: `mood_logs(user_id, mood_score, test_type, created_at)` — migration `0020_mood_logs.sql`
-- 트렌드 조회: `GET /api/chat/mood-trend?days=14` (최대 90일)
-
-### 외부 검사 결과 입력 (ExternalResultSection)
-- 점수 직접 입력 탭: `/api/test/external-result` POST
-- PDF 업로드 + AI 해석 탭: pdf.js로 텍스트 추출 → `/api/test/analyze-pdf` POST (3 크레딧)
-- 히스토리 탭에 `📥 외부 검사 결과 입력 · AI 해석` 버튼으로 진입
-
-### CBT 8주 자기관리 플랜 (CbtPlanCard)
-- PHQ-9·GAD-7·BURNOUT·DASS-21 검사 이력이 있을 때만 대시보드에 표시
-- `/api/test/cbt-plan` GET으로 플랜 로드 (최초 1회 생성)
-- 주차별 완료 여부는 `localStorage('cbt_done_weeks')`에 저장
-
-### 인근 상담 기관 찾기 (CounselingPage)
-- Kakao Maps SDK + `/api/nearby-counseling?lat=&lng=` 로 주변 기관 검색
-- 카테고리 필터: 정신건강의학과 / 정신건강복지센터 / 심리상담센터
-- 24시간 무료 상담전화(109, 1577-0199, 1388) 섹션 포함
-- `lang` prop 필수 — app.jsx 호출 시 반드시 전달
-
----
-
-## 마음게임 번역 ✅ 완료
-
-**현황:** `maumgame-main/` 및 `cts-game-main/` 영어 번역 완료
-
-**구현 내용:**
-- 패턴: `t(ko, en)` 헬퍼 — `GAME_LANG === 'en' ? en : ko`
-- `GAME_LANG` 전역 변수: `game_engine.jsx`에서 `new URLSearchParams(location.search).get('lang') || 'ko'` 로 초기화
-- lang 전달: 마음풀/CTS → 게임 링크 열 때 `?lang=en` URL 파라미터로 전달
-- `maumcouple`도 `COUPLE_LANG` / `tl(ko, en)` 헬퍼로 동일 패턴 적용
-
-**번역 완료 파일 (maumgame 11개, cts-game 추가 +qt.jsx):**
-`game_engine.jsx`, `game_registry.jsx`, `game_hub.jsx`, `games/mood.jsx`, `games/garden.jsx`, `games/burnout.jsx`, `games/efmt.jsx`, `games/gratitude.jsx`, `games/tree.jsx`, `games/focus.jsx`, `games/worry.jsx`
-
----
-
-## 크레딧 시스템
-
-### 단가 구조 (maumful-main/src/index.tsx)
-
-| 기능 | 크레딧 | 비고 |
-|------|--------|------|
-| 심리검사 1회 | 10 cr | PHQ-9·GAD-7는 무료 |
-| AI 채팅 1회 | 2 cr | 크레딧 보유 시 소진까지 무제한 |
-| AI 채팅 (크레딧 없음) | 무료 | 하루 5회 제한 |
-| PDF 분석 1회 | 3 cr | 외부 검사 AI 해석 |
-
-### 크레딧 패키지 (KRW)
-
-| 패키지 | 크레딧 | 가격 | 단가 |
-|--------|--------|------|------|
-| 스타터 | 50 | 2,900원 | 58원/cr |
-| 표준 | 120 | 5,900원 | 49원/cr |
-| 프리미엄 | 300 | 12,900원 | 43원/cr |
-| 대용량 | 700 | 24,900원 | 36원/cr |
-
-### 일일 제한 로직 (`src/index.tsx`)
-- 크레딧 ≥ 2: 차감 후 무제한 (KV 일일 카운터 없음)
-- 크레딧 < 2: 무료 5회/일 (`ai_daily:{userId}:{today}` KV, TTL 86400)
-- 비회원: 평생 3회 (`guest_chat:{ip}` KV, TTL 없음)
-- 마스터 계정: 무제한·무차감
-
-### 향후 상품제 전환 계획 (현재는 크레딧 유지)
-
-유료 결제를 **상품제**(검사+AI채팅 / 검사+결과해석 / AI채팅하기 등 상품별 직접 결제)로 전환 예정. **현재는 크레딧 제도 유지.**
-
-- **방식: 하이브리드** — 사용자 화면은 상품 단위로 표시·결제하되, 백엔드는 기존 크레딧 엔진(`spendCredits`/`gainCredits`)을 내부에서 그대로 활용 (결제 시 상품에 맞는 크레딧 자동 지급/소진). UI는 상품제 직관성 + 백엔드는 검증된 로직·트윈 구조 유지.
-- **AI 채팅**은 상품에 "내장 횟수"로 매핑 (무제한 기간권은 Claude API 원가 폭주 위험 → 지양).
-- **전환 순서:** ① 토스 **정식(실결제) 승인 이후** 착수 → ② **마음풀·CTS 두 시스템 동시 변경** (한쪽만 바꿔 트윈 분기 금지).
-- 착수 전 상세 설계(상품목록·가격·DB·플로우) 먼저 검토받을 것.
-
----
-
-## 토스페이먼츠 결제 연동
-
-### SDK
-
-- **사용 버전:** v1 (`https://js.tosspayments.com/v1`) — HTML `<head>`에 포함
-- ⚠️ `https://js.tosspayments.com/v2/base` → **403 Forbidden** — 사용 불가
-- `window.TossPayments(clientKey)` → 동기 초기화, `requestPayment('카드', {...})` 방식
-
-### 결제 플로우
-
-```
-프론트 → POST /api/payment/toss/checkout
-       → { clientKey, customerKey, orderId, orderName, amount, successUrl, failUrl } 반환
-       → window.TossPayments(clientKey).requestPayment('카드', {...})
-       → 결제 완료 → GET /api/payment/toss/success?paymentKey=&orderId=&amount=&chargeId=
-       → 토스 confirm API 호출 → 크레딧 지급
-       → POST /api/webhook/toss (이중지급 방지)
-```
-
-### 시크릿 설정
-
-```bash
-npx wrangler secret put TOSS_CLIENT_KEY   # test_ck_... 또는 live_ck_...
-npx wrangler secret put TOSS_SECRET_KEY   # test_sk_... 또는 live_sk_...
-# TOSS_WEBHOOK_SECRET: 미설정 시 검증 건너뜀 (실서비스 전 설정 권장)
-```
-
-- 테스트 키는 `test_ck_` / `test_sk_` prefix — 실결제 없음
-- 실서비스 전환 시 `live_ck_` / `live_sk_` 로 교체 (코드 변경 불필요)
-
----
-
-## 카카오 소셜 로그인 설정
-
-### Redirect URI 등록 위치
-카카오 Developer Console에서 Redirect URI는 **카카오 로그인 > 일반** 이 아닌 아래 경로에 있음:
-
-> 콘솔 → 앱 선택 → 앱 설정 → **플랫폼 키 / 어드민 키 → REST API 키** → 카카오 로그인 리다이렉트 URI
-
-- 마음풀 등록 URI: `https://maumful.com/api/auth/kakao/callback`
-- REST API 방식(서버 사이드) 사용 시 위 경로에 등록
-
-### 동의항목 제한 사항
-- `gender`, `age_range` → **권한 없음** — Kakao OAuth 응답에서 제공 안 됨
-- 카카오 로그인으로 제공되는 항목: 닉네임(필수), 프로필사진(선택), 이메일(비즈 앱 필요)
-- 성별·연령대는 **이메일 회원가입 폼에서만** 직접 수집
-
----
-
-## 지자체 화이트라벨 (구현 대기)
-
-사용자가 요청 시 구현 시작. 지금은 설계만 확정된 상태.
-
-### 아키텍처: 멀티테넌트 단일 Worker
-
-- `organizations` 테이블 + `users.org_id` FK
-- Worker가 `host` 헤더로 org 식별 → `/api/org-config` 반환
-- 지자체 도메인 → Cloudflare DNS CNAME → 마음풀 Worker
-- org 설정 없으면 마음풀 기본 디자인으로 폴백
-
-### landing_config JSON 구조
-
-```json
-{
-  "hero": {
-    "bg_image": "https://cdn.../hero.jpg",
-    "overlay": 0.55,
-    "title": "서울시민 마음건강 플랫폼",
-    "subtitle": "서울특별시와 마음풀이 함께합니다"
-  },
-  "brand": {
-    "name": "서울 마음풀",
-    "logo": "https://cdn.../logo.png",
-    "color": "#0033A0"
-  },
-  "footer": {
-    "org_name": "서울특별시 정신건강복지센터",
-    "address": "서울특별시 ...",
-    "phone": "02-XXX-XXXX"
-  }
-}
-```
-
-### 히어로 영역 규칙
-- 배경 사진 + 반투명 오버레이(0.5~0.6) + 흰색 텍스트 고정
-- overlay 값으로 사진 밝기 무관하게 가독성 유지
-
-### 구현 시 작업 목록
-1. `organizations` 테이블 migration (id, domain, name, landing_config JSON, ...)
-2. `users` 테이블에 `org_id` FK 추가
-3. `GET /api/org-config` 엔드포인트 (host 헤더 → org 조회)
-4. `landing.jsx` — org_config 로드 후 히어로/브랜드/푸터 적용
-5. 어드민: 지자체 설정 관리 UI (landing_config JSON 편집)
-
-### 데이터 분리 기준
-| 지자체 규모 | 방식 |
-|------------|------|
-| 소규모·파일럿 | 멀티테넌트 단일 Worker (A안) |
-| 대형·데이터 분리 요구 | CTS 트윈 모델 (B안) |
-
----
-
-## 임상·법적 표현 정책 ⚠️ 카피 작성·검토 시 필수
-
-마음풀·CTS는 의료기관이 아닌 **B2C 자기이해·정보제공·돌봄 콘텐츠 서비스**다. "서비스가 진단·치료한다"는 함의를 주는 임상 표현은 모두 완화한다. (2026-06 양 사이트 전 영역 점검 완료) → 메모리 `feedback_clinical_expression_policy`
-
-### 완화 대상 (발견 시 순화) — 마음풀·CTS 양쪽 동일 적용
-| 표현 | 순화 |
-|------|------|
-| 진단 (서비스 기능) | 점검 / 체크 / 돌아보기 (예: "무료 진단"→"무료") |
-| 치료 / 처방 / 완치 | 제거 또는 돌봄·연습·관점 ("인지행동치료 기법"→"인지행동(CBT) 관점") |
-| 임상(검증/사용/표준) | 전문가들이 널리 활용하는 / 표준 ("임상 심리검사"→"전문 심리검사") |
-| 임상 심리학 | 심리학 |
-| 진단조 단정 ("중등도 우울 증상") | "우울감이 다소 높게 나타남" (단정 금지) |
-| 처방형 권고 (~프로그램 참여/기술 훈련/재구조화 작업) | 참고할 수 있는 접근 / 이해 / 연습 |
-| EN: clinically validated / THERAPY / heal·restore your mind / diagnosis / symptom patterns / clinical psychology | standardized·professional / (삭제) / nurture·care for your mind / check / response patterns / psychology |
-
-### 유지 (절대 건드리지 말 것)
-- **면책 문구**("의료적 진단·치료를 대체하지 않습니다", "의학적 진단이 아닙니다") — 보호장치
-- **백엔드 AI 프롬프트의 진단금지 지침**("임상적·진단적 표현 절대 금지", "약물·치료 권유 금지", "성향·경향·패턴으로 표현", "전문가 상담 권유") — 안전장치
-- **검사 문항 원문의 `증상`** — 검증된 표준도구(PHQ-9 등) 원문, 변경 시 신뢰도 훼손
-- **상담사 자격·전문분야**("임상심리사 1급", "공황장애 전문") — 실제 직업 정보(사실)
-- **인근기관명**(정신건강의학과/정신건강복지센터) — 실제 기관명
-- **심각도 레벨**(정상/경도/중등도/중증) — 표준 채점 구간
-- **admin "모델 진단"** — IT 기술용어
-
-> 톤 원칙: **자기이해·정보제공·돌봄**. 영어본도 동일 기준. 신규 카피 작성 시에도 준수.
-
----
-
-## 개발 완료 후 검증 원칙 ⚠️ 필수 준수
-
-### 신규 개발 즉시 에러·버그 검증 (자동 수행)
-
-사용자가 별도로 요청하지 않아도, **기능 개발이 완료되면 즉시** 에러·버그 검증을 수행한다.
-
-**검증 시점:** 빌드 성공 확인 후, 배포 전 또는 배포 직후
-
-**검증 범위 (병렬 에이전트 활용):**
-- 변경된 파일 + 직접 연관된 파일 (프론트·백엔드 모두)
-- 신규 함수의 변수 스코프, 타입 오류, undefined 참조
-- 크레딧 차감 로직 (레이스 컨디션, 원자적 처리 여부)
-- API 응답 구조 일치 여부 (프론트 ↔ 백엔드)
-- `parseInt()` NaN, `.first()` null 체크
-- React Hook 의존성 배열 누락
-
-**이유:** 신규 기능 추가 후 치명 버그가 뒤늦게 발견된 사례 다수 —  
-`getAnthropicKey` 매개변수 오류, `credits`/`isMaster` 미정의, 크레딧 레이스 컨디션, `AI_LIMIT_PAID` 미정의 등.  
-모두 사전 검증으로 방지 가능했던 버그들.
-
----
-
-## 버전 관리 원칙 ⚠️ 필수 준수
-
-### 수정 즉시 커밋·푸시 (필수)
-
-코드·설정을 수정하면 **항상 GitHub에 커밋과 푸시를 수행한다.** 사용자가 별도로 요청하지 않아도 작업 완료 시 자동으로 커밋·푸시까지 끝낸다.
-
-**규칙:**
-- 빌드·배포 완료 후 곧바로 `git commit` + `git push origin main`
-- CTS(`cts-maum-main/`)는 submodule이므로 **submodule 내부 커밋·push → 부모 레포 포인터 커밋·push** 순서로 진행
-- 커밋을 미루거나 누락하지 않는다 (다중 PC 환경 동기화 필수)
+## 버전 관리 원칙 ⚠️ 전 서비스 필수
+
+### 수정 즉시 커밋·푸시
+코드·설정 수정 시 **항상 커밋·푸시**(사용자 요청 없어도 작업 완료 시 자동). `git push origin main`. 다중 PC 동기화 필수.
+- CTS(`cts-maum-main/`)는 **submodule** → 내부 커밋·push → 부모 레포 포인터 커밋·push 순서.
 
 ### 서비스별 커밋 분리 (매우 중요)
-
-마음풀·CTS는 향후 완전히 독립적으로 운영될 예정이므로, **서비스 간 변경 사항을 절대 하나의 커밋에 혼합하지 않는다.**
-
-**규칙:**
-- 마음풀(`maumful-main/`) 변경 → 별도 커밋
-- CTS(`cts-maum-main/`) 변경 → 별도 커밋
-- 공통 설정(`CLAUDE.md` 등) 변경 → 별도 커밋
-
-**이유:** 서비스별로 커밋이 분리되어 있어야 `git revert <commit>` 한 번으로 특정 서비스만 롤백할 수 있다. 혼합 커밋은 선택적 롤백이 불가능해진다.
-
-**커밋 메시지 prefix 예시:**
+서비스 간 변경을 **하나의 커밋에 절대 혼합하지 않는다** (선택적 `git revert`를 위해). 서비스별 별도 커밋.
 ```
-[maumful] 상담센터 안내 페이지로 교체
-[cts] 예약 시스템 원복
-[공통] CLAUDE.md 버전관리 원칙 추가
+[maumful] …   [cts] …   [maumgame] …   [maumcouple] …
+[maumotter] … [maumgyeot] … [maum-series] …   [공통] …
 ```
 
 ### ⚠️ GitHub 계정 2개 — push 실패 시 가장 먼저 확인
-
-이 PC에는 GitHub 계정이 **2개** 등록돼 있다: **`youngjun1603`(레포 소유주)** 와 `shine184280-hue`.
-활성 계정이 `shine184280-hue`이면 private 레포(`lightoflife-cts` 등) push가 **"Repository not found"(404)** 로 실패한다. (부모 레포 `maum-developserver`는 같은 자격증명으로도 되어 헷갈리니 주의.)
-
-**push가 "Repository not found"면 토큰 만료로 오해 말고 계정부터 전환:**
+계정 2개 등록: **`youngjun1603`(레포 소유주)** / `shine184280-hue`. 활성이 `shine184280-hue`이면 private 레포(`lightoflife-cts` 등) push가 **"Repository not found"(404)** 로 실패(부모 레포는 되어 헷갈림).
 ```bash
 gh auth status                      # Active account 확인
 gh auth switch --user youngjun1603  # 소유 계정으로 전환
 gh auth setup-git                   # gh를 git 자격증명 헬퍼로(GCM 캐시 우회)
 ```
 → 메모리 `feedback_github_account`
+
+---
+
+## 배포 원칙 (공통)
+- 워커 서비스(`wrangler deploy`)는 반드시 **포그라운드** 실행(백그라운드 시 인증 실패). 배포 전 TypeScript 에러 확인.
+- 마음 시리즈(수달·곁)는 GitHub 웹UI → Cloudflare 자동 배포 (각 폴더 CLAUDE.md).
+
+## 개발 완료 후 검증 (공통)
+기능 개발 완료 시 **요청 없어도 즉시** 에러·버그 검증(빌드 성공 후, 배포 전/직후). 상세 체크리스트는 각 서비스 CLAUDE.md. (메모리 `feedback_verify_after_dev`)
