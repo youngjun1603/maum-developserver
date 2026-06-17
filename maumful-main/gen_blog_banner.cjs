@@ -33,9 +33,9 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="260" v
 
 sharp(Buffer.from(svg))
   .png({ compressionLevel: 9 })
-  .toFile('../pic/maumful_blog_banner.png')
+  .toFile('../_assets/pic/maumful_blog_banner.png')
   .then(() => {
-    const s = require('fs').statSync('../pic/maumful_blog_banner.png');
+    const s = require('fs').statSync('../_assets/pic/maumful_blog_banner.png');
     console.log('maumful_blog_banner.png written — ' + (s.size / 1024).toFixed(1) + 'KB (1000x260)');
   })
   .catch(e => console.log('ERR', e.message));
