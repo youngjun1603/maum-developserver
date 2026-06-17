@@ -2,7 +2,7 @@
 // 계정/인증은 공용 maum-auth(AUTH_DB) + 공유 모듈 ./auth (마음곁과 동일 사본).
 // 안전원칙(단정금지·의료용어금지·비밀거짓말금지·위기 보수판정)은 docs/ 준수.
 import { Hono } from 'hono';
-import { registerUser, loginUser, getUser, issueToken, requireAuth } from './auth';
+import { registerUser, loginUser, getUser, issueToken, requireAuth, hashPassword, verifyPassword } from './auth';
 
 type Bindings = {
   DB: D1Database;          // 마음수달 도메인 (children/sessions/utterances/reports)
@@ -102,6 +102,25 @@ app.get('/api/auth/me', requireAuth, async (c) => {
   return c.json({ user: await getUser(c.env.AUTH_DB, c.get('uid')) });
 });
 
+// ── 부모 PIN (아이 모드 게이팅, spec 2-2) — KV 저장 ──
+const pinKey = (uid: number) => `pin:${uid}`;
+app.get('/api/pin', requireAuth, async (c) => {
+  const has = !!(await c.env.KV.get(pinKey(c.get('uid'))));
+  return c.json({ hasPin: has });
+});
+app.post('/api/pin', requireAuth, async (c) => {
+  const { pin } = await c.req.json().catch(() => ({}));
+  if (!pin || !/^\d{4,6}$/.test(String(pin))) return c.json({ error: '4~6자리 숫자 PIN을 입력해주세요' }, 400);
+  await c.env.KV.put(pinKey(c.get('uid')), await hashPassword(String(pin)));
+  return c.json({ ok: true });
+});
+app.post('/api/pin/verify', requireAuth, async (c) => {
+  const { pin } = await c.req.json().catch(() => ({}));
+  const stored = await c.env.KV.get(pinKey(c.get('uid')));
+  if (!stored) return c.json({ ok: false, error: 'PIN 미설정' }, 400);
+  return c.json({ ok: await verifyPassword(String(pin ?? ''), stored) });
+});
+
 // ── 아이 목록 / 등록 (도메인 DB) ──
 app.get('/api/children', requireAuth, async (c) => {
   const { results } = await c.env.DB.prepare('SELECT * FROM children WHERE maum_user_id=? ORDER BY id').bind(c.get('uid')).all();
@@ -122,7 +141,8 @@ app.post('/api/session/start', requireAuth, async (c) => {
   if (!child) return c.json({ error: '아이를 찾을 수 없어요' }, 404);
   const r = await c.env.DB.prepare('INSERT INTO sessions (child_id,maum_user_id) VALUES (?,?)').bind(child_id, c.get('uid')).run();
   const sid = r.meta.last_row_id as number;
-  const greeting = `안녕! 오늘도 또또랑 이야기하러 와줘서 고마워 🦦 오늘 하루는 어땠어?`;
+  // AI 정체성 고지(spec 2-4) + 따뜻한 시작
+  const greeting = `안녕! 나는 진짜 동물은 아니고, 네 마음을 들어주는 수달 친구 또또야 🦦 오늘도 와줘서 고마워! 오늘 하루는 어땠어?`;
   await c.env.DB.prepare('INSERT INTO utterances (session_id,role,content) VALUES (?,?,?)').bind(sid, 'otter', greeting).run();
   return c.json({ session_id: sid, greeting, child: { name: child.name, age: child.age } });
 });

@@ -111,14 +111,18 @@ function Dashboard({ token, user, onLogout, onStart, onReports }) {
 function ChildChat({ token, child, onEnd }) {
   const [sid,setSid]=useState(null); const [msgs,setMsgs]=useState([]); const [input,setInput]=useState('');
   const [busy,setBusy]=useState(false); const [ending,setEnding]=useState(false); const endRef=useRef();
+  const [secsLeft,setSecsLeft]=useState(12*60); const finishRef=useRef();   // 세션 10~15분 제한(컴패니언화 방지, spec 2-3)
   useEffect(()=>{ api('/session/start',{method:'POST',token,body:{child_id:child.id}}).then(d=>{ setSid(d.session_id); setMsgs([{role:'otter',content:d.greeting}]); }).catch(()=>{}); },[]);
   useEffect(()=>{ endRef.current?.scrollIntoView({behavior:'smooth'}); },[msgs,busy]);
+  useEffect(()=>{ const t=setInterval(()=>setSecsLeft(s=>{ if(s<=1){ clearInterval(t); finishRef.current&&finishRef.current(); return 0; } return s-1; }),1000); return ()=>clearInterval(t); },[]);
   async function send(){ const t=input.trim(); if(!t||!sid||busy) return; setInput(''); setMsgs(m=>[...m,{role:'child',content:t}]); setBusy(true);
     try{ const d=await api('/session/'+sid+'/utterance',{method:'POST',token,body:{content:t}}); setMsgs(m=>[...m,{role:'otter',content:d.reply}]); }
     catch{ setMsgs(m=>[...m,{role:'otter',content:'또또가 잠깐 딴 생각을 했어! 다시 말해줄래?'}]); } finally{ setBusy(false); } }
-  async function finish(){ if(!sid) return; setEnding(true); try{ const d=await api('/session/'+sid+'/end',{method:'POST',token}); onEnd(d); }catch{ onEnd(null); } }
+  async function finish(){ if(!sid||ending) return; setEnding(true); try{ const d=await api('/session/'+sid+'/end',{method:'POST',token}); onEnd(d); }catch{ onEnd(null); } }
+  finishRef.current=finish;
+  const mm=Math.floor(secsLeft/60), ss=String(secsLeft%60).padStart(2,'0');
   return html`<div style=${{minHeight:'100vh',display:'flex',flexDirection:'column'}}>
-    <div class="topbar"><b>🦦 또또</b><button class="btn-ghost" style=${{padding:'7px 12px',borderRadius:10,cursor:'pointer'}} disabled=${ending} onClick=${finish}>${ending?'정리 중…':'오늘은 여기까지'}</button></div>
+    <div class="topbar"><b>🦦 또또</b><div style=${{display:'flex',alignItems:'center',gap:10}}><span class="muted" style=${{fontSize:12}}>${mm}:${ss}</span><button class="btn-ghost" style=${{padding:'7px 12px',borderRadius:10,cursor:'pointer'}} disabled=${ending} onClick=${finish}>${ending?'정리 중…':'오늘은 여기까지'}</button></div></div>
     <div class="chat" style=${{flex:1}}>
       ${msgs.map((m,i)=>html`<div key=${i} class=${'msg '+m.role}>${m.content}</div>`)}
       ${busy && html`<div class="msg otter">🦦 …</div>`}
@@ -160,10 +164,46 @@ function Reports({ token, child, onOpen }) {
   </div>`;
 }
 
+// 부모 PIN 게이트 (아이 모드 진입·리포트 열람 보호, spec 2-2). mode 'auto'=없으면 설정/있으면 확인, 'enter'=확인만
+function PinGate({ token, mode, title, desc, onPass, onCancel }) {
+  const [hasPin,setHasPin]=useState(mode==='enter'?true:null);
+  const [pin,setPin]=useState(''); const [pin2,setPin2]=useState(''); const [err,setErr]=useState(''); const [busy,setBusy]=useState(false);
+  useEffect(()=>{ if(mode!=='enter') api('/pin',{token}).then(d=>setHasPin(d.hasPin)).catch(()=>setHasPin(false)); },[]);
+  const setup = hasPin===false;
+  async function submit(){
+    setErr(''); setBusy(true);
+    try{
+      if(setup){
+        if(!/^\d{4,6}$/.test(pin)){ setErr('숫자 4~6자리로 만들어주세요'); setBusy(false); return; }
+        if(pin!==pin2){ setErr('PIN이 일치하지 않아요'); setBusy(false); return; }
+        await api('/pin',{method:'POST',token,body:{pin}}); onPass();
+      } else {
+        const d=await api('/pin/verify',{method:'POST',token,body:{pin}});
+        if(d.ok) onPass(); else setErr('PIN이 맞지 않아요');
+      }
+    }catch(e){ setErr(e.message||'오류'); } finally{ setBusy(false); }
+  }
+  if(hasPin===null) return html`<div class="wrap"><div class="muted">잠시만요…</div></div>`;
+  return html`<div class="wrap">
+    <div style=${{textAlign:'center',padding:'28px 0 14px'}}>
+      <div style=${{fontSize:40}}>🔒</div>
+      <div class="h1">${title || (setup?'부모 PIN 설정':'부모 확인')}</div>
+      <div class="muted">${desc || (setup?'아이 모드 보호를 위해 부모님만 아는 PIN을 만들어요':'부모님만 진행할 수 있어요. PIN을 입력해주세요')}</div>
+    </div>
+    <div class="card">
+      <input class="field" type="password" inputmode="numeric" placeholder="PIN (숫자 4~6자리)" value=${pin} onInput=${e=>setPin(e.target.value)} onKeyDown=${e=>{if(e.key==='Enter'&&!setup)submit();}} />
+      ${setup && html`<input class="field" type="password" inputmode="numeric" placeholder="PIN 다시 입력" value=${pin2} onInput=${e=>setPin2(e.target.value)} />`}
+      ${err && html`<div class="err">${err}</div>`}
+      <button class="btn" disabled=${busy} onClick=${submit}>${busy?'잠시만요…':(setup?'설정하고 시작':'확인')}</button>
+      ${onCancel && html`<button class="btn btn-ghost" style=${{marginTop:8}} onClick=${onCancel}>취소</button>`}
+    </div>
+  </div>`;
+}
+
 function App() {
   const [token,setToken]=useState(localStorage.getItem(TOKEN_KEY)||'');
   const [user,setUser]=useState(null);
-  const [view,setView]=useState('dashboard'); // dashboard | child | reports | report
+  const [view,setView]=useState('dashboard'); // dashboard | pinStart | child | handoff | report | reports
   const [child,setChild]=useState(null); const [reportData,setReportData]=useState(null);
   useEffect(()=>{ if(token) api('/auth/me',{token}).then(d=>setUser(d.user)).catch(()=>{ localStorage.removeItem(TOKEN_KEY); setToken(''); }); },[token]);
   function logout(){ localStorage.removeItem(TOKEN_KEY); setToken(''); setUser(null); }
@@ -171,12 +211,20 @@ function App() {
 
   if(!token) return html`<${Auth} onLogin=${(t,u)=>{setToken(t);setUser(u);}} />`;
 
-  if(view==='child' && child) return html`<${ChildChat} token=${token} child=${child} onEnd=${(d)=>{ setReportData(d); setView('report'); }} />`;
+  // 아이 모드 진입 게이트 (부모 PIN)
+  if(view==='pinStart' && child) return html`<${PinGate} token=${token} mode="auto"
+    onPass=${()=>setView('child')} onCancel=${back} />`;
+  // 또또 대화(아이 모드)
+  if(view==='child' && child) return html`<${ChildChat} token=${token} child=${child} onEnd=${(d)=>{ setReportData(d); setView('handoff'); }} />`;
+  // 종료 → 부모 핸드오프(아이가 리포트 못 봄)
+  if(view==='handoff') return html`<${PinGate} token=${token} mode="enter"
+    title="오늘 대화가 끝났어요 🦦" desc="부모님께 휴대폰을 전해주세요. 통역 리포트는 부모님 PIN으로 열려요."
+    onPass=${()=>setView('report')} onCancel=${back} />`;
   if(view==='report') return html`<div><div class="topbar"><b>통역 리포트</b><span class="muted" style=${{cursor:'pointer'}} onClick=${back}>완료</span></div><div class="wrap"><${Report} data=${reportData} /></div></div>`;
   if(view==='reports' && child) return html`<div><div class="topbar"><b>🦦 마음수달</b><span class="muted" style=${{cursor:'pointer'}} onClick=${back}>← 뒤로</span></div>
     <${Reports} token=${token} child=${child} onOpen=${(id)=>{ api('/reports/'+id,{token}).then(d=>{setReportData(d);setView('report');}); }} /></div>`;
   return html`<${Dashboard} token=${token} user=${user} onLogout=${logout}
-    onStart=${(ch)=>{setChild(ch);setView('child');}} onReports=${(ch)=>{setChild(ch);setView('reports');}} />`;
+    onStart=${(ch)=>{setChild(ch);setView('pinStart');}} onReports=${(ch)=>{setChild(ch);setView('reports');}} />`;
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(html`<${App} />`);
