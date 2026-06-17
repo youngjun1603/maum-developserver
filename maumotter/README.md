@@ -18,7 +18,7 @@ docs/              spec · dialogue-scenarios · translation-engine
 2. **Cloudflare → Workers & Pages → Create → Connect Git** → `maumotter` 연결 (Workers Builds 자동 빌드/배포).
 3. **D1 2개 생성:**
    - `maumotter-db`(도메인) → ID를 `wrangler.toml` `DB`에 기입 → Console에서 `schema.sql` 실행.
-   - `maum-auth`(공용 계정) → ID를 `wrangler.toml` `AUTH_DB`에 기입 → Console에서 `../_shared/maum-auth-schema.sql` 실행. **마음곁도 같은 maum-auth 바인딩**(통합계정).
+   - `maum-auth`(공용 계정) → ID를 `wrangler.toml` `AUTH_DB`에 기입 → Console에서 `maum-auth-schema.sql` 실행. **마음곁도 같은 maum-auth 바인딩**(통합계정).
 4. **KV 생성:** namespace → `id`를 `wrangler.toml`에 기입.
 5. **Secrets** (Settings → Variables and Secrets):
    - `JWT_SECRET` — 마음 시리즈 공유값(마음곁과 **동일**, `_shared` 2장)
