@@ -40,8 +40,10 @@ app.options('/api/*', (c) => {
 });
 
 // ── Anthropic 호출 ────────────────────────────────────────────
+// Anthropic은 Cloudflare AI Gateway 경유(직접 api.anthropic.com 호출은 Workers egress에서 403 차단됨)
+const AI_GATEWAY = 'https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages';
 async function callClaude(env: Bindings, opts: { model: string; system: string; messages: any[]; max_tokens: number; temperature?: number }) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await fetch(AI_GATEWAY, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({ model: opts.model, max_tokens: opts.max_tokens, temperature: opts.temperature ?? 1, system: opts.system, messages: opts.messages }),
@@ -141,7 +143,7 @@ app.post('/api/session/:id/utterance', requireAuth, async (c) => {
   let reply = '응, 그렇구나. 더 이야기해줄래?';
   try {
     reply = await callClaude(c.env, { model: CHAT_MODEL, system: ottoSystem(child?.age ?? null, child?.name ?? ''), messages: history, max_tokens: 200, temperature: 0.7 }) || reply;
-  } catch (e) { /* 폴백 reply 유지 */ }
+  } catch (e) { console.log('chat LLM fail:', String((e as any)?.message || e)); /* 폴백 reply 유지 */ }
   await c.env.DB.prepare('INSERT INTO utterances (session_id,role,content) VALUES (?,?,?)').bind(sid, 'otter', reply).run();
   return c.json({ reply });
 });
@@ -174,7 +176,7 @@ app.post('/api/session/:id/end', requireAuth, async (c) => {
         raw2 = raw2.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
         try { const p2 = JSON.parse(raw2); if (!MED_TERMS.some((t) => JSON.stringify(p2).includes(t))) report = p2; } catch {}
       }
-    } catch (e) { /* 기본 리포트 유지 */ }
+    } catch (e) { console.log('REPORT_FAIL', String((e as any)?.message || e)); }
   }
 
   const crisisFlag = report?.crisis?.flag ? 1 : 0;
