@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>마음수달 — 우리 아이 마음 통역</title>
+<style>
+  :root { --cream:#F4F1EA; --ink:#2E2A26; --muted:#8A8276; --water:#5B7C7D; --water-d:#456062; --brown:#8C6A4E; --line:#E3DDD1; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { margin:0; font-family:-apple-system,'Pretendard','Noto Sans KR',sans-serif; background:var(--cream); color:var(--ink); }
+  #root { max-width:480px; margin:0 auto; min-height:100vh; }
+  input,textarea,button{ font-family:inherit; font-size:15px; }
+  .wrap{ padding:20px; }
+  .card{ background:#fff; border:1px solid var(--line); border-radius:18px; padding:18px; margin-bottom:14px; }
+  .btn{ width:100%; padding:14px; border:none; border-radius:14px; background:var(--water); color:#fff; font-weight:700; cursor:pointer; }
+  .btn:disabled{ opacity:.5; }
+  .btn-ghost{ background:#fff; color:var(--water-d); border:1.5px solid var(--line); }
+  .field{ width:100%; padding:12px 14px; border:1.5px solid var(--line); border-radius:12px; margin-bottom:10px; background:#fff; }
+  .muted{ color:var(--muted); font-size:13px; }
+  .h1{ font-size:22px; font-weight:800; margin:0 0 4px; }
+  .pill{ display:inline-block; padding:3px 10px; border-radius:20px; background:#EEF3F2; color:var(--water-d); font-size:12px; font-weight:700; }
+  .err{ color:#c0492f; font-size:13px; margin:6px 0; }
+  /* 채팅 */
+  .chat{ display:flex; flex-direction:column; gap:10px; padding:16px; }
+  .msg{ max-width:78%; padding:11px 14px; border-radius:16px; line-height:1.55; font-size:15px; }
+  .msg.otter{ align-self:flex-start; background:#fff; border:1px solid var(--line); border-bottom-left-radius:5px; }
+  .msg.child{ align-self:flex-end; background:var(--water); color:#fff; border-bottom-right-radius:5px; }
+  .topbar{ display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--cream); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/htm@3.1.1/dist/htm.umd.js"></script>
+<script>
+const { useState, useEffect, useRef } = React;
+const html = htm.bind(React.createElement);
+const TOKEN_KEY = 'maumotter_token';
+
+function api(path, { method='GET', body, token } = {}) {
+  return fetch('/api'+path, {
+    method,
+    headers: { 'Content-Type':'application/json', ...(token ? { Authorization:'Bearer '+token } : {}) },
+    body: body ? JSON.stringify(body) : undefined,
+  }).then(async r => { const d = await r.json().catch(()=>({})); if(!r.ok) throw new Error(d.error||'오류가 발생했어요'); return d; });
+}
+
+function Auth({ onLogin }) {
+  const [mode,setMode]=useState('login');
+  const [email,setEmail]=useState(''); const [pw,setPw]=useState(''); const [name,setName]=useState('');
+  const [err,setErr]=useState(''); const [loading,setLoading]=useState(false);
+  async function submit(){
+    setErr(''); setLoading(true);
+    try{
+      const d = await api('/auth/'+(mode==='login'?'login':'register'), { method:'POST', body:{ email, password:pw, name } });
+      localStorage.setItem(TOKEN_KEY, d.token); onLogin(d.token, d.user);
+    }catch(e){ setErr(e.message); } finally{ setLoading(false); }
+  }
+  return html`<div class="wrap">
+    <div style=${{textAlign:'center', padding:'32px 0 20px'}}>
+      <div style=${{fontSize:54}}>🦦</div>
+      <div class="h1">마음수달</div>
+      <div class="muted">우리 아이의 속마음, 또또가 들어주고<br/>부모님께 따뜻하게 통역해드려요</div>
+    </div>
+    <div class="card">
+      ${mode==='register' && html`<input class="field" placeholder="이름(선택)" value=${name} onInput=${e=>setName(e.target.value)} />`}
+      <input class="field" type="email" placeholder="이메일" value=${email} onInput=${e=>setEmail(e.target.value)} />
+      <input class="field" type="password" placeholder="비밀번호 (8자 이상)" value=${pw} onInput=${e=>setPw(e.target.value)} />
+      ${err && html`<div class="err">${err}</div>`}
+      <button class="btn" disabled=${loading} onClick=${submit}>${loading?'잠시만요…':(mode==='login'?'로그인':'가입하기')}</button>
+      <div style=${{textAlign:'center', marginTop:12}}>
+        <span class="muted" style=${{cursor:'pointer'}} onClick=${()=>{setMode(mode==='login'?'register':'login');setErr('');}}>
+          ${mode==='login'?'처음이신가요? 가입하기':'이미 계정이 있어요 · 로그인'}
+        </span>
+      </div>
+    </div>
+    <div class="muted" style=${{textAlign:'center'}}>부모님 휴대폰에서, 아이와 함께 사용하는 서비스예요.<br/>본 서비스는 의학적 진단이 아닙니다.</div>
+  </div>`;
+}
+
+function Dashboard({ token, user, onLogout, onStart, onReports }) {
+  const [children,setChildren]=useState([]); const [adding,setAdding]=useState(false);
+  const [name,setName]=useState(''); const [age,setAge]=useState(''); const [err,setErr]=useState('');
+  function load(){ api('/children',{token}).then(d=>setChildren(d.children)).catch(()=>{}); }
+  useEffect(load,[]);
+  async function add(){ setErr(''); try{ await api('/children',{method:'POST',token,body:{name,age:age?Number(age):null}}); setName('');setAge('');setAdding(false); load(); }catch(e){setErr(e.message);} }
+  return html`<div>
+    <div class="topbar"><b>🦦 마음수달</b><span class="muted" style=${{cursor:'pointer'}} onClick=${onLogout}>로그아웃</span></div>
+    <div class="wrap">
+      <div class="h1" style=${{marginBottom:12}}>우리 아이</div>
+      ${children.map(ch => html`<div class="card" key=${ch.id}>
+        <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+          <div><b>${ch.name}</b> <span class="muted">${ch.age?ch.age+'세':''}</span></div>
+        </div>
+        <div style=${{display:'flex',gap:8,marginTop:12}}>
+          <button class="btn" style=${{flex:1}} onClick=${()=>onStart(ch)}>또또와 대화 시작</button>
+          <button class="btn btn-ghost" style=${{flex:1}} onClick=${()=>onReports(ch)}>통역 리포트</button>
+        </div>
+      </div>`)}
+      ${adding ? html`<div class="card">
+        <input class="field" placeholder="아이 애칭" value=${name} onInput=${e=>setName(e.target.value)} />
+        <input class="field" type="number" placeholder="나이 (3~9)" value=${age} onInput=${e=>setAge(e.target.value)} />
+        ${err && html`<div class="err">${err}</div>`}
+        <button class="btn" onClick=${add}>등록</button>
+      </div>` : html`<button class="btn btn-ghost" onClick=${()=>setAdding(true)}>+ 아이 등록</button>`}
+    </div>
+  </div>`;
+}
+
+function ChildChat({ token, child, onEnd }) {
+  const [sid,setSid]=useState(null); const [msgs,setMsgs]=useState([]); const [input,setInput]=useState('');
+  const [busy,setBusy]=useState(false); const [ending,setEnding]=useState(false); const endRef=useRef();
+  useEffect(()=>{ api('/session/start',{method:'POST',token,body:{child_id:child.id}}).then(d=>{ setSid(d.session_id); setMsgs([{role:'otter',content:d.greeting}]); }).catch(()=>{}); },[]);
+  useEffect(()=>{ endRef.current?.scrollIntoView({behavior:'smooth'}); },[msgs,busy]);
+  async function send(){ const t=input.trim(); if(!t||!sid||busy) return; setInput(''); setMsgs(m=>[...m,{role:'child',content:t}]); setBusy(true);
+    try{ const d=await api('/session/'+sid+'/utterance',{method:'POST',token,body:{content:t}}); setMsgs(m=>[...m,{role:'otter',content:d.reply}]); }
+    catch{ setMsgs(m=>[...m,{role:'otter',content:'또또가 잠깐 딴 생각을 했어! 다시 말해줄래?'}]); } finally{ setBusy(false); } }
+  async function finish(){ if(!sid) return; setEnding(true); try{ const d=await api('/session/'+sid+'/end',{method:'POST',token}); onEnd(d); }catch{ onEnd(null); } }
+  return html`<div style=${{minHeight:'100vh',display:'flex',flexDirection:'column'}}>
+    <div class="topbar"><b>🦦 또또</b><button class="btn-ghost" style=${{padding:'7px 12px',borderRadius:10,cursor:'pointer'}} disabled=${ending} onClick=${finish}>${ending?'정리 중…':'오늘은 여기까지'}</button></div>
+    <div class="chat" style=${{flex:1}}>
+      ${msgs.map((m,i)=>html`<div key=${i} class=${'msg '+m.role}>${m.content}</div>`)}
+      ${busy && html`<div class="msg otter">🦦 …</div>`}
+      <div ref=${endRef}></div>
+    </div>
+    <div style=${{display:'flex',gap:8,padding:14,borderTop:'1px solid var(--line)',position:'sticky',bottom:0,background:'var(--cream)'}}>
+      <input class="field" style=${{marginBottom:0}} placeholder="또또에게 이야기해요" value=${input} onInput=${e=>setInput(e.target.value)} onKeyDown=${e=>{if(e.key==='Enter')send();}} />
+      <button class="btn" style=${{width:64}} disabled=${busy} onClick=${send}>→</button>
+    </div>
+  </div>`;
+}
+
+function Report({ data }) {
+  const r = data?.report; const crisis = r?.crisis?.flag;
+  if(!r) return html`<div class="card">리포트를 불러오지 못했어요.</div>`;
+  return html`<div>
+    ${crisis && html`<div class="card" style=${{background:'#FFF4EE',border:'1px solid #F2C9B5'}}>
+      <b>🟠 함께 살펴보면 좋아요</b><div class="muted" style=${{marginTop:6}}>${r.crisis.note||'아이의 안전·정서를 위해 전문기관 상담을 권해드려요. (아동보호전문기관 112 / 1577-1391)'}</div></div>`}
+    <div class="card"><div class="pill">오늘의 통역</div>
+      <div style=${{marginTop:10,lineHeight:1.6}}>${r.summary}</div>
+      ${r.feelings?.length>0 && html`<div style=${{marginTop:10}}>${r.feelings.map((f,i)=>html`<span key=${i} class="pill" style=${{marginRight:6}}>#${f}</span>`)}</div>`}
+    </div>
+    ${r.what_happened && html`<div class="card"><b>무슨 일이 있었나요</b><div class="muted" style=${{marginTop:6,lineHeight:1.6,color:'var(--ink)'}}>${r.what_happened}</div></div>`}
+    ${r.parent_tips?.length>0 && html`<div class="card"><b>오늘 이렇게 해보세요</b><ul style=${{margin:'8px 0 0',paddingLeft:18,lineHeight:1.7}}>${r.parent_tips.map((t,i)=>html`<li key=${i}>${t}</li>`)}</ul></div>`}
+    ${r.talk_starters?.length>0 && html`<div class="card"><b>대화 물꼬</b><ul style=${{margin:'8px 0 0',paddingLeft:18,lineHeight:1.7}}>${r.talk_starters.map((t,i)=>html`<li key=${i}>"${t}"</li>`)}</ul></div>`}
+    <div class="muted" style=${{textAlign:'center',padding:'4px 0 16px'}}>이 통역은 자기이해를 돕는 참고용이며, 의학적 진단이 아닙니다.</div>
+  </div>`;
+}
+
+function Reports({ token, child, onOpen }) {
+  const [list,setList]=useState([]);
+  useEffect(()=>{ api('/reports?child_id='+child.id,{token}).then(d=>setList(d.reports)).catch(()=>{}); },[]);
+  return html`<div class="wrap">
+    <div class="h1" style=${{marginBottom:12}}>${child.name}의 통역 리포트</div>
+    ${list.length===0 && html`<div class="muted">아직 리포트가 없어요. 또또와 대화를 마치면 생겨요.</div>`}
+    ${list.map(r=>html`<div key=${r.id} class="card" style=${{cursor:'pointer'}} onClick=${()=>onOpen(r.id)}>
+      <div style=${{display:'flex',justifyContent:'space-between'}}><b>${(r.created_at||'').slice(0,10)}</b>${r.crisis_flag?html`<span class="pill" style=${{background:'#FFF4EE',color:'#c0492f'}}>살펴보기</span>`:''}</div>
+    </div>`)}
+  </div>`;
+}
+
+function App() {
+  const [token,setToken]=useState(localStorage.getItem(TOKEN_KEY)||'');
+  const [user,setUser]=useState(null);
+  const [view,setView]=useState('dashboard'); // dashboard | child | reports | report
+  const [child,setChild]=useState(null); const [reportData,setReportData]=useState(null);
+  useEffect(()=>{ if(token) api('/auth/me',{token}).then(d=>setUser(d.user)).catch(()=>{ localStorage.removeItem(TOKEN_KEY); setToken(''); }); },[token]);
+  function logout(){ localStorage.removeItem(TOKEN_KEY); setToken(''); setUser(null); }
+  function back(){ setView('dashboard'); setChild(null); setReportData(null); }
+
+  if(!token) return html`<${Auth} onLogin=${(t,u)=>{setToken(t);setUser(u);}} />`;
+
+  if(view==='child' && child) return html`<${ChildChat} token=${token} child=${child} onEnd=${(d)=>{ setReportData(d); setView('report'); }} />`;
+  if(view==='report') return html`<div><div class="topbar"><b>통역 리포트</b><span class="muted" style=${{cursor:'pointer'}} onClick=${back}>완료</span></div><div class="wrap"><${Report} data=${reportData} /></div></div>`;
+  if(view==='reports' && child) return html`<div><div class="topbar"><b>🦦 마음수달</b><span class="muted" style=${{cursor:'pointer'}} onClick=${back}>← 뒤로</span></div>
+    <${Reports} token=${token} child=${child} onOpen=${(id)=>{ api('/reports/'+id,{token}).then(d=>{setReportData(d);setView('report');}); }} /></div>`;
+  return html`<${Dashboard} token=${token} user=${user} onLogout=${logout}
+    onStart=${(ch)=>{setChild(ch);setView('child');}} onReports=${(ch)=>{setChild(ch);setView('reports');}} />`;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(html`<${App} />`);
+</script>
+</body>
+</html>

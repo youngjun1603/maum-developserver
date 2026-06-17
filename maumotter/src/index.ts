@@ -1,0 +1,274 @@
+// 마음수달 (MaumOtter) — Worker (Hono). MVP.
+// 안전원칙(단정금지·의료용어금지·비밀거짓말금지·위기 보수판정)은 docs/ 준수.
+import { Hono } from 'hono';
+
+type Bindings = {
+  DB: D1Database;
+  KV: KVNamespace;
+  ASSETS: Fetcher;
+  JWT_SECRET: string;
+  ANTHROPIC_API_KEY: string;
+};
+
+const app = new Hono<{ Bindings: Bindings; Variables: { uid: number } }>();
+
+// ── CORS (마음 시리즈 공통 화이트리스트, _shared 3장) ──────────
+const ALLOWED = [
+  'https://maumotter.com', 'https://app.maumotter.com',
+  'https://maumgyeot.com', 'https://app.maumgyeot.com',
+];
+app.use('/api/*', async (c, next) => {
+  const origin = c.req.header('Origin') || '';
+  await next();
+  if (ALLOWED.includes(origin)) {
+    c.header('Access-Control-Allow-Origin', origin);
+    c.header('Access-Control-Allow-Credentials', 'true');
+    c.header('Vary', 'Origin');
+  }
+});
+app.options('/api/*', (c) => {
+  const origin = c.req.header('Origin') || '';
+  const h: Record<string, string> = {
+    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+  };
+  if (ALLOWED.includes(origin)) { h['Access-Control-Allow-Origin'] = origin; h['Access-Control-Allow-Credentials'] = 'true'; }
+  return new Response(null, { status: 204, headers: h });
+});
+
+// ── JWT (crypto.subtle, _shared 2장 — btoa(payload)는 금지 패턴 아님: 헤더/페이로드 base64url) ──
+const b64url = (bytes: Uint8Array) =>
+  btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+const b64urlStr = (obj: object) => b64url(new TextEncoder().encode(JSON.stringify(obj)));
+const fromB64url = (s: string) => {
+  const pad = s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4);
+  return Uint8Array.from(atob(pad), (ch) => ch.charCodeAt(0));
+};
+
+async function hmacKey(secret: string) {
+  return crypto.subtle.importKey('raw', new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
+}
+async function createJWT(payload: object, secret: string): Promise<string> {
+  const headerB64 = b64urlStr({ alg: 'HS256', typ: 'JWT' });
+  const payloadB64 = b64urlStr(payload);
+  const input = `${headerB64}.${payloadB64}`;
+  const key = await hmacKey(secret);
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(input));
+  return `${input}.${b64url(new Uint8Array(sig))}`;
+}
+async function verifyJWT(token: string, secret: string): Promise<any | null> {
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+  const [h, p, s] = parts;
+  const key = await hmacKey(secret);
+  const ok = await crypto.subtle.verify('HMAC', key, fromB64url(s), new TextEncoder().encode(`${h}.${p}`));
+  if (!ok) return null;
+  try {
+    const payload = JSON.parse(new TextDecoder().decode(fromB64url(p)));
+    if (payload.exp && Math.floor(Date.now() / 1000) > payload.exp) return null;
+    return payload;
+  } catch { return null; }
+}
+
+// ── 비밀번호 해시 (PBKDF2 / crypto.subtle) ────────────────────
+const toHex = (b: ArrayBuffer) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, '0')).join('');
+async function hashPassword(pw: string): Promise<string> {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const baseKey = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, baseKey, 256);
+  return `${toHex(salt.buffer)}:${toHex(bits)}`;
+}
+async function verifyPassword(pw: string, stored: string): Promise<boolean> {
+  const [saltHex, hashHex] = stored.split(':');
+  if (!saltHex || !hashHex) return false;
+  const salt = Uint8Array.from(saltHex.match(/.{2}/g)!.map((x) => parseInt(x, 16)));
+  const baseKey = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, baseKey, 256);
+  return toHex(bits) === hashHex;
+}
+
+// ── 인증 미들웨어 ──────────────────────────────────────────────
+async function requireAuth(c: any, next: any) {
+  const auth = c.req.header('Authorization') || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  const payload = token ? await verifyJWT(token, c.env.JWT_SECRET) : null;
+  if (!payload?.maum_user_id) return c.json({ error: '로그인이 필요해요' }, 401);
+  c.set('uid', payload.maum_user_id as number);
+  await next();
+}
+
+// ── Anthropic 호출 ────────────────────────────────────────────
+async function callClaude(env: Bindings, opts: { model: string; system: string; messages: any[]; max_tokens: number; temperature?: number }) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model: opts.model, max_tokens: opts.max_tokens, temperature: opts.temperature ?? 1, system: opts.system, messages: opts.messages }),
+  });
+  if (!res.ok) throw new Error('LLM ' + res.status + ' ' + (await res.text()).slice(0, 300));
+  const data = await res.json() as any;
+  return (data.content?.find((b: any) => b.type === 'text')?.text ?? '').trim();
+}
+
+const CHAT_MODEL = 'claude-haiku-4-5-20251001';
+const REPORT_MODEL = 'claude-sonnet-4-6';
+
+// 또또 대화 시스템 프롬프트 (docs/maumotter-dialogue-scenarios.md)
+function ottoSystem(age: number | null, name: string) {
+  return `당신은 '마음수달'의 수달 친구 '또또'입니다. ${name ? name + '(이)라는 ' : ''}${age ?? 7}세 아이와 대화합니다.
+[화법] 1인칭 투사 화법("또또는 그런 날엔 ~"), 캐묻지 않기, 단정 금지("~구나" 대신 "~했을까?"), 한 번에 1~2문장 짧고 따뜻하게.
+[연령] ${age && age <= 5 ? '아주 짧고 쉬운 단어, 선택지 제시' : age && age >= 8 ? '감정 단어를 조금 넓혀 대화' : '짧은 문장, 구체적 질문 하나씩'}.
+[금지] 진단·평가·의료용어 금지. "비밀로 할게" 금지(→ "엄마/아빠가 너를 더 잘 이해하도록 또또가 도와줄게"). 추궁·유도신문 금지. 위기 상황이어도 신고·해결·위기 이야기를 아이에게 꺼내지 말 것(평소처럼 따뜻하게 안전감만).
+[목표] 아이가 편하게 자기 마음을 더 말하도록 돕기. 답을 요구받으면 "또또는 잘 모르겠어, 네 생각이 더 궁금해!".
+한국어로, 또또의 다음 한 마디만 출력하세요(설명·따옴표 없이).`;
+}
+
+// 통역 시스템 프롬프트 (docs/maumotter-translation-engine.md)
+const TRANSLATE_SYSTEM = `당신은 '마음수달'의 정서 통역가입니다. 아이가 수달 '또또'와 나눈 대화를 읽고, 그 속마음을 양육자(부모)가 이해·대응할 수 있도록 통역합니다.
+[원칙] 진단·평가하지 않고 '통역'만. AI는 아이와 부모 사이의 다리.
+[절대금지] 의료·임상 용어(진단/치료/처방/장애/증상/우울증/불안장애/ADHD 등) 금지. 단정 금지("~인 것 같아요/~로 보여요"만). 부모 비난·죄책감 금지. 대화에 나타난 내용에만 근거(정보 적으면 적다고 말함).
+[위기] 학대·방임·자해·심각한 공포가 대화에 '명시적으로' 나타난 경우에만 crisis.flag=true. 애매하면 false + note에 부드럽게. true여도 부모 놀라지 않게 전문기관 상담 권유 톤.
+[출력] 아래 JSON 스키마로만, JSON 외 텍스트/코드블록 절대 금지:
+{"summary":"2~3문장 따뜻한 요약(단정X)","feelings":["감정 키워드, 없으면 []"],"what_happened":"상황·맥락 정리","parent_tips":["오늘 할 수 있는 따뜻한 행동 2~3개(비훈육)"],"talk_starters":["아이에게 건넬 말 1~2개"],"data_confidence":"low|medium|high","crisis":{"flag":false,"note":""}}`;
+
+const MED_TERMS = ['진단', '치료', '처방', '장애', '증상', '우울증', '불안장애', 'ADHD', '자폐', '정신과'];
+
+// ════════════════════ API ════════════════════
+app.get('/api/health', (c) => c.json({ ok: true }));
+
+// 회원가입(부모)
+app.post('/api/auth/register', async (c) => {
+  const { email, password, name } = await c.req.json().catch(() => ({}));
+  if (!email || !password || String(password).length < 8) return c.json({ error: '이메일과 8자 이상 비밀번호가 필요해요' }, 400);
+  const exists = await c.env.DB.prepare('SELECT id FROM users WHERE email=?').bind(String(email).toLowerCase()).first();
+  if (exists) return c.json({ error: '이미 가입된 이메일이에요' }, 409);
+  const hash = await hashPassword(password);
+  const r = await c.env.DB.prepare('INSERT INTO users (email,password_hash,name) VALUES (?,?,?)')
+    .bind(String(email).toLowerCase(), hash, name ?? null).run();
+  const uid = r.meta.last_row_id as number;
+  const token = await createJWT({ maum_user_id: uid, email: String(email).toLowerCase(), iss: 'maum', exp: Math.floor(Date.now() / 1000) + 30 * 86400 }, c.env.JWT_SECRET);
+  return c.json({ token, user: { id: uid, email, name } });
+});
+
+// 로그인
+app.post('/api/auth/login', async (c) => {
+  const { email, password } = await c.req.json().catch(() => ({}));
+  if (!email || !password) return c.json({ error: '이메일과 비밀번호를 입력해주세요' }, 400);
+  const u = await c.env.DB.prepare('SELECT * FROM users WHERE email=?').bind(String(email).toLowerCase()).first<any>();
+  if (!u || !(await verifyPassword(password, u.password_hash))) return c.json({ error: '이메일 또는 비밀번호가 맞지 않아요' }, 401);
+  const token = await createJWT({ maum_user_id: u.id, email: u.email, iss: 'maum', exp: Math.floor(Date.now() / 1000) + 30 * 86400 }, c.env.JWT_SECRET);
+  return c.json({ token, user: { id: u.id, email: u.email, name: u.name } });
+});
+
+app.get('/api/auth/me', requireAuth, async (c) => {
+  const u = await c.env.DB.prepare('SELECT id,email,name FROM users WHERE id=?').bind(c.get('uid')).first();
+  return c.json({ user: u });
+});
+
+// 아이 목록 / 등록
+app.get('/api/children', requireAuth, async (c) => {
+  const { results } = await c.env.DB.prepare('SELECT * FROM children WHERE maum_user_id=? ORDER BY id').bind(c.get('uid')).all();
+  return c.json({ children: results });
+});
+app.post('/api/children', requireAuth, async (c) => {
+  const { name, age, gender, interests } = await c.req.json().catch(() => ({}));
+  if (!name) return c.json({ error: '아이 이름(애칭)을 입력해주세요' }, 400);
+  const r = await c.env.DB.prepare('INSERT INTO children (maum_user_id,name,age,gender,interests) VALUES (?,?,?,?,?)')
+    .bind(c.get('uid'), name, age ?? null, gender ?? null, interests ?? null).run();
+  return c.json({ id: r.meta.last_row_id });
+});
+
+// 세션 시작 (부모 인증 후 아이 모드 진입)
+app.post('/api/session/start', requireAuth, async (c) => {
+  const { child_id } = await c.req.json().catch(() => ({}));
+  const child = await c.env.DB.prepare('SELECT * FROM children WHERE id=? AND maum_user_id=?').bind(child_id, c.get('uid')).first<any>();
+  if (!child) return c.json({ error: '아이를 찾을 수 없어요' }, 404);
+  const r = await c.env.DB.prepare('INSERT INTO sessions (child_id,maum_user_id) VALUES (?,?)').bind(child_id, c.get('uid')).run();
+  const sid = r.meta.last_row_id as number;
+  // 또또 첫 인사
+  const greeting = `안녕! 오늘도 또또랑 이야기하러 와줘서 고마워 🦦 오늘 하루는 어땠어?`;
+  await c.env.DB.prepare('INSERT INTO utterances (session_id,role,content) VALUES (?,?,?)').bind(sid, 'otter', greeting).run();
+  return c.json({ session_id: sid, greeting, child: { name: child.name, age: child.age } });
+});
+
+// 아이 발화 → 또또 응답
+app.post('/api/session/:id/utterance', requireAuth, async (c) => {
+  const sid = Number(c.req.param('id'));
+  const { content } = await c.req.json().catch(() => ({}));
+  if (!content) return c.json({ error: '내용이 비어 있어요' }, 400);
+  const s = await c.env.DB.prepare('SELECT * FROM sessions WHERE id=? AND maum_user_id=?').bind(sid, c.get('uid')).first<any>();
+  if (!s || s.status !== 'open') return c.json({ error: '세션을 찾을 수 없어요' }, 404);
+  const child = await c.env.DB.prepare('SELECT name,age FROM children WHERE id=?').bind(s.child_id).first<any>();
+
+  await c.env.DB.prepare('INSERT INTO utterances (session_id,role,content) VALUES (?,?,?)').bind(sid, 'child', String(content).slice(0, 1000)).run();
+
+  const { results } = await c.env.DB.prepare('SELECT role,content FROM utterances WHERE session_id=? ORDER BY id').bind(sid).all<any>();
+  const history = results.map((u: any) => ({ role: u.role === 'child' ? 'user' : 'assistant', content: u.content }));
+  let reply = '응, 그렇구나. 더 이야기해줄래?';
+  try {
+    reply = await callClaude(c.env, { model: CHAT_MODEL, system: ottoSystem(child?.age ?? null, child?.name ?? ''), messages: history, max_tokens: 200, temperature: 0.7 }) || reply;
+  } catch (e) { /* 폴백 reply 유지 */ }
+  await c.env.DB.prepare('INSERT INTO utterances (session_id,role,content) VALUES (?,?,?)').bind(sid, 'otter', reply).run();
+  return c.json({ reply });
+});
+
+// 세션 종료 → 통역 리포트 생성
+app.post('/api/session/:id/end', requireAuth, async (c) => {
+  const sid = Number(c.req.param('id'));
+  const s = await c.env.DB.prepare('SELECT * FROM sessions WHERE id=? AND maum_user_id=?').bind(sid, c.get('uid')).first<any>();
+  if (!s) return c.json({ error: '세션을 찾을 수 없어요' }, 404);
+  if (s.status === 'done') {
+    const existing = await c.env.DB.prepare('SELECT * FROM reports WHERE session_id=?').bind(sid).first<any>();
+    if (existing) return c.json({ report: JSON.parse(existing.report_json), report_id: existing.id });
+  }
+  const child = await c.env.DB.prepare('SELECT * FROM children WHERE id=?').bind(s.child_id).first<any>();
+  const { results } = await c.env.DB.prepare("SELECT role,content FROM utterances WHERE session_id=? ORDER BY id").bind(sid).all<any>();
+  const childTurns = results.filter((u: any) => u.role === 'child');
+
+  const transcript = results.map((u: any) => `${u.role === 'child' ? '아이' : '또또'}: ${u.content}`).join('\n');
+  const userMsg = `[아이 정보]\n- 나이: ${child?.age ?? '미상'}세${child?.interests ? `\n- 관심사: ${child.interests}` : ''}\n\n[오늘 또또와 나눈 대화]\n${transcript}\n\n위 대화를 부모용 통역 리포트(JSON)로 만들어 주세요.`;
+
+  let report: any = { summary: '오늘은 대화를 충분히 담지 못했어요. 다음에 다시 시도해 주세요.', feelings: [], what_happened: '', parent_tips: [], talk_starters: [], data_confidence: 'low', crisis: { flag: false, note: '' } };
+  if (childTurns.length > 0) {
+    try {
+      let raw = await callClaude(c.env, { model: REPORT_MODEL, system: TRANSLATE_SYSTEM, messages: [{ role: 'user', content: userMsg }], max_tokens: 900, temperature: 0 });
+      raw = raw.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
+      const parsed = JSON.parse(raw);
+      // 의료용어 후처리 검증
+      const flat = JSON.stringify(parsed);
+      if (!MED_TERMS.some((t) => flat.includes(t))) report = parsed;
+      else {
+        // 재시도 1회
+        let raw2 = await callClaude(c.env, { model: REPORT_MODEL, system: TRANSLATE_SYSTEM + '\n(이전 출력에 금지된 의료용어가 있었습니다. 절대 사용하지 마세요.)', messages: [{ role: 'user', content: userMsg }], max_tokens: 900, temperature: 0 });
+        raw2 = raw2.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
+        try { const p2 = JSON.parse(raw2); if (!MED_TERMS.some((t) => JSON.stringify(p2).includes(t))) report = p2; } catch {}
+      }
+    } catch (e) { /* 기본 리포트 유지 */ }
+  }
+
+  const crisisFlag = report?.crisis?.flag ? 1 : 0;
+  await c.env.DB.prepare('UPDATE sessions SET status=?, ended_at=datetime("now") WHERE id=?').bind('done', sid).run();
+  const r = await c.env.DB.prepare('INSERT INTO reports (session_id,child_id,maum_user_id,report_json,crisis_flag) VALUES (?,?,?,?,?)')
+    .bind(sid, s.child_id, c.get('uid'), JSON.stringify(report), crisisFlag).run();
+  return c.json({ report, report_id: r.meta.last_row_id });
+});
+
+// 리포트 목록 / 상세
+app.get('/api/reports', requireAuth, async (c) => {
+  const childId = c.req.query('child_id');
+  const q = childId
+    ? c.env.DB.prepare('SELECT id,session_id,child_id,crisis_flag,created_at FROM reports WHERE maum_user_id=? AND child_id=? ORDER BY id DESC').bind(c.get('uid'), childId)
+    : c.env.DB.prepare('SELECT id,session_id,child_id,crisis_flag,created_at FROM reports WHERE maum_user_id=? ORDER BY id DESC').bind(c.get('uid'));
+  const { results } = await q.all();
+  return c.json({ reports: results });
+});
+app.get('/api/reports/:id', requireAuth, async (c) => {
+  const rep = await c.env.DB.prepare('SELECT * FROM reports WHERE id=? AND maum_user_id=?').bind(c.req.param('id'), c.get('uid')).first<any>();
+  if (!rep) return c.json({ error: '리포트를 찾을 수 없어요' }, 404);
+  return c.json({ report: JSON.parse(rep.report_json), crisis_flag: rep.crisis_flag, created_at: rep.created_at });
+});
+
+// 정적 프론트(React CDN) — /api 외는 assets
+app.all('*', (c) => c.env.ASSETS.fetch(c.req.raw));
+
+export default app;

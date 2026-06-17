@@ -1,0 +1,23 @@
+name = "maumotter"
+main = "src/index.ts"
+compatibility_date = "2026-06-01"
+compatibility_flags = ["nodejs_compat"]
+
+# 정적 프론트(React CDN) — public/ 를 그대로 서빙. /api/* 는 Worker가 처리.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+# MVP: 단일 D1에 users + 도메인 테이블. (마음곁 합류 시 users → 공용 maum-auth 로 분리)
+[[d1_databases]]
+binding = "DB"
+database_name = "maumotter-db"
+database_id = "PUT_D1_ID_HERE"   # 대시보드에서 D1 생성 후 ID 기입
+
+[[kv_namespaces]]
+binding = "KV"
+id = "PUT_KV_ID_HERE"            # 대시보드에서 KV 생성 후 ID 기입
+
+# 시크릿(대시보드 Variables 또는 wrangler secret put):
+#   JWT_SECRET        — 마음 시리즈 공유 (마음곁과 동일 값, _shared 2장)
+#   ANTHROPIC_API_KEY — 통역/대화 LLM
