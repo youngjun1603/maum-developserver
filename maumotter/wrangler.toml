@@ -12,17 +12,17 @@ binding = "ASSETS"
 [[d1_databases]]
 binding = "DB"
 database_name = "maumotter-db"
-database_id = "PUT_MAUMOTTER_DB_ID_HERE"   # 대시보드에서 D1 생성 후 ID 기입
+database_id = "f404bbb2-678a-440c-ad2b-f2fd341d8702"
 
 # 공용 인증 D1 (마음 시리즈 공유 — 마음곁도 동일 maum-auth 바인딩)
 [[d1_databases]]
 binding = "AUTH_DB"
 database_name = "maum-auth"
-database_id = "PUT_MAUM_AUTH_DB_ID_HERE"   # maum-auth D1 생성 후 ID 기입 (_shared/maum-auth-schema.sql 적용)
+database_id = "2df188da-159e-43ea-be31-b2dc39d8501d"   # maum-auth (_shared/maum-auth-schema.sql 적용)
 
 [[kv_namespaces]]
 binding = "KV"
-id = "PUT_KV_ID_HERE"            # 대시보드에서 KV 생성 후 ID 기입
+id = "9d5fba04837142f4858b949511095f7e"
 
 # 시크릿(대시보드 Variables 또는 wrangler secret put):
 #   JWT_SECRET        — 마음 시리즈 공유 (마음곁과 동일 값, _shared 2장)
