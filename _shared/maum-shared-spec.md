@@ -39,6 +39,13 @@ maumotter D1 → children, sessions, reports ... (maum_user_id 참조)
 maumgyeot D1 → pets, observations, pet_reports ... (maum_user_id 참조)
 ```
 
+### ✅ 구현 확정 (2026-06)
+- **스키마:** `_shared/maum-auth-schema.sql` (users). 대시보드에서 `maum-auth` D1 생성 후 Console 실행.
+- **바인딩:** 각 서비스 Worker에 `AUTH_DB`(= maum-auth D1) 동일 바인딩 + 자기 도메인 `DB` 별도. 같은 maum-auth를 두 워커가 공유 → 한 곳에서 가입한 계정으로 양쪽 로그인.
+- **공유 모듈:** `_shared/auth.ts`(CANONICAL) → 각 저장소 `src/auth.ts`로 **동일 사본** 복사. JWT(crypto.subtle HS256)·PBKDF2 비번·`registerUser`/`loginUser`/`getUser`/`issueToken`/`requireAuth` 제공. **수정 시 캐논+모든 사본 함께.**
+- **토큰:** `issueToken`이 `{maum_user_id, email, iss:'maum', exp(초)}` 발급. `JWT_SECRET`은 시리즈 공유 시크릿.
+- 마음수달이 이 구조로 1차 적용 완료. 마음곁은 같은 `AUTH_DB`+`auth.ts` 사본 재사용.
+
 ---
 
 ## 2. JWT 규약 (반드시 동일하게 구현)
