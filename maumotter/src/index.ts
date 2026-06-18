@@ -219,10 +219,16 @@ app.post('/api/session/:id/end', requireAuth, async (c) => {
 app.get('/api/reports', requireAuth, async (c) => {
   const childId = c.req.query('child_id');
   const q = childId
-    ? c.env.DB.prepare('SELECT id,session_id,child_id,crisis_flag,created_at FROM reports WHERE maum_user_id=? AND child_id=? ORDER BY id DESC').bind(c.get('uid'), childId)
-    : c.env.DB.prepare('SELECT id,session_id,child_id,crisis_flag,created_at FROM reports WHERE maum_user_id=? ORDER BY id DESC').bind(c.get('uid'));
-  const { results } = await q.all();
-  return c.json({ reports: results });
+    ? c.env.DB.prepare('SELECT id,session_id,child_id,crisis_flag,created_at,report_json FROM reports WHERE maum_user_id=? AND child_id=? ORDER BY id DESC').bind(c.get('uid'), childId)
+    : c.env.DB.prepare('SELECT id,session_id,child_id,crisis_flag,created_at,report_json FROM reports WHERE maum_user_id=? ORDER BY id DESC').bind(c.get('uid'));
+  const { results } = await q.all<any>();
+  // 대시보드/목록용 요약만 노출(원문 report_json은 상세 엔드포인트에서)
+  const reports = results.map((r: any) => {
+    let summary = '';
+    try { summary = (JSON.parse(r.report_json)?.summary || '').slice(0, 90); } catch {}
+    return { id: r.id, session_id: r.session_id, child_id: r.child_id, crisis_flag: r.crisis_flag, created_at: r.created_at, summary };
+  });
+  return c.json({ reports });
 });
 app.get('/api/reports/:id', requireAuth, async (c) => {
   const rep = await c.env.DB.prepare('SELECT * FROM reports WHERE id=? AND maum_user_id=?').bind(c.req.param('id'), c.get('uid')).first<any>();

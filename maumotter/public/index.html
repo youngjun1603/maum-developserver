@@ -80,20 +80,29 @@ function Auth({ onLogin }) {
   </div>`;
 }
 
-function Dashboard({ token, user, onLogout, onStart, onReports }) {
-  const [children,setChildren]=useState([]); const [adding,setAdding]=useState(false);
-  const [name,setName]=useState(''); const [age,setAge]=useState(''); const [err,setErr]=useState('');
-  function load(){ api('/children',{token}).then(d=>setChildren(d.children)).catch(()=>{}); }
+function Dashboard({ token, user, onLogout, onStart, onReports, onSettings }) {
+  const [children,setChildren]=useState([]); const [latest,setLatest]=useState({}); const [adding,setAdding]=useState(false);
+  const [name,setName]=useState(''); const [age,setAge]=useState(''); const [gender,setGender]=useState(''); const [interests,setInterests]=useState(''); const [err,setErr]=useState('');
+  function load(){
+    api('/children',{token}).then(d=>setChildren(d.children)).catch(()=>{});
+    api('/reports',{token}).then(d=>{ const m={}; (d.reports||[]).forEach(r=>{ if(!m[r.child_id]) m[r.child_id]=r; }); setLatest(m); }).catch(()=>{}); // DESC → child별 첫 항목=최근
+  }
   useEffect(load,[]);
-  async function add(){ setErr(''); try{ await api('/children',{method:'POST',token,body:{name,age:age?Number(age):null}}); setName('');setAge('');setAdding(false); load(); }catch(e){setErr(e.message);} }
+  async function add(){ setErr(''); if(!name.trim()){ setErr('아이 애칭을 입력해주세요'); return; }
+    try{ await api('/children',{method:'POST',token,body:{name,age:age?Number(age):null,gender:gender||null,interests:interests||null}}); setName('');setAge('');setGender('');setInterests('');setAdding(false); load(); }catch(e){setErr(e.message);} }
   return html`<div>
-    <div class="topbar"><b>🦦 마음수달</b><span class="muted" style=${{cursor:'pointer'}} onClick=${onLogout}>로그아웃</span></div>
+    <div class="topbar"><b>🦦 마음수달</b><div style=${{display:'flex',gap:14,alignItems:'center'}}>
+      <span class="muted" style=${{cursor:'pointer'}} onClick=${onSettings}>설정</span>
+      <span class="muted" style=${{cursor:'pointer'}} onClick=${onLogout}>로그아웃</span>
+    </div></div>
     <div class="wrap">
       <div class="h1" style=${{marginBottom:12}}>우리 아이</div>
       ${children.map(ch => html`<div class="card" key=${ch.id}>
         <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
           <div><b>${ch.name}</b> <span class="muted">${ch.age?ch.age+'세':''}</span></div>
+          ${latest[ch.id]?.crisis_flag?html`<span class="pill" style=${{background:'#FFF4EE',color:'#c0492f'}}>살펴보기</span>`:''}
         </div>
+        ${latest[ch.id] && html`<div class="muted" style=${{marginTop:8,fontSize:13,lineHeight:1.5}}>최근 통역(${(latest[ch.id].created_at||'').slice(0,10)})<br/>${latest[ch.id].summary||''}</div>`}
         <div style=${{display:'flex',gap:8,marginTop:12}}>
           <button class="btn" style=${{flex:1}} onClick=${()=>onStart(ch)}>또또와 대화 시작</button>
           <button class="btn btn-ghost" style=${{flex:1}} onClick=${()=>onReports(ch)}>통역 리포트</button>
@@ -102,8 +111,13 @@ function Dashboard({ token, user, onLogout, onStart, onReports }) {
       ${adding ? html`<div class="card">
         <input class="field" placeholder="아이 애칭" value=${name} onInput=${e=>setName(e.target.value)} />
         <input class="field" type="number" placeholder="나이 (3~9)" value=${age} onInput=${e=>setAge(e.target.value)} />
+        <select class="field" value=${gender} onChange=${e=>setGender(e.target.value)}>
+          <option value="">성별 (선택)</option><option value="남아">남아</option><option value="여아">여아</option><option value="비공개">비공개</option>
+        </select>
+        <input class="field" placeholder="관심사 (예: 공룡, 그림 — 선택)" value=${interests} onInput=${e=>setInterests(e.target.value)} />
         ${err && html`<div class="err">${err}</div>`}
         <button class="btn" onClick=${add}>등록</button>
+        <button class="btn btn-ghost" style=${{marginTop:8}} onClick=${()=>setAdding(false)}>취소</button>
       </div>` : html`<button class="btn btn-ghost" onClick=${()=>setAdding(true)}>+ 아이 등록</button>`}
     </div>
   </div>`;
@@ -228,6 +242,40 @@ function PinGate({ token, mode, title, desc, onPass, onCancel }) {
   </div>`;
 }
 
+function Settings({ token, user, onBack }) {
+  const [pin,setPin]=useState(''); const [pin2,setPin2]=useState(''); const [msg,setMsg]=useState(''); const [busy,setBusy]=useState(false);
+  async function savePin(){ setMsg(''); if(!/^\d{4,6}$/.test(pin)){ setMsg('숫자 4~6자리로 입력해주세요'); return; } if(pin!==pin2){ setMsg('PIN이 일치하지 않아요'); return; }
+    setBusy(true); try{ await api('/pin',{method:'POST',token,body:{pin}}); setMsg('✓ PIN이 변경됐어요'); setPin('');setPin2(''); }catch(e){ setMsg(e.message||'오류'); } finally{ setBusy(false); } }
+  return html`<div>
+    <div class="topbar"><b>설정</b><span class="muted" style=${{cursor:'pointer'}} onClick=${onBack}>← 뒤로</span></div>
+    <div class="wrap">
+      <div class="card"><div class="muted">계정</div><b>${user?.email||''}</b></div>
+      <div class="card"><b>🔒 부모 PIN 변경</b>
+        <input class="field" style=${{marginTop:10}} type="password" inputmode="numeric" placeholder="새 PIN (숫자 4~6자리)" value=${pin} onInput=${e=>setPin(e.target.value)} />
+        <input class="field" type="password" inputmode="numeric" placeholder="새 PIN 다시 입력" value=${pin2} onInput=${e=>setPin2(e.target.value)} />
+        ${msg && html`<div class=${msg.startsWith('✓')?'muted':'err'} style=${{marginBottom:8}}>${msg}</div>`}
+        <button class="btn" disabled=${busy} onClick=${savePin}>${busy?'잠시만요…':'PIN 변경'}</button>
+      </div>
+      <div class="card"><b>개인정보 · 데이터</b>
+        <div class="muted" style=${{marginTop:8,lineHeight:1.7}}>
+          • 아이와의 대화는 <b>통역 리포트 생성</b>에만 쓰이며, <b>부모님만</b> 열람할 수 있어요.<br/>
+          • 음성은 기기에서 <b>텍스트로만</b> 변환되고, 음성 원본은 저장하지 않아요.<br/>
+          • (도입 시) 카메라/영상은 기기 안에서만 처리하고 원본을 저장·전송하지 않아요.
+        </div>
+      </div>
+      <div class="card"><b>안내 · 면책</b>
+        <div class="muted" style=${{marginTop:8,lineHeight:1.7}}>
+          마음수달은 의료·심리 치료 서비스가 아니며, 통역 리포트는 <b>자녀 이해를 돕는 참고용</b>입니다. 의학적 진단이 아니에요. 아이의 안전이 걱정되면 전문기관(아동보호전문기관 <b>112</b> / 1577-1391) 상담을 권해드려요.
+        </div>
+      </div>
+      <a href="https://maumful.com" target="_blank" rel="noopener noreferrer" class="card" style=${{display:'block',textDecoration:'none',color:'inherit'}}>
+        <b>🌿 마음 시리즈</b><div class="muted" style=${{marginTop:6}}>마음풀 — 나를 이해하는 심리검사·마음돌봄 →</div>
+      </a>
+      <div class="muted" style=${{textAlign:'center',padding:'8px 0'}}>마음수달 · 부모님 휴대폰 전용</div>
+    </div>
+  </div>`;
+}
+
 function App() {
   const [token,setToken]=useState(localStorage.getItem(TOKEN_KEY)||'');
   const [user,setUser]=useState(null);
@@ -251,8 +299,9 @@ function App() {
   if(view==='report') return html`<div><div class="topbar"><b>통역 리포트</b><span class="muted" style=${{cursor:'pointer'}} onClick=${back}>완료</span></div><div class="wrap"><${Report} data=${reportData} /></div></div>`;
   if(view==='reports' && child) return html`<div><div class="topbar"><b>🦦 마음수달</b><span class="muted" style=${{cursor:'pointer'}} onClick=${back}>← 뒤로</span></div>
     <${Reports} token=${token} child=${child} onOpen=${(id)=>{ api('/reports/'+id,{token}).then(d=>{setReportData(d);setView('report');}); }} /></div>`;
+  if(view==='settings') return html`<${Settings} token=${token} user=${user} onBack=${back} />`;
   return html`<${Dashboard} token=${token} user=${user} onLogout=${logout}
-    onStart=${(ch)=>{setChild(ch);setView('pinStart');}} onReports=${(ch)=>{setChild(ch);setView('reports');}} />`;
+    onStart=${(ch)=>{setChild(ch);setView('pinStart');}} onReports=${(ch)=>{setChild(ch);setView('reports');}} onSettings=${()=>setView('settings')} />`;
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(html`<${App} />`);
