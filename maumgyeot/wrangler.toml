@@ -1,0 +1,29 @@
+name = "maumgyeot"
+main = "src/index.ts"
+compatibility_date = "2026-06-01"
+compatibility_flags = ["nodejs_compat"]
+
+# 정적 프론트(React CDN) — public/ 를 그대로 서빙. /api/* 는 Worker가 처리.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+# 도메인 D1 (pets/observations/pet_reports)
+[[d1_databases]]
+binding = "DB"
+database_name = "maumgyeot-db"
+database_id = "d04c7ab8-011c-4fd8-a4d1-63a73b1f9c57"
+
+# 공용 인증 D1 (마음 시리즈 공유 — 마음수달과 동일 maum-auth → 통합 로그인)
+[[d1_databases]]
+binding = "AUTH_DB"
+database_name = "maum-auth"
+database_id = "2df188da-159e-43ea-be31-b2dc39d8501d"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "ab0da67427b44439a1c6348a4e014a62"
+
+# 시크릿(대시보드 Variables 또는 wrangler secret put):
+#   JWT_SECRET        — 마음 시리즈 공유 (마음수달과 동일 값이어야 통합 로그인 성립)
+#   ANTHROPIC_API_KEY — 통역 LLM

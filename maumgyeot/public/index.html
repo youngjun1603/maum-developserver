@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>마음곁 — 반려동물 마음 통역</title>
+<style>
+  :root{ --bg:#FAF7F2; --card:#fff; --ink:#2C2A28; --muted:#8A847C; --line:#ECE6DD; --paw:#E08A52; --teal:#3E8E8A; --warn:#C0492F; }
+  *{ box-sizing:border-box; } body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Apple SD Gothic Neo","Malgun Gothic",sans-serif; background:var(--bg); color:var(--ink); }
+  .wrap{ max-width:560px; margin:0 auto; padding:18px; }
+  .topbar{ display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--bg); z-index:5; }
+  .h1{ font-size:20px; font-weight:700; }
+  .muted{ color:var(--muted); font-size:14px; }
+  .card{ background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px; margin-bottom:12px; }
+  .field{ width:100%; padding:12px 14px; border:1px solid var(--line); border-radius:12px; font-size:15px; margin-bottom:10px; background:#fff; }
+  .btn{ width:100%; padding:13px; border:none; border-radius:12px; background:var(--teal); color:#fff; font-size:15px; font-weight:600; cursor:pointer; }
+  .btn-ghost{ background:#fff; border:1px solid var(--line); color:var(--ink); }
+  .err{ color:var(--warn); font-size:13px; margin-bottom:8px; }
+  .pill{ display:inline-block; background:#EAF3F2; color:var(--teal); border-radius:999px; padding:3px 10px; font-size:12px; font-weight:600; }
+  .chip{ display:inline-block; border:1px solid var(--line); border-radius:999px; padding:8px 12px; margin:0 6px 8px 0; font-size:13px; cursor:pointer; background:#fff; }
+  .chip.on{ background:var(--teal); color:#fff; border-color:var(--teal); }
+  .conf-high{ background:#E7F4EA; color:#2E7D46; } .conf-medium{ background:#FBF1DD; color:#B9821F; } .conf-low{ background:#EEE; color:#777; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/htm@3.1.1/dist/htm.umd.js" crossorigin></script>
+<script>
+const { useState, useEffect } = React;
+const html = htm.bind(React.createElement);
+const TOKEN_KEY = 'maumgyeot_token';
+function api(path, { method='GET', body, token } = {}) {
+  return fetch('/api'+path, {
+    method,
+    headers: { 'Content-Type':'application/json', ...(token ? { Authorization:'Bearer '+token } : {}) },
+    body: body ? JSON.stringify(body) : undefined,
+  }).then(async r => { const d = await r.json().catch(()=>({})); if(!r.ok) throw new Error(d.error||'오류가 발생했어요'); return d; });
+}
+const SPECIES_LABEL = { cat:'고양이', dog:'개' };
+
+function Auth({ onLogin }) {
+  const [mode,setMode]=useState('login'); const [email,setEmail]=useState(''); const [pw,setPw]=useState(''); const [name,setName]=useState('');
+  const [err,setErr]=useState(''); const [loading,setLoading]=useState(false);
+  async function submit(){ setErr(''); setLoading(true);
+    try{ const d=await api('/auth/'+mode,{method:'POST',body: mode==='register'?{email,password:pw,name}:{email,password:pw}}); localStorage.setItem(TOKEN_KEY,d.token); onLogin(d.token,d.user); }
+    catch(e){ setErr(e.message); } finally{ setLoading(false); } }
+  return html`<div class="wrap">
+    <div style=${{textAlign:'center',padding:'34px 0 18px'}}>
+      <div style=${{fontSize:46}}>🐾</div>
+      <div class="h1">마음곁</div>
+      <div class="muted">반려동물의 행동을 읽어 마음을 통역해요</div>
+    </div>
+    <div class="card">
+      ${mode==='register' && html`<input class="field" placeholder="이름(선택)" value=${name} onInput=${e=>setName(e.target.value)} />`}
+      <input class="field" type="email" placeholder="이메일" value=${email} onInput=${e=>setEmail(e.target.value)} />
+      <input class="field" type="password" placeholder="비밀번호" value=${pw} onInput=${e=>setPw(e.target.value)} onKeyDown=${e=>{if(e.key==='Enter')submit();}} />
+      ${err && html`<div class="err">${err}</div>`}
+      <button class="btn" disabled=${loading} onClick=${submit}>${loading?'잠시만요…':(mode==='login'?'로그인':'가입하기')}</button>
+      <div class="muted" style=${{textAlign:'center',marginTop:12,cursor:'pointer'}} onClick=${()=>{setMode(mode==='login'?'register':'login');setErr('');}}>
+        ${mode==='login'?'처음이세요? 가입하기':'이미 계정이 있어요 → 로그인'}
+      </div>
+    </div>
+    <div class="muted" style=${{textAlign:'center'}}>본 서비스는 수의학적 진단이 아니며, 행동 이해를 돕는 참고용이에요.</div>
+  </div>`;
+}
+
+function Dashboard({ token, user, onLogout, onObserve, onReports }) {
+  const [pets,setPets]=useState([]); const [latest,setLatest]=useState({}); const [adding,setAdding]=useState(false);
+  const [name,setName]=useState(''); const [species,setSpecies]=useState('cat'); const [breed,setBreed]=useState(''); const [age,setAge]=useState(''); const [pers,setPers]=useState(''); const [err,setErr]=useState('');
+  function load(){
+    api('/pets',{token}).then(d=>setPets(d.pets)).catch(()=>{});
+    api('/reports',{token}).then(d=>{ const m={}; (d.reports||[]).forEach(r=>{ if(!m[r.pet_id]) m[r.pet_id]=r; }); setLatest(m); }).catch(()=>{});
+  }
+  useEffect(load,[]);
+  async function add(){ setErr(''); if(!name.trim()){ setErr('이름을 입력해주세요'); return; }
+    try{ await api('/pets',{method:'POST',token,body:{name,species,breed:breed||null,age:age?Number(age):null,personality:pers||null}}); setName('');setBreed('');setAge('');setPers('');setAdding(false); load(); }catch(e){setErr(e.message);} }
+  return html`<div>
+    <div class="topbar"><b>🐾 마음곁</b><span class="muted" style=${{cursor:'pointer'}} onClick=${onLogout}>로그아웃</span></div>
+    <div class="wrap">
+      <div class="h1" style=${{marginBottom:12}}>우리 아이</div>
+      ${pets.map(p => html`<div class="card" key=${p.id}>
+        <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+          <div><b>${p.species==='cat'?'🐱':'🐶'} ${p.name}</b> <span class="muted">${SPECIES_LABEL[p.species]||''}${p.age?' · '+p.age+'살':''}</span></div>
+          ${latest[p.id]?.health_flag?html`<span class="pill" style=${{background:'#FFF4EE',color:'var(--warn)'}}>건강 살펴보기</span>`:''}
+        </div>
+        ${latest[p.id] && html`<div class="muted" style=${{marginTop:8,fontSize:13,lineHeight:1.5}}>최근 통역(${(latest[p.id].created_at||'').slice(0,10)})<br/>${latest[p.id].summary||''}</div>`}
+        <div style=${{display:'flex',gap:8,marginTop:12}}>
+          <button class="btn" style=${{flex:1}} onClick=${()=>onObserve(p)}>통역 받기</button>
+          <button class="btn btn-ghost" style=${{flex:1}} onClick=${()=>onReports(p)}>지난 통역</button>
+        </div>
+      </div>`)}
+      ${adding ? html`<div class="card">
+        <input class="field" placeholder="이름" value=${name} onInput=${e=>setName(e.target.value)} />
+        <select class="field" value=${species} onChange=${e=>setSpecies(e.target.value)}><option value="cat">고양이</option><option value="dog">개</option></select>
+        <input class="field" placeholder="품종(선택)" value=${breed} onInput=${e=>setBreed(e.target.value)} />
+        <input class="field" type="number" placeholder="나이(선택)" value=${age} onInput=${e=>setAge(e.target.value)} />
+        <input class="field" placeholder="성격 메모(선택)" value=${pers} onInput=${e=>setPers(e.target.value)} />
+        ${err && html`<div class="err">${err}</div>`}
+        <button class="btn" onClick=${add}>등록</button>
+        <button class="btn btn-ghost" style=${{marginTop:8}} onClick=${()=>setAdding(false)}>취소</button>
+      </div>` : html`<button class="btn btn-ghost" onClick=${()=>setAdding(true)}>+ 반려동물 등록</button>`}
+    </div>
+  </div>`;
+}
+
+function Observe({ token, pet, onDone, onBack }) {
+  const [sigs,setSigs]=useState([]); const [picked,setPicked]=useState([]); const [context,setContext]=useState(''); const [busy,setBusy]=useState(false); const [err,setErr]=useState('');
+  useEffect(()=>{ api('/behavior?species='+pet.species,{token}).then(d=>setSigs(d.signals||[])).catch(()=>{}); },[]);
+  function toggle(code){ setPicked(p=>p.includes(code)?p.filter(x=>x!==code):[...p,code]); }
+  const groups = sigs.reduce((acc,s)=>{ (acc[s.group]=acc[s.group]||[]).push(s); return acc; },{});
+  async function submit(){ if(picked.length===0 && context.trim().length<2){ setErr('행동을 하나 이상 고르거나 상황을 적어주세요'); return; }
+    setErr(''); setBusy(true);
+    try{ const d=await api('/observe',{method:'POST',token,body:{pet_id:pet.id,signals:picked,context}}); onDone(d); }
+    catch(e){ setErr(e.message); setBusy(false); } }
+  return html`<div>
+    <div class="topbar"><b>${pet.species==='cat'?'🐱':'🐶'} ${pet.name} 통역</b><span class="muted" style=${{cursor:'pointer'}} onClick=${onBack}>← 뒤로</span></div>
+    <div class="wrap">
+      <div class="card"><b>1. 어떤 행동을 보였나요?</b> <span class="muted">(여러 개 선택)</span>
+        ${Object.entries(groups).map(([g,list])=>html`<div key=${g} style=${{marginTop:12}}>
+          <div class="muted" style=${{marginBottom:6}}>${g}</div>
+          ${list.map(s=>html`<span key=${s.code} class=${'chip'+(picked.includes(s.code)?' on':'')} onClick=${()=>toggle(s.code)}>${s.label}${s.ambiguous?' ⚠️':''}</span>`)}
+        </div>`)}
+      </div>
+      <div class="card"><b>2. 언제·어디서·무슨 상황이었나요?</b>
+        <textarea class="field" style=${{marginTop:10,minHeight:90,resize:'vertical'}} placeholder="예: 저녁에 손님이 왔는데 소파 밑으로 숨었어요" value=${context} onInput=${e=>setContext(e.target.value)}></textarea>
+      </div>
+      ${err && html`<div class="err">${err}</div>`}
+      <button class="btn" disabled=${busy} onClick=${submit}>${busy?'마음을 읽는 중…':'통역 받기'}</button>
+      <div class="muted" style=${{textAlign:'center',padding:'10px 0'}}>⚠️ 표시는 맥락에 따라 정반대일 수 있는 신호예요. 단정하지 않고 함께 읽어요.</div>
+    </div>
+  </div>`;
+}
+
+function Report({ data }) {
+  const r = data?.report; if(!r) return html`<div class="card">리포트를 불러오지 못했어요.</div>`;
+  const cf = r.confidence||'low'; const CL={high:'높음',medium:'보통',low:'낮음'};
+  return html`<div>
+    ${r.health_flag?.flag && html`<div class="card" style=${{background:'#FFF4EE',border:'1px solid #F2C9B5'}}>
+      <b>🟠 건강을 함께 살펴보세요</b><div class="muted" style=${{marginTop:6}}>${r.health_flag.note||'몸이 불편한 신호일 수 있어요. 수의사 상담을 권해드려요. (진단 아님)'}</div></div>`}
+    <div class="card">
+      <span class=${'pill conf-'+cf}>신뢰도 ${CL[cf]||cf}</span>
+      <div style=${{marginTop:10,lineHeight:1.6}}>${r.summary}</div>
+      ${r.body_signals_read?.length>0 && html`<div style=${{marginTop:10}}>${r.body_signals_read.map((s,i)=>html`<span key=${i} class="pill" style=${{marginRight:6}}>${s}</span>`)}</div>`}
+    </div>
+    ${r.possible_meanings?.length>0 && html`<div class="card"><b>이런 마음일 수 있어요</b>
+      ${r.possible_meanings.map((m,i)=>html`<div key=${i} style=${{marginTop:10,paddingTop:10,borderTop:i?'1px solid var(--line)':'none'}}>
+        <div style=${{fontWeight:600}}>${m.meaning}</div>
+        ${m.why && html`<div class="muted" style=${{marginTop:4,color:'var(--ink)'}}>${m.why}</div>`}
+        ${m.caveat && html`<div class="muted" style=${{marginTop:4,color:'var(--warn)'}}>⚠️ ${m.caveat}</div>`}
+      </div>`)}
+    </div>`}
+    ${r.what_to_do?.length>0 && html`<div class="card"><b>이렇게 해보세요</b><ul style=${{margin:'8px 0 0',paddingLeft:18,lineHeight:1.7}}>${r.what_to_do.map((t,i)=>html`<li key=${i}>${t}</li>`)}</ul></div>`}
+    <div class="muted" style=${{textAlign:'center',padding:'4px 0 16px'}}>직접 관찰·교감이 가장 중요해요. 이 통역은 참고용이며 수의학적 진단이 아니에요.</div>
+  </div>`;
+}
+
+function Reports({ token, pet, onOpen }) {
+  const [list,setList]=useState([]);
+  useEffect(()=>{ api('/reports?pet_id='+pet.id,{token}).then(d=>setList(d.reports)).catch(()=>{}); },[]);
+  return html`<div class="wrap">
+    <div class="h1" style=${{marginBottom:12}}>${pet.name}의 지난 통역</div>
+    ${list.length===0 && html`<div class="muted">아직 통역 기록이 없어요. "통역 받기"로 시작해요.</div>`}
+    ${list.map(r=>html`<div key=${r.id} class="card" style=${{cursor:'pointer'}} onClick=${()=>onOpen(r.id)}>
+      <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center'}}><b>${(r.created_at||'').slice(0,10)}</b>${r.health_flag?html`<span class="pill" style=${{background:'#FFF4EE',color:'var(--warn)'}}>건강</span>`:html`<span class=${'pill conf-'+(r.confidence||'low')}>${({high:'높음',medium:'보통',low:'낮음'})[r.confidence]||''}</span>`}</div>
+      <div class="muted" style=${{marginTop:6}}>${r.summary||''}</div>
+    </div>`)}
+  </div>`;
+}
+
+function App() {
+  const [token,setToken]=useState(localStorage.getItem(TOKEN_KEY)||'');
+  const [user,setUser]=useState(null); const [view,setView]=useState('dashboard'); const [pet,setPet]=useState(null); const [reportData,setReportData]=useState(null);
+  useEffect(()=>{ if(token) api('/auth/me',{token}).then(d=>setUser(d.user)).catch(()=>{ localStorage.removeItem(TOKEN_KEY); setToken(''); }); },[token]);
+  function logout(){ localStorage.removeItem(TOKEN_KEY); setToken(''); setUser(null); }
+  function back(){ setView('dashboard'); setPet(null); setReportData(null); }
+  if(!token) return html`<${Auth} onLogin=${(t,u)=>{setToken(t);setUser(u);}} />`;
+  if(view==='observe' && pet) return html`<${Observe} token=${token} pet=${pet} onBack=${back} onDone=${(d)=>{ setReportData(d); setView('report'); }} />`;
+  if(view==='report') return html`<div><div class="topbar"><b>통역 리포트</b><span class="muted" style=${{cursor:'pointer'}} onClick=${back}>완료</span></div><div class="wrap"><${Report} data=${reportData} /></div></div>`;
+  if(view==='reports' && pet) return html`<div><div class="topbar"><b>🐾 마음곁</b><span class="muted" style=${{cursor:'pointer'}} onClick=${back}>← 뒤로</span></div>
+    <${Reports} token=${token} pet=${pet} onOpen=${(id)=>{ api('/reports/'+id,{token}).then(d=>{setReportData(d);setView('report');}); }} /></div>`;
+  return html`<${Dashboard} token=${token} user=${user} onLogout=${logout}
+    onObserve=${(p)=>{setPet(p);setView('observe');}} onReports=${(p)=>{setPet(p);setView('reports');}} />`;
+}
+ReactDOM.createRoot(document.getElementById('root')).render(html`<${App} />`);
+</script>
+</body>
+</html>
