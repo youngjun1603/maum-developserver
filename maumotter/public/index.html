@@ -47,6 +47,27 @@ function api(path, { method='GET', body, token } = {}) {
   }).then(async r => { const d = await r.json().catch(()=>({})); if(!r.ok) throw new Error(d.error||'오류가 발생했어요'); return d; });
 }
 
+// face-api.js 지연 로더 (카메라 켤 때만). 온디바이스 표정 분석 — 영상 원본은 기기 밖으로 안 나감(spec 2-8/7-C).
+let _faceApiPromise = null;
+function loadFaceApi() {
+  if (_faceApiPromise) return _faceApiPromise;
+  _faceApiPromise = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js';
+    s.onload = async () => {
+      try {
+        const M = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights';
+        await window.faceapi.nets.tinyFaceDetector.loadFromUri(M);
+        await window.faceapi.nets.faceExpressionNet.loadFromUri(M);
+        resolve(window.faceapi);
+      } catch (e) { reject(e); }
+    };
+    s.onerror = reject; document.head.appendChild(s);
+  });
+  return _faceApiPromise;
+}
+const EXPR_LABEL = { happy:'웃음', neutral:'무표정', sad:'시무룩', angry:'찡그림', surprised:'놀람', fearful:'긴장', disgusted:'찌푸림' };
+
 function Auth({ onLogin }) {
   const [mode,setMode]=useState('login');
   const [email,setEmail]=useState(''); const [pw,setPw]=useState(''); const [name,setName]=useState('');
@@ -130,13 +151,16 @@ function ChildChat({ token, child, onEnd }) {
   const [secsLeft,setSecsLeft]=useState(12*60); const finishRef=useRef();   // 세션 10~15분 제한(컴패니언화 방지, spec 2-3)
   const [voiceOn,setVoiceOn]=useState(true); const [listening,setListening]=useState(false); const recRef=useRef(null);
   const SRsupported = typeof window!=='undefined' && !!(window.SpeechRecognition||window.webkitSpeechRecognition);
+  const [camOn,setCamOn]=useState(false); const [camLoading,setCamLoading]=useState(false);   // 표정 카메라(온디바이스, spec 2-8/7-C)
+  const videoRef=useRef(null); const streamRef=useRef(null); const detTimerRef=useRef(null); const exprRef=useRef({});
 
   function speak(text){ if(!voiceOn||!text) return; try{ const s=window.speechSynthesis; if(!s) return; s.cancel(); const u=new SpeechSynthesisUtterance(text); u.lang='ko-KR'; u.rate=0.96; s.speak(u); }catch{} }
 
   useEffect(()=>{ api('/session/start',{method:'POST',token,body:{child_id:child.id}}).then(d=>{ setSid(d.session_id); setMsgs([{role:'otter',content:d.greeting}]); speak(d.greeting); }).catch(()=>{}); },[]);
   useEffect(()=>{ endRef.current?.scrollIntoView({behavior:'smooth'}); },[msgs,busy]);
   useEffect(()=>{ const t=setInterval(()=>setSecsLeft(s=>{ if(s<=1){ clearInterval(t); finishRef.current&&finishRef.current(); return 0; } return s-1; }),1000); return ()=>clearInterval(t); },[]);
-  useEffect(()=>()=>{ try{window.speechSynthesis&&window.speechSynthesis.cancel();}catch{} try{recRef.current&&recRef.current.stop();}catch{} },[]);
+  useEffect(()=>()=>{ try{window.speechSynthesis&&window.speechSynthesis.cancel();}catch{} try{recRef.current&&recRef.current.stop();}catch{} try{detTimerRef.current&&clearInterval(detTimerRef.current);}catch{} try{streamRef.current&&streamRef.current.getTracks().forEach(t=>t.stop());}catch{} },[]);
+  useEffect(()=>{ const v=videoRef.current; if(camOn&&v&&streamRef.current){ v.srcObject=streamRef.current; v.muted=true; v.playsInline=true; v.play().catch(()=>{}); } },[camOn]);
 
   async function sendText(raw){ const t=(raw||'').trim(); if(!t||!sid||busy) return; setInput(''); setMsgs(m=>[...m,{role:'child',content:t}]); setBusy(true);
     try{ const d=await api('/session/'+sid+'/utterance',{method:'POST',token,body:{content:t}}); setMsgs(m=>[...m,{role:'otter',content:d.reply}]); speak(d.reply); }
@@ -151,15 +175,33 @@ function ChildChat({ token, child, onEnd }) {
     }catch{ setListening(false); } }
   function stopListen(){ try{recRef.current&&recRef.current.stop();}catch{} setListening(false); }
 
-  async function finish(){ if(!sid||ending) return; setEnding(true); try{window.speechSynthesis&&window.speechSynthesis.cancel();}catch{} try{ const d=await api('/session/'+sid+'/end',{method:'POST',token}); onEnd(d); }catch{ onEnd(null); } }
+  // 표정 카메라 — 프레임은 기기 안에서만 분석, 원본 미저장·미전송. 종료 시 요약 텍스트만 통역에 보조.
+  async function startCam(){ if(camOn||camLoading) return; setCamLoading(true);
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false}); streamRef.current=stream;
+      const fa=await loadFaceApi(); setCamOn(true); setCamLoading(false);
+      detTimerRef.current=setInterval(async()=>{ const v=videoRef.current; if(!v||v.readyState<2) return;
+        try{ const r=await fa.detectSingleFace(v,new fa.TinyFaceDetectorOptions()).withFaceExpressions();
+          if(r&&r.expressions){ let top='',mx=0; for(const k in r.expressions){ if(r.expressions[k]>mx){ mx=r.expressions[k]; top=k; } } if(top&&mx>0.55) exprRef.current[top]=(exprRef.current[top]||0)+1; }
+        }catch{} },1500);
+    }catch(e){ setCamLoading(false); try{streamRef.current&&streamRef.current.getTracks().forEach(t=>t.stop());}catch{} streamRef.current=null; alert('카메라를 시작할 수 없어요. 권한을 확인해 주세요.'); } }
+  function stopCam(){ try{detTimerRef.current&&clearInterval(detTimerRef.current);}catch{} detTimerRef.current=null; try{streamRef.current&&streamRef.current.getTracks().forEach(t=>t.stop());}catch{} streamRef.current=null; setCamOn(false); }
+  function exprSummary(){ const ent=Object.entries(exprRef.current).sort((a,b)=>b[1]-a[1]); if(!ent.length) return ''; return '세션 동안 표정은 주로 '+ent.slice(0,2).map(([k])=>EXPR_LABEL[k]||k).join(', ')+'으로 보였어요'; }
+
+  async function finish(){ if(!sid||ending) return; setEnding(true); try{window.speechSynthesis&&window.speechSynthesis.cancel();}catch{} const es=exprSummary(); stopCam(); try{ const d=await api('/session/'+sid+'/end',{method:'POST',token,body:es?{expression_summary:es}:{}}); onEnd(d); }catch{ onEnd(null); } }
   finishRef.current=finish;
   const mm=Math.floor(secsLeft/60), ss=String(secsLeft%60).padStart(2,'0');
   return html`<div style=${{minHeight:'100vh',display:'flex',flexDirection:'column'}}>
     <div class="topbar"><b>🦦 또또</b><div style=${{display:'flex',alignItems:'center',gap:10}}>
+      <button onClick=${camOn?stopCam:startCam} disabled=${camLoading} title="표정 카메라(기기 안에서만)" style=${{background:'none',border:'none',fontSize:20,cursor:camLoading?'default':'pointer',opacity:camLoading?0.5:1}}>${camOn?'📷':'📵'}</button>
       <button onClick=${()=>{ if(voiceOn){try{window.speechSynthesis.cancel();}catch{}} setVoiceOn(v=>!v); }} title="또또 목소리" style=${{background:'none',border:'none',fontSize:20,cursor:'pointer'}}>${voiceOn?'🔊':'🔇'}</button>
       <span class="muted" style=${{fontSize:12}}>${mm}:${ss}</span>
       <button class="btn-ghost" style=${{padding:'7px 12px',borderRadius:10,cursor:'pointer'}} disabled=${ending} onClick=${finish}>${ending?'정리 중…':'오늘은 여기까지'}</button>
     </div></div>
+    ${(camOn||camLoading) && html`<div style=${{display:'flex',alignItems:'center',gap:8,padding:'6px 14px',background:'#FBEFE9',borderBottom:'1px solid var(--line)'}}>
+      <video ref=${videoRef} style=${{width:44,height:44,borderRadius:10,objectFit:'cover',background:'#000'}}></video>
+      <span class="muted" style=${{fontSize:12}}>${camLoading?'카메라 준비 중…':'📷 표정도 함께 보고 있어요 (기기 안에서만 · 영상은 저장 안 해요)'}</span>
+    </div>`}
     <div class="chat" style=${{flex:1}}>
       ${msgs.map((m,i)=>html`<div key=${i} class=${'msg '+m.role}>${m.content}</div>`)}
       ${busy && html`<div class="msg otter">🦦 …</div>`}

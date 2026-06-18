@@ -181,8 +181,13 @@ app.post('/api/session/:id/end', requireAuth, async (c) => {
   const { results } = await c.env.DB.prepare("SELECT role,content FROM utterances WHERE session_id=? ORDER BY id").bind(sid).all<any>();
   const childTurns = results.filter((u: any) => u.role === 'child');
 
+  // 표정 메타(온디바이스 분석 요약 텍스트만 — 원본 영상은 기기에서 폐기, spec 2-8/7-C). 참고용·단정 금지.
+  const body = await c.req.json().catch(() => ({})) as { expression_summary?: string };
+  const expr = typeof body?.expression_summary === 'string' ? body.expression_summary.slice(0, 120) : '';
+  const exprLine = expr ? `\n\n[표정 관찰(기기 내 분석 요약, 참고용·단정 금지)]\n${expr}` : '';
+
   const transcript = results.map((u: any) => `${u.role === 'child' ? '아이' : '또또'}: ${u.content}`).join('\n');
-  const userMsg = `[아이 정보]\n- 나이: ${child?.age ?? '미상'}세${child?.interests ? `\n- 관심사: ${child.interests}` : ''}\n\n[오늘 또또와 나눈 대화]\n${transcript}\n\n위 대화를 부모용 통역 리포트(JSON)로 만들어 주세요.`;
+  const userMsg = `[아이 정보]\n- 나이: ${child?.age ?? '미상'}세${child?.interests ? `\n- 관심사: ${child.interests}` : ''}\n\n[오늘 또또와 나눈 대화]\n${transcript}${exprLine}\n\n위 대화를 부모용 통역 리포트(JSON)로 만들어 주세요.`;
 
   let report: any = { summary: '오늘은 대화를 충분히 담지 못했어요. 다음에 다시 시도해 주세요.', feelings: [], what_happened: '', parent_tips: [], talk_starters: [], data_confidence: 'low', crisis: { flag: false, note: '' } };
   if (childTurns.length > 0) {
