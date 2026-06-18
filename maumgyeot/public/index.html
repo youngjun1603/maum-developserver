@@ -28,7 +28,7 @@
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/htm@3.1.1/dist/htm.umd.js" crossorigin></script>
 <script>
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
 const html = htm.bind(React.createElement);
 const TOKEN_KEY = 'maumgyeot_token';
 function api(path, { method='GET', body, token } = {}) {
@@ -105,18 +105,40 @@ function Dashboard({ token, user, onLogout, onObserve, onReports }) {
   </div>`;
 }
 
+// 영상 통역: 후면 카메라로 ~7초 촬영하며 프레임 6장 추출 → 분석에만 일시 전송, 저장 안 함(원본·프레임 미저장).
 function Observe({ token, pet, onDone, onBack }) {
   const [sigs,setSigs]=useState([]); const [picked,setPicked]=useState([]); const [context,setContext]=useState(''); const [busy,setBusy]=useState(false); const [err,setErr]=useState('');
+  const [cam,setCam]=useState(false); const [recording,setRecording]=useState(false); const [prog,setProg]=useState(0);
+  const videoRef=useRef(null); const streamRef=useRef(null); const framesRef=useRef([]); const TOTAL=6;
   useEffect(()=>{ api('/behavior?species='+pet.species,{token}).then(d=>setSigs(d.signals||[])).catch(()=>{}); },[]);
+  useEffect(()=>()=>{ try{streamRef.current&&streamRef.current.getTracks().forEach(t=>t.stop());}catch{} },[]);
+  useEffect(()=>{ const v=videoRef.current; if(cam&&v&&streamRef.current){ v.srcObject=streamRef.current; v.muted=true; v.playsInline=true; v.play().catch(()=>{}); } },[cam]);
   function toggle(code){ setPicked(p=>p.includes(code)?p.filter(x=>x!==code):[...p,code]); }
   const groups = sigs.reduce((acc,s)=>{ (acc[s.group]=acc[s.group]||[]).push(s); return acc; },{});
-  async function submit(){ if(picked.length===0 && context.trim().length<2){ setErr('행동을 하나 이상 고르거나 상황을 적어주세요'); return; }
+
+  async function submit(frames){ const fr=Array.isArray(frames)?frames:[];
+    if(picked.length===0 && context.trim().length<2 && fr.length===0){ setErr('행동을 고르거나, 상황을 적거나, 영상을 찍어주세요'); return; }
     setErr(''); setBusy(true);
-    try{ const d=await api('/observe',{method:'POST',token,body:{pet_id:pet.id,signals:picked,context}}); onDone(d); }
+    try{ const d=await api('/observe',{method:'POST',token,body:{pet_id:pet.id,signals:picked,context,frames:fr}}); onDone(d); }
     catch(e){ setErr(e.message); setBusy(false); } }
+
+  async function startVideo(){ try{ const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false}); streamRef.current=stream; framesRef.current=[]; setProg(0); setCam(true); }catch{ alert('카메라를 열 수 없어요. 권한을 확인해 주세요.'); } }
+  function stopVideo(){ try{streamRef.current&&streamRef.current.getTracks().forEach(t=>t.stop());}catch{} streamRef.current=null; setCam(false); setRecording(false); }
+  function grabFrame(){ const v=videoRef.current; if(!v||v.readyState<2) return; const w=360, h=Math.round((v.videoHeight/v.videoWidth)*360)||270; const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(v,0,0,w,h); framesRef.current.push(cv.toDataURL('image/jpeg',0.7)); }
+  function startRec(){ if(recording) return; framesRef.current=[]; setRecording(true); setProg(0); let n=0;
+    const iv=setInterval(()=>{ grabFrame(); n++; setProg(n); if(n>=TOTAL){ clearInterval(iv); const frames=framesRef.current.slice(); stopVideo(); submit(frames); } },1100); }
+
   return html`<div>
-    <div class="topbar"><b>${pet.species==='cat'?'🐱':'🐶'} ${pet.name} 통역</b><span class="muted" style=${{cursor:'pointer'}} onClick=${onBack}>← 뒤로</span></div>
+    <div class="topbar"><b>${pet.species==='cat'?'🐱':'🐶'} ${pet.name} 통역</b><span class="muted" style=${{cursor:'pointer'}} onClick=${()=>{stopVideo();onBack();}}>← 뒤로</span></div>
     <div class="wrap">
+      ${cam ? html`<div class="card" style=${{textAlign:'center'}}>
+        <video ref=${videoRef} style=${{width:'100%',maxHeight:320,borderRadius:12,background:'#000'}}></video>
+        ${recording
+          ? html`<div class="muted" style=${{marginTop:12}}>📹 촬영 중… ${prog}/${TOTAL}</div>`
+          : html`<button class="btn" style=${{marginTop:12}} onClick=${startRec}>● 촬영 시작 (약 7초)</button>`}
+        <button class="btn btn-ghost" style=${{marginTop:8}} disabled=${recording} onClick=${stopVideo}>취소</button>
+        <div class="muted" style=${{marginTop:8,fontSize:12}}>${pet.name}의 모습을 비춰주세요. 영상은 분석에만 잠깐 쓰이고 <b>저장하지 않아요</b>.</div>
+      </div>` : html`
       <div class="card"><b>1. 어떤 행동을 보였나요?</b> <span class="muted">(여러 개 선택)</span>
         ${Object.entries(groups).map(([g,list])=>html`<div key=${g} style=${{marginTop:12}}>
           <div class="muted" style=${{marginBottom:6}}>${g}</div>
@@ -127,8 +149,10 @@ function Observe({ token, pet, onDone, onBack }) {
         <textarea class="field" style=${{marginTop:10,minHeight:90,resize:'vertical'}} placeholder="예: 저녁에 손님이 왔는데 소파 밑으로 숨었어요" value=${context} onInput=${e=>setContext(e.target.value)}></textarea>
       </div>
       ${err && html`<div class="err">${err}</div>`}
-      <button class="btn" disabled=${busy} onClick=${submit}>${busy?'마음을 읽는 중…':'통역 받기'}</button>
+      <button class="btn" disabled=${busy} onClick=${()=>submit()}>${busy?'마음을 읽는 중…':'통역 받기'}</button>
+      <button class="btn btn-ghost" style=${{marginTop:8}} disabled=${busy} onClick=${startVideo}>📹 영상 찍어서 통역받기</button>
       <div class="muted" style=${{textAlign:'center',padding:'10px 0'}}>⚠️ 표시는 맥락에 따라 정반대일 수 있는 신호예요. 단정하지 않고 함께 읽어요.</div>
+      `}
     </div>
   </div>`;
 }

@@ -92,29 +92,37 @@ app.get('/api/behavior', (c) => {
 
 // ── 관찰 → 통역 ──
 app.post('/api/observe', requireAuth, async (c) => {
-  const { pet_id, signals, context, media_note } = await c.req.json().catch(() => ({}));
+  const { pet_id, signals, context, media_note, frames } = await c.req.json().catch(() => ({}));
   const pet = await c.env.DB.prepare('SELECT * FROM pets WHERE id=? AND maum_user_id=?').bind(pet_id, c.get('uid')).first<any>();
   if (!pet) return c.json({ error: '반려동물을 찾을 수 없어요' }, 404);
   const species = pet.species === 'dog' ? 'dog' : 'cat';
   const codes: string[] = Array.isArray(signals) ? signals : [];
   const { lines, hasHealth, hasAmbiguous } = signalsToLines(species, codes);
 
+  // 영상 프레임(비전): 분석에만 일시 사용, 어디에도 저장하지 않음(원본·프레임 미저장). 최대 6장.
+  const frameArr: string[] = Array.isArray(frames) ? frames.slice(0, 6) : [];
+  const hasVideo = frameArr.length > 0;
+
   const userMsg = `[반려동물] 종: ${species === 'cat' ? '고양이' : '개'} | 이름: ${pet.name} | 나이: ${pet.age ?? '미상'}${pet.personality ? ` | 성격: ${pet.personality}` : ''}
 [관찰한 행동 신호]
 ${lines || '- (선택된 신호 없음)'}
-[맥락] ${context || '(미입력)'}${media_note ? `\n[사진/영상 메모(참고용)] ${media_note}` : ''}
+[맥락] ${context || '(미입력)'}${hasVideo ? '\n[영상] 짧은 영상에서 뽑은 연속 프레임을 함께 첨부했어요.' : ''}
 
-위 관찰을 보호자용 통역 리포트(JSON)로 만들어 주세요.${hasAmbiguous ? ' 다의적 신호가 포함되어 있으니 caveat를 꼭 채우세요.' : ''}`;
+위 관찰을 보호자용 통역 리포트(JSON)로 만들어 주세요.${hasVideo ? ' 첨부 프레임에서 자세·꼬리·귀·표정을 함께 읽어 통역에 반영해 주세요.' : ''}${hasAmbiguous ? ' 다의적 신호가 포함되어 있으니 caveat를 꼭 채우세요.' : ''}`;
+
+  const userContent: any = hasVideo
+    ? [...frameArr.map((f) => ({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: String(f).replace(/^data:image\/\w+;base64,/, '') } })), { type: 'text', text: userMsg }]
+    : userMsg;
 
   let report: any = { summary: '신호가 충분하지 않아 해석이 어려워요. 더 지켜봐 주세요.', confidence: 'low', body_signals_read: [], possible_meanings: [], what_to_do: ['반려동물의 평소 모습과 비교하며 며칠 더 관찰해 주세요.'], health_flag: { flag: false, note: '' } };
-  if (codes.length > 0 || (context && context.length > 1)) {
+  if (codes.length > 0 || hasVideo || (context && context.length > 1)) {
     try {
-      let raw = await callClaude(c.env, { system: TRANSLATE_SYSTEM, messages: [{ role: 'user', content: userMsg }], max_tokens: 900, temperature: 0 });
+      let raw = await callClaude(c.env, { system: TRANSLATE_SYSTEM, messages: [{ role: 'user', content: userContent }], max_tokens: 900, temperature: 0 });
       raw = raw.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
       const parsed = JSON.parse(raw);
       if (!VET_TERMS.some((t) => JSON.stringify(parsed).includes(t))) report = parsed;
       else {
-        let raw2 = await callClaude(c.env, { system: TRANSLATE_SYSTEM + '\n(이전 출력에 금지된 수의학 용어가 있었습니다. 절대 사용하지 마세요.)', messages: [{ role: 'user', content: userMsg }], max_tokens: 900, temperature: 0 });
+        let raw2 = await callClaude(c.env, { system: TRANSLATE_SYSTEM + '\n(이전 출력에 금지된 수의학 용어가 있었습니다. 절대 사용하지 마세요.)', messages: [{ role: 'user', content: userContent }], max_tokens: 900, temperature: 0 });
         raw2 = raw2.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
         try { const p2 = JSON.parse(raw2); if (!VET_TERMS.some((t) => JSON.stringify(p2).includes(t))) report = p2; } catch {}
       }
@@ -130,8 +138,9 @@ ${lines || '- (선택된 신호 없음)'}
   }
   const healthFlag = report?.health_flag?.flag ? 1 : 0;
 
+  const noteToSave = hasVideo ? '영상 분석함(원본·프레임 미저장)' : (media_note ?? null);
   const obs = await c.env.DB.prepare('INSERT INTO observations (pet_id,maum_user_id,species,signals_json,context,media_note) VALUES (?,?,?,?,?,?)')
-    .bind(pet.id, c.get('uid'), species, JSON.stringify(codes), context ?? null, media_note ?? null).run();
+    .bind(pet.id, c.get('uid'), species, JSON.stringify(codes), context ?? null, noteToSave).run();
   const rep = await c.env.DB.prepare('INSERT INTO pet_reports (observation_id,pet_id,maum_user_id,report_json,health_flag) VALUES (?,?,?,?,?)')
     .bind(obs.meta.last_row_id, pet.id, c.get('uid'), JSON.stringify(report), healthFlag).run();
   return c.json({ report, report_id: rep.meta.last_row_id });
