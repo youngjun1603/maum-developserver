@@ -199,6 +199,15 @@ app.post('/api/session/:id/end', requireAuth, async (c) => {
     } catch (e) { console.log('REPORT_FAIL', String((e as any)?.message || e)); }
   }
 
+  // 위기 사전 키워드 스크리닝 (LLM 판정과 이중·보수적, spec 2-6). 단정 아님 — 부모 검토용 플래그.
+  if (report?.crisis) {
+    const CRISIS_KW = ['때렸', '때려', '때리', '맞았', '무서워', '죽고싶', '죽고 싶', '자해', '피가', '술 먹고', '술마시고', '버리고 갈', '나를 버'];
+    const childText = childTurns.map((u: any) => String(u.content)).join(' ');
+    if (CRISIS_KW.some((k) => childText.includes(k)) && !report.crisis.flag) {
+      report.crisis.flag = true;
+      report.crisis.note = report.crisis.note || '대화에 함께 살펴볼 만한 표현이 있었어요. 단정은 아니며, 필요하면 전문기관(아동보호전문기관 112 / 1577-1391) 상담을 권해드려요.';
+    }
+  }
   const crisisFlag = report?.crisis?.flag ? 1 : 0;
   await c.env.DB.prepare('UPDATE sessions SET status=?, ended_at=datetime("now") WHERE id=?').bind('done', sid).run();
   const r = await c.env.DB.prepare('INSERT INTO reports (session_id,child_id,maum_user_id,report_json,crisis_flag) VALUES (?,?,?,?,?)')
