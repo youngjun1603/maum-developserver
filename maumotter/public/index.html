@@ -219,21 +219,7 @@ function ChildChat({ token, child, onEnd }) {
       <span class="muted" style=${{fontSize:12}}>${camLoading?'카메라 준비 중…':'📷 표정도 함께 보고 있어요 (기기 안에서만 · 영상은 저장 안 해요)'}</span>
     </div>`}
     <div style=${{display:'flex',flexDirection:'column',alignItems:'center',padding:'14px 0 8px',background:'linear-gradient(#F1ECE2,var(--cream))'}}>
-      <div style=${{animation:(speaking?'bob 1.6s':'bob 3.4s')+' ease-in-out infinite',transformOrigin:'center bottom'}}>
-        <svg width="124" height="124" viewBox="0 0 140 140" aria-label="또또">
-          <ellipse cx="36" cy="40" rx="13" ry="13" fill="#8B5E3C"/><ellipse cx="104" cy="40" rx="13" ry="13" fill="#8B5E3C"/>
-          <circle cx="36" cy="40" r="6" fill="#6E472B"/><circle cx="104" cy="40" r="6" fill="#6E472B"/>
-          <ellipse cx="70" cy="78" rx="46" ry="48" fill="#A6764F"/>
-          <ellipse cx="70" cy="84" rx="33" ry="35" fill="#EBD7BC"/>
-          <circle cx="56" cy="70" r="6.5" fill="#3A2A1E"/><circle cx="84" cy="70" r="6.5" fill="#3A2A1E"/>
-          <circle cx="58" cy="68" r="2" fill="#fff"/><circle cx="86" cy="68" r="2" fill="#fff"/>
-          <circle cx="50" cy="86" r="6" fill="#F2B8A8" opacity="0.5"/><circle cx="90" cy="86" r="6" fill="#F2B8A8" opacity="0.5"/>
-          <ellipse cx="70" cy="84" rx="7" ry="5" fill="#5A3D2B"/>
-          ${speaking
-            ? html`<ellipse cx="70" cy="99" rx="9" ry="7" fill="#7A4A33" style=${{animation:'talk 0.26s ease-in-out infinite',transformOrigin:'70px 99px'}}/>`
-            : html`<path d="M61 96 Q70 103 79 96" stroke="#7A4A33" stroke-width="3" fill="none" stroke-linecap="round"/>`}
-        </svg>
-      </div>
+      <img src="/otto.jpg" alt="또또" style=${{width:150,height:150,objectFit:'cover',borderRadius:26,boxShadow:speaking?'0 0 0 4px #BBD9EA, 0 8px 20px rgba(91,124,125,0.35)':'0 4px 14px rgba(0,0,0,0.12)',animation:(speaking?'bob 1.6s':'bob 3.6s')+' ease-in-out infinite',transformOrigin:'center bottom',transition:'box-shadow 0.2s'}} />
       <div class="muted" style=${{fontSize:13,marginTop:2,fontWeight:600,color:'var(--ink)'}}>${speaking?'또또가 말하고 있어요…':(listening?'듣고 있어요 🎙️':'또또예요 🦦')}</div>
     </div>
     <div class="chat" style=${{flex:1}}>
