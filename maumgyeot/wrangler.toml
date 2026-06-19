@@ -24,6 +24,11 @@ database_id = "2df188da-159e-43ea-be31-b2dc39d8501d"
 binding = "KV"
 id = "ab0da67427b44439a1c6348a4e014a62"
 
+# 커스텀 도메인 (루트). zone이 같은 Cloudflare 계정에 있으면 deploy 시 DNS·인증서 자동 생성.
+[[routes]]
+pattern = "maumgyeot.com"
+custom_domain = true
+
 # 시크릿(대시보드 Variables 또는 wrangler secret put):
 #   JWT_SECRET        — 마음 시리즈 공유 (마음수달과 동일 값이어야 통합 로그인 성립)
 #   ANTHROPIC_API_KEY — 통역 LLM

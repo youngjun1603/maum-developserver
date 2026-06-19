@@ -104,7 +104,7 @@ function Dashboard({ token, user, onLogout, onObserve, onReports, onGuide }) {
         <button class="btn" onClick=${add}>등록</button>
         <button class="btn btn-ghost" style=${{marginTop:8}} onClick=${()=>setAdding(false)}>취소</button>
       </div>` : html`<button class="btn btn-ghost" onClick=${()=>setAdding(true)}>+ 반려동물 등록</button>`}
-      <a href=${'https://maumotter.limyj007.workers.dev/#token='+encodeURIComponent(token)} class="card" style=${{display:'block',textDecoration:'none',color:'inherit',marginTop:16}}>
+      <a href=${'https://maumotter.com/#token='+encodeURIComponent(token)} class="card" style=${{display:'block',textDecoration:'none',color:'inherit',marginTop:16}}>
         <b>🦦 마음수달</b><div class="muted" style=${{marginTop:6}}>아이의 속마음을 또또가 통역해요 — 같은 계정으로 바로 입장 →</div>
       </a>
     </div>
