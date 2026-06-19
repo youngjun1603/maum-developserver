@@ -310,6 +310,9 @@ function Settings({ token, user, onBack }) {
           마음수달은 의료·심리 치료 서비스가 아니며, 통역 리포트는 <b>자녀 이해를 돕는 참고용</b>입니다. 의학적 진단이 아니에요. 아이의 안전이 걱정되면 전문기관(아동보호전문기관 <b>112</b> / 1577-1391) 상담을 권해드려요.
         </div>
       </div>
+      <a href=${'https://maumgyeot.limyj007.workers.dev/#token='+encodeURIComponent(token)} class="card" style=${{display:'block',textDecoration:'none',color:'inherit'}}>
+        <b>🐾 마음곁</b><div class="muted" style=${{marginTop:6}}>반려동물의 마음을 통역해요 — 같은 계정으로 바로 입장 →</div>
+      </a>
       <a href="https://maumful.com" target="_blank" rel="noopener noreferrer" class="card" style=${{display:'block',textDecoration:'none',color:'inherit'}}>
         <b>🌿 마음 시리즈</b><div class="muted" style=${{marginTop:6}}>마음풀 — 나를 이해하는 심리검사·마음돌봄 →</div>
       </a>
@@ -323,6 +326,8 @@ function App() {
   const [user,setUser]=useState(null);
   const [view,setView]=useState('dashboard'); // dashboard | pinStart | child | handoff | report | reports
   const [child,setChild]=useState(null); const [reportData,setReportData]=useState(null);
+  // 마음 시리즈 SSO: 다른 앱에서 #token=…로 넘어오면 그대로 로그인(공용 maum-auth·JWT 공유)
+  useEffect(()=>{ const m=(location.hash||'').match(/token=([^&]+)/); if(m){ const t=decodeURIComponent(m[1]); localStorage.setItem(TOKEN_KEY,t); setToken(t); history.replaceState(null,'',location.pathname+location.search); } },[]);
   useEffect(()=>{ if(token) api('/auth/me',{token}).then(d=>setUser(d.user)).catch(()=>{ localStorage.removeItem(TOKEN_KEY); setToken(''); }); },[token]);
   function logout(){ localStorage.removeItem(TOKEN_KEY); setToken(''); setUser(null); }
   function back(){ setView('dashboard'); setChild(null); setReportData(null); }
