@@ -150,7 +150,7 @@ function Dashboard({ token, user, onLogout, onStart, onReports, onSettings }) {
 }
 
 // 음성: STT(webkitSpeechRecognition)·TTS(speechSynthesis). spec 4.5 — 못 읽는 아이가 말로 대화. 음성 원본은 서버로 안 보냄(텍스트만).
-const BUDDIES=[{key:'otto',name:'또또',img:'/otto.jpg'},{key:'lala',name:'라라',img:'/lala.jpg'}];
+const BUDDIES=[{key:'otto',name:'또또',img:'/otto.jpg',talk:'/otto_talk.jpg'},{key:'lala',name:'라라',img:'/lala.jpg',talk:'/lala_talk.jpg'}];
 function ChildChat({ token, child, onEnd, onBack }) {
   const [buddy,setBuddy]=useState(null);
   const [sid,setSid]=useState(null); const [msgs,setMsgs]=useState([]); const [input,setInput]=useState('');
@@ -238,7 +238,10 @@ function ChildChat({ token, child, onEnd, onBack }) {
       <span class="muted" style=${{fontSize:12}}>${camLoading?'카메라 준비 중…':'📷 표정도 함께 보고 있어요 (기기 안에서만 · 영상은 저장 안 해요)'}</span>
     </div>`}
     <div style=${{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center',padding:'8px 20px 0'}}>
-      <img src=${buddy.img} alt=${buddy.name} style=${{width:'min(66vw,272px)',height:'min(66vw,272px)',objectFit:'cover',borderRadius:40,boxShadow:speaking?'0 0 0 6px #BBD9EA, 0 12px 30px rgba(91,124,125,0.4)':'0 8px 22px rgba(0,0,0,0.14)',animation:(speaking?'bob 1.6s':'bob 3.6s')+' ease-in-out infinite',transition:'box-shadow .25s'}} />
+      <div style=${{position:'relative',width:'min(66vw,272px)',height:'min(66vw,272px)',borderRadius:40,overflow:'hidden',boxShadow:speaking?'0 0 0 6px #BBD9EA, 0 12px 30px rgba(91,124,125,0.4)':'0 8px 22px rgba(0,0,0,0.14)',transition:'box-shadow .25s',animation:(speaking?'bob 1.6s':'bob 3.6s')+' ease-in-out infinite'}}>
+        <img src=${buddy.img} alt=${buddy.name} style=${{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',opacity:speaking?0:1,transition:'opacity .3s'}} />
+        <img src=${buddy.talk||buddy.img} alt="" aria-hidden="true" style=${{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',opacity:speaking?1:0,transition:'opacity .3s'}} />
+      </div>
       ${!started
         ? html`<button class="btn" style=${{marginTop:26,maxWidth:300,fontSize:18,padding:'16px'}} onClick=${startConversation}>🔊 ${buddy.name}랑 이야기 시작하기</button>
             <div class="muted" style=${{fontSize:12,marginTop:8}}>버튼을 누르면 ${buddy.name}가 말을 걸어요</div>`
