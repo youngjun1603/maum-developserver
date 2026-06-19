@@ -66,7 +66,7 @@ function Auth({ onLogin }) {
   </div>`;
 }
 
-function Dashboard({ token, user, onLogout, onObserve, onReports }) {
+function Dashboard({ token, user, onLogout, onObserve, onReports, onGuide }) {
   const [pets,setPets]=useState([]); const [latest,setLatest]=useState({}); const [adding,setAdding]=useState(false);
   const [name,setName]=useState(''); const [species,setSpecies]=useState('cat'); const [breed,setBreed]=useState(''); const [age,setAge]=useState(''); const [pers,setPers]=useState(''); const [err,setErr]=useState('');
   function load(){
@@ -77,7 +77,10 @@ function Dashboard({ token, user, onLogout, onObserve, onReports }) {
   async function add(){ setErr(''); if(!name.trim()){ setErr('이름을 입력해주세요'); return; }
     try{ await api('/pets',{method:'POST',token,body:{name,species,breed:breed||null,age:age?Number(age):null,personality:pers||null}}); setName('');setBreed('');setAge('');setPers('');setAdding(false); load(); }catch(e){setErr(e.message);} }
   return html`<div>
-    <div class="topbar"><b>🐾 마음곁</b><span class="muted" style=${{cursor:'pointer'}} onClick=${onLogout}>로그아웃</span></div>
+    <div class="topbar"><b>🐾 마음곁</b><div style=${{display:'flex',gap:14,alignItems:'center'}}>
+      <span class="muted" style=${{cursor:'pointer'}} onClick=${onGuide}>행동 도감</span>
+      <span class="muted" style=${{cursor:'pointer'}} onClick=${onLogout}>로그아웃</span>
+    </div></div>
     <div class="wrap">
       <div class="h1" style=${{marginBottom:12}}>우리 아이</div>
       ${pets.map(p => html`<div class="card" key=${p.id}>
@@ -101,6 +104,9 @@ function Dashboard({ token, user, onLogout, onObserve, onReports }) {
         <button class="btn" onClick=${add}>등록</button>
         <button class="btn btn-ghost" style=${{marginTop:8}} onClick=${()=>setAdding(false)}>취소</button>
       </div>` : html`<button class="btn btn-ghost" onClick=${()=>setAdding(true)}>+ 반려동물 등록</button>`}
+      <a href=${'https://maumotter.limyj007.workers.dev/#token='+encodeURIComponent(token)} class="card" style=${{display:'block',textDecoration:'none',color:'inherit',marginTop:16}}>
+        <b>🦦 마음수달</b><div class="muted" style=${{marginTop:6}}>아이의 속마음을 또또가 통역해요 — 같은 계정으로 바로 입장 →</div>
+      </a>
     </div>
   </div>`;
 }
@@ -193,9 +199,34 @@ function Reports({ token, pet, onOpen }) {
   </div>`;
 }
 
+function Behavior({ token, onBack }) {
+  const [sp,setSp]=useState('cat'); const [sigs,setSigs]=useState([]);
+  useEffect(()=>{ api('/behavior?species='+sp,{token}).then(d=>setSigs(d.signals||[])).catch(()=>{}); },[sp]);
+  const groups = sigs.reduce((a,s)=>{ (a[s.group]=a[s.group]||[]).push(s); return a; },{});
+  return html`<div>
+    <div class="topbar"><b>🐾 행동 도감</b><span class="muted" style=${{cursor:'pointer'}} onClick=${onBack}>← 뒤로</span></div>
+    <div class="wrap">
+      <div style=${{display:'flex',gap:8,marginBottom:12}}>
+        <button class=${'btn '+(sp==='cat'?'':'btn-ghost')} style=${{flex:1}} onClick=${()=>setSp('cat')}>🐱 고양이</button>
+        <button class=${'btn '+(sp==='dog'?'':'btn-ghost')} style=${{flex:1}} onClick=${()=>setSp('dog')}>🐶 개</button>
+      </div>
+      ${Object.entries(groups).map(([g,list])=>html`<div key=${g} class="card">
+        <span class="pill">${g}</span>
+        ${list.map(s=>html`<div key=${s.code} style=${{marginTop:10}}>
+          <div style=${{fontWeight:600}}>${s.label} ${s.ambiguous?html`<span style=${{color:'var(--warn)',fontSize:12}}>⚠️ 다의적</span>`:''}${s.health?html`<span class="muted" style=${{fontSize:12}}> · 건강 관련</span>`:''}</div>
+          <div class="muted" style=${{marginTop:2}}>${s.meanings.join(' / ')}</div>
+        </div>`)}
+      </div>`)}
+      <div class="muted" style=${{textAlign:'center',padding:'8px 0'}}>모든 의미는 "~일 수 있음"(단정 아님). 단일 신호로 판단하지 말고 함께 읽어요.</div>
+    </div>
+  </div>`;
+}
+
 function App() {
   const [token,setToken]=useState(localStorage.getItem(TOKEN_KEY)||'');
   const [user,setUser]=useState(null); const [view,setView]=useState('dashboard'); const [pet,setPet]=useState(null); const [reportData,setReportData]=useState(null);
+  // 마음 시리즈 SSO: 다른 앱에서 #token=…로 넘어오면 그대로 로그인(공용 maum-auth·JWT 공유)
+  useEffect(()=>{ const m=(location.hash||'').match(/token=([^&]+)/); if(m){ const t=decodeURIComponent(m[1]); localStorage.setItem(TOKEN_KEY,t); setToken(t); history.replaceState(null,'',location.pathname+location.search); } },[]);
   useEffect(()=>{ if(token) api('/auth/me',{token}).then(d=>setUser(d.user)).catch(()=>{ localStorage.removeItem(TOKEN_KEY); setToken(''); }); },[token]);
   function logout(){ localStorage.removeItem(TOKEN_KEY); setToken(''); setUser(null); }
   function back(){ setView('dashboard'); setPet(null); setReportData(null); }
@@ -204,8 +235,9 @@ function App() {
   if(view==='report') return html`<div><div class="topbar"><b>통역 리포트</b><span class="muted" style=${{cursor:'pointer'}} onClick=${back}>완료</span></div><div class="wrap"><${Report} data=${reportData} /></div></div>`;
   if(view==='reports' && pet) return html`<div><div class="topbar"><b>🐾 마음곁</b><span class="muted" style=${{cursor:'pointer'}} onClick=${back}>← 뒤로</span></div>
     <${Reports} token=${token} pet=${pet} onOpen=${(id)=>{ api('/reports/'+id,{token}).then(d=>{setReportData(d);setView('report');}); }} /></div>`;
+  if(view==='guide') return html`<${Behavior} token=${token} onBack=${back} />`;
   return html`<${Dashboard} token=${token} user=${user} onLogout=${logout}
-    onObserve=${(p)=>{setPet(p);setView('observe');}} onReports=${(p)=>{setPet(p);setView('reports');}} />`;
+    onObserve=${(p)=>{setPet(p);setView('observe');}} onReports=${(p)=>{setPet(p);setView('reports');}} onGuide=${()=>setView('guide')} />`;
 }
 ReactDOM.createRoot(document.getElementById('root')).render(html`<${App} />`);
 </script>

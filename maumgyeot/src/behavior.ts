@@ -20,6 +20,9 @@ export const BEHAVIOR: Record<'cat' | 'dog', BehaviorSignal[]> = {
     { code: 'hide_appetite', label: '숨기·식욕저하·화장실 밖 배변', group: '몸짓', meanings: ['스트레스', '몸 불편'], health: true },
   ],
   dog: [
+    { code: 'growl', label: '으르렁거림', group: '발성', meanings: ['경고·불편(거리 요청)', '(놀이 중엔 흥분)'], ambiguous: true },
+    { code: 'bark_repeat', label: '반복적으로 짖음', group: '발성', meanings: ['경계·요구', '불안·흥분'] },
+    { code: 'whine', label: '낑낑거림', group: '발성', meanings: ['요구·관심', '불안·통증'], health: true },
     { code: 'tail_wag', label: '꼬리 흔들기', group: '꼬리', meanings: ['흥분·각성(긍정/부정 모두)', '높이·속도·몸 전체로 판단'], ambiguous: true },
     { code: 'tail_low', label: '꼬리 낮게/다리 사이', group: '꼬리', meanings: ['불안·두려움·복종'] },
     { code: 'tail_stiff', label: '꼬리 수평·뻣뻣', group: '꼬리', meanings: ['경계·집중'] },
@@ -30,6 +33,9 @@ export const BEHAVIOR: Record<'cat' | 'dog', BehaviorSignal[]> = {
     { code: 'play_bow', label: '플레이 바우(엉덩이↑)', group: '자세', meanings: ['놀자! 초대'] },
     { code: 'crouch', label: '몸 낮추기·웅크림', group: '자세', meanings: ['두려움·복종'] },
     { code: 'hackles', label: '털 곤두섬(hackles)', group: '자세', meanings: ['각성↑(공포/흥분/경계)'], ambiguous: true },
+    { code: 'belly_up', label: '배 보이고 뒹굴기', group: '자세', meanings: ['편안·복종', '(만져달라는 뜻 아닐 수도)'], ambiguous: true },
+    { code: 'paw_lift', label: '앞발 들어 올리기', group: '자세', meanings: ['관심·요청', '불확실·주저'] },
+    { code: 'zoomies', label: '우다다(갑자기 질주)', group: '자세', meanings: ['흥분·에너지 발산(놀이)'] },
     { code: 'lethargy', label: '식욕·기력 저하·통증 회피 자세', group: '자세', meanings: ['몸 불편'], health: true },
   ],
 };
