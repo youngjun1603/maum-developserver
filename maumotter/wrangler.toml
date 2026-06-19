@@ -24,6 +24,11 @@ database_id = "2df188da-159e-43ea-be31-b2dc39d8501d"   # maum-auth (_shared/maum
 binding = "KV"
 id = "9d5fba04837142f4858b949511095f7e"
 
+# 커스텀 도메인 (루트). zone이 같은 Cloudflare 계정에 있으면 deploy 시 DNS·인증서 자동 생성.
+[[routes]]
+pattern = "maumotter.com"
+custom_domain = true
+
 # 시크릿(대시보드 Variables 또는 wrangler secret put):
 #   JWT_SECRET        — 마음 시리즈 공유 (마음곁과 동일 값, _shared 2장)
 #   ANTHROPIC_API_KEY — 통역/대화 LLM
