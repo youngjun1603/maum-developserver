@@ -82,9 +82,9 @@ function Auth({ onLogin }) {
     }catch(e){ setErr(e.message); } finally{ setLoading(false); }
   }
   return html`<div class="wrap">
-    <div style=${{textAlign:'center', padding:'32px 0 20px'}}>
-      <div style=${{fontSize:54}}>🦦</div>
-      <div class="h1">마음수달</div>
+    <div style=${{textAlign:'center', padding:'28px 0 18px'}}>
+      <img src="/otto.jpg" alt="또또" style=${{width:140,height:140,objectFit:'cover',borderRadius:32,boxShadow:'0 8px 22px rgba(0,0,0,0.14)',animation:'bob 3.6s ease-in-out infinite'}} />
+      <div class="h1" style=${{marginTop:14}}>마음수달</div>
       <div class="muted">우리 아이의 속마음, 또또가 들어주고<br/>부모님께 따뜻하게 통역해드려요</div>
     </div>
     <div class="card">

@@ -58,8 +58,9 @@ const REPORT_MODEL = 'claude-sonnet-4-6';
 
 // 또또 대화 시스템 프롬프트 (docs/maumotter-dialogue-scenarios.md)
 function ottoSystem(age: number | null, name: string) {
-  return `당신은 '마음수달'의 수달 친구 '또또'입니다. ${name ? name + '(이)라는 ' : ''}${age ?? 7}세 아이와 대화합니다.
+  return `당신은 아이의 마음을 들어주는 친구 '또또'입니다. ${name ? name + '(이)라는 ' : ''}${age ?? 7}세 아이와 대화합니다.
 [화법] 1인칭 투사 화법("또또는 그런 날엔 ~"), 캐묻지 않기, 단정 금지("~구나" 대신 "~했을까?"), 한 번에 1~2문장 짧고 따뜻하게.
+[호칭] 자기 자신은 항상 '또또'라고만 부른다. '수달'이라는 단어로 자신을 칭하지 않는다(어색함).
 [연령] ${age && age <= 5 ? '아주 짧고 쉬운 단어, 선택지 제시' : age && age >= 8 ? '감정 단어를 조금 넓혀 대화' : '짧은 문장, 구체적 질문 하나씩'}.
 [금지] 진단·평가·의료용어 금지. "비밀로 할게" 금지(→ "엄마/아빠가 너를 더 잘 이해하도록 또또가 도와줄게"). 추궁·유도신문 금지. 위기 상황이어도 신고·해결·위기 이야기를 아이에게 꺼내지 말 것(평소처럼 따뜻하게 안전감만).
 [목표] 아이가 편하게 자기 마음을 더 말하도록 돕기. 답을 요구받으면 "또또는 잘 모르겠어, 네 생각이 더 궁금해!".
@@ -142,7 +143,7 @@ app.post('/api/session/start', requireAuth, async (c) => {
   const r = await c.env.DB.prepare('INSERT INTO sessions (child_id,maum_user_id) VALUES (?,?)').bind(child_id, c.get('uid')).run();
   const sid = r.meta.last_row_id as number;
   // AI 정체성 고지(spec 2-4) + 따뜻한 시작
-  const greeting = `안녕! 나는 진짜 동물은 아니고, 네 마음을 들어주는 수달 친구 또또야 🦦 오늘도 와줘서 고마워! 오늘 하루는 어땠어?`;
+  const greeting = `안녕! 나는 또또야 🦦 진짜는 아니지만, 네 마음 이야기를 들어주는 친구야. 오늘도 와줘서 고마워! 오늘 하루는 어땠어?`;
   await c.env.DB.prepare('INSERT INTO utterances (session_id,role,content) VALUES (?,?,?)').bind(sid, 'otter', greeting).run();
   return c.json({ session_id: sid, greeting, child: { name: child.name, age: child.age } });
 });
