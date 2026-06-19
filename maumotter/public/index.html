@@ -27,6 +27,8 @@
   .msg.child{ align-self:flex-end; background:var(--water); color:#fff; border-bottom-right-radius:5px; }
   .topbar{ display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--cream); }
   @keyframes pulse{ 0%,100%{ transform:scale(1); opacity:1; } 50%{ transform:scale(1.08); opacity:.85; } }
+  @keyframes bob{ 0%,100%{ transform:translateY(0) rotate(-1deg); } 50%{ transform:translateY(-7px) rotate(1deg); } }
+  @keyframes talk{ 0%,100%{ transform:scaleY(0.6); } 50%{ transform:scaleY(1.15); } }
 </style>
 </head>
 <body>
@@ -150,21 +152,27 @@ function ChildChat({ token, child, onEnd }) {
   const [busy,setBusy]=useState(false); const [ending,setEnding]=useState(false); const endRef=useRef();
   const [secsLeft,setSecsLeft]=useState(12*60); const finishRef=useRef();   // 세션 10~15분 제한(컴패니언화 방지, spec 2-3)
   const [voiceOn,setVoiceOn]=useState(true); const [listening,setListening]=useState(false); const recRef=useRef(null);
+  const [started,setStarted]=useState(false); const voiceRef=useRef(null); const [speaking,setSpeaking]=useState(false);   // started=오디오 잠금해제(모바일 자동재생 우회)·핸즈프리 시작
   const SRsupported = typeof window!=='undefined' && !!(window.SpeechRecognition||window.webkitSpeechRecognition);
   const [camOn,setCamOn]=useState(false); const [camLoading,setCamLoading]=useState(false);   // 표정 카메라(온디바이스, spec 2-8/7-C)
   const videoRef=useRef(null); const streamRef=useRef(null); const detTimerRef=useRef(null); const exprRef=useRef({});
 
-  function speak(text){ if(!voiceOn||!text) return; try{ const s=window.speechSynthesis; if(!s) return; s.cancel(); const u=new SpeechSynthesisUtterance(text); u.lang='ko-KR'; u.rate=0.96; s.speak(u); }catch{} }
+  function pickVoice(){ try{ const vs=(window.speechSynthesis?.getVoices()||[]).filter(v=>(v.lang||'').toLowerCase().startsWith('ko')); if(vs.length) voiceRef.current = vs.find(v=>/google|naver|네이버|microsoft|yuna|sora|heami|seoyeon|nara/i.test(v.name)) || vs[0]; }catch{} }
+  // cancel() 없이 speak(모바일 무음 충돌 방지) + 최적 보이스 + 끝나면 onEnd(핸즈프리)
+  function speak(text, onEnd){ if(!voiceOn||!text){ onEnd&&onEnd(); return; } try{ const s=window.speechSynthesis; if(!s){ onEnd&&onEnd(); return; } const u=new SpeechSynthesisUtterance(text); u.lang='ko-KR'; if(voiceRef.current) u.voice=voiceRef.current; u.rate=1.0; u.pitch=1.2; u.onstart=()=>setSpeaking(true); u.onend=()=>{ setSpeaking(false); onEnd&&onEnd(); }; u.onerror=()=>{ setSpeaking(false); onEnd&&onEnd(); }; s.speak(u); try{s.resume();}catch{} }catch{ setSpeaking(false); onEnd&&onEnd(); } }
+  function autoListen(){ if(started && SRsupported && !busy) startListen(); }   // 또또가 말 끝나면 자동으로 듣기
+  function startConversation(){ setStarted(true); const greet=(msgs[0]&&msgs[0].content)||''; speak(greet, autoListen); }   // 사용자 탭=오디오 잠금해제
 
-  useEffect(()=>{ api('/session/start',{method:'POST',token,body:{child_id:child.id}}).then(d=>{ setSid(d.session_id); setMsgs([{role:'otter',content:d.greeting}]); speak(d.greeting); }).catch(()=>{}); },[]);
+  useEffect(()=>{ pickVoice(); if(window.speechSynthesis) window.speechSynthesis.onvoiceschanged=pickVoice; },[]);
+  useEffect(()=>{ api('/session/start',{method:'POST',token,body:{child_id:child.id}}).then(d=>{ setSid(d.session_id); setMsgs([{role:'otter',content:d.greeting}]); }).catch(()=>{}); },[]);
   useEffect(()=>{ endRef.current?.scrollIntoView({behavior:'smooth'}); },[msgs,busy]);
   useEffect(()=>{ const t=setInterval(()=>setSecsLeft(s=>{ if(s<=1){ clearInterval(t); finishRef.current&&finishRef.current(); return 0; } return s-1; }),1000); return ()=>clearInterval(t); },[]);
   useEffect(()=>()=>{ try{window.speechSynthesis&&window.speechSynthesis.cancel();}catch{} try{recRef.current&&recRef.current.stop();}catch{} try{detTimerRef.current&&clearInterval(detTimerRef.current);}catch{} try{streamRef.current&&streamRef.current.getTracks().forEach(t=>t.stop());}catch{} },[]);
   useEffect(()=>{ const v=videoRef.current; if(camOn&&v&&streamRef.current){ v.srcObject=streamRef.current; v.muted=true; v.playsInline=true; v.play().catch(()=>{}); } },[camOn]);
 
   async function sendText(raw){ const t=(raw||'').trim(); if(!t||!sid||busy) return; setInput(''); setMsgs(m=>[...m,{role:'child',content:t}]); setBusy(true);
-    try{ const d=await api('/session/'+sid+'/utterance',{method:'POST',token,body:{content:t}}); setMsgs(m=>[...m,{role:'otter',content:d.reply}]); speak(d.reply); }
-    catch{ const fb='또또가 잠깐 딴 생각을 했어! 다시 말해줄래?'; setMsgs(m=>[...m,{role:'otter',content:fb}]); speak(fb); } finally{ setBusy(false); } }
+    try{ const d=await api('/session/'+sid+'/utterance',{method:'POST',token,body:{content:t}}); setMsgs(m=>[...m,{role:'otter',content:d.reply}]); setBusy(false); speak(d.reply, autoListen); return; }
+    catch{ const fb='또또가 잠깐 딴 생각을 했어! 다시 말해줄래?'; setMsgs(m=>[...m,{role:'otter',content:fb}]); setBusy(false); speak(fb, autoListen); } }
   function send(){ sendText(input); }
 
   function startListen(){ if(!SRsupported||busy||listening) return;
@@ -202,16 +210,39 @@ function ChildChat({ token, child, onEnd }) {
       <video ref=${videoRef} style=${{width:44,height:44,borderRadius:10,objectFit:'cover',background:'#000'}}></video>
       <span class="muted" style=${{fontSize:12}}>${camLoading?'카메라 준비 중…':'📷 표정도 함께 보고 있어요 (기기 안에서만 · 영상은 저장 안 해요)'}</span>
     </div>`}
+    <div style=${{display:'flex',flexDirection:'column',alignItems:'center',padding:'14px 0 8px',background:'linear-gradient(#F1ECE2,var(--cream))'}}>
+      <div style=${{animation:(speaking?'bob 1.6s':'bob 3.4s')+' ease-in-out infinite',transformOrigin:'center bottom'}}>
+        <svg width="124" height="124" viewBox="0 0 140 140" aria-label="또또">
+          <ellipse cx="36" cy="40" rx="13" ry="13" fill="#8B5E3C"/><ellipse cx="104" cy="40" rx="13" ry="13" fill="#8B5E3C"/>
+          <circle cx="36" cy="40" r="6" fill="#6E472B"/><circle cx="104" cy="40" r="6" fill="#6E472B"/>
+          <ellipse cx="70" cy="78" rx="46" ry="48" fill="#A6764F"/>
+          <ellipse cx="70" cy="84" rx="33" ry="35" fill="#EBD7BC"/>
+          <circle cx="56" cy="70" r="6.5" fill="#3A2A1E"/><circle cx="84" cy="70" r="6.5" fill="#3A2A1E"/>
+          <circle cx="58" cy="68" r="2" fill="#fff"/><circle cx="86" cy="68" r="2" fill="#fff"/>
+          <circle cx="50" cy="86" r="6" fill="#F2B8A8" opacity="0.5"/><circle cx="90" cy="86" r="6" fill="#F2B8A8" opacity="0.5"/>
+          <ellipse cx="70" cy="84" rx="7" ry="5" fill="#5A3D2B"/>
+          ${speaking
+            ? html`<ellipse cx="70" cy="99" rx="9" ry="7" fill="#7A4A33" style=${{animation:'talk 0.26s ease-in-out infinite',transformOrigin:'70px 99px'}}/>`
+            : html`<path d="M61 96 Q70 103 79 96" stroke="#7A4A33" stroke-width="3" fill="none" stroke-linecap="round"/>`}
+        </svg>
+      </div>
+      <div class="muted" style=${{fontSize:13,marginTop:2,fontWeight:600,color:'var(--ink)'}}>${speaking?'또또가 말하고 있어요…':(listening?'듣고 있어요 🎙️':'또또예요 🦦')}</div>
+    </div>
     <div class="chat" style=${{flex:1}}>
       ${msgs.map((m,i)=>html`<div key=${i} class=${'msg '+m.role}>${m.content}</div>`)}
       ${busy && html`<div class="msg otter">🦦 …</div>`}
       <div ref=${endRef}></div>
     </div>
-    ${SRsupported && html`<div style=${{textAlign:'center',padding:'8px 0 2px'}}>
-      <button onClick=${listening?stopListen:startListen} disabled=${busy}
-        style=${{width:84,height:84,borderRadius:'50%',border:'none',cursor:busy?'default':'pointer',fontSize:34,color:'#fff',background:listening?'#C0492F':'var(--water)',boxShadow:'0 4px 14px rgba(91,124,125,0.4)',animation:listening?'pulse 1s infinite':'none'}}>🎤</button>
-      <div class="muted" style=${{fontSize:12,marginTop:4}}>${listening?'듣고 있어요… 말해보세요':'마이크를 누르고 말해요'}</div>
-    </div>`}
+    ${!started
+      ? html`<div style=${{textAlign:'center',padding:'16px 0 6px'}}>
+          <button class="btn" style=${{maxWidth:300,margin:'0 auto',fontSize:17,padding:'15px'}} onClick=${startConversation}>🔊 또또랑 이야기 시작하기</button>
+          <div class="muted" style=${{fontSize:12,marginTop:6}}>버튼을 누르면 또또가 소리내어 말을 걸어요</div>
+        </div>`
+      : (SRsupported ? html`<div style=${{textAlign:'center',padding:'8px 0 2px'}}>
+          <button onClick=${listening?stopListen:startListen} disabled=${busy}
+            style=${{width:84,height:84,borderRadius:'50%',border:'none',cursor:busy?'default':'pointer',fontSize:34,color:'#fff',background:listening?'#C0492F':'var(--water)',boxShadow:'0 4px 14px rgba(91,124,125,0.4)',animation:listening?'pulse 1s infinite':'none'}}>🎤</button>
+          <div class="muted" style=${{fontSize:12,marginTop:4}}>${busy?'또또가 생각 중…':(listening?'듣고 있어요… 말해보세요':'또또가 말하면 자동으로 들어요 (직접 눌러도 돼요)')}</div>
+        </div>` : null)}
     <div style=${{display:'flex',gap:8,padding:14,borderTop:'1px solid var(--line)',position:'sticky',bottom:0,background:'var(--cream)'}}>
       <input class="field" style=${{marginBottom:0}} placeholder=${SRsupported?'또는 글로 써도 돼요':'또또에게 이야기해요'} value=${input} onInput=${e=>setInput(e.target.value)} onKeyDown=${e=>{if(e.key==='Enter')send();}} />
       <button class="btn" style=${{width:64}} disabled=${busy} onClick=${send}>→</button>
