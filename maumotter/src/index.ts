@@ -57,14 +57,15 @@ const CHAT_MODEL = 'claude-haiku-4-5-20251001';
 const REPORT_MODEL = 'claude-sonnet-4-6';
 
 // 또또 대화 시스템 프롬프트 (docs/maumotter-dialogue-scenarios.md)
-function ottoSystem(age: number | null, name: string) {
-  return `당신은 아이의 마음을 들어주는 친구 '또또'입니다. ${name ? name + '(이)라는 ' : ''}${age ?? 7}세 아이와 대화합니다.
-[화법] 1인칭 투사 화법("또또는 그런 날엔 ~"), 캐묻지 않기, 단정 금지("~구나" 대신 "~했을까?"), 한 번에 1~2문장 짧고 따뜻하게.
-[호칭] 자기 자신은 항상 '또또'라고만 부른다. '수달'이라는 단어로 자신을 칭하지 않는다(어색함).
+function ottoSystem(age: number | null, name: string, buddy?: string) {
+  const B = buddy === '라라' ? '라라' : '또또';
+  return `당신은 아이의 마음을 들어주는 친구 '${B}'입니다. ${name ? name + '(이)라는 ' : ''}${age ?? 7}세 아이와 대화합니다.
+[화법] 1인칭 투사 화법("${B}는 그런 날엔 ~"), 캐묻지 않기, 단정 금지("~구나" 대신 "~했을까?"), 한 번에 1~2문장 짧고 따뜻하게.
+[호칭] 자기 자신은 항상 '${B}'라고만 부른다. '수달'이라는 단어로 자신을 칭하지 않는다(어색함).
 [연령] ${age && age <= 5 ? '아주 짧고 쉬운 단어, 선택지 제시' : age && age >= 8 ? '감정 단어를 조금 넓혀 대화' : '짧은 문장, 구체적 질문 하나씩'}.
-[금지] 진단·평가·의료용어 금지. "비밀로 할게" 금지(→ "엄마/아빠가 너를 더 잘 이해하도록 또또가 도와줄게"). 추궁·유도신문 금지. 위기 상황이어도 신고·해결·위기 이야기를 아이에게 꺼내지 말 것(평소처럼 따뜻하게 안전감만).
-[목표] 아이가 편하게 자기 마음을 더 말하도록 돕기. 답을 요구받으면 "또또는 잘 모르겠어, 네 생각이 더 궁금해!".
-한국어로, 또또의 다음 한 마디만 출력하세요(설명·따옴표 없이).`;
+[금지] 진단·평가·의료용어 금지. "비밀로 할게" 금지(→ "엄마/아빠가 너를 더 잘 이해하도록 ${B}가 도와줄게"). 추궁·유도신문 금지. 위기 상황이어도 신고·해결·위기 이야기를 아이에게 꺼내지 말 것(평소처럼 따뜻하게 안전감만).
+[목표] 아이가 편하게 자기 마음을 더 말하도록 돕기. 답을 요구받으면 "${B}는 잘 모르겠어, 네 생각이 더 궁금해!".
+한국어로, ${B}의 다음 한 마디만 출력하세요(설명·따옴표 없이).`;
 }
 
 // 통역 시스템 프롬프트 (docs/maumotter-translation-engine.md)
@@ -137,15 +138,16 @@ app.post('/api/children', requireAuth, async (c) => {
 
 // ── 세션 시작 (부모 인증 후 아이 모드) ──
 app.post('/api/session/start', requireAuth, async (c) => {
-  const { child_id } = await c.req.json().catch(() => ({}));
+  const { child_id, buddy } = await c.req.json().catch(() => ({}));
   const child = await c.env.DB.prepare('SELECT * FROM children WHERE id=? AND maum_user_id=?').bind(child_id, c.get('uid')).first<any>();
   if (!child) return c.json({ error: '아이를 찾을 수 없어요' }, 404);
-  const r = await c.env.DB.prepare('INSERT INTO sessions (child_id,maum_user_id) VALUES (?,?)').bind(child_id, c.get('uid')).run();
+  const B = (buddy === 'lala' || buddy === '라라') ? '라라' : '또또';   // 클라이언트는 ASCII 키('lala'/'otto') 전송
+  const r = await c.env.DB.prepare('INSERT INTO sessions (child_id,maum_user_id,buddy) VALUES (?,?,?)').bind(child_id, c.get('uid'), B).run();
   const sid = r.meta.last_row_id as number;
   // AI 정체성 고지(spec 2-4) + 따뜻한 시작
-  const greeting = `안녕! 나는 또또야 🦦 진짜는 아니지만, 네 마음 이야기를 들어주는 친구야. 오늘도 와줘서 고마워! 오늘 하루는 어땠어?`;
+  const greeting = `안녕! 나는 ${B}야 🦦 진짜는 아니지만, 네 마음 이야기를 들어주는 친구야. 오늘도 와줘서 고마워! 오늘 하루는 어땠어?`;
   await c.env.DB.prepare('INSERT INTO utterances (session_id,role,content) VALUES (?,?,?)').bind(sid, 'otter', greeting).run();
-  return c.json({ session_id: sid, greeting, child: { name: child.name, age: child.age } });
+  return c.json({ session_id: sid, greeting, buddy: B, child: { name: child.name, age: child.age } });
 });
 
 // ── 아이 발화 → 또또 응답 ──
@@ -163,7 +165,7 @@ app.post('/api/session/:id/utterance', requireAuth, async (c) => {
   const history = results.map((u: any) => ({ role: u.role === 'child' ? 'user' : 'assistant', content: u.content }));
   let reply = '응, 그렇구나. 더 이야기해줄래?';
   try {
-    reply = await callClaude(c.env, { model: CHAT_MODEL, system: ottoSystem(child?.age ?? null, child?.name ?? ''), messages: history, max_tokens: 200, temperature: 0.7 }) || reply;
+    reply = await callClaude(c.env, { model: CHAT_MODEL, system: ottoSystem(child?.age ?? null, child?.name ?? '', s.buddy), messages: history, max_tokens: 200, temperature: 0.7 }) || reply;
   } catch (e) { console.log('chat LLM fail:', String((e as any)?.message || e)); /* 폴백 reply 유지 */ }
   await c.env.DB.prepare('INSERT INTO utterances (session_id,role,content) VALUES (?,?,?)').bind(sid, 'otter', reply).run();
   return c.json({ reply });
@@ -187,8 +189,9 @@ app.post('/api/session/:id/end', requireAuth, async (c) => {
   const expr = typeof body?.expression_summary === 'string' ? body.expression_summary.slice(0, 120) : '';
   const exprLine = expr ? `\n\n[표정 관찰(기기 내 분석 요약, 참고용·단정 금지)]\n${expr}` : '';
 
-  const transcript = results.map((u: any) => `${u.role === 'child' ? '아이' : '또또'}: ${u.content}`).join('\n');
-  const userMsg = `[아이 정보]\n- 나이: ${child?.age ?? '미상'}세${child?.interests ? `\n- 관심사: ${child.interests}` : ''}\n\n[오늘 또또와 나눈 대화]\n${transcript}${exprLine}\n\n위 대화를 부모용 통역 리포트(JSON)로 만들어 주세요.`;
+  const B = s.buddy || '또또';
+  const transcript = results.map((u: any) => `${u.role === 'child' ? '아이' : B}: ${u.content}`).join('\n');
+  const userMsg = `[아이 정보]\n- 나이: ${child?.age ?? '미상'}세${child?.interests ? `\n- 관심사: ${child.interests}` : ''}\n\n[오늘 ${B}와 나눈 대화]\n${transcript}${exprLine}\n\n위 대화를 부모용 통역 리포트(JSON)로 만들어 주세요.`;
 
   let report: any = { summary: '오늘은 대화를 충분히 담지 못했어요. 다음에 다시 시도해 주세요.', feelings: [], what_happened: '', parent_tips: [], talk_starters: [], data_confidence: 'low', crisis: { flag: false, note: '' } };
   if (childTurns.length > 0) {

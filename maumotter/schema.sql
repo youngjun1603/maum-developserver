@@ -23,7 +23,8 @@ CREATE TABLE IF NOT EXISTS sessions (
   maum_user_id INTEGER NOT NULL,
   started_at   TEXT DEFAULT (datetime('now')),
   ended_at     TEXT,
-  status       TEXT DEFAULT 'open'       -- open | done | aborted
+  status       TEXT DEFAULT 'open',      -- open | done | aborted
+  buddy        TEXT DEFAULT '또또'       -- 대화 친구(또또 | 라라)
 );
 CREATE INDEX IF NOT EXISTS idx_sessions_child ON sessions(child_id);
 

@@ -147,7 +147,9 @@ function Dashboard({ token, user, onLogout, onStart, onReports, onSettings }) {
 }
 
 // 음성: STT(webkitSpeechRecognition)·TTS(speechSynthesis). spec 4.5 — 못 읽는 아이가 말로 대화. 음성 원본은 서버로 안 보냄(텍스트만).
-function ChildChat({ token, child, onEnd }) {
+const BUDDIES=[{key:'otto',name:'또또',img:'/otto.jpg'},{key:'lala',name:'라라',img:'/lala.jpg'}];
+function ChildChat({ token, child, onEnd, onBack }) {
+  const [buddy,setBuddy]=useState(null);
   const [sid,setSid]=useState(null); const [msgs,setMsgs]=useState([]); const [input,setInput]=useState('');
   const [busy,setBusy]=useState(false); const [ending,setEnding]=useState(false); const endRef=useRef();
   const [secsLeft,setSecsLeft]=useState(12*60); const finishRef=useRef();   // 세션 10~15분 제한(컴패니언화 방지, spec 2-3)
@@ -167,7 +169,7 @@ function ChildChat({ token, child, onEnd }) {
   function startConversation(){ setStarted(true); startListen(); const greet=(msgs[0]&&msgs[0].content)||''; speak(greet); }
 
   useEffect(()=>{ pickVoice(); if(window.speechSynthesis) window.speechSynthesis.onvoiceschanged=pickVoice; },[]);
-  useEffect(()=>{ api('/session/start',{method:'POST',token,body:{child_id:child.id}}).then(d=>{ setSid(d.session_id); setMsgs([{role:'otter',content:d.greeting}]); }).catch(()=>{}); },[]);
+  function pickBuddy(b){ setBuddy(b); api('/session/start',{method:'POST',token,body:{child_id:child.id,buddy:b.key}}).then(d=>{ setSid(d.session_id); setMsgs([{role:'otter',content:d.greeting}]); }).catch(()=>{}); }
   useEffect(()=>{ endRef.current?.scrollIntoView({behavior:'smooth'}); },[msgs,busy]);
   useEffect(()=>{ const t=setInterval(()=>setSecsLeft(s=>{ if(s<=1){ clearInterval(t); finishRef.current&&finishRef.current(); return 0; } return s-1; }),1000); return ()=>clearInterval(t); },[]);
   useEffect(()=>()=>{ manualStopRef.current=true; try{window.speechSynthesis&&window.speechSynthesis.cancel();}catch{} try{recRef.current&&recRef.current.stop();}catch{} try{detTimerRef.current&&clearInterval(detTimerRef.current);}catch{} try{streamRef.current&&streamRef.current.getTracks().forEach(t=>t.stop());}catch{} },[]);
@@ -209,8 +211,18 @@ function ChildChat({ token, child, onEnd }) {
   finishRef.current=finish;
   const mm=Math.floor(secsLeft/60), ss=String(secsLeft%60).padStart(2,'0');
   let lastOtter=''; for(let i=msgs.length-1;i>=0;i--){ if(msgs[i].role==='otter'){ lastOtter=msgs[i].content; break; } }
+  if(!buddy) return html`<div style=${{minHeight:'100vh',display:'flex',flexDirection:'column',justifyContent:'center',background:'linear-gradient(165deg,#F4EFE6,#FBF8F1)'}}>
+    <div class="topbar" style=${{position:'fixed',top:0,left:0,right:0,background:'transparent',borderBottom:'none'}}><span></span><span class="muted" style=${{cursor:'pointer'}} onClick=${onBack}>← 뒤로</span></div>
+    <div style=${{textAlign:'center',marginBottom:22}}><div class="h1">누구랑 이야기할까?</div><div class="muted" style=${{marginTop:4}}>마음을 들어줄 친구를 골라요</div></div>
+    <div style=${{display:'flex',gap:16,justifyContent:'center',flexWrap:'wrap'}}>
+      ${BUDDIES.map(b=>html`<div key=${b.key} onClick=${()=>pickBuddy(b)} style=${{cursor:'pointer',textAlign:'center'}}>
+        <img src=${b.img} alt=${b.name} style=${{width:'40vw',maxWidth:165,height:'40vw',maxHeight:165,objectFit:'cover',borderRadius:30,boxShadow:'0 6px 18px rgba(0,0,0,0.14)'}} />
+        <div style=${{marginTop:10,fontWeight:700,fontSize:18}}>${b.name}</div>
+      </div>`)}
+    </div>
+  </div>`;
   return html`<div style=${{minHeight:'100vh',display:'flex',flexDirection:'column',background:'linear-gradient(165deg,#F4EFE6,#FBF8F1)'}}>
-    <div class="topbar"><b>🦦 또또</b><div style=${{display:'flex',alignItems:'center',gap:10}}>
+    <div class="topbar"><b>🦦 ${buddy.name}</b><div style=${{display:'flex',alignItems:'center',gap:10}}>
       <button onClick=${camOn?stopCam:startCam} disabled=${camLoading} title="표정 카메라(기기 안에서만)" style=${{background:'none',border:'none',fontSize:20,cursor:camLoading?'default':'pointer',opacity:camLoading?0.5:1}}>${camOn?'📷':'📵'}</button>
       <button onClick=${()=>{ if(voiceOn){try{window.speechSynthesis.cancel();}catch{}} setVoiceOn(v=>!v); }} title="또또 목소리" style=${{background:'none',border:'none',fontSize:20,cursor:'pointer'}}>${voiceOn?'🔊':'🔇'}</button>
       <span class="muted" style=${{fontSize:12}}>${mm}:${ss}</span>
@@ -221,13 +233,13 @@ function ChildChat({ token, child, onEnd }) {
       <span class="muted" style=${{fontSize:12}}>${camLoading?'카메라 준비 중…':'📷 표정도 함께 보고 있어요 (기기 안에서만 · 영상은 저장 안 해요)'}</span>
     </div>`}
     <div style=${{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center',padding:'8px 20px 0'}}>
-      <img src="/otto.jpg" alt="또또" style=${{width:'min(66vw,272px)',height:'min(66vw,272px)',objectFit:'cover',borderRadius:40,boxShadow:speaking?'0 0 0 6px #BBD9EA, 0 12px 30px rgba(91,124,125,0.4)':'0 8px 22px rgba(0,0,0,0.14)',animation:(speaking?'bob 1.6s':'bob 3.6s')+' ease-in-out infinite',transition:'box-shadow .25s'}} />
+      <img src=${buddy.img} alt=${buddy.name} style=${{width:'min(66vw,272px)',height:'min(66vw,272px)',objectFit:'cover',borderRadius:40,boxShadow:speaking?'0 0 0 6px #BBD9EA, 0 12px 30px rgba(91,124,125,0.4)':'0 8px 22px rgba(0,0,0,0.14)',animation:(speaking?'bob 1.6s':'bob 3.6s')+' ease-in-out infinite',transition:'box-shadow .25s'}} />
       ${!started
-        ? html`<button class="btn" style=${{marginTop:26,maxWidth:300,fontSize:18,padding:'16px'}} onClick=${startConversation}>🔊 또또랑 이야기 시작하기</button>
-            <div class="muted" style=${{fontSize:12,marginTop:8}}>버튼을 누르면 또또가 말을 걸어요</div>`
+        ? html`<button class="btn" style=${{marginTop:26,maxWidth:300,fontSize:18,padding:'16px'}} onClick=${startConversation}>🔊 ${buddy.name}랑 이야기 시작하기</button>
+            <div class="muted" style=${{fontSize:12,marginTop:8}}>버튼을 누르면 ${buddy.name}가 말을 걸어요</div>`
         : html`<div style=${{marginTop:20,maxWidth:440,width:'100%'}}>
             ${lastOtter && html`<div style=${{display:'inline-block',background:'#fff',border:'1px solid var(--line)',borderRadius:'18px 18px 18px 4px',padding:'13px 17px',fontSize:16,lineHeight:1.55,boxShadow:'0 3px 10px rgba(0,0,0,0.06)',textAlign:'left'}}>${busy?'…':lastOtter}</div>`}
-            <div style=${{marginTop:16,fontSize:14,fontWeight:700,color:speaking?'var(--water)':(listening?'#C0492F':'var(--muted)')}}>${busy?'또또가 생각 중이에요…':(speaking?'또또가 말하고 있어요 🦦':(listening?'🎙️ 듣고 있어요 — 그냥 말해요':'잠깐 멈췄어요'))}</div>
+            <div style=${{marginTop:16,fontSize:14,fontWeight:700,color:speaking?'var(--water)':(listening?'#C0492F':'var(--muted)')}}>${busy?buddy.name+'가 생각 중이에요…':(speaking?buddy.name+'가 말하고 있어요 🦦':(listening?'🎙️ 듣고 있어요 — 그냥 말해요':'잠깐 멈췄어요'))}</div>
           </div>`}
     </div>
     ${started && html`<div style=${{padding:'6px 0 16px',textAlign:'center'}}>
@@ -235,7 +247,7 @@ function ChildChat({ token, child, onEnd }) {
         style=${{width:76,height:76,borderRadius:'50%',border:'none',cursor:busy?'default':'pointer',fontSize:30,color:'#fff',background:listening?'#C0492F':'var(--water)',boxShadow:'0 4px 14px rgba(91,124,125,0.4)',animation:listening?'pulse 1.5s infinite':'none'}}>🎤</button>`}
       <div><button onClick=${()=>setShowText(s=>!s)} style=${{background:'none',border:'none',color:'var(--muted)',fontSize:12,cursor:'pointer',marginTop:8,textDecoration:'underline'}}>✏️ 글로 쓸래요</button></div>
       ${showText && html`<div style=${{display:'flex',gap:8,padding:'8px 14px 0',maxWidth:520,margin:'0 auto'}}>
-        <input class="field" style=${{marginBottom:0}} placeholder="또또에게 하고 싶은 말" value=${input} onInput=${e=>setInput(e.target.value)} onKeyDown=${e=>{if(e.key==='Enter')send();}} />
+        <input class="field" style=${{marginBottom:0}} placeholder=${buddy.name+'에게 하고 싶은 말'} value=${input} onInput=${e=>setInput(e.target.value)} onKeyDown=${e=>{if(e.key==='Enter')send();}} />
         <button class="btn" style=${{width:60}} disabled=${busy} onClick=${send}>→</button>
       </div>`}
     </div>`}
@@ -361,7 +373,7 @@ function App() {
   if(view==='pinStart' && child) return html`<${PinGate} token=${token} mode="auto"
     onPass=${()=>setView('child')} onCancel=${back} />`;
   // 또또 대화(아이 모드)
-  if(view==='child' && child) return html`<${ChildChat} token=${token} child=${child} onEnd=${(d)=>{ setReportData(d); setView('handoff'); }} />`;
+  if(view==='child' && child) return html`<${ChildChat} token=${token} child=${child} onBack=${back} onEnd=${(d)=>{ setReportData(d); setView('handoff'); }} />`;
   // 종료 → 부모 핸드오프(아이가 리포트 못 봄)
   if(view==='handoff') return html`<${PinGate} token=${token} mode="enter"
     title="오늘 대화가 끝났어요 🦦" desc="부모님께 휴대폰을 전해주세요. 통역 리포트는 부모님 PIN으로 열려요."
