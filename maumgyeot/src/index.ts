@@ -117,12 +117,12 @@ ${lines || '- (선택된 신호 없음)'}
   let report: any = { summary: '신호가 충분하지 않아 해석이 어려워요. 더 지켜봐 주세요.', confidence: 'low', body_signals_read: [], possible_meanings: [], what_to_do: ['반려동물의 평소 모습과 비교하며 며칠 더 관찰해 주세요.'], health_flag: { flag: false, note: '' } };
   if (codes.length > 0 || hasVideo || (context && context.length > 1)) {
     try {
-      let raw = await callClaude(c.env, { system: TRANSLATE_SYSTEM, messages: [{ role: 'user', content: userContent }], max_tokens: 900, temperature: 0 });
+      let raw = await callClaude(c.env, { system: TRANSLATE_SYSTEM, messages: [{ role: 'user', content: userContent }], max_tokens: 1400, temperature: 0 });
       raw = raw.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
       const parsed = JSON.parse(raw);
       if (!VET_TERMS.some((t) => JSON.stringify(parsed).includes(t))) report = parsed;
       else {
-        let raw2 = await callClaude(c.env, { system: TRANSLATE_SYSTEM + '\n(이전 출력에 금지된 수의학 용어가 있었습니다. 절대 사용하지 마세요.)', messages: [{ role: 'user', content: userContent }], max_tokens: 900, temperature: 0 });
+        let raw2 = await callClaude(c.env, { system: TRANSLATE_SYSTEM + '\n(이전 출력에 금지된 수의학 용어가 있었습니다. 절대 사용하지 마세요.)', messages: [{ role: 'user', content: userContent }], max_tokens: 1400, temperature: 0 });
         raw2 = raw2.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
         try { const p2 = JSON.parse(raw2); if (!VET_TERMS.some((t) => JSON.stringify(p2).includes(t))) report = p2; } catch {}
       }
