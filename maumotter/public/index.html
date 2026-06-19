@@ -120,17 +120,20 @@ function Dashboard({ token, user, onLogout, onStart, onReports, onSettings }) {
     </div></div>
     <div class="wrap">
       <div class="h1" style=${{marginBottom:12}}>우리 아이</div>
-      ${children.map(ch => html`<div class="card" key=${ch.id}>
+      ${children.map(ch => { let lb=null; try{lb=localStorage.getItem('maumotter_buddy_'+ch.id);}catch{} const bud=BUDDIES.find(b=>b.key===lb); return html`<div class="card" key=${ch.id}>
         <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-          <div><b>${ch.name}</b> <span class="muted">${ch.age?ch.age+'세':''}</span></div>
+          <div style=${{display:'flex',alignItems:'center',gap:10}}>
+            ${bud && html`<img src=${bud.img} alt=${bud.name} style=${{width:40,height:40,borderRadius:'50%',objectFit:'cover'}} />`}
+            <div><b>${ch.name}</b> <span class="muted">${ch.age?ch.age+'세':''}</span>${bud?html`<div class="muted" style=${{fontSize:12}}>지난번 친구: ${bud.name}</div>`:''}</div>
+          </div>
           ${latest[ch.id]?.crisis_flag?html`<span class="pill" style=${{background:'#FFF4EE',color:'#c0492f'}}>살펴보기</span>`:''}
         </div>
         ${latest[ch.id] && html`<div class="muted" style=${{marginTop:8,fontSize:13,lineHeight:1.5}}>최근 통역(${(latest[ch.id].created_at||'').slice(0,10)})<br/>${latest[ch.id].summary||''}</div>`}
         <div style=${{display:'flex',gap:8,marginTop:12}}>
-          <button class="btn" style=${{flex:1}} onClick=${()=>onStart(ch)}>또또와 대화 시작</button>
+          <button class="btn" style=${{flex:1}} onClick=${()=>onStart(ch)}>이야기 시작</button>
           <button class="btn btn-ghost" style=${{flex:1}} onClick=${()=>onReports(ch)}>통역 리포트</button>
         </div>
-      </div>`)}
+      </div>`; })}
       ${adding ? html`<div class="card">
         <input class="field" placeholder="아이 애칭" value=${name} onInput=${e=>setName(e.target.value)} />
         <input class="field" type="number" placeholder="나이 (3~9)" value=${age} onInput=${e=>setAge(e.target.value)} />
@@ -169,7 +172,7 @@ function ChildChat({ token, child, onEnd, onBack }) {
   function startConversation(){ setStarted(true); startListen(); const greet=(msgs[0]&&msgs[0].content)||''; speak(greet); }
 
   useEffect(()=>{ pickVoice(); if(window.speechSynthesis) window.speechSynthesis.onvoiceschanged=pickVoice; },[]);
-  function pickBuddy(b){ setBuddy(b); api('/session/start',{method:'POST',token,body:{child_id:child.id,buddy:b.key}}).then(d=>{ setSid(d.session_id); setMsgs([{role:'otter',content:d.greeting}]); }).catch(()=>{}); }
+  function pickBuddy(b){ try{localStorage.setItem('maumotter_buddy_'+child.id,b.key);}catch{} setBuddy(b); api('/session/start',{method:'POST',token,body:{child_id:child.id,buddy:b.key}}).then(d=>{ setSid(d.session_id); setMsgs([{role:'otter',content:d.greeting}]); }).catch(()=>{}); }
   useEffect(()=>{ endRef.current?.scrollIntoView({behavior:'smooth'}); },[msgs,busy]);
   useEffect(()=>{ const t=setInterval(()=>setSecsLeft(s=>{ if(s<=1){ clearInterval(t); finishRef.current&&finishRef.current(); return 0; } return s-1; }),1000); return ()=>clearInterval(t); },[]);
   useEffect(()=>()=>{ manualStopRef.current=true; try{window.speechSynthesis&&window.speechSynthesis.cancel();}catch{} try{recRef.current&&recRef.current.stop();}catch{} try{detTimerRef.current&&clearInterval(detTimerRef.current);}catch{} try{streamRef.current&&streamRef.current.getTracks().forEach(t=>t.stop());}catch{} },[]);
@@ -211,13 +214,15 @@ function ChildChat({ token, child, onEnd, onBack }) {
   finishRef.current=finish;
   const mm=Math.floor(secsLeft/60), ss=String(secsLeft%60).padStart(2,'0');
   let lastOtter=''; for(let i=msgs.length-1;i>=0;i--){ if(msgs[i].role==='otter'){ lastOtter=msgs[i].content; break; } }
+  let remembered=null; try{ remembered=localStorage.getItem('maumotter_buddy_'+child.id); }catch{}
   if(!buddy) return html`<div style=${{minHeight:'100vh',display:'flex',flexDirection:'column',justifyContent:'center',background:'linear-gradient(165deg,#F4EFE6,#FBF8F1)'}}>
     <div class="topbar" style=${{position:'fixed',top:0,left:0,right:0,background:'transparent',borderBottom:'none'}}><span></span><span class="muted" style=${{cursor:'pointer'}} onClick=${onBack}>← 뒤로</span></div>
     <div style=${{textAlign:'center',marginBottom:22}}><div class="h1">누구랑 이야기할까?</div><div class="muted" style=${{marginTop:4}}>마음을 들어줄 친구를 골라요</div></div>
     <div style=${{display:'flex',gap:16,justifyContent:'center',flexWrap:'wrap'}}>
       ${BUDDIES.map(b=>html`<div key=${b.key} onClick=${()=>pickBuddy(b)} style=${{cursor:'pointer',textAlign:'center'}}>
-        <img src=${b.img} alt=${b.name} style=${{width:'40vw',maxWidth:165,height:'40vw',maxHeight:165,objectFit:'cover',borderRadius:30,boxShadow:'0 6px 18px rgba(0,0,0,0.14)'}} />
+        <img src=${b.img} alt=${b.name} style=${{width:'40vw',maxWidth:165,height:'40vw',maxHeight:165,objectFit:'cover',borderRadius:30,boxShadow:remembered===b.key?'0 0 0 4px var(--water), 0 6px 18px rgba(0,0,0,0.18)':'0 6px 18px rgba(0,0,0,0.14)'}} />
         <div style=${{marginTop:10,fontWeight:700,fontSize:18}}>${b.name}</div>
+        ${remembered===b.key && html`<div class="muted" style=${{fontSize:12,marginTop:2}}>⭐ 지난번 친구</div>`}
       </div>`)}
     </div>
   </div>`;
