@@ -5921,6 +5921,16 @@ function PsychologicalTestSystem() {
     const [isListening, setIsListening] = React.useState(false);
     const [hasMemory, setHasMemory] = React.useState(false);
     const [speakingMsgId, setSpeakingMsgId] = React.useState(null);
+    // ── 핸즈프리 음성 상담 모드 (추가 기능 — 기존 음성 입출력은 그대로) ──
+    const [voiceMode, setVoiceMode] = React.useState(false);
+    const voiceModeRef = React.useRef(false);
+    const voiceRecRef = React.useRef(null);
+    const sendBtnRef = React.useRef(null);
+    const streamingRef = React.useRef(false);
+    const speakingRef = React.useRef(false);
+    const lastSpokenRef = React.useRef(null);
+    React.useEffect(() => { streamingRef.current = chatStreaming; }, [chatStreaming]);
+    React.useEffect(() => { speakingRef.current = (speakingMsgId !== null); }, [speakingMsgId]);
 
     // 이전 대화 기억 여부 확인
     React.useEffect(() => {
@@ -5990,6 +6000,46 @@ function PsychologicalTestSystem() {
       recognition.onerror = () => setIsListening(false);
       recognition.onend = () => setIsListening(false);
     }
+
+    // ── 핸즈프리 음성 상담: 시작 탭 1번 → 연속 인식 + 답변 자동 낭독 ──
+    function startVoiceMode() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) { setChatError(t('이 브라우저는 음성 인식을 지원하지 않아요. 크롬을 권장해요.','Speech recognition not supported. Try Chrome.')); return; }
+      voiceModeRef.current = true; setVoiceMode(true); setChatError('');
+      // 사용자 탭(제스처)에서 한마디 → 모바일 오디오 잠금해제
+      speakText(t('네, 편하게 말씀하세요.','Yes, please speak.'), 'voice-hello');
+      try {
+        const rec = new SR();
+        rec.lang = lang === 'en' ? 'en-US' : 'ko-KR'; rec.continuous = true; rec.interimResults = false;
+        rec.onresult = (e) => {
+          if (streamingRef.current || speakingRef.current) return; // AI 말하는 중/응답 중엔 무시(에코 방지)
+          let txt = ''; for (let i = e.resultIndex; i < e.results.length; i++) { if (e.results[i].isFinal) txt += e.results[i][0].transcript; }
+          txt = txt.trim();
+          if (txt && inputRef.current && sendBtnRef.current) { inputRef.current.value = txt; sendBtnRef.current.click(); }
+        };
+        rec.onerror = (ev) => { if (ev && (ev.error === 'not-allowed' || ev.error === 'service-not-allowed')) stopVoiceMode(); };
+        rec.onend = () => { if (voiceModeRef.current) { try { rec.start(); } catch {} } };
+        voiceRecRef.current = rec; rec.start(); setIsListening(true);
+      } catch {}
+    }
+    function stopVoiceMode() {
+      voiceModeRef.current = false; setVoiceMode(false); setIsListening(false);
+      try { voiceRecRef.current && voiceRecRef.current.stop(); } catch {}
+      try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch {}
+    }
+    // 음성 모드일 때 완료된 AI 답변 자동 낭독
+    React.useEffect(() => {
+      if (!voiceMode) return;
+      for (let i = chatMessages.length - 1; i >= 0; i--) {
+        const m = chatMessages[i];
+        if (m.role === 'assistant' && !m.streaming && m.content) {
+          if (lastSpokenRef.current !== m.id) { lastSpokenRef.current = m.id; speakText(m.content, m.id); }
+          break;
+        }
+      }
+    }, [chatMessages, voiceMode]);
+    // 언마운트 시 정리
+    React.useEffect(() => () => { voiceModeRef.current = false; try { voiceRecRef.current && voiceRecRef.current.stop(); } catch {} try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch {} }, []);
 
     React.useEffect(() => {
       const container = chatContainerRef.current;
@@ -6313,13 +6363,21 @@ function PsychologicalTestSystem() {
                 {(window.SpeechRecognition || window.webkitSpeechRecognition) && (
                   <button
                     onClick={startVoiceInput}
-                    disabled={isListening || chatStreaming}
+                    disabled={isListening || chatStreaming || voiceMode}
                     title={isListening ? t('듣는 중...','Listening...') : t('음성 입력','Voice input')}
                     className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-lg transition ${isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-100 hover:bg-gray-200 text-gray-600 disabled:opacity-40'}`}
                   >🎤</button>
                 )}
+                {(window.SpeechRecognition || window.webkitSpeechRecognition) && (
+                  <button
+                    onClick={voiceMode ? stopVoiceMode : startVoiceMode}
+                    title={voiceMode ? t('음성 상담 끝내기','Stop voice') : t('핸즈프리 음성 상담 — 누르고 그냥 말하면 돼요','Hands-free voice — tap and just speak')}
+                    className={`shrink-0 h-10 px-3 rounded-xl flex items-center justify-center text-sm font-bold whitespace-nowrap transition ${voiceMode ? 'bg-blue-600 text-white animate-pulse' : 'bg-blue-50 hover:bg-blue-100 text-blue-700'}`}
+                  >{voiceMode ? t('⏹ 음성 끝','⏹ Stop') : t('🔊 음성 상담','🔊 Voice')}</button>
+                )}
                 <div className="flex flex-col gap-1.5">
                   <button
+                    ref={sendBtnRef}
                     onClick={() => {
                       if (isAiChatExhausted()) { setShowAiLimitModal(true); return; }
                       const currentValue = inputRef.current?.value || '';

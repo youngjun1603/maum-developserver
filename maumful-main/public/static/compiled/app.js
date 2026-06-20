@@ -4919,6 +4919,19 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
     const [isListening, setIsListening] = React.useState(false);
     const [hasMemory, setHasMemory] = React.useState(false);
     const [speakingMsgId, setSpeakingMsgId] = React.useState(null);
+    const [voiceMode, setVoiceMode] = React.useState(false);
+    const voiceModeRef = React.useRef(false);
+    const voiceRecRef = React.useRef(null);
+    const sendBtnRef = React.useRef(null);
+    const streamingRef = React.useRef(false);
+    const speakingRef = React.useRef(false);
+    const lastSpokenRef = React.useRef(null);
+    React.useEffect(() => {
+      streamingRef.current = chatStreaming;
+    }, [chatStreaming]);
+    React.useEffect(() => {
+      speakingRef.current = speakingMsgId !== null;
+    }, [speakingMsgId]);
     React.useEffect(() => {
       if (!isLoggedIn) return;
       fetch("/api/ai-chat/memory", { headers: api._authHeader() }).then((r) => r.json()).then((d) => {
@@ -4980,6 +4993,87 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
       recognition.onerror = () => setIsListening(false);
       recognition.onend = () => setIsListening(false);
     }
+    function startVoiceMode() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) {
+        setChatError(t("\uC774 \uBE0C\uB77C\uC6B0\uC800\uB294 \uC74C\uC131 \uC778\uC2DD\uC744 \uC9C0\uC6D0\uD558\uC9C0 \uC54A\uC544\uC694. \uD06C\uB86C\uC744 \uAD8C\uC7A5\uD574\uC694.", "Speech recognition not supported. Try Chrome."));
+        return;
+      }
+      voiceModeRef.current = true;
+      setVoiceMode(true);
+      setChatError("");
+      speakText(t("\uB124, \uD3B8\uD558\uAC8C \uB9D0\uC500\uD558\uC138\uC694.", "Yes, please speak."), "voice-hello");
+      try {
+        const rec = new SR();
+        rec.lang = lang === "en" ? "en-US" : "ko-KR";
+        rec.continuous = true;
+        rec.interimResults = false;
+        rec.onresult = (e) => {
+          if (streamingRef.current || speakingRef.current) return;
+          let txt = "";
+          for (let i = e.resultIndex; i < e.results.length; i++) {
+            if (e.results[i].isFinal) txt += e.results[i][0].transcript;
+          }
+          txt = txt.trim();
+          if (txt && inputRef.current && sendBtnRef.current) {
+            inputRef.current.value = txt;
+            sendBtnRef.current.click();
+          }
+        };
+        rec.onerror = (ev) => {
+          if (ev && (ev.error === "not-allowed" || ev.error === "service-not-allowed")) stopVoiceMode();
+        };
+        rec.onend = () => {
+          if (voiceModeRef.current) {
+            try {
+              rec.start();
+            } catch {
+            }
+          }
+        };
+        voiceRecRef.current = rec;
+        rec.start();
+        setIsListening(true);
+      } catch {
+      }
+    }
+    function stopVoiceMode() {
+      voiceModeRef.current = false;
+      setVoiceMode(false);
+      setIsListening(false);
+      try {
+        voiceRecRef.current && voiceRecRef.current.stop();
+      } catch {
+      }
+      try {
+        window.speechSynthesis && window.speechSynthesis.cancel();
+      } catch {
+      }
+    }
+    React.useEffect(() => {
+      if (!voiceMode) return;
+      for (let i = chatMessages.length - 1; i >= 0; i--) {
+        const m = chatMessages[i];
+        if (m.role === "assistant" && !m.streaming && m.content) {
+          if (lastSpokenRef.current !== m.id) {
+            lastSpokenRef.current = m.id;
+            speakText(m.content, m.id);
+          }
+          break;
+        }
+      }
+    }, [chatMessages, voiceMode]);
+    React.useEffect(() => () => {
+      voiceModeRef.current = false;
+      try {
+        voiceRecRef.current && voiceRecRef.current.stop();
+      } catch {
+      }
+      try {
+        window.speechSynthesis && window.speechSynthesis.cancel();
+      } catch {
+      }
+    }, []);
     React.useEffect(() => {
       const container = chatContainerRef.current;
       if (!container) return;
@@ -5208,14 +5302,23 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
       "button",
       {
         onClick: startVoiceInput,
-        disabled: isListening || chatStreaming,
+        disabled: isListening || chatStreaming || voiceMode,
         title: isListening ? t("\uB4E3\uB294 \uC911...", "Listening...") : t("\uC74C\uC131 \uC785\uB825", "Voice input"),
         className: `shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-lg transition ${isListening ? "bg-red-500 text-white animate-pulse" : "bg-gray-100 hover:bg-gray-200 text-gray-600 disabled:opacity-40"}`
       },
       "\u{1F3A4}"
+    ), (window.SpeechRecognition || window.webkitSpeechRecognition) && /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        onClick: voiceMode ? stopVoiceMode : startVoiceMode,
+        title: voiceMode ? t("\uC74C\uC131 \uC0C1\uB2F4 \uB05D\uB0B4\uAE30", "Stop voice") : t("\uD578\uC988\uD504\uB9AC \uC74C\uC131 \uC0C1\uB2F4 \u2014 \uB204\uB974\uACE0 \uADF8\uB0E5 \uB9D0\uD558\uBA74 \uB3FC\uC694", "Hands-free voice \u2014 tap and just speak"),
+        className: `shrink-0 h-10 px-3 rounded-xl flex items-center justify-center text-sm font-bold whitespace-nowrap transition ${voiceMode ? "bg-blue-600 text-white animate-pulse" : "bg-blue-50 hover:bg-blue-100 text-blue-700"}`
+      },
+      voiceMode ? t("\u23F9 \uC74C\uC131 \uB05D", "\u23F9 Stop") : t("\u{1F50A} \uC74C\uC131 \uC0C1\uB2F4", "\u{1F50A} Voice")
     ), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col gap-1.5" }, /* @__PURE__ */ React.createElement(
       "button",
       {
+        ref: sendBtnRef,
         onClick: () => {
           var _a2;
           if (isAiChatExhausted()) {
