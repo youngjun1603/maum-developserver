@@ -107,6 +107,9 @@ function Dashboard({ token, user, onLogout, onObserve, onReports, onGuide }) {
       <a href=${'https://maumotter.com/#token='+encodeURIComponent(token)} class="card" style=${{display:'block',textDecoration:'none',color:'inherit',marginTop:16}}>
         <b>🦦 마음수달</b><div class="muted" style=${{marginTop:6}}>아이의 속마음을 또또가 통역해요 — 같은 계정으로 바로 입장 →</div>
       </a>
+      <div class="muted" style=${{textAlign:'center',marginTop:24,fontSize:12,lineHeight:1.9}}>
+        <a href="/privacy" style=${{color:'inherit'}}>개인정보처리방침</a> · <a href="/account-deletion" style=${{color:'inherit'}}>회원 탈퇴</a>
+      </div>
     </div>
   </div>`;
 }

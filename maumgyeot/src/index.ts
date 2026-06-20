@@ -2,7 +2,7 @@
 // 계정/인증은 공용 maum-auth(AUTH_DB) + 공유 모듈 ./auth (마음수달과 동일 사본).
 // 안전: 단정 금지(confidence 필수)·수의학 용어 금지·health_flag·종 분리 — docs/ 준수.
 import { Hono } from 'hono';
-import { registerUser, loginUser, getUser, issueToken, requireAuth } from './auth';
+import { registerUser, loginUser, getUser, issueToken, requireAuth, deleteUser } from './auth';
 import { BEHAVIOR, signalsToLines } from './behavior';
 
 type Bindings = { DB: D1Database; AUTH_DB: D1Database; KV: KVNamespace; JWT_SECRET: string; ANTHROPIC_API_KEY: string; ASSETS: Fetcher };
@@ -165,6 +165,82 @@ app.get('/api/reports/:id', requireAuth, async (c) => {
   if (!rep) return c.json({ error: '리포트를 찾을 수 없어요' }, 404);
   return c.json({ report: JSON.parse(rep.report_json), health_flag: rep.health_flag, created_at: rep.created_at });
 });
+
+// ── 계정 삭제(회원 탈퇴) — Google Play 필수 ──
+app.delete('/api/account', requireAuth, async (c) => {
+  const uid = c.get('uid');
+  // 1) 마음곁 도메인 데이터 전부 삭제
+  await c.env.DB.batch([
+    c.env.DB.prepare('DELETE FROM pet_reports WHERE maum_user_id=?').bind(uid),
+    c.env.DB.prepare('DELETE FROM observations WHERE maum_user_id=?').bind(uid),
+    c.env.DB.prepare('DELETE FROM pets WHERE maum_user_id=?').bind(uid),
+  ]);
+  // 2) 공용 마음 계정 삭제(통합 로그인 계정 — 마음 시리즈 전체에서 제거)
+  await deleteUser(c.env.AUTH_DB, uid);
+  return c.json({ ok: true });
+});
+
+// ── 공개 정책 페이지(Play 심사·데이터보안에 URL 제출) ──
+const PAGE = (title: string, body: string) => `<!doctype html><html lang="ko"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/><title>${title} · 마음곁</title>
+<style>body{font-family:system-ui,-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;max-width:720px;margin:0 auto;padding:28px 20px 60px;color:#222;line-height:1.7}
+h1{font-size:22px}h2{font-size:16px;margin-top:28px}.muted{color:#777;font-size:13px}a{color:#16a34a}
+.btn{display:inline-block;background:#dc2626;color:#fff;border:0;border-radius:10px;padding:12px 20px;font-size:15px;font-weight:700;cursor:pointer}
+.card{border:1px solid #eee;border-radius:12px;padding:16px;margin-top:16px}</style></head><body>${body}
+<p class="muted" style="margin-top:40px">🐾 마음곁 · 문의 limyj007@gmail.com</p></body></html>`;
+
+app.get('/privacy', (c) => c.html(PAGE('개인정보처리방침', `
+<h1>마음곁 개인정보처리방침</h1>
+<p class="muted">시행일: 2026-06-20</p>
+<p>마음곁(이하 "서비스")은 반려동물의 행동을 통역해 드리는 서비스이며, 아래와 같이 개인정보를 처리합니다.</p>
+<h2>1. 수집 항목</h2>
+<ul>
+<li><b>계정</b>: 이메일, 비밀번호(암호화 저장), 이름(선택)</li>
+<li><b>반려동물 정보</b>: 이름, 종(개/고양이), 품종·나이·성격(선택)</li>
+<li><b>관찰·통역 기록</b>: 선택한 행동 신호, 입력한 맥락, 생성된 통역 리포트</li>
+</ul>
+<h2>2. 영상 처리(비저장)</h2>
+<p>통역을 위해 촬영한 짧은 영상의 프레임은 <b>분석 시에만 일시적으로 사용</b>되며, 원본·프레임을 서버나 기기에 <b>저장하지 않습니다</b>.</p>
+<h2>3. 처리 위탁(제3자 제공 아님)</h2>
+<ul>
+<li><b>Anthropic</b>: 행동 통역 생성을 위해 입력 신호·맥락·영상 프레임을 AI 처리에 전송</li>
+<li><b>Cloudflare</b>: 서버·데이터베이스 인프라</li>
+<li><b>Google AdMob</b>: 무료 운영을 위한 광고 표시(도입 시) — 이 경우 광고 식별자(Advertising ID)가 맞춤형 광고 목적으로 수집·이용될 수 있습니다.</li>
+</ul>
+<h2>4. 보유 및 파기</h2>
+<p>회원 탈퇴 시 위 모든 데이터를 <b>즉시 삭제</b>합니다(법령상 보관 의무가 있는 경우 제외). 탈퇴는 앱 내 "회원 탈퇴" 또는 <a href="/account-deletion">여기</a>에서 가능합니다.</p>
+<h2>5. 이용자 권리</h2>
+<p>전송 구간은 HTTPS로 암호화되며, 데이터 열람·삭제를 요청할 수 있습니다.</p>
+<h2>6. 아동</h2>
+<p>본 서비스는 만 13세 미만 아동을 대상으로 하지 않습니다.</p>
+<h2>7. 문의</h2>
+<p>limyj007@gmail.com</p>`)));
+
+app.get('/account-deletion', (c) => c.html(PAGE('회원 탈퇴', `
+<h1>마음곁 회원 탈퇴 · 계정 삭제</h1>
+<p>탈퇴 시 <b>계정과 모든 데이터(반려동물 정보·관찰·통역 기록)가 즉시 영구 삭제</b>되며 복구할 수 없습니다.
+영상은 애초에 저장하지 않으므로 삭제 대상이 아닙니다.</p>
+<p class="muted">⚠️ 마음곁 계정은 마음 시리즈(마음수달 등) 통합 로그인 계정입니다. 탈퇴하면 같은 계정의 다른 마음 서비스에서도 함께 삭제됩니다.</p>
+<div class="card" id="box">
+  <p id="msg">로그인 상태를 확인하는 중…</p>
+  <button class="btn" id="del" style="display:none" onclick="doDelete()">계정 영구 삭제</button>
+</div>
+<p class="muted">앱 내에서도 <b>홈 화면 하단 → 회원 탈퇴</b>로 진행할 수 있습니다. 로그인 없이 삭제를 원하시면 limyj007@gmail.com 으로 가입 이메일과 함께 요청해 주세요.</p>
+<script>
+var TOKEN_KEY='maumgyeot_token';
+var token=localStorage.getItem(TOKEN_KEY);
+var msg=document.getElementById('msg'), del=document.getElementById('del');
+if(token){ msg.textContent='현재 로그인되어 있습니다. 아래 버튼으로 계정을 영구 삭제할 수 있습니다.'; del.style.display='inline-block'; }
+else { msg.innerHTML='로그인되어 있지 않습니다. 앱(또는 maumgyeot.com)에서 로그인 후 이 페이지를 다시 열어 주세요.'; }
+function doDelete(){
+  if(!confirm('정말 계정과 모든 데이터를 영구 삭제할까요? 되돌릴 수 없습니다.')) return;
+  del.disabled=true; del.textContent='삭제 중…';
+  fetch('/api/account',{method:'DELETE',headers:{Authorization:'Bearer '+token}})
+    .then(function(r){ if(!r.ok) throw new Error(); localStorage.removeItem(TOKEN_KEY);
+      msg.textContent='계정이 삭제되었습니다. 그동안 이용해 주셔서 감사합니다.'; del.style.display='none'; })
+    .catch(function(){ del.disabled=false; del.textContent='계정 영구 삭제'; alert('삭제 중 문제가 발생했어요. 잠시 후 다시 시도해 주세요.'); });
+}
+</script>`)));
 
 // 정적 프론트(React CDN) — /api 외는 assets
 app.all('*', (c) => c.env.ASSETS.fetch(c.req.raw));

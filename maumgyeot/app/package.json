@@ -1,0 +1,19 @@
+{
+  "name": "maumgyeot-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "마음곁 안드로이드 래퍼 (Capacitor + AdMob)",
+  "scripts": {
+    "add:android": "cap add android",
+    "sync": "cap sync android",
+    "open": "cap open android"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.2"
+  },
+  "dependencies": {
+    "@capacitor/core": "^6.1.2",
+    "@capacitor/android": "^6.1.2",
+    "@capacitor-community/admob": "^6.0.0"
+  }
+}

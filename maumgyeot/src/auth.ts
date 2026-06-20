@@ -76,6 +76,11 @@ export async function loginUser(authDb: D1Database, p: { email: string; password
 export async function getUser(authDb: D1Database, id: number): Promise<MaumUser | null> {
   return (await authDb.prepare('SELECT id,email,name FROM users WHERE id=?').bind(id).first<MaumUser>()) ?? null;
 }
+// 공용 마음 계정 삭제(회원 탈퇴). ⚠️ maum-auth는 시리즈 공유 → 삭제 시 마음 시리즈 전체에서 제거됨.
+// 도메인 데이터(각 서비스 DB)는 호출부에서 먼저 지운다. (canonical: maumotter/src/auth.ts에도 동기화)
+export async function deleteUser(authDb: D1Database, id: number): Promise<void> {
+  await authDb.prepare('DELETE FROM users WHERE id=?').bind(id).run();
+}
 
 // ── Hono 미들웨어: Bearer 검증 → c.set('uid', maum_user_id) ─
 // 사용처에서 c.env.JWT_SECRET, c.env.AUTH_DB 가 있어야 한다.

@@ -1,0 +1,18 @@
+<!-- `npx cap add android` 후 생성되는
+       android/app/src/main/AndroidManifest.xml
+     에 아래를 병합한다. -->
+
+<!-- ① <manifest> 바로 아래(=<application> 밖)에 권한 추가 -->
+<uses-permission android:name="android.permission.INTERNET" />
+<uses-permission android:name="android.permission.CAMERA" />
+<uses-permission android:name="android.permission.RECORD_AUDIO" />
+<!-- 광고형(AdMob) 운영: 광고 식별자 권한 (Android 13+ 필수 선언) -->
+<uses-permission android:name="com.google.android.gms.permission.AD_ID" />
+<!-- 카메라 없는 기기에서도 설치 가능하게 required=false -->
+<uses-feature android:name="android.hardware.camera" android:required="false" />
+
+<!-- ② <application> ... </application> 안에 AdMob 앱 ID meta-data 추가 -->
+<!--    아래는 Google 공식 "테스트" App ID. 실제 출시 전 AdMob 콘솔에서 발급한 앱 ID(ca-app-pub-XXXX~YYYY)로 교체. -->
+<meta-data
+    android:name="com.google.android.gms.ads.APPLICATION_ID"
+    android:value="ca-app-pub-3940256099942544~3347511713" />
