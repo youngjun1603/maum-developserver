@@ -4993,6 +4993,45 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
       recognition.onerror = () => setIsListening(false);
       recognition.onend = () => setIsListening(false);
     }
+    const pausedForSpeechRef = React.useRef(false);
+    function speakVoice(text, id) {
+      if (!window.speechSynthesis) return;
+      pausedForSpeechRef.current = true;
+      try {
+        voiceRecRef.current && voiceRecRef.current.stop();
+      } catch {
+      }
+      window.speechSynthesis.cancel();
+      const clean = String(text).replace(/[*#`_~>]/g, "").replace(/\n+/g, " ").trim();
+      if (!clean) {
+        pausedForSpeechRef.current = false;
+        return;
+      }
+      const utt = new SpeechSynthesisUtterance(clean);
+      utt.lang = lang === "en" ? "en-US" : "ko-KR";
+      utt.rate = 1;
+      utt.pitch = 1;
+      const vs = window.speechSynthesis.getVoices() || [];
+      const pref = vs.find((v) => v.lang && v.lang.toLowerCase().startsWith(lang === "en" ? "en" : "ko"));
+      if (pref) utt.voice = pref;
+      setSpeakingMsgId(id);
+      const after = () => {
+        setSpeakingMsgId(null);
+        setTimeout(() => {
+          pausedForSpeechRef.current = false;
+          if (voiceModeRef.current) {
+            try {
+              voiceRecRef.current && voiceRecRef.current.start();
+              setIsListening(true);
+            } catch {
+            }
+          }
+        }, 600);
+      };
+      utt.onend = after;
+      utt.onerror = after;
+      window.speechSynthesis.speak(utt);
+    }
     function startVoiceMode() {
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SR) {
@@ -5002,14 +5041,13 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
       voiceModeRef.current = true;
       setVoiceMode(true);
       setChatError("");
-      speakText(t("\uB124, \uD3B8\uD558\uAC8C \uB9D0\uC500\uD558\uC138\uC694.", "Yes, please speak."), "voice-hello");
       try {
         const rec = new SR();
         rec.lang = lang === "en" ? "en-US" : "ko-KR";
         rec.continuous = true;
         rec.interimResults = false;
         rec.onresult = (e) => {
-          if (streamingRef.current || speakingRef.current) return;
+          if (streamingRef.current || speakingRef.current || pausedForSpeechRef.current) return;
           let txt = "";
           for (let i = e.resultIndex; i < e.results.length; i++) {
             if (e.results[i].isFinal) txt += e.results[i][0].transcript;
@@ -5024,7 +5062,7 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
           if (ev && (ev.error === "not-allowed" || ev.error === "service-not-allowed")) stopVoiceMode();
         };
         rec.onend = () => {
-          if (voiceModeRef.current) {
+          if (voiceModeRef.current && !pausedForSpeechRef.current) {
             try {
               rec.start();
             } catch {
@@ -5032,15 +5070,15 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
           }
         };
         voiceRecRef.current = rec;
-        rec.start();
-        setIsListening(true);
       } catch {
       }
+      speakVoice(t("\uB124, \uD3B8\uD558\uAC8C \uB9D0\uC500\uD558\uC138\uC694.", "Yes, please speak."), "voice-hello");
     }
     function stopVoiceMode() {
       voiceModeRef.current = false;
       setVoiceMode(false);
       setIsListening(false);
+      pausedForSpeechRef.current = false;
       try {
         voiceRecRef.current && voiceRecRef.current.stop();
       } catch {
@@ -5057,7 +5095,7 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
         if (m.role === "assistant" && !m.streaming && m.content) {
           if (lastSpokenRef.current !== m.id) {
             lastSpokenRef.current = m.id;
-            speakText(m.content, m.id);
+            speakVoice(m.content, m.id);
           }
           break;
         }

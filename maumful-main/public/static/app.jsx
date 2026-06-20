@@ -6001,44 +6001,61 @@ function PsychologicalTestSystem() {
       recognition.onend = () => setIsListening(false);
     }
 
-    // ── 핸즈프리 음성 상담: 시작 탭 1번 → 연속 인식 + 답변 자동 낭독 ──
+    // ── 핸즈프리 음성 상담: AI 말하는 동안 마이크 정지(에코 루프 방지) ──
+    const pausedForSpeechRef = React.useRef(false);
+    function speakVoice(text, id) {
+      if (!window.speechSynthesis) return;
+      pausedForSpeechRef.current = true;                 // 말하는 동안 마이크 멈춤
+      try { voiceRecRef.current && voiceRecRef.current.stop(); } catch {}
+      window.speechSynthesis.cancel();
+      const clean = String(text).replace(/[*#`_~>]/g, '').replace(/\n+/g, ' ').trim();
+      if (!clean) { pausedForSpeechRef.current = false; return; }
+      const utt = new SpeechSynthesisUtterance(clean);
+      utt.lang = lang === 'en' ? 'en-US' : 'ko-KR'; utt.rate = 1.0; utt.pitch = 1.0;
+      const vs = window.speechSynthesis.getVoices() || [];
+      const pref = vs.find(v => v.lang && v.lang.toLowerCase().startsWith(lang === 'en' ? 'en' : 'ko'));
+      if (pref) utt.voice = pref;
+      setSpeakingMsgId(id);
+      const after = () => { setSpeakingMsgId(null); setTimeout(() => { pausedForSpeechRef.current = false; if (voiceModeRef.current) { try { voiceRecRef.current && voiceRecRef.current.start(); setIsListening(true); } catch {} } }, 600); };
+      utt.onend = after; utt.onerror = after;
+      window.speechSynthesis.speak(utt);
+    }
     function startVoiceMode() {
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SR) { setChatError(t('이 브라우저는 음성 인식을 지원하지 않아요. 크롬을 권장해요.','Speech recognition not supported. Try Chrome.')); return; }
       voiceModeRef.current = true; setVoiceMode(true); setChatError('');
-      // 사용자 탭(제스처)에서 한마디 → 모바일 오디오 잠금해제
-      speakText(t('네, 편하게 말씀하세요.','Yes, please speak.'), 'voice-hello');
       try {
         const rec = new SR();
         rec.lang = lang === 'en' ? 'en-US' : 'ko-KR'; rec.continuous = true; rec.interimResults = false;
         rec.onresult = (e) => {
-          if (streamingRef.current || speakingRef.current) return; // AI 말하는 중/응답 중엔 무시(에코 방지)
+          if (streamingRef.current || speakingRef.current || pausedForSpeechRef.current) return; // AI 음성/응답 중엔 무시
           let txt = ''; for (let i = e.resultIndex; i < e.results.length; i++) { if (e.results[i].isFinal) txt += e.results[i][0].transcript; }
           txt = txt.trim();
           if (txt && inputRef.current && sendBtnRef.current) { inputRef.current.value = txt; sendBtnRef.current.click(); }
         };
         rec.onerror = (ev) => { if (ev && (ev.error === 'not-allowed' || ev.error === 'service-not-allowed')) stopVoiceMode(); };
-        rec.onend = () => { if (voiceModeRef.current) { try { rec.start(); } catch {} } };
-        voiceRecRef.current = rec; rec.start(); setIsListening(true);
+        rec.onend = () => { if (voiceModeRef.current && !pausedForSpeechRef.current) { try { rec.start(); } catch {} } };
+        voiceRecRef.current = rec;
       } catch {}
+      // 인사말 먼저 → 끝난 뒤 마이크 시작(인사 에코 방지). speakVoice가 0.6초 후 마이크 켬.
+      speakVoice(t('네, 편하게 말씀하세요.','Yes, please speak.'), 'voice-hello');
     }
     function stopVoiceMode() {
-      voiceModeRef.current = false; setVoiceMode(false); setIsListening(false);
+      voiceModeRef.current = false; setVoiceMode(false); setIsListening(false); pausedForSpeechRef.current = false;
       try { voiceRecRef.current && voiceRecRef.current.stop(); } catch {}
       try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch {}
     }
-    // 음성 모드일 때 완료된 AI 답변 자동 낭독
+    // 음성 모드일 때 완료된 AI 답변 자동 낭독(speakVoice가 마이크 정지/재개 처리)
     React.useEffect(() => {
       if (!voiceMode) return;
       for (let i = chatMessages.length - 1; i >= 0; i--) {
         const m = chatMessages[i];
         if (m.role === 'assistant' && !m.streaming && m.content) {
-          if (lastSpokenRef.current !== m.id) { lastSpokenRef.current = m.id; speakText(m.content, m.id); }
+          if (lastSpokenRef.current !== m.id) { lastSpokenRef.current = m.id; speakVoice(m.content, m.id); }
           break;
         }
       }
     }, [chatMessages, voiceMode]);
-    // 언마운트 시 정리
     React.useEffect(() => () => { voiceModeRef.current = false; try { voiceRecRef.current && voiceRecRef.current.stop(); } catch {} try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch {} }, []);
 
     React.useEffect(() => {
