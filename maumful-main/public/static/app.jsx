@@ -6005,9 +6005,8 @@ function PsychologicalTestSystem() {
     const pausedForSpeechRef = React.useRef(false);
     function speakVoice(text, id) {
       if (!window.speechSynthesis) return;
-      pausedForSpeechRef.current = true;                 // 말하는 동안 마이크 멈춤
-      try { voiceRecRef.current && voiceRecRef.current.stop(); } catch {}
-      setIsListening(false);                             // 표시도 '꺼짐'으로(AI 말하는 중)
+      pausedForSpeechRef.current = true;                 // 발화 중·직후 인식 무시(에코 방지). 마이크는 끄지 않음 → 모바일 자동 재개(제스처 불필요)
+      setIsListening(false);                             // 표시는 '말하는 중'
       window.speechSynthesis.cancel();
       const clean = String(text).replace(/[*#`_~>]/g, '').replace(/\n+/g, ' ').trim();
       if (!clean) { pausedForSpeechRef.current = false; return; }
@@ -6017,7 +6016,7 @@ function PsychologicalTestSystem() {
       const pref = vs.find(v => v.lang && v.lang.toLowerCase().startsWith(lang === 'en' ? 'en' : 'ko'));
       if (pref) utt.voice = pref;
       setSpeakingMsgId(id);
-      const after = () => { setSpeakingMsgId(null); setTimeout(() => { pausedForSpeechRef.current = false; if (voiceModeRef.current) { try { voiceRecRef.current && voiceRecRef.current.start(); setIsListening(true); } catch {} } }, 600); };
+      const after = () => { setSpeakingMsgId(null); setTimeout(() => { pausedForSpeechRef.current = false; if (voiceModeRef.current) { setIsListening(true); try { voiceRecRef.current && voiceRecRef.current.start(); } catch {} } }, 800); };
       utt.onend = after; utt.onerror = after;
       window.speechSynthesis.speak(utt);
     }

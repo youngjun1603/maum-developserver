@@ -4997,10 +4997,6 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
     function speakVoice(text, id) {
       if (!window.speechSynthesis) return;
       pausedForSpeechRef.current = true;
-      try {
-        voiceRecRef.current && voiceRecRef.current.stop();
-      } catch {
-      }
       setIsListening(false);
       window.speechSynthesis.cancel();
       const clean = String(text).replace(/[*#`_~>]/g, "").replace(/\n+/g, " ").trim();
@@ -5021,13 +5017,13 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
         setTimeout(() => {
           pausedForSpeechRef.current = false;
           if (voiceModeRef.current) {
+            setIsListening(true);
             try {
               voiceRecRef.current && voiceRecRef.current.start();
-              setIsListening(true);
             } catch {
             }
           }
-        }, 600);
+        }, 800);
       };
       utt.onend = after;
       utt.onerror = after;
