@@ -4926,6 +4926,7 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
     const streamingRef = React.useRef(false);
     const speakingRef = React.useRef(false);
     const lastSpokenRef = React.useRef(null);
+    const lastSpokenTextRef = React.useRef("");
     React.useEffect(() => {
       streamingRef.current = chatStreaming;
     }, [chatStreaming]);
@@ -5004,6 +5005,7 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
         pausedForSpeechRef.current = false;
         return;
       }
+      lastSpokenTextRef.current = clean;
       const utt = new SpeechSynthesisUtterance(clean);
       utt.lang = lang === "en" ? "en-US" : "ko-KR";
       utt.rate = 1;
@@ -5050,7 +5052,11 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
             if (e.results[i].isFinal) txt += e.results[i][0].transcript;
           }
           txt = txt.trim();
-          if (txt && inputRef.current && sendBtnRef.current) {
+          if (!txt) return;
+          const norm = (s) => String(s || "").replace(/[^가-힣a-zA-Z0-9]/g, "");
+          const nt = norm(txt), ns = norm(lastSpokenTextRef.current);
+          if (nt.length >= 5 && ns && (ns.indexOf(nt) !== -1 || ns.indexOf(nt.slice(0, 12)) !== -1)) return;
+          if (inputRef.current && sendBtnRef.current) {
             inputRef.current.value = txt;
             sendBtnRef.current.click();
           }

@@ -5929,6 +5929,7 @@ function PsychologicalTestSystem() {
     const streamingRef = React.useRef(false);
     const speakingRef = React.useRef(false);
     const lastSpokenRef = React.useRef(null);
+    const lastSpokenTextRef = React.useRef('');   // 방금 AI가 말한 텍스트(에코 필터용)
     React.useEffect(() => { streamingRef.current = chatStreaming; }, [chatStreaming]);
     React.useEffect(() => { speakingRef.current = (speakingMsgId !== null); }, [speakingMsgId]);
 
@@ -6010,6 +6011,7 @@ function PsychologicalTestSystem() {
       window.speechSynthesis.cancel();
       const clean = String(text).replace(/[*#`_~>]/g, '').replace(/\n+/g, ' ').trim();
       if (!clean) { pausedForSpeechRef.current = false; return; }
+      lastSpokenTextRef.current = clean;                  // 에코 필터: 이 텍스트가 다시 인식되면 무시
       const utt = new SpeechSynthesisUtterance(clean);
       utt.lang = lang === 'en' ? 'en-US' : 'ko-KR'; utt.rate = 1.0; utt.pitch = 1.0;
       const vs = window.speechSynthesis.getVoices() || [];
@@ -6031,7 +6033,12 @@ function PsychologicalTestSystem() {
           if (streamingRef.current || speakingRef.current || pausedForSpeechRef.current) return; // AI 음성/응답 중엔 무시
           let txt = ''; for (let i = e.resultIndex; i < e.results.length; i++) { if (e.results[i].isFinal) txt += e.results[i][0].transcript; }
           txt = txt.trim();
-          if (txt && inputRef.current && sendBtnRef.current) { inputRef.current.value = txt; sendBtnRef.current.click(); }
+          if (!txt) return;
+          // 내용 기반 에코 필터: 인식된 말이 방금 AI가 말한 텍스트의 일부면 자기 목소리 → 무시
+          const norm = s => String(s || '').replace(/[^가-힣a-zA-Z0-9]/g, '');
+          const nt = norm(txt), ns = norm(lastSpokenTextRef.current);
+          if (nt.length >= 5 && ns && (ns.indexOf(nt) !== -1 || ns.indexOf(nt.slice(0, 12)) !== -1)) return;
+          if (inputRef.current && sendBtnRef.current) { inputRef.current.value = txt; sendBtnRef.current.click(); }
         };
         rec.onerror = (ev) => { if (ev && (ev.error === 'not-allowed' || ev.error === 'service-not-allowed')) stopVoiceMode(); };
         rec.onend = () => { if (voiceModeRef.current && !pausedForSpeechRef.current) { try { rec.start(); } catch {} } };
