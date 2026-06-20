@@ -20,6 +20,7 @@
   .chip{ display:inline-block; border:1px solid var(--line); border-radius:999px; padding:8px 12px; margin:0 6px 8px 0; font-size:13px; cursor:pointer; background:#fff; }
   .chip.on{ background:var(--teal); color:#fff; border-color:var(--teal); }
   .conf-high{ background:#E7F4EA; color:#2E7D46; } .conf-medium{ background:#FBF1DD; color:#B9821F; } .conf-low{ background:#EEE; color:#777; }
+  body.has-ad{ padding-bottom: 68px; }   /* 앱(AdMob) 하단 배너가 콘텐츠를 가리지 않도록 */
 </style>
 </head>
 <body>
@@ -243,6 +244,20 @@ function App() {
     onObserve=${(p)=>{setPet(p);setView('observe');}} onReports=${(p)=>{setPet(p);setView('reports');}} onGuide=${()=>setView('guide')} />`;
 }
 ReactDOM.createRoot(document.getElementById('root')).render(html`<${App} />`);
+
+// ── AdMob 하단 배너(광고형) — Capacitor 네이티브에서만 동작, 웹 브라우저에선 no-op ──
+// ⚠️ 출시 전 교체: banner = 실제 배너 단위 ID, testing = false. (App ID는 AndroidManifest meta-data)
+const ADMOB = { banner: 'ca-app-pub-3940256099942544/6300978111', testing: true }; // 현재 Google 테스트 배너 ID
+(async function initBannerAd(){
+  try{
+    if(!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())) return;
+    const AdMob = window.Capacitor.Plugins && window.Capacitor.Plugins.AdMob;
+    if(!AdMob) return;
+    await AdMob.initialize();
+    await AdMob.showBanner({ adId: ADMOB.banner, adSize: 'ADAPTIVE_BANNER', position: 'BOTTOM_CENTER', margin: 0, isTesting: ADMOB.testing });
+    document.body.classList.add('has-ad');
+  }catch(e){ /* 웹/플러그인 미설치 환경은 조용히 무시 */ }
+})();
 </script>
 </body>
 </html>

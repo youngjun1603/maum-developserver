@@ -44,22 +44,15 @@ npx cap add android
   ```
 
 ## 4. AdMob (광고형 수익화)
-1. **AdMob 콘솔**(apps.admob.com)에서 앱 등록(패키지 `com.maumgyeot.app`) → **앱 ID**(`ca-app-pub-…~…`)와 **광고 단위 ID**(배너/전면) 발급.
-2. 매니페스트 meta-data의 **테스트 App ID를 실제 앱 ID로 교체**.
-3. **광고 호출은 웹앱에서**(라이브 URL 래핑이라 JS가 원격): `public/index.html`에 아래 훅을 추가(다음 단계 — 실제 단위 ID 발급 후):
-   ```js
-   // Capacitor 네이티브에서만 동작(웹에선 no-op)
-   if (window.Capacitor?.isNativePlatform?.()) {
-     const { AdMob } = window.Capacitor.Plugins;
-     AdMob.initialize().then(() => AdMob.showBanner({
-       adId: 'ca-app-pub-XXXX/ZZZZ',       // 실제 배너 단위 ID
-       position: 'BOTTOM_CENTER', margin: 0,
-       // 테스트 중엔 isTesting:true 또는 Google 테스트 단위 ID 사용
-     }));
-   }
-   ```
-4. **테스트는 반드시 테스트 광고 ID로**(자기 실광고 클릭 = 정책 위반·계정 정지). 출시 직전 실 단위 ID로 교체.
-5. 데이터보안·콘텐츠등급에 **광고 포함=예**, **광고 식별자 수집** 선언(7절).
+- ✅ **웹 배너 훅은 이미 연동됨** — `maumgyeot/public/index.html` 끝의 `initBannerAd()`. Capacitor 네이티브에서만 하단 적응형 배너 표시(웹 브라우저에선 no-op), 배너 높이만큼 `body.has-ad` 패딩으로 콘텐츠 가림 방지. 현재 **Google 테스트 배너 ID + `isTesting:true`** 라 빌드만 하면 바로 테스트 광고가 뜸.
+- 남은 일(실 ID 발급 후, 두 군데만 교체):
+  1. **AdMob 콘솔**(apps.admob.com)에서 앱 등록(패키지 `com.maumgyeot.app`) → **앱 ID**(`ca-app-pub-…~…`)·**배너 단위 ID** 발급.
+  2. `AndroidManifest.xml` meta-data의 **테스트 App ID → 실제 앱 ID** 교체.
+  3. `public/index.html`의 `const ADMOB = { banner: '…', testing: true }` → **실제 배너 단위 ID + `testing:false`** 로 교체 후 워커 배포(`wrangler deploy`).
+- ⚠️ **테스트 중 자기 실광고 클릭 금지**(정책 위반·계정 정지). 반드시 테스트 ID로 검증 후 출시 직전에만 실 ID로.
+- ⚠️ 네이티브에 **`@capacitor-community/admob` 플러그인이 설치**돼 있어야 `window.Capacitor.Plugins.AdMob`가 동작(package.json에 포함 → `npm install` + `npx cap sync android`).
+- 데이터보안·콘텐츠등급에 **광고 포함=예**, **광고 식별자 수집** 선언(7절).
+- (선택) EU/UMP 동의: 한국 단독 출시면 생략 가능, 글로벌 확장 시 UMP 동의 폼 추가.
 
 ## 5. 릴리스 서명 + .aab
 ```bash
