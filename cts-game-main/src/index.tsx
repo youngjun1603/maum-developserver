@@ -131,11 +131,12 @@ const HTML = (v: string) => `<!DOCTYPE html>
   <div id="root"></div>
   <script>
     // SSO 토큰 처리 — React 마운트 전 실행 필수
+    // ⚠️ 변수명은 't' 금지: game_engine.js의 i18n용 전역 const t 와 충돌해 게임 전체가 깨짐
     const urlParams = new URLSearchParams(window.location.search);
-    const t = urlParams.get('t');
+    const tok = urlParams.get('t');
     const gameParam = urlParams.get('game');
-    if (t) {
-      localStorage.setItem('game_token', t);
+    if (tok) {
+      localStorage.setItem('game_token', tok);
       const nextUrl = gameParam ? '/?game=' + encodeURIComponent(gameParam) : '/';
       window.history.replaceState({}, '', nextUrl);
     }
