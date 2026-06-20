@@ -5001,6 +5001,7 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
         voiceRecRef.current && voiceRecRef.current.stop();
       } catch {
       }
+      setIsListening(false);
       window.speechSynthesis.cancel();
       const clean = String(text).replace(/[*#`_~>]/g, "").replace(/\n+/g, " ").trim();
       if (!clean) {
@@ -5336,11 +5337,11 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
         disabled: chatStreaming,
         className: "flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm resize-none focus:outline-none focus:border-blue-400 disabled:bg-gray-50"
       }
-    ), (window.SpeechRecognition || window.webkitSpeechRecognition) && /* @__PURE__ */ React.createElement(
+    ), (window.SpeechRecognition || window.webkitSpeechRecognition) && !voiceMode && /* @__PURE__ */ React.createElement(
       "button",
       {
         onClick: startVoiceInput,
-        disabled: isListening || chatStreaming || voiceMode,
+        disabled: isListening || chatStreaming,
         title: isListening ? t("\uB4E3\uB294 \uC911...", "Listening...") : t("\uC74C\uC131 \uC785\uB825", "Voice input"),
         className: `shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-lg transition ${isListening ? "bg-red-500 text-white animate-pulse" : "bg-gray-100 hover:bg-gray-200 text-gray-600 disabled:opacity-40"}`
       },
@@ -5349,10 +5350,10 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
       "button",
       {
         onClick: voiceMode ? stopVoiceMode : startVoiceMode,
-        title: voiceMode ? t("\uC74C\uC131 \uC0C1\uB2F4 \uB05D\uB0B4\uAE30", "Stop voice") : t("\uD578\uC988\uD504\uB9AC \uC74C\uC131 \uC0C1\uB2F4 \u2014 \uB204\uB974\uACE0 \uADF8\uB0E5 \uB9D0\uD558\uBA74 \uB3FC\uC694", "Hands-free voice \u2014 tap and just speak"),
-        className: `shrink-0 h-10 px-3 rounded-xl flex items-center justify-center text-sm font-bold whitespace-nowrap transition ${voiceMode ? "bg-blue-600 text-white animate-pulse" : "bg-blue-50 hover:bg-blue-100 text-blue-700"}`
+        title: voiceMode ? t("\uD0ED\uD558\uBA74 \uC74C\uC131 \uC0C1\uB2F4 \uC885\uB8CC", "Tap to stop") : t("\uD578\uC988\uD504\uB9AC \uC74C\uC131 \uC0C1\uB2F4 \u2014 \uB204\uB974\uACE0 \uADF8\uB0E5 \uB9D0\uD558\uBA74 \uB3FC\uC694", "Hands-free voice \u2014 tap and just speak"),
+        className: `shrink-0 h-10 px-3 rounded-xl flex items-center justify-center text-sm font-bold whitespace-nowrap transition ${voiceMode ? speakingMsgId ? "bg-gray-400 text-white" : "bg-red-500 text-white animate-pulse" : "bg-blue-50 hover:bg-blue-100 text-blue-700"}`
       },
-      voiceMode ? t("\u23F9 \uC74C\uC131 \uB05D", "\u23F9 Stop") : t("\u{1F50A} \uC74C\uC131 \uC0C1\uB2F4", "\u{1F50A} Voice")
+      voiceMode ? speakingMsgId ? t("\u{1F508} \uB9D0\uD558\uB294 \uC911", "\u{1F508} Speaking") : t("\u{1F399}\uFE0F \uB4E3\uB294 \uC911\xB7\uD0ED=\uB05D", "\u{1F399}\uFE0F Listening") : t("\u{1F50A} \uC74C\uC131 \uC0C1\uB2F4", "\u{1F50A} Voice")
     ), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col gap-1.5" }, /* @__PURE__ */ React.createElement(
       "button",
       {

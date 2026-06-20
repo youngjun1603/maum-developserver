@@ -6007,6 +6007,7 @@ function PsychologicalTestSystem() {
       if (!window.speechSynthesis) return;
       pausedForSpeechRef.current = true;                 // 말하는 동안 마이크 멈춤
       try { voiceRecRef.current && voiceRecRef.current.stop(); } catch {}
+      setIsListening(false);                             // 표시도 '꺼짐'으로(AI 말하는 중)
       window.speechSynthesis.cancel();
       const clean = String(text).replace(/[*#`_~>]/g, '').replace(/\n+/g, ' ').trim();
       if (!clean) { pausedForSpeechRef.current = false; return; }
@@ -6377,10 +6378,10 @@ function PsychologicalTestSystem() {
                   disabled={chatStreaming}
                   className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm resize-none focus:outline-none focus:border-blue-400 disabled:bg-gray-50"
                 />
-                {(window.SpeechRecognition || window.webkitSpeechRecognition) && (
+                {(window.SpeechRecognition || window.webkitSpeechRecognition) && !voiceMode && (
                   <button
                     onClick={startVoiceInput}
-                    disabled={isListening || chatStreaming || voiceMode}
+                    disabled={isListening || chatStreaming}
                     title={isListening ? t('듣는 중...','Listening...') : t('음성 입력','Voice input')}
                     className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-lg transition ${isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-100 hover:bg-gray-200 text-gray-600 disabled:opacity-40'}`}
                   >🎤</button>
@@ -6388,9 +6389,9 @@ function PsychologicalTestSystem() {
                 {(window.SpeechRecognition || window.webkitSpeechRecognition) && (
                   <button
                     onClick={voiceMode ? stopVoiceMode : startVoiceMode}
-                    title={voiceMode ? t('음성 상담 끝내기','Stop voice') : t('핸즈프리 음성 상담 — 누르고 그냥 말하면 돼요','Hands-free voice — tap and just speak')}
-                    className={`shrink-0 h-10 px-3 rounded-xl flex items-center justify-center text-sm font-bold whitespace-nowrap transition ${voiceMode ? 'bg-blue-600 text-white animate-pulse' : 'bg-blue-50 hover:bg-blue-100 text-blue-700'}`}
-                  >{voiceMode ? t('⏹ 음성 끝','⏹ Stop') : t('🔊 음성 상담','🔊 Voice')}</button>
+                    title={voiceMode ? t('탭하면 음성 상담 종료','Tap to stop') : t('핸즈프리 음성 상담 — 누르고 그냥 말하면 돼요','Hands-free voice — tap and just speak')}
+                    className={`shrink-0 h-10 px-3 rounded-xl flex items-center justify-center text-sm font-bold whitespace-nowrap transition ${voiceMode ? (speakingMsgId ? 'bg-gray-400 text-white' : 'bg-red-500 text-white animate-pulse') : 'bg-blue-50 hover:bg-blue-100 text-blue-700'}`}
+                  >{voiceMode ? (speakingMsgId ? t('🔈 말하는 중','🔈 Speaking') : t('🎙️ 듣는 중·탭=끝','🎙️ Listening')) : t('🔊 음성 상담','🔊 Voice')}</button>
                 )}
                 <div className="flex flex-col gap-1.5">
                   <button
