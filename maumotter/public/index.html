@@ -40,6 +40,8 @@
 const { useState, useEffect, useRef } = React;
 const html = htm.bind(React.createElement);
 const TOKEN_KEY = 'maumotter_token';
+// ⚠️ 스마트스토어 상품(또는 스토어) URL — 등록 후 채우면 '구매하기' 버튼 활성화.
+const STORE_URL = '';
 
 function api(path, { method='GET', body, token } = {}) {
   return fetch('/api'+path, {
@@ -71,7 +73,14 @@ function EntitlementCard({ token }) {
     </div>
     ${msg && html`<div class="muted" style=${{color:'#3B6FB5',marginTop:8}}>${msg}</div>`}
     ${err && html`<div class="err" style=${{marginTop:8}}>${err}</div>`}
-    <div class="muted" style=${{marginTop:8,fontSize:12}}>통역(또또와의 대화 1번)에 1회 차감 · 스마트스토어 구매 코드를 등록하세요.</div>
+    <div class="muted" style=${{marginTop:8,fontSize:12}}>통역(또또와의 대화 1번)에 1회 차감.</div>
+    <div style=${{marginTop:12,paddingTop:12,borderTop:'1px solid #E3E8F0'}}>
+      <div class="muted" style=${{fontSize:12,marginBottom:6}}>🛒 이용권 구매 (스마트스토어)</div>
+      <div class="muted" style=${{fontSize:13,lineHeight:1.7,color:'#234E86'}}>라이트 30일·월 30회 4,900원 · 프로 30일·월 100회 9,900원 · 회차권 10회(60일) 4,900원</div>
+      ${STORE_URL
+        ? html`<a href=${STORE_URL} target="_blank" rel="noopener noreferrer" class="btn" style=${{display:'block',textAlign:'center',textDecoration:'none',marginTop:10}}>스마트스토어에서 구매하기 →</a>`
+        : html`<div class="muted" style=${{fontSize:12,marginTop:8}}>스토어 오픈 준비 중이에요. 구매 후 받은 코드를 위에 등록하시면 됩니다.</div>`}
+    </div>
   </div>`;
 }
 
