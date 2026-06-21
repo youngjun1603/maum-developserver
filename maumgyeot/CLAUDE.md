@@ -113,3 +113,26 @@ D1 스키마 → 인증/JWT(공유 규약) → 반려동물 등록 → 관찰·�
 - 이 폴더 = **동물행동학 도메인**. 마음수달(아동) 규칙·용어를 끌어오지 말 것.
 - 인증·브랜드만 `_shared`를 따르고, 나머지는 이 폴더 문서를 따른다.
 - 모든 통역에 confidence + 단정 금지. 이게 이 서비스의 생명.
+
+---
+
+## 10. 안드로이드 앱화 — ⏸️ 보류 중 (2026-06)
+
+> **결정: 안드로이드 앱 진행 당분간 보류.** 사유 = 앱은 마케팅 비용을 전부 직접 부담해야 해 부담이 큼.
+> **웹 서비스(maumgyeot.com)는 그대로 운영·발전.** 아래는 재개 시 바로 이어갈 수 있게 남겨둔 자료.
+
+### 이미 구현·배포되어 그대로 유지하는 것 (웹에도 유효 → 삭제·롤백 금지)
+- **계정 삭제(회원 탈퇴)**: `DELETE /api/account`(도메인 데이터 + 공용 maum-auth 계정 삭제), 공개 페이지 `/privacy`·`/account-deletion`, 홈 하단 링크. → Play 요건이자 **웹 개인정보 보호에도 필요**하므로 유지.
+- **AdMob 배너 웹 훅**: `public/index.html`의 `initBannerAd()`. **Capacitor 네이티브에서만 동작, 웹 브라우저에선 no-op**(가드+try/catch)라 그대로 둬도 웹 영향 0. 현재 Google 테스트 ID.
+
+### 재개 시 쓸 자료 (보류 동안 건드릴 필요 없음)
+- 래핑 스캐폴드: `maumgyeot/app/`(capacitor.config.ts `appId=com.maumgyeot.app`, capacitor-www, native-templates: MainActivity textZoom+카메라권한, AndroidManifest CAMERA/RECORD_AUDIO/AD_ID+AdMob meta), 단계별 `maumgyeot/app/README.md`.
+- 루트 플레이북: `../ANDROID_APP_PLAYBOOK.md`. 메모리 `project_android_app_plan`.
+- 결정됐던 형태: **광고형(AdMob)**. 두 앱 이메일 로그인이라 WebView OAuth 이슈 없음.
+
+### 재개 시 남은 작업(로컬·Play)
+`npx cap add android` → 네이티브 fix 적용 → 카메라 실기확인 → AdMob 실 ID 2곳 교체 → 키스토어+`.aab` → Play 내부테스트 → (개인계정이면) 비공개테스트 12명·14일 → 프로덕션.
+
+### 유료화·제휴는 앱과 분리되어 계속 (웹 기준)
+- 앱 보류와 무관하게 **웹 유료화**는 진행 가능. 방향: **구독+월 사용캡**, 런칭 결제는 **스마트스토어+쿠폰(CTS 쿠폰 시스템 포팅)** — 토스 승인 지연 회피. 제휴는 `?ref=` 추적.
+- 상세: 메모리 `project_maum_series_monetization`.
