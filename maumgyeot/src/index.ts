@@ -5,7 +5,7 @@ import { Hono } from 'hono';
 import { registerUser, loginUser, getUser, issueToken, requireAuth, deleteUser } from './auth';
 import { BEHAVIOR, signalsToLines } from './behavior';
 
-type Bindings = { DB: D1Database; AUTH_DB: D1Database; KV: KVNamespace; JWT_SECRET: string; ANTHROPIC_API_KEY: string; ASSETS: Fetcher };
+type Bindings = { DB: D1Database; AUTH_DB: D1Database; KV: KVNamespace; JWT_SECRET: string; ANTHROPIC_API_KEY: string; ASSETS: Fetcher; ADMIN_SECRET?: string };
 const app = new Hono<{ Bindings: Bindings; Variables: { uid: number } }>();
 
 const REPORT_MODEL = 'claude-sonnet-4-6';
@@ -36,23 +36,156 @@ const TRANSLATE_SYSTEM = `당신은 '마음곁'의 동물행동학 기반 통역
 [출력] 아래 JSON 스키마로만, JSON 외 텍스트/코드블록 금지:
 {"summary":"이 행동은 ~일 수 있어요(단정X) 2~3문장","confidence":"low|medium|high","body_signals_read":["함께 읽은 신호"],"possible_meanings":[{"meaning":"가능한 의미","why":"근거","caveat":"다의성·맥락 주의(없으면 '')"}],"what_to_do":["보호자가 해볼 따뜻한 대응 1~3개"],"health_flag":{"flag":false,"note":"통증·이상 의심 시 수의사 상담 권장. 진단 아님(없으면 '')"}}`;
 
+// LLM 호출 — 25s 타임아웃 + 1회 재시도(게이트웨이 지연·일시 5xx 격리)
 async function callClaude(env: Bindings, opts: { system: string; messages: any[]; max_tokens: number; temperature?: number }) {
-  const res = await fetch(AI_GATEWAY, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: REPORT_MODEL, max_tokens: opts.max_tokens, temperature: opts.temperature ?? 0, system: opts.system, messages: opts.messages }),
-  });
-  if (!res.ok) throw new Error('LLM ' + res.status + ' ' + (await res.text()).slice(0, 300));
-  const data = await res.json<any>();
-  return (data?.content?.[0]?.text || '').trim();
+  const once = async () => {
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), 25000);
+    try {
+      const res = await fetch(AI_GATEWAY, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({ model: REPORT_MODEL, max_tokens: opts.max_tokens, temperature: opts.temperature ?? 0, system: opts.system, messages: opts.messages }),
+        signal: ctrl.signal,
+      });
+      if (!res.ok) throw new Error('LLM ' + res.status + ' ' + (await res.text()).slice(0, 300));
+      const data = await res.json<any>();
+      return (data?.content?.[0]?.text || '').trim();
+    } finally { clearTimeout(to); }
+  };
+  try { return await once(); } catch { return await once(); }
+}
+
+// ── 레이트리밋(KV 버킷, 마음풀 패턴) — KV 오류 시 통과(가용성 우선) ──
+async function checkRateLimit(kv: KVNamespace, key: string, limit: number, windowSec = 60): Promise<boolean> {
+  const bucket = Math.floor(Date.now() / 1000 / windowSec);
+  const k = `rl:${key}:${bucket}`;
+  try {
+    const cur = parseInt((await kv.get(k)) || '0', 10);
+    if (cur >= limit) return false;
+    kv.put(k, String(cur + 1), { expirationTtl: windowSec * 2 }).catch(() => {});
+    return true;
+  } catch { return true; }
+}
+const clientIp = (c: any) => c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || 'unknown';
+
+// ── 유료/쿼터 엔진 (월 사용캡 + 구독 + 회차권). 숫자는 여기서 조정. ──
+const FREE_MONTHLY = 5;   // 가입자 월 무료 통역
+const GUEST_FREE = 2;     // 비회원 미리보기 평생 횟수(IP)
+const PLAN: Record<string, { plan: string; quota: number; days: number }> = {
+  sub_light: { plan: 'light', quota: 30, days: 30 },
+  sub_pro: { plan: 'pro', quota: 100, days: 30 },
+};
+const PACK: Record<string, { count: number; days: number }> = { pack10: { count: 10, days: 60 } };
+const ym = () => { const d = new Date(); return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}`; };
+const nowIso = () => new Date().toISOString();
+const addDays = (days: number) => new Date(Date.now() + days * 86400000).toISOString();
+
+async function getEntitlement(env: Bindings, uid: number) {
+  const now = nowIso(); const m = ym();
+  const sub = await env.DB.prepare('SELECT plan,monthly_quota,expires_at FROM subscriptions WHERE maum_user_id=?').bind(uid).first<any>();
+  const subActive = !!(sub && sub.expires_at > now);
+  const subQuota = subActive ? sub.monthly_quota : 0;
+  const used = (await env.DB.prepare('SELECT used FROM usage_monthly WHERE maum_user_id=? AND ym=?').bind(uid, m).first<any>())?.used || 0;
+  const pack = await env.DB.prepare('SELECT remaining,expires_at FROM packs WHERE maum_user_id=?').bind(uid).first<any>();
+  const packRemaining = (pack && pack.remaining > 0 && (!pack.expires_at || pack.expires_at > now)) ? pack.remaining : 0;
+  const monthlyAllowance = FREE_MONTHLY + subQuota;
+  const monthlyRemaining = Math.max(0, monthlyAllowance - used);
+  return { plan: subActive ? sub.plan : 'free', subActive, subExpires: subActive ? sub.expires_at : null,
+    freeMonthly: FREE_MONTHLY, monthlyAllowance, used, monthlyRemaining, packRemaining, totalRemaining: monthlyRemaining + packRemaining };
+}
+// 통역 1회 차감(무료월 → 구독월 → 회차권 순). ok=false면 한도 초과.
+async function consumeQuota(env: Bindings, uid: number): Promise<{ ok: boolean; source?: string }> {
+  const e = await getEntitlement(env, uid);
+  if (e.monthlyRemaining > 0) {
+    await env.DB.prepare("INSERT INTO usage_monthly (maum_user_id,ym,used) VALUES (?,?,1) ON CONFLICT(maum_user_id,ym) DO UPDATE SET used=used+1").bind(uid, ym()).run();
+    return { ok: true, source: e.used < e.freeMonthly ? 'free' : 'subscription' };
+  }
+  if (e.packRemaining > 0) {
+    await env.DB.prepare("UPDATE packs SET remaining=remaining-1, updated_at=datetime('now') WHERE maum_user_id=?").bind(uid).run();
+    return { ok: true, source: 'pack' };
+  }
+  return { ok: false };
+}
+// 쿠폰 코드 → 구독/회차권 부여
+const normCode = (s: any) => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+async function applyGrant(env: Bindings, uid: number, type: string) {
+  const now = nowIso();
+  if (PLAN[type]) {
+    const g = PLAN[type];
+    const sub = await env.DB.prepare('SELECT expires_at,monthly_quota FROM subscriptions WHERE maum_user_id=?').bind(uid).first<any>();
+    const base = sub && sub.expires_at > now ? new Date(sub.expires_at).getTime() : Date.now();
+    const newExpires = new Date(base + g.days * 86400000).toISOString();
+    const quota = Math.max(g.quota, sub?.monthly_quota || 0);
+    const plan = quota >= 100 ? 'pro' : g.plan;
+    await env.DB.prepare("INSERT INTO subscriptions (maum_user_id,plan,monthly_quota,expires_at,updated_at) VALUES (?,?,?,?,datetime('now')) ON CONFLICT(maum_user_id) DO UPDATE SET plan=excluded.plan,monthly_quota=excluded.monthly_quota,expires_at=excluded.expires_at,updated_at=datetime('now')")
+      .bind(uid, plan, quota, newExpires).run();
+    return { kind: 'subscription', plan, expires_at: newExpires };
+  }
+  if (PACK[type]) {
+    const g = PACK[type];
+    const pack = await env.DB.prepare('SELECT remaining FROM packs WHERE maum_user_id=?').bind(uid).first<any>();
+    const remaining = (pack?.remaining || 0) + g.count;
+    const expires = addDays(g.days);
+    await env.DB.prepare("INSERT INTO packs (maum_user_id,remaining,expires_at,updated_at) VALUES (?,?,?,datetime('now')) ON CONFLICT(maum_user_id) DO UPDATE SET remaining=excluded.remaining,expires_at=excluded.expires_at,updated_at=datetime('now')")
+      .bind(uid, remaining, expires).run();
+    return { kind: 'pack', remaining };
+  }
+  throw new Error('UNKNOWN_TYPE');
+}
+// 어드민 인증 + 코드 생성기
+function requireAdmin(c: any): 'ok' | 'unset' | 'unauth' {
+  if (!c.env.ADMIN_SECRET) return 'unset';
+  return (c.req.header('Authorization') || '') === `Bearer ${c.env.ADMIN_SECRET}` ? 'ok' : 'unauth';
+}
+const genCode = (len = 8) => { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; const r = crypto.getRandomValues(new Uint8Array(len)); let s = ''; for (let i = 0; i < len; i++) s += A[r[i] % A.length]; return s; };
+
+// ── 통역 코어(회원/비회원 공용) ──
+async function runTranslation(env: Bindings, p: { species: 'cat' | 'dog'; name?: string; age?: any; personality?: string; codes: string[]; context?: string; frames?: any[] }) {
+  const species = p.species;
+  const { lines, hasHealth, hasAmbiguous } = signalsToLines(species, p.codes);
+  const frameArr: string[] = Array.isArray(p.frames) ? p.frames.slice(0, 6) : [];
+  const hasVideo = frameArr.length > 0;
+  const userMsg = `[반려동물] 종: ${species === 'cat' ? '고양이' : '개'} | 이름: ${p.name || '미상'} | 나이: ${p.age ?? '미상'}${p.personality ? ` | 성격: ${p.personality}` : ''}
+[관찰한 행동 신호]
+${lines || '- (선택된 신호 없음)'}
+[맥락] ${p.context || '(미입력)'}${hasVideo ? '\n[영상] 짧은 영상에서 뽑은 연속 프레임을 함께 첨부했어요.' : ''}
+
+위 관찰을 보호자용 통역 리포트(JSON)로 만들어 주세요.${hasVideo ? ' 첨부 프레임에서 자세·꼬리·귀·표정을 함께 읽어 통역에 반영해 주세요.' : ''}${hasAmbiguous ? ' 다의적 신호가 포함되어 있으니 caveat를 꼭 채우세요.' : ''}`;
+  const userContent: any = hasVideo
+    ? [...frameArr.map((f) => ({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: String(f).replace(/^data:image\/\w+;base64,/, '') } })), { type: 'text', text: userMsg }]
+    : userMsg;
+  let report: any = { summary: '신호가 충분하지 않아 해석이 어려워요. 더 지켜봐 주세요.', confidence: 'low', body_signals_read: [], possible_meanings: [], what_to_do: ['반려동물의 평소 모습과 비교하며 며칠 더 관찰해 주세요.'], health_flag: { flag: false, note: '' } };
+  if (p.codes.length > 0 || hasVideo || (p.context && p.context.length > 1)) {
+    try {
+      let raw = await callClaude(env, { system: TRANSLATE_SYSTEM, messages: [{ role: 'user', content: userContent }], max_tokens: 1400, temperature: 0 });
+      raw = raw.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
+      const parsed = JSON.parse(raw);
+      if (!VET_TERMS.some((t) => JSON.stringify(parsed).includes(t))) report = parsed;
+      else {
+        let raw2 = await callClaude(env, { system: TRANSLATE_SYSTEM + '\n(이전 출력에 금지된 수의학 용어가 있었습니다. 절대 사용하지 마세요.)', messages: [{ role: 'user', content: userContent }], max_tokens: 1400, temperature: 0 });
+        raw2 = raw2.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
+        try { const p2 = JSON.parse(raw2); if (!VET_TERMS.some((t) => JSON.stringify(p2).includes(t))) report = p2; } catch {}
+      }
+    } catch (e) { console.log('OBSERVE_FAIL', String((e as any)?.message || e)); }
+  }
+  const HEALTH_KW = ['아파', '아픈', '절뚝', '토했', '구토', '설사', '안 먹', '못 먹', '식욕', '기운 없', '무기력', '피', '다쳤', '떨'];
+  const ctxHit = typeof p.context === 'string' && HEALTH_KW.some((k) => p.context!.includes(k));
+  if (report?.health_flag && (hasHealth || ctxHit) && !report.health_flag.flag) {
+    report.health_flag.flag = true;
+    report.health_flag.note = report.health_flag.note || '몸이 불편한 신호일 수 있어요. 단정은 아니며, 수의사 상담을 권해드려요.';
+  }
+  return { report, hasVideo, healthFlag: report?.health_flag?.flag ? 1 : 0 };
 }
 
 app.get('/api/health', (c) => c.json({ ok: true }));
 
 // ── 인증 (공용 maum-auth) ──
 app.post('/api/auth/register', async (c) => {
+  if (!(await checkRateLimit(c.env.KV, `register:${clientIp(c)}`, 5, 3600))) return c.json({ error: '잠시 후 다시 시도해주세요.' }, 429);
   const { email, password, name } = await c.req.json().catch(() => ({}));
-  if (!email || !password) return c.json({ error: '이메일과 비밀번호를 입력해주세요' }, 400);
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) return c.json({ error: '올바른 이메일을 입력해주세요' }, 400);
+  if (!password || String(password).length < 8) return c.json({ error: '비밀번호는 8자 이상이어야 해요' }, 400);
   try {
     const user = await registerUser(c.env.AUTH_DB, { email, password, name });
     return c.json({ token: await issueToken(c.env.JWT_SECRET, user), user });
@@ -62,6 +195,7 @@ app.post('/api/auth/register', async (c) => {
   }
 });
 app.post('/api/auth/login', async (c) => {
+  if (!(await checkRateLimit(c.env.KV, `login:${clientIp(c)}`, 10, 60))) return c.json({ error: '시도가 너무 많아요. 잠시 후 다시 시도해주세요.' }, 429);
   const { email, password } = await c.req.json().catch(() => ({}));
   if (!email || !password) return c.json({ error: '이메일과 비밀번호를 입력해주세요' }, 400);
   const user = await loginUser(c.env.AUTH_DB, { email, password });
@@ -92,58 +226,96 @@ app.get('/api/behavior', (c) => {
 
 // ── 관찰 → 통역 ──
 app.post('/api/observe', requireAuth, async (c) => {
+  const uid = c.get('uid');
+  // 남용·버스트 방지(유저당 분당 8회)
+  if (!(await checkRateLimit(c.env.KV, `observe:${uid}`, 8, 60))) return c.json({ error: '요청이 너무 잦아요. 잠시 후 다시 시도해주세요.' }, 429);
   const { pet_id, signals, context, media_note, frames } = await c.req.json().catch(() => ({}));
-  const pet = await c.env.DB.prepare('SELECT * FROM pets WHERE id=? AND maum_user_id=?').bind(pet_id, c.get('uid')).first<any>();
+  if (typeof context === 'string' && context.length > 2000) return c.json({ error: '맥락이 너무 길어요(2000자 이내)' }, 413);
+  const pet = await c.env.DB.prepare('SELECT * FROM pets WHERE id=? AND maum_user_id=?').bind(pet_id, uid).first<any>();
   if (!pet) return c.json({ error: '반려동물을 찾을 수 없어요' }, 404);
   const species = pet.species === 'dog' ? 'dog' : 'cat';
   const codes: string[] = Array.isArray(signals) ? signals : [];
-  const { lines, hasHealth, hasAmbiguous } = signalsToLines(species, codes);
-
-  // 영상 프레임(비전): 분석에만 일시 사용, 어디에도 저장하지 않음(원본·프레임 미저장). 최대 6장.
-  const frameArr: string[] = Array.isArray(frames) ? frames.slice(0, 6) : [];
-  const hasVideo = frameArr.length > 0;
-
-  const userMsg = `[반려동물] 종: ${species === 'cat' ? '고양이' : '개'} | 이름: ${pet.name} | 나이: ${pet.age ?? '미상'}${pet.personality ? ` | 성격: ${pet.personality}` : ''}
-[관찰한 행동 신호]
-${lines || '- (선택된 신호 없음)'}
-[맥락] ${context || '(미입력)'}${hasVideo ? '\n[영상] 짧은 영상에서 뽑은 연속 프레임을 함께 첨부했어요.' : ''}
-
-위 관찰을 보호자용 통역 리포트(JSON)로 만들어 주세요.${hasVideo ? ' 첨부 프레임에서 자세·꼬리·귀·표정을 함께 읽어 통역에 반영해 주세요.' : ''}${hasAmbiguous ? ' 다의적 신호가 포함되어 있으니 caveat를 꼭 채우세요.' : ''}`;
-
-  const userContent: any = hasVideo
-    ? [...frameArr.map((f) => ({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: String(f).replace(/^data:image\/\w+;base64,/, '') } })), { type: 'text', text: userMsg }]
-    : userMsg;
-
-  let report: any = { summary: '신호가 충분하지 않아 해석이 어려워요. 더 지켜봐 주세요.', confidence: 'low', body_signals_read: [], possible_meanings: [], what_to_do: ['반려동물의 평소 모습과 비교하며 며칠 더 관찰해 주세요.'], health_flag: { flag: false, note: '' } };
-  if (codes.length > 0 || hasVideo || (context && context.length > 1)) {
-    try {
-      let raw = await callClaude(c.env, { system: TRANSLATE_SYSTEM, messages: [{ role: 'user', content: userContent }], max_tokens: 1400, temperature: 0 });
-      raw = raw.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
-      const parsed = JSON.parse(raw);
-      if (!VET_TERMS.some((t) => JSON.stringify(parsed).includes(t))) report = parsed;
-      else {
-        let raw2 = await callClaude(c.env, { system: TRANSLATE_SYSTEM + '\n(이전 출력에 금지된 수의학 용어가 있었습니다. 절대 사용하지 마세요.)', messages: [{ role: 'user', content: userContent }], max_tokens: 1400, temperature: 0 });
-        raw2 = raw2.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
-        try { const p2 = JSON.parse(raw2); if (!VET_TERMS.some((t) => JSON.stringify(p2).includes(t))) report = p2; } catch {}
-      }
-    } catch (e) { console.log('OBSERVE_FAIL', String((e as any)?.message || e)); }
+  const realAttempt = codes.length > 0 || (Array.isArray(frames) && frames.length > 0) || (context && String(context).length > 1);
+  // 실제 통역 시도일 때만 쿼터 차감(무료월→구독→회차권). 한도 초과 시 402.
+  if (realAttempt) {
+    const q = await consumeQuota(c.env, uid);
+    if (!q.ok) return c.json({ error: '이번 달 통역 횟수를 모두 사용했어요. 이용권 코드를 등록하면 더 이용할 수 있어요.', code: 'QUOTA' }, 402);
   }
-
-  // health 보정(보수적·진단 아님): 건강 관련 신호 또는 맥락 키워드 시 health_flag
-  const HEALTH_KW = ['아파', '아픈', '절뚝', '토했', '구토', '설사', '안 먹', '못 먹', '식욕', '기운 없', '무기력', '피', '다쳤', '떨'];
-  const ctxHit = typeof context === 'string' && HEALTH_KW.some((k) => context.includes(k));
-  if (report?.health_flag && (hasHealth || ctxHit) && !report.health_flag.flag) {
-    report.health_flag.flag = true;
-    report.health_flag.note = report.health_flag.note || '몸이 불편한 신호일 수 있어요. 단정은 아니며, 수의사 상담을 권해드려요.';
-  }
-  const healthFlag = report?.health_flag?.flag ? 1 : 0;
+  const { report, hasVideo, healthFlag } = await runTranslation(c.env, { species, name: pet.name, age: pet.age, personality: pet.personality, codes, context, frames });
 
   const noteToSave = hasVideo ? '영상 분석함(원본·프레임 미저장)' : (media_note ?? null);
   const obs = await c.env.DB.prepare('INSERT INTO observations (pet_id,maum_user_id,species,signals_json,context,media_note) VALUES (?,?,?,?,?,?)')
-    .bind(pet.id, c.get('uid'), species, JSON.stringify(codes), context ?? null, noteToSave).run();
+    .bind(pet.id, uid, species, JSON.stringify(codes), context ?? null, noteToSave).run();
   const rep = await c.env.DB.prepare('INSERT INTO pet_reports (observation_id,pet_id,maum_user_id,report_json,health_flag) VALUES (?,?,?,?,?)')
-    .bind(obs.meta.last_row_id, pet.id, c.get('uid'), JSON.stringify(report), healthFlag).run();
-  return c.json({ report, report_id: rep.meta.last_row_id });
+    .bind(obs.meta.last_row_id, pet.id, uid, JSON.stringify(report), healthFlag).run();
+  const ent = await getEntitlement(c.env, uid);
+  return c.json({ report, report_id: rep.meta.last_row_id, remaining: ent.totalRemaining });
+});
+
+// ── 비회원 미리보기(로그인 전 체험) — IP당 평생 GUEST_FREE회, 저장 안 함. 마음풀 guest 패턴 ──
+app.post('/api/observe/guest', async (c) => {
+  const ip = clientIp(c);
+  if (!(await checkRateLimit(c.env.KV, `guest_obs:${ip}`, 5, 60))) return c.json({ error: '요청이 너무 잦아요. 잠시 후 다시 시도해주세요.' }, 429);
+  const key = `guest_observe:${ip}`;
+  const used = parseInt((await c.env.KV.get(key)) || '0', 10);
+  if (used >= GUEST_FREE) return c.json({ error: '비회원 미리보기를 모두 사용했어요. 가입하면 매월 무료로 더 이용할 수 있어요.', code: 'GUEST_LIMIT' }, 402);
+  const { species, signals, context, frames } = await c.req.json().catch(() => ({}));
+  if (typeof context === 'string' && context.length > 2000) return c.json({ error: '맥락이 너무 길어요(2000자 이내)' }, 413);
+  const sp: 'cat' | 'dog' = species === 'dog' ? 'dog' : 'cat';
+  const codes: string[] = Array.isArray(signals) ? signals : [];
+  if (!(codes.length > 0 || (Array.isArray(frames) && frames.length > 0) || (context && String(context).length > 1))) return c.json({ error: '행동 신호나 상황을 입력해 주세요' }, 400);
+  const { report } = await runTranslation(c.env, { species: sp, codes, context, frames });
+  c.env.KV.put(key, String(used + 1), { expirationTtl: 31536000 }).catch(() => {});
+  return c.json({ report, guest: true, remaining: Math.max(0, GUEST_FREE - used - 1) });
+});
+
+// ── 이용권(쿼터) 조회 + 쿠폰 등록 ──
+app.get('/api/entitlement', requireAuth, async (c) => c.json({ entitlement: await getEntitlement(c.env, c.get('uid')) }));
+
+app.post('/api/coupon/redeem', requireAuth, async (c) => {
+  const uid = c.get('uid');
+  if (!(await checkRateLimit(c.env.KV, `redeem:${clientIp(c)}`, 10, 3600))) return c.json({ error: '잠시 후 다시 시도해주세요.' }, 429);
+  const { code } = await c.req.json().catch(() => ({}));
+  const norm = normCode(code);
+  if (!norm) return c.json({ error: '코드를 입력해주세요' }, 400);
+  const cp = await c.env.DB.prepare('SELECT * FROM coupons WHERE code=?').bind(norm).first<any>();
+  if (!cp || !cp.active) return c.json({ error: '유효하지 않은 코드예요' }, 404);
+  if (cp.valid_until && cp.valid_until < nowIso()) return c.json({ error: '만료된 코드예요' }, 410);
+  if (cp.redeemed_count >= cp.max_redemptions) return c.json({ error: '이미 모두 사용된 코드예요' }, 409);
+  const mine = await c.env.DB.prepare('SELECT COUNT(*) n FROM coupon_redemptions WHERE code=? AND maum_user_id=?').bind(norm, uid).first<any>();
+  if ((mine?.n || 0) >= cp.per_user_limit) return c.json({ error: '이미 등록한 코드예요' }, 409);
+  try {
+    await c.env.DB.prepare('INSERT INTO coupon_redemptions (code,maum_user_id,type) VALUES (?,?,?)').bind(norm, uid, cp.type).run();
+  } catch { return c.json({ error: '이미 등록한 코드예요' }, 409); }
+  await c.env.DB.prepare('UPDATE coupons SET redeemed_count=redeemed_count+1 WHERE code=?').bind(norm).run();
+  const result = await applyGrant(c.env, uid, cp.type);
+  return c.json({ ok: true, granted: cp.type, result, entitlement: await getEntitlement(c.env, uid) });
+});
+
+// ── 어드민: 쿠폰 발행/조회 (ADMIN_SECRET Bearer) ──
+app.post('/api/admin/coupon/create', async (c) => {
+  const g = requireAdmin(c);
+  if (g === 'unset') return c.json({ error: 'ADMIN_SECRET 미설정' }, 503);
+  if (g === 'unauth') return c.json({ error: 'Unauthorized' }, 401);
+  const { type, count = 1, max_redemptions = 1, per_user_limit = 1, valid_until, source } = await c.req.json().catch(() => ({}));
+  if (!PLAN[type] && !PACK[type]) return c.json({ error: 'type은 sub_light|sub_pro|pack10' }, 400);
+  const n = Math.min(Math.max(1, Number(count) | 0), 500);
+  const batch = 'B' + Date.now().toString(36).toUpperCase();
+  const codes: string[] = [];
+  for (let i = 0; i < n; i++) {
+    const code = genCode(8);
+    await c.env.DB.prepare('INSERT INTO coupons (code,type,max_redemptions,per_user_limit,valid_until,source,batch_id) VALUES (?,?,?,?,?,?,?)')
+      .bind(code, type, Number(max_redemptions) || 1, Number(per_user_limit) || 1, valid_until || null, source || 'admin', batch).run();
+    codes.push(code);
+  }
+  return c.json({ ok: true, type, batch_id: batch, count: n, codes });
+});
+app.get('/api/admin/coupon/list', async (c) => {
+  const g = requireAdmin(c);
+  if (g === 'unset') return c.json({ error: 'ADMIN_SECRET 미설정' }, 503);
+  if (g === 'unauth') return c.json({ error: 'Unauthorized' }, 401);
+  const { results } = await c.env.DB.prepare('SELECT code,type,max_redemptions,redeemed_count,per_user_limit,valid_until,active,source,batch_id,created_at FROM coupons ORDER BY created_at DESC LIMIT 500').all();
+  return c.json({ coupons: results });
 });
 
 // ── 리포트 ──
