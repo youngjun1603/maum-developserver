@@ -403,8 +403,25 @@ function App() {
   useEffect(()=>{ if(token) api('/auth/me',{token}).then(d=>setUser(d.user)).catch(()=>{ localStorage.removeItem(TOKEN_KEY); setToken(''); }); },[token]);
   function logout(){ localStorage.removeItem(TOKEN_KEY); setToken(''); setUser(null); }
   function back(){ setView('dashboard'); setChild(null); setReportData(null); }
+  // 통역(세션) 시작 전 잔여 확인 — 0이면 아이 모드 진입 대신 부모 화면에서 안내(아이가 한도 에러 안 봄)
+  async function tryStart(ch){ setChild(ch);
+    try{ const d=await api('/entitlement',{token}); if((d.entitlement?.totalRemaining??1)<=0){ setView('quotaWall'); return; } }catch(e){}
+    setView('pinStart'); }
 
   if(!token) return html`<${Auth} onLogin=${(t,u)=>{setToken(t);setUser(u);}} />`;
+
+  // 한도 초과 — 부모 화면(아이 모드 진입 전)
+  if(view==='quotaWall' && child) return html`<div>
+    <div class="topbar"><b>🦦 마음수달</b><span class="muted" style=${{cursor:'pointer'}} onClick=${back}>← 뒤로</span></div>
+    <div class="wrap">
+      <div class="card" style=${{textAlign:'center'}}>
+        <div style=${{fontSize:42}}>🎟️</div>
+        <b>이번 달 통역을 모두 사용했어요</b>
+        <div class="muted" style=${{margin:'8px 0 0'}}>이용권 코드를 등록하면 ${child?.name||'아이'}와 다시 이야기를 시작할 수 있어요.</div>
+      </div>
+      <${EntitlementCard} token=${token} />
+      <button class="btn" onClick=${()=>tryStart(child)}>이야기 시작하기</button>
+    </div></div>`;
 
   // 아이 모드 진입 게이트 (부모 PIN)
   if(view==='pinStart' && child) return html`<${PinGate} token=${token} mode="auto"
@@ -420,7 +437,7 @@ function App() {
     <${Reports} token=${token} child=${child} onOpen=${(id)=>{ api('/reports/'+id,{token}).then(d=>{setReportData(d);setView('report');}); }} /></div>`;
   if(view==='settings') return html`<${Settings} token=${token} user=${user} onBack=${back} />`;
   return html`<${Dashboard} token=${token} user=${user} onLogout=${logout}
-    onStart=${(ch)=>{setChild(ch);setView('pinStart');}} onReports=${(ch)=>{setChild(ch);setView('reports');}} onSettings=${()=>setView('settings')} />`;
+    onStart=${tryStart} onReports=${(ch)=>{setChild(ch);setView('reports');}} onSettings=${()=>setView('settings')} />`;
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(html`<${App} />`);
