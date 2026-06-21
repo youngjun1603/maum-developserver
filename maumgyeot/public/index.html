@@ -37,11 +37,11 @@ function api(path, { method='GET', body, token } = {}) {
     method,
     headers: { 'Content-Type':'application/json', ...(token ? { Authorization:'Bearer '+token } : {}) },
     body: body ? JSON.stringify(body) : undefined,
-  }).then(async r => { const d = await r.json().catch(()=>({})); if(!r.ok) throw new Error(d.error||'오류가 발생했어요'); return d; });
+  }).then(async r => { const d = await r.json().catch(()=>({})); if(!r.ok){ const e=new Error(d.error||'오류가 발생했어요'); e.code=d.code; e.status=r.status; throw e; } return d; });
 }
 const SPECIES_LABEL = { cat:'고양이', dog:'개' };
 
-function Auth({ onLogin }) {
+function Auth({ onLogin, onGuest }) {
   const [mode,setMode]=useState('login'); const [email,setEmail]=useState(''); const [pw,setPw]=useState(''); const [name,setName]=useState('');
   const [err,setErr]=useState(''); const [loading,setLoading]=useState(false);
   async function submit(){ setErr(''); setLoading(true);
@@ -63,7 +63,8 @@ function Auth({ onLogin }) {
         ${mode==='login'?'처음이세요? 가입하기':'이미 계정이 있어요 → 로그인'}
       </div>
     </div>
-    <div class="muted" style=${{textAlign:'center'}}>본 서비스는 수의학적 진단이 아니며, 행동 이해를 돕는 참고용이에요.</div>
+    <button class="btn btn-ghost" style=${{marginTop:6}} onClick=${onGuest}>로그인 없이 체험해보기 →</button>
+    <div class="muted" style=${{textAlign:'center',marginTop:14}}>본 서비스는 수의학적 진단이 아니며, 행동 이해를 돕는 참고용이에요.</div>
   </div>`;
 }
 
@@ -105,6 +106,7 @@ function Dashboard({ token, user, onLogout, onObserve, onReports, onGuide }) {
         <button class="btn" onClick=${add}>등록</button>
         <button class="btn btn-ghost" style=${{marginTop:8}} onClick=${()=>setAdding(false)}>취소</button>
       </div>` : html`<button class="btn btn-ghost" onClick=${()=>setAdding(true)}>+ 반려동물 등록</button>`}
+      <${EntitlementCard} token=${token} />
       <a href=${'https://maumotter.com/#token='+encodeURIComponent(token)} class="card" style=${{display:'block',textDecoration:'none',color:'inherit',marginTop:16}}>
         <b>🦦 마음수달</b><div class="muted" style=${{marginTop:6}}>아이의 속마음을 또또가 통역해요 — 같은 계정으로 바로 입장 →</div>
       </a>
@@ -117,7 +119,7 @@ function Dashboard({ token, user, onLogout, onObserve, onReports, onGuide }) {
 
 // 영상 통역: 후면 카메라로 ~7초 촬영하며 프레임 6장 추출 → 분석에만 일시 전송, 저장 안 함(원본·프레임 미저장).
 function Observe({ token, pet, onDone, onBack }) {
-  const [sigs,setSigs]=useState([]); const [picked,setPicked]=useState([]); const [context,setContext]=useState(''); const [busy,setBusy]=useState(false); const [err,setErr]=useState('');
+  const [sigs,setSigs]=useState([]); const [picked,setPicked]=useState([]); const [context,setContext]=useState(''); const [busy,setBusy]=useState(false); const [err,setErr]=useState(''); const [quotaHit,setQuotaHit]=useState(false);
   const [cam,setCam]=useState(false); const [recording,setRecording]=useState(false); const [prog,setProg]=useState(0);
   const videoRef=useRef(null); const streamRef=useRef(null); const framesRef=useRef([]); const TOTAL=6;
   useEffect(()=>{ api('/behavior?species='+pet.species,{token}).then(d=>setSigs(d.signals||[])).catch(()=>{}); },[]);
@@ -130,7 +132,7 @@ function Observe({ token, pet, onDone, onBack }) {
     if(picked.length===0 && context.trim().length<2 && fr.length===0){ setErr('행동을 고르거나, 상황을 적거나, 영상을 찍어주세요'); return; }
     setErr(''); setBusy(true);
     try{ const d=await api('/observe',{method:'POST',token,body:{pet_id:pet.id,signals:picked,context,frames:fr}}); onDone(d); }
-    catch(e){ setErr(e.message); setBusy(false); } }
+    catch(e){ setErr(e.message); if(e.code==='QUOTA'||e.status===402){ setQuotaHit(true); } setBusy(false); } }
 
   async function startVideo(){ try{ const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false}); streamRef.current=stream; framesRef.current=[]; setProg(0); setCam(true); }catch{ alert('카메라를 열 수 없어요. 권한을 확인해 주세요.'); } }
   function stopVideo(){ try{streamRef.current&&streamRef.current.getTracks().forEach(t=>t.stop());}catch{} streamRef.current=null; setCam(false); setRecording(false); }
@@ -159,6 +161,7 @@ function Observe({ token, pet, onDone, onBack }) {
         <textarea class="field" style=${{marginTop:10,minHeight:90,resize:'vertical'}} placeholder="예: 저녁에 손님이 왔는데 소파 밑으로 숨었어요" value=${context} onInput=${e=>setContext(e.target.value)}></textarea>
       </div>
       ${err && html`<div class="err">${err}</div>`}
+      ${quotaHit && html`<button class="btn" style=${{marginBottom:8}} onClick=${onBack}>🎟️ 돌아가서 이용권 코드 등록하기</button>`}
       <button class="btn" disabled=${busy} onClick=${()=>submit()}>${busy?'마음을 읽는 중…':'통역 받기'}</button>
       <button class="btn btn-ghost" style=${{marginTop:8}} disabled=${busy} onClick=${startVideo}>📹 영상 찍어서 통역받기</button>
       <div class="muted" style=${{textAlign:'center',padding:'10px 0'}}>⚠️ 표시는 맥락에 따라 정반대일 수 있는 신호예요. 단정하지 않고 함께 읽어요.</div>
@@ -226,15 +229,84 @@ function Behavior({ token, onBack }) {
   </div>`;
 }
 
+// 이용권(쿼터) 표시 + 코드 등록
+function EntitlementCard({ token }) {
+  const [ent,setEnt]=useState(null); const [code,setCode]=useState(''); const [msg,setMsg]=useState(''); const [err,setErr]=useState(''); const [busy,setBusy]=useState(false);
+  useEffect(()=>{ api('/entitlement',{token}).then(d=>setEnt(d.entitlement)).catch(()=>{}); },[]);
+  async function redeem(){ if(!code.trim())return; setErr('');setMsg('');setBusy(true);
+    try{ const d=await api('/coupon/redeem',{method:'POST',token,body:{code}}); setEnt(d.entitlement); setCode(''); setMsg('등록 완료! 이용권이 적용됐어요.'); }
+    catch(e){ setErr(e.message); } finally{ setBusy(false); } }
+  const planLabel = ent ? (ent.plan==='pro'?'프로':ent.plan==='light'?'라이트':'무료') : '';
+  return html`<div class="card">
+    <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+      <b>🎟️ 이용권</b>
+      ${ent && html`<span class="pill">${planLabel} · 남은 통역 ${ent.totalRemaining}회</span>`}
+    </div>
+    ${ent && html`<div class="muted" style=${{marginTop:6,fontSize:12}}>이번 달 ${ent.used}/${ent.monthlyAllowance}회 사용${ent.packRemaining?` · 회차권 ${ent.packRemaining}회`:''}${ent.subActive?` · 구독 ~${(ent.subExpires||'').slice(0,10)}`:''}</div>`}
+    <div style=${{display:'flex',gap:8,marginTop:10}}>
+      <input class="field" style=${{margin:0,flex:1}} placeholder="이용권 코드 입력" value=${code} onInput=${e=>setCode(e.target.value)} onKeyDown=${e=>{if(e.key==='Enter')redeem();}} />
+      <button class="btn" style=${{width:'auto',padding:'12px 16px'}} disabled=${busy||!code.trim()} onClick=${redeem}>등록</button>
+    </div>
+    ${msg && html`<div class="muted" style=${{color:'var(--teal)',marginTop:8}}>${msg}</div>`}
+    ${err && html`<div class="err" style=${{marginTop:8}}>${err}</div>`}
+    <div class="muted" style=${{marginTop:8,fontSize:12}}>스마트스토어에서 이용권을 구매하면 코드를 받을 수 있어요.</div>
+  </div>`;
+}
+
+// 비회원 미리보기(로그인 전 체험) — /api/observe/guest, 저장 안 함
+function GuestObserve({ onSignup, onBack }) {
+  const [sp,setSp]=useState('cat'); const [sigs,setSigs]=useState([]); const [picked,setPicked]=useState([]); const [context,setContext]=useState('');
+  const [busy,setBusy]=useState(false); const [err,setErr]=useState(''); const [data,setData]=useState(null); const [remaining,setRemaining]=useState(null);
+  useEffect(()=>{ api('/behavior?species='+sp).then(d=>setSigs(d.signals||[])).catch(()=>{}); setPicked([]); },[sp]);
+  const groups = sigs.reduce((a,s)=>{ (a[s.group]=a[s.group]||[]).push(s); return a; },{});
+  function toggle(code){ setPicked(p=>p.includes(code)?p.filter(x=>x!==code):[...p,code]); }
+  async function submit(){ if(picked.length===0 && context.trim().length<2){ setErr('행동을 고르거나 상황을 적어주세요'); return; } setErr('');setBusy(true);
+    try{ const d=await api('/observe/guest',{method:'POST',body:{species:sp,signals:picked,context}}); setData(d); setRemaining(d.remaining); }
+    catch(e){ setErr(e.message); } finally{ setBusy(false); } }
+  if(data) return html`<div>
+    <div class="topbar"><b>미리보기 통역</b><span class="muted" style=${{cursor:'pointer'}} onClick=${onBack}>← 뒤로</span></div>
+    <div class="wrap">
+      <${Report} data=${data} />
+      <div class="card" style=${{textAlign:'center',background:'#EAF3F2'}}>
+        <b>가입하면 더 깊이 이용할 수 있어요</b>
+        <div class="muted" style=${{margin:'6px 0 12px'}}>우리 아이 등록 · 영상 통역 · 지난 기록까지. 가입 시 매월 무료 통역을 드려요.${remaining!=null?` (남은 미리보기 ${remaining}회)`:''}</div>
+        <button class="btn" onClick=${onSignup}>가입하고 계속하기</button>
+      </div>
+    </div></div>`;
+  return html`<div>
+    <div class="topbar"><b>🐾 미리보기 체험</b><span class="muted" style=${{cursor:'pointer'}} onClick=${onBack}>← 뒤로</span></div>
+    <div class="wrap">
+      <div style=${{display:'flex',gap:8,marginBottom:12}}>
+        <button class=${'btn '+(sp==='cat'?'':'btn-ghost')} style=${{flex:1}} onClick=${()=>setSp('cat')}>🐱 고양이</button>
+        <button class=${'btn '+(sp==='dog'?'':'btn-ghost')} style=${{flex:1}} onClick=${()=>setSp('dog')}>🐶 개</button>
+      </div>
+      <div class="card"><b>어떤 행동을 보였나요?</b> <span class="muted">(여러 개 선택)</span>
+        ${Object.entries(groups).map(([g,list])=>html`<div key=${g} style=${{marginTop:12}}>
+          <div class="muted" style=${{marginBottom:6}}>${g}</div>
+          ${list.map(s=>html`<span key=${s.code} class=${'chip'+(picked.includes(s.code)?' on':'')} onClick=${()=>toggle(s.code)}>${s.label}${s.ambiguous?' ⚠️':''}</span>`)}
+        </div>`)}
+      </div>
+      <div class="card"><b>무슨 상황이었나요?</b>
+        <textarea class="field" style=${{marginTop:10,minHeight:80,resize:'vertical'}} placeholder="예: 손님이 오자 소파 밑으로 숨었어요" value=${context} onInput=${e=>setContext(e.target.value)}></textarea>
+      </div>
+      ${err && html`<div class="err">${err}</div>`}
+      <button class="btn" disabled=${busy} onClick=${submit}>${busy?'마음을 읽는 중…':'무료로 통역 받아보기'}</button>
+      <div class="muted" style=${{textAlign:'center',padding:'10px 0',fontSize:12}}>로그인 없이 체험용이에요. 결과는 저장되지 않아요.</div>
+    </div></div>`;
+}
+
 function App() {
   const [token,setToken]=useState(localStorage.getItem(TOKEN_KEY)||'');
-  const [user,setUser]=useState(null); const [view,setView]=useState('dashboard'); const [pet,setPet]=useState(null); const [reportData,setReportData]=useState(null);
+  const [user,setUser]=useState(null); const [view,setView]=useState('dashboard'); const [pet,setPet]=useState(null); const [reportData,setReportData]=useState(null); const [guest,setGuest]=useState(false);
   // 마음 시리즈 SSO: 다른 앱에서 #token=…로 넘어오면 그대로 로그인(공용 maum-auth·JWT 공유)
   useEffect(()=>{ const m=(location.hash||'').match(/token=([^&]+)/); if(m){ const t=decodeURIComponent(m[1]); localStorage.setItem(TOKEN_KEY,t); setToken(t); history.replaceState(null,'',location.pathname+location.search); } },[]);
   useEffect(()=>{ if(token) api('/auth/me',{token}).then(d=>setUser(d.user)).catch(()=>{ localStorage.removeItem(TOKEN_KEY); setToken(''); }); },[token]);
   function logout(){ localStorage.removeItem(TOKEN_KEY); setToken(''); setUser(null); }
   function back(){ setView('dashboard'); setPet(null); setReportData(null); }
-  if(!token) return html`<${Auth} onLogin=${(t,u)=>{setToken(t);setUser(u);}} />`;
+  if(!token){
+    if(guest) return html`<${GuestObserve} onBack=${()=>setGuest(false)} onSignup=${()=>setGuest(false)} />`;
+    return html`<${Auth} onLogin=${(t,u)=>{setToken(t);setUser(u);}} onGuest=${()=>setGuest(true)} />`;
+  }
   if(view==='observe' && pet) return html`<${Observe} token=${token} pet=${pet} onBack=${back} onDone=${(d)=>{ setReportData(d); setView('report'); }} />`;
   if(view==='report') return html`<div><div class="topbar"><b>통역 리포트</b><span class="muted" style=${{cursor:'pointer'}} onClick=${back}>완료</span></div><div class="wrap"><${Report} data=${reportData} /></div></div>`;
   if(view==='reports' && pet) return html`<div><div class="topbar"><b>🐾 마음곁</b><span class="muted" style=${{cursor:'pointer'}} onClick=${back}>← 뒤로</span></div>

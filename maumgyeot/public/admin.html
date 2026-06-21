@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>마음곁 · 쿠폰 발행 (관리자)</title>
+<style>
+  body{font-family:system-ui,-apple-system,'Malgun Gothic',sans-serif;max-width:780px;margin:0 auto;padding:24px 18px 60px;color:#222;background:#FAF7F2}
+  h1{font-size:20px}h2{font-size:15px;margin-top:24px}
+  .card{background:#fff;border:1px solid #ECE6DD;border-radius:14px;padding:16px;margin-top:14px}
+  label{display:block;font-size:13px;color:#555;margin:10px 0 4px}
+  input,select{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:10px;font-size:14px;box-sizing:border-box}
+  .row{display:flex;gap:10px}.row>div{flex:1}
+  button{background:#3E8E8A;color:#fff;border:0;border-radius:10px;padding:11px 16px;font-size:14px;font-weight:600;cursor:pointer}
+  button.ghost{background:#fff;border:1px solid #ddd;color:#333}
+  .muted{color:#888;font-size:12px}.err{color:#C0492F;font-size:13px;margin-top:8px}
+  code{background:#F3F0EA;padding:2px 6px;border-radius:6px;font-size:13px}
+  table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}
+  td,th{border-bottom:1px solid #eee;padding:6px 4px;text-align:left}
+  pre{background:#F3F0EA;padding:12px;border-radius:10px;white-space:pre-wrap;word-break:break-all;font-size:13px}
+</style>
+</head>
+<body>
+<h1>🎟️ 마음곁 쿠폰 발행 (관리자)</h1>
+<div class="card">
+  <label>ADMIN_SECRET</label>
+  <input id="secret" type="password" placeholder="wrangler secret put ADMIN_SECRET 값" />
+  <div class="muted" style="margin-top:6px">브라우저에만 저장됩니다(localStorage). 공용 PC에선 사용 후 지워주세요.</div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0">코드 발행</h2>
+  <label>상품 종류</label>
+  <select id="type">
+    <option value="sub_light">구독 라이트 (30일 · 월 30회)</option>
+    <option value="sub_pro">구독 프로 (30일 · 월 100회)</option>
+    <option value="pack10">회차권 10회 (60일 유효)</option>
+  </select>
+  <div class="row">
+    <div><label>발행 개수</label><input id="count" type="number" value="10" min="1" max="500" /></div>
+    <div><label>코드당 사용 가능 인원</label><input id="maxr" type="number" value="1" min="1" /></div>
+    <div><label>1인 등록 한도</label><input id="peruser" type="number" value="1" min="1" /></div>
+  </div>
+  <div class="row">
+    <div><label>만료일(선택)</label><input id="until" type="date" /></div>
+    <div><label>출처(선택)</label><input id="source" placeholder="smartstore / partner:이름" /></div>
+  </div>
+  <button style="margin-top:14px" onclick="create()">발행하기</button>
+  <div id="cerr" class="err"></div>
+  <div id="out"></div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0">발행 내역 <button class="ghost" style="float:right;padding:6px 12px" onclick="load()">새로고침</button></h2>
+  <div id="list"></div>
+</div>
+
+<script>
+var S=document.getElementById('secret');
+S.value=localStorage.getItem('mg_admin_secret')||'';
+S.addEventListener('input',function(){ localStorage.setItem('mg_admin_secret',S.value); });
+function hdr(){ return { 'Content-Type':'application/json', 'Authorization':'Bearer '+(S.value||'') }; }
+
+async function create(){
+  document.getElementById('cerr').textContent='';
+  document.getElementById('out').innerHTML='';
+  var body={ type:document.getElementById('type').value, count:Number(document.getElementById('count').value)||1,
+    max_redemptions:Number(document.getElementById('maxr').value)||1, per_user_limit:Number(document.getElementById('peruser').value)||1,
+    valid_until:document.getElementById('until').value? new Date(document.getElementById('until').value+'T23:59:59').toISOString():null,
+    source:document.getElementById('source').value||'admin' };
+  try{
+    var r=await fetch('/api/admin/coupon/create',{method:'POST',headers:hdr(),body:JSON.stringify(body)});
+    var d=await r.json(); if(!r.ok) throw new Error(d.error||'실패');
+    var csv='code,type,batch\n'+d.codes.map(function(c){return c+','+d.type+','+d.batch_id;}).join('\n');
+    document.getElementById('out').innerHTML='<div class="muted" style="margin-top:12px">배치 '+d.batch_id+' · '+d.count+'개 발행됨 (아래 코드를 스마트스토어 구매자에게 제공)</div>'+
+      '<pre>'+d.codes.join('\n')+'</pre>'+
+      '<button class="ghost" onclick="dl(\''+encodeURIComponent(csv)+'\',\''+d.batch_id+'\')">CSV 다운로드</button>';
+    load();
+  }catch(e){ document.getElementById('cerr').textContent=e.message; }
+}
+function dl(enc,batch){ var a=document.createElement('a'); a.href='data:text/csv;charset=utf-8,'+enc; a.download='maumgyeot_'+batch+'.csv'; a.click(); }
+
+async function load(){
+  try{
+    var r=await fetch('/api/admin/coupon/list',{headers:hdr()}); var d=await r.json(); if(!r.ok) throw new Error(d.error||'실패');
+    var rows=(d.coupons||[]).map(function(c){ return '<tr><td><code>'+c.code+'</code></td><td>'+c.type+'</td><td>'+c.redeemed_count+'/'+c.max_redemptions+'</td><td>'+(c.source||'')+'</td><td>'+(c.created_at||'').slice(0,10)+'</td></tr>'; }).join('');
+    document.getElementById('list').innerHTML='<table><tr><th>코드</th><th>종류</th><th>사용</th><th>출처</th><th>발행일</th></tr>'+rows+'</table>';
+  }catch(e){ document.getElementById('list').innerHTML='<div class="err">'+e.message+'</div>'; }
+}
+if(S.value) load();
+</script>
+</body>
+</html>
