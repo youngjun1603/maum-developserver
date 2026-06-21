@@ -353,11 +353,16 @@ app.get('/api/reports/:id', requireAuth, async (c) => {
 // ── 계정 삭제(회원 탈퇴) — Google Play 필수 ──
 app.delete('/api/account', requireAuth, async (c) => {
   const uid = c.get('uid');
-  // 1) 마음곁 도메인 데이터 전부 삭제
+  // 1) 마음곁 도메인 + 빌링/제휴 데이터 전부 삭제(완전 탈퇴)
   await c.env.DB.batch([
     c.env.DB.prepare('DELETE FROM pet_reports WHERE maum_user_id=?').bind(uid),
     c.env.DB.prepare('DELETE FROM observations WHERE maum_user_id=?').bind(uid),
     c.env.DB.prepare('DELETE FROM pets WHERE maum_user_id=?').bind(uid),
+    c.env.DB.prepare('DELETE FROM subscriptions WHERE maum_user_id=?').bind(uid),
+    c.env.DB.prepare('DELETE FROM packs WHERE maum_user_id=?').bind(uid),
+    c.env.DB.prepare('DELETE FROM usage_monthly WHERE maum_user_id=?').bind(uid),
+    c.env.DB.prepare('DELETE FROM coupon_redemptions WHERE maum_user_id=?').bind(uid),
+    c.env.DB.prepare('DELETE FROM referrals WHERE maum_user_id=?').bind(uid),
   ]);
   // 2) 공용 마음 계정 삭제(통합 로그인 계정 — 마음 시리즈 전체에서 제거)
   await deleteUser(c.env.AUTH_DB, uid);
