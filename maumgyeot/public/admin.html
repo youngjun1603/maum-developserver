@@ -23,9 +23,9 @@
 <body>
 <h1>🎟️ 마음곁 쿠폰 발행 (관리자)</h1>
 <div class="card">
-  <label>ADMIN_SECRET</label>
-  <input id="secret" type="password" placeholder="wrangler secret put ADMIN_SECRET 값" />
-  <div class="muted" style="margin-top:6px">브라우저에만 저장됩니다(localStorage). 공용 PC에선 사용 후 지워주세요.</div>
+  <label>ADMIN_SECRET (여기에 직접 입력)</label>
+  <input id="secret" type="password" placeholder="Cloudflare에 등록한 ADMIN_SECRET 값을 붙여넣으세요" />
+  <div class="muted" style="margin-top:6px">이 칸은 비어 있는 입력칸입니다(시크릿이 노출된 게 아니에요). 입력해야 발행 API 인증이 됩니다. 값은 이 브라우저에만 저장(localStorage)되고 서버로만 전송됩니다. 공용 PC에선 사용 후 지워주세요.</div>
 </div>
 
 <div class="card">
