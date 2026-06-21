@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>마음수달 · 쿠폰 발행 (관리자)</title>
+<style>
+  body{font-family:system-ui,-apple-system,'Malgun Gothic',sans-serif;max-width:780px;margin:0 auto;padding:24px 18px 60px;color:#222;background:#F5F8FF}
+  h1{font-size:20px}h2{font-size:15px;margin-top:24px}
+  .card{background:#fff;border:1px solid #E3E8F0;border-radius:14px;padding:16px;margin-top:14px}
+  label{display:block;font-size:13px;color:#555;margin:10px 0 4px}
+  input,select{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:10px;font-size:14px;box-sizing:border-box}
+  .row{display:flex;gap:10px}.row>div{flex:1}
+  button{background:#3B6FB5;color:#fff;border:0;border-radius:10px;padding:11px 16px;font-size:14px;font-weight:600;cursor:pointer}
+  button.ghost{background:#fff;border:1px solid #ddd;color:#333}
+  .muted{color:#888;font-size:12px}.err{color:#C0492F;font-size:13px;margin-top:8px}
+  code{background:#EEF2FA;padding:2px 6px;border-radius:6px;font-size:13px}
+  table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}
+  td,th{border-bottom:1px solid #eee;padding:6px 4px;text-align:left}
+  pre{background:#EEF2FA;padding:12px;border-radius:10px;white-space:pre-wrap;word-break:break-all;font-size:13px}
+</style>
+</head>
+<body>
+<h1>🎟️ 마음수달 쿠폰 발행 (관리자)</h1>
+<div class="card">
+  <label>ADMIN_SECRET (여기에 직접 입력)</label>
+  <input id="secret" type="password" placeholder="Cloudflare에 등록한 ADMIN_SECRET 값을 붙여넣으세요" />
+  <div class="muted" style="margin-top:6px">이 칸은 비어 있는 입력칸입니다(시크릿 노출 아님). 입력해야 발행 API 인증이 됩니다. 값은 이 브라우저에만 저장(localStorage)되고 서버로만 전송됩니다.</div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0">코드 발행</h2>
+  <label>상품 종류 (1통역 = 세션 1건)</label>
+  <select id="type">
+    <option value="sub_light">구독 라이트 (30일 · 월 30세션)</option>
+    <option value="sub_pro">구독 프로 (30일 · 월 100세션)</option>
+    <option value="pack10">회차권 10세션 (60일 유효)</option>
+  </select>
+  <div class="row">
+    <div><label>발행 개수</label><input id="count" type="number" value="10" min="1" max="500" /></div>
+    <div><label>코드당 사용 가능 인원</label><input id="maxr" type="number" value="1" min="1" /></div>
+    <div><label>1인 등록 한도</label><input id="peruser" type="number" value="1" min="1" /></div>
+  </div>
+  <div class="row">
+    <div><label>만료일(선택)</label><input id="until" type="date" /></div>
+    <div><label>출처(선택)</label><input id="source" placeholder="smartstore / partner:이름" /></div>
+  </div>
+  <button style="margin-top:14px" onclick="create()">발행하기</button>
+  <div id="cerr" class="err"></div>
+  <div id="out"></div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0">발행 내역 <button class="ghost" style="float:right;padding:6px 12px" onclick="load()">새로고침</button></h2>
+  <div id="list"></div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0">제휴(?ref) 통계 <button class="ghost" style="float:right;padding:6px 12px" onclick="loadRefs()">새로고침</button></h2>
+  <div class="muted">파트너 링크 예: <code>https://maumotter.com/?ref=파트너이름</code> · 가입수 / 유료전환(코드등록자)</div>
+  <div id="refs"></div>
+</div>
+
+<script>
+var S=document.getElementById('secret');
+S.value=localStorage.getItem('mo_admin_secret')||'';
+S.addEventListener('input',function(){ localStorage.setItem('mo_admin_secret',S.value); });
+function hdr(){ return { 'Content-Type':'application/json', 'Authorization':'Bearer '+(S.value||'') }; }
+async function create(){
+  document.getElementById('cerr').textContent=''; document.getElementById('out').innerHTML='';
+  var body={ type:document.getElementById('type').value, count:Number(document.getElementById('count').value)||1,
+    max_redemptions:Number(document.getElementById('maxr').value)||1, per_user_limit:Number(document.getElementById('peruser').value)||1,
+    valid_until:document.getElementById('until').value? new Date(document.getElementById('until').value+'T23:59:59').toISOString():null,
+    source:document.getElementById('source').value||'admin' };
+  try{
+    var r=await fetch('/api/admin/coupon/create',{method:'POST',headers:hdr(),body:JSON.stringify(body)});
+    var d=await r.json(); if(!r.ok) throw new Error(d.error||'실패');
+    var csv='code,type,batch\n'+d.codes.map(function(c){return c+','+d.type+','+d.batch_id;}).join('\n');
+    document.getElementById('out').innerHTML='<div class="muted" style="margin-top:12px">배치 '+d.batch_id+' · '+d.count+'개 발행됨</div><pre>'+d.codes.join('\n')+'</pre>'+
+      '<button class="ghost" onclick="dl(\''+encodeURIComponent(csv)+'\',\''+d.batch_id+'\')">CSV 다운로드</button>';
+    load();
+  }catch(e){ document.getElementById('cerr').textContent=e.message; }
+}
+function dl(enc,batch){ var a=document.createElement('a'); a.href='data:text/csv;charset=utf-8,'+enc; a.download='maumotter_'+batch+'.csv'; a.click(); }
+async function load(){
+  try{
+    var r=await fetch('/api/admin/coupon/list',{headers:hdr()}); var d=await r.json(); if(!r.ok) throw new Error(d.error||'실패');
+    var rows=(d.coupons||[]).map(function(c){ return '<tr><td><code>'+c.code+'</code></td><td>'+c.type+'</td><td>'+c.redeemed_count+'/'+c.max_redemptions+'</td><td>'+(c.source||'')+'</td><td>'+(c.created_at||'').slice(0,10)+'</td></tr>'; }).join('');
+    document.getElementById('list').innerHTML='<table><tr><th>코드</th><th>종류</th><th>사용</th><th>출처</th><th>발행일</th></tr>'+rows+'</table>';
+  }catch(e){ document.getElementById('list').innerHTML='<div class="err">'+e.message+'</div>'; }
+}
+async function loadRefs(){
+  try{
+    var r=await fetch('/api/admin/referrals',{headers:hdr()}); var d=await r.json(); if(!r.ok) throw new Error(d.error||'실패');
+    var list=d.referrals||[];
+    if(list.length===0){ document.getElementById('refs').innerHTML='<div class="muted" style="margin-top:8px">아직 제휴 유입 가입이 없어요.</div>'; return; }
+    var rows=list.map(function(x){ var cv=x.signups?Math.round(x.paid/x.signups*100):0; return '<tr><td><code>'+x.ref+'</code></td><td>'+x.signups+'</td><td>'+x.paid+'</td><td>'+cv+'%</td></tr>'; }).join('');
+    document.getElementById('refs').innerHTML='<table><tr><th>파트너(ref)</th><th>가입</th><th>유료전환</th><th>전환율</th></tr>'+rows+'</table>';
+  }catch(e){ document.getElementById('refs').innerHTML='<div class="err">'+e.message+'</div>'; }
+}
+if(S.value){ load(); loadRefs(); }
+</script>
+</body>
+</html>

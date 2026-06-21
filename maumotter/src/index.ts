@@ -11,6 +11,7 @@ type Bindings = {
   ASSETS: Fetcher;
   JWT_SECRET: string;      // 마음 시리즈 공유
   ANTHROPIC_API_KEY: string;
+  ADMIN_SECRET?: string;   // 쿠폰 발행 어드민
 };
 
 const app = new Hono<{ Bindings: Bindings; Variables: { uid: number } }>();
@@ -43,15 +44,103 @@ app.options('/api/*', (c) => {
 // Anthropic은 Cloudflare AI Gateway 경유(직접 api.anthropic.com 호출은 Workers egress에서 403 차단됨)
 const AI_GATEWAY = 'https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages';
 async function callClaude(env: Bindings, opts: { model: string; system: string; messages: any[]; max_tokens: number; temperature?: number }) {
-  const res = await fetch(AI_GATEWAY, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: opts.model, max_tokens: opts.max_tokens, temperature: opts.temperature ?? 1, system: opts.system, messages: opts.messages }),
-  });
-  if (!res.ok) throw new Error('LLM ' + res.status + ' ' + (await res.text()).slice(0, 300));
-  const data = await res.json() as any;
-  return (data.content?.find((b: any) => b.type === 'text')?.text ?? '').trim();
+  const once = async () => {
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), 25000);
+    try {
+      const res = await fetch(AI_GATEWAY, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({ model: opts.model, max_tokens: opts.max_tokens, temperature: opts.temperature ?? 1, system: opts.system, messages: opts.messages }),
+        signal: ctrl.signal,
+      });
+      if (!res.ok) throw new Error('LLM ' + res.status + ' ' + (await res.text()).slice(0, 300));
+      const data = await res.json() as any;
+      return (data.content?.find((b: any) => b.type === 'text')?.text ?? '').trim();
+    } finally { clearTimeout(to); }
+  };
+  try { return await once(); } catch { return await once(); }
 }
+
+// ── 레이트리밋(KV 버킷, 마음풀 패턴) ──
+async function checkRateLimit(kv: KVNamespace, key: string, limit: number, windowSec = 60): Promise<boolean> {
+  const bucket = Math.floor(Date.now() / 1000 / windowSec);
+  const k = `rl:${key}:${bucket}`;
+  try {
+    const cur = parseInt((await kv.get(k)) || '0', 10);
+    if (cur >= limit) return false;
+    kv.put(k, String(cur + 1), { expirationTtl: windowSec * 2 }).catch(() => {});
+    return true;
+  } catch { return true; }
+}
+const clientIp = (c: any) => c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || 'unknown';
+
+// ── 유료/쿼터 엔진 (통역 단위 = 세션 1건). 마음곁과 동일. ──
+const FREE_MONTHLY = 5;   // 가입자 월 무료 세션
+const PLAN: Record<string, { plan: string; quota: number; days: number }> = {
+  sub_light: { plan: 'light', quota: 30, days: 30 },
+  sub_pro: { plan: 'pro', quota: 100, days: 30 },
+};
+const PACK: Record<string, { count: number; days: number }> = { pack10: { count: 10, days: 60 } };
+const ym = () => { const d = new Date(); return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}`; };
+const nowIso = () => new Date().toISOString();
+const addDays = (days: number) => new Date(Date.now() + days * 86400000).toISOString();
+
+async function getEntitlement(env: Bindings, uid: number) {
+  const now = nowIso(); const m = ym();
+  const sub = await env.DB.prepare('SELECT plan,monthly_quota,expires_at FROM subscriptions WHERE maum_user_id=?').bind(uid).first<any>();
+  const subActive = !!(sub && sub.expires_at > now);
+  const subQuota = subActive ? sub.monthly_quota : 0;
+  const used = (await env.DB.prepare('SELECT used FROM usage_monthly WHERE maum_user_id=? AND ym=?').bind(uid, m).first<any>())?.used || 0;
+  const pack = await env.DB.prepare('SELECT remaining,expires_at FROM packs WHERE maum_user_id=?').bind(uid).first<any>();
+  const packRemaining = (pack && pack.remaining > 0 && (!pack.expires_at || pack.expires_at > now)) ? pack.remaining : 0;
+  const monthlyAllowance = FREE_MONTHLY + subQuota;
+  const monthlyRemaining = Math.max(0, monthlyAllowance - used);
+  return { plan: subActive ? sub.plan : 'free', subActive, subExpires: subActive ? sub.expires_at : null,
+    freeMonthly: FREE_MONTHLY, monthlyAllowance, used, monthlyRemaining, packRemaining, totalRemaining: monthlyRemaining + packRemaining };
+}
+async function consumeQuota(env: Bindings, uid: number): Promise<{ ok: boolean; source?: string }> {
+  const e = await getEntitlement(env, uid);
+  if (e.monthlyRemaining > 0) {
+    await env.DB.prepare("INSERT INTO usage_monthly (maum_user_id,ym,used) VALUES (?,?,1) ON CONFLICT(maum_user_id,ym) DO UPDATE SET used=used+1").bind(uid, ym()).run();
+    return { ok: true, source: e.used < e.freeMonthly ? 'free' : 'subscription' };
+  }
+  if (e.packRemaining > 0) {
+    await env.DB.prepare("UPDATE packs SET remaining=remaining-1, updated_at=datetime('now') WHERE maum_user_id=?").bind(uid).run();
+    return { ok: true, source: 'pack' };
+  }
+  return { ok: false };
+}
+const normCode = (s: any) => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+async function applyGrant(env: Bindings, uid: number, type: string) {
+  const now = nowIso();
+  if (PLAN[type]) {
+    const g = PLAN[type];
+    const sub = await env.DB.prepare('SELECT expires_at,monthly_quota FROM subscriptions WHERE maum_user_id=?').bind(uid).first<any>();
+    const base = sub && sub.expires_at > now ? new Date(sub.expires_at).getTime() : Date.now();
+    const newExpires = new Date(base + g.days * 86400000).toISOString();
+    const quota = Math.max(g.quota, sub?.monthly_quota || 0);
+    const plan = quota >= 100 ? 'pro' : g.plan;
+    await env.DB.prepare("INSERT INTO subscriptions (maum_user_id,plan,monthly_quota,expires_at,updated_at) VALUES (?,?,?,?,datetime('now')) ON CONFLICT(maum_user_id) DO UPDATE SET plan=excluded.plan,monthly_quota=excluded.monthly_quota,expires_at=excluded.expires_at,updated_at=datetime('now')")
+      .bind(uid, plan, quota, newExpires).run();
+    return { kind: 'subscription', plan, expires_at: newExpires };
+  }
+  if (PACK[type]) {
+    const g = PACK[type];
+    const pack = await env.DB.prepare('SELECT remaining FROM packs WHERE maum_user_id=?').bind(uid).first<any>();
+    const remaining = (pack?.remaining || 0) + g.count;
+    const expires = addDays(g.days);
+    await env.DB.prepare("INSERT INTO packs (maum_user_id,remaining,expires_at,updated_at) VALUES (?,?,?,datetime('now')) ON CONFLICT(maum_user_id) DO UPDATE SET remaining=excluded.remaining,expires_at=excluded.expires_at,updated_at=datetime('now')")
+      .bind(uid, remaining, expires).run();
+    return { kind: 'pack', remaining };
+  }
+  throw new Error('UNKNOWN_TYPE');
+}
+function requireAdmin(c: any): 'ok' | 'unset' | 'unauth' {
+  if (!c.env.ADMIN_SECRET) return 'unset';
+  return (c.req.header('Authorization') || '') === `Bearer ${c.env.ADMIN_SECRET}` ? 'ok' : 'unauth';
+}
+const genCode = (len = 8) => { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; const r = crypto.getRandomValues(new Uint8Array(len)); let s = ''; for (let i = 0; i < len; i++) s += A[r[i] % A.length]; return s; };
 
 const CHAT_MODEL = 'claude-haiku-4-5-20251001';
 const REPORT_MODEL = 'claude-sonnet-4-6';
@@ -87,10 +176,13 @@ app.get('/api/health', (c) => c.json({ ok: true }));
 
 // ── 인증 (공용 maum-auth) ──
 app.post('/api/auth/register', async (c) => {
-  const { email, password, name } = await c.req.json().catch(() => ({}));
-  if (!email || !password || String(password).length < 8) return c.json({ error: '이메일과 8자 이상 비밀번호가 필요해요' }, 400);
+  if (!(await checkRateLimit(c.env.KV, `register:${clientIp(c)}`, 5, 3600))) return c.json({ error: '잠시 후 다시 시도해주세요.' }, 429);
+  const { email, password, name, ref } = await c.req.json().catch(() => ({}));
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) return c.json({ error: '올바른 이메일을 입력해주세요' }, 400);
+  if (!password || String(password).length < 8) return c.json({ error: '이메일과 8자 이상 비밀번호가 필요해요' }, 400);
   try {
     const user = await registerUser(c.env.AUTH_DB, { email, password, name });
+    if (ref) { try { await c.env.DB.prepare('INSERT OR IGNORE INTO referrals (maum_user_id,ref) VALUES (?,?)').bind(user.id, String(ref).slice(0, 64)).run(); } catch {} }
     return c.json({ token: await issueToken(c.env.JWT_SECRET, user), user });
   } catch (e: any) {
     if (e?.message === 'DUPLICATE_EMAIL') return c.json({ error: '이미 가입된 이메일이에요' }, 409);
@@ -98,6 +190,7 @@ app.post('/api/auth/register', async (c) => {
   }
 });
 app.post('/api/auth/login', async (c) => {
+  if (!(await checkRateLimit(c.env.KV, `login:${clientIp(c)}`, 10, 60))) return c.json({ error: '시도가 너무 많아요. 잠시 후 다시 시도해주세요.' }, 429);
   const { email, password } = await c.req.json().catch(() => ({}));
   if (!email || !password) return c.json({ error: '이메일과 비밀번호를 입력해주세요' }, 400);
   const user = await loginUser(c.env.AUTH_DB, { email, password });
@@ -145,6 +238,10 @@ app.post('/api/session/start', requireAuth, async (c) => {
   const { child_id, buddy } = await c.req.json().catch(() => ({}));
   const child = await c.env.DB.prepare('SELECT * FROM children WHERE id=? AND maum_user_id=?').bind(child_id, c.get('uid')).first<any>();
   if (!child) return c.json({ error: '아이를 찾을 수 없어요' }, 404);
+  // 남용 방지 + 통역(세션) 1회 쿼터 차감(무료월→구독→회차권). 한도 초과 시 402.
+  if (!(await checkRateLimit(c.env.KV, `session:${c.get('uid')}`, 12, 3600))) return c.json({ error: '잠시 후 다시 시도해주세요.' }, 429);
+  const q = await consumeQuota(c.env, c.get('uid'));
+  if (!q.ok) return c.json({ error: '이번 달 통역(세션) 횟수를 모두 사용했어요. 이용권 코드를 등록하면 더 이용할 수 있어요.', code: 'QUOTA' }, 402);
   const B = (buddy === 'lala' || buddy === '라라') ? '라라' : '또또';   // 클라이언트는 ASCII 키('lala'/'otto') 전송
   const r = await c.env.DB.prepare('INSERT INTO sessions (child_id,maum_user_id,buddy) VALUES (?,?,?)').bind(child_id, c.get('uid'), B).run();
   const sid = r.meta.last_row_id as number;
@@ -157,6 +254,7 @@ app.post('/api/session/start', requireAuth, async (c) => {
 // ── 아이 발화 → 또또 응답 ──
 app.post('/api/session/:id/utterance', requireAuth, async (c) => {
   const sid = Number(c.req.param('id'));
+  if (!(await checkRateLimit(c.env.KV, `utt:${c.get('uid')}:${sid}`, 30, 60))) return c.json({ error: '조금 천천히 이야기해 줄래요?' }, 429);
   const { content } = await c.req.json().catch(() => ({}));
   if (!content) return c.json({ error: '내용이 비어 있어요' }, 400);
   const s = await c.env.DB.prepare('SELECT * FROM sessions WHERE id=? AND maum_user_id=?').bind(sid, c.get('uid')).first<any>();
@@ -247,6 +345,65 @@ app.get('/api/reports/:id', requireAuth, async (c) => {
   const rep = await c.env.DB.prepare('SELECT * FROM reports WHERE id=? AND maum_user_id=?').bind(c.req.param('id'), c.get('uid')).first<any>();
   if (!rep) return c.json({ error: '리포트를 찾을 수 없어요' }, 404);
   return c.json({ report: JSON.parse(rep.report_json), crisis_flag: rep.crisis_flag, created_at: rep.created_at });
+});
+
+// ── 이용권(쿼터) 조회 + 쿠폰 등록 ──
+app.get('/api/entitlement', requireAuth, async (c) => c.json({ entitlement: await getEntitlement(c.env, c.get('uid')) }));
+
+app.post('/api/coupon/redeem', requireAuth, async (c) => {
+  const uid = c.get('uid');
+  if (!(await checkRateLimit(c.env.KV, `redeem:${clientIp(c)}`, 10, 3600))) return c.json({ error: '잠시 후 다시 시도해주세요.' }, 429);
+  const { code } = await c.req.json().catch(() => ({}));
+  const norm = normCode(code);
+  if (!norm) return c.json({ error: '코드를 입력해주세요' }, 400);
+  const cp = await c.env.DB.prepare('SELECT * FROM coupons WHERE code=?').bind(norm).first<any>();
+  if (!cp || !cp.active) return c.json({ error: '유효하지 않은 코드예요' }, 404);
+  if (cp.valid_until && cp.valid_until < nowIso()) return c.json({ error: '만료된 코드예요' }, 410);
+  if (cp.redeemed_count >= cp.max_redemptions) return c.json({ error: '이미 모두 사용된 코드예요' }, 409);
+  const mine = await c.env.DB.prepare('SELECT COUNT(*) n FROM coupon_redemptions WHERE code=? AND maum_user_id=?').bind(norm, uid).first<any>();
+  if ((mine?.n || 0) >= cp.per_user_limit) return c.json({ error: '이미 등록한 코드예요' }, 409);
+  try {
+    await c.env.DB.prepare('INSERT INTO coupon_redemptions (code,maum_user_id,type) VALUES (?,?,?)').bind(norm, uid, cp.type).run();
+  } catch { return c.json({ error: '이미 등록한 코드예요' }, 409); }
+  await c.env.DB.prepare('UPDATE coupons SET redeemed_count=redeemed_count+1 WHERE code=?').bind(norm).run();
+  const result = await applyGrant(c.env, uid, cp.type);
+  return c.json({ ok: true, granted: cp.type, result, entitlement: await getEntitlement(c.env, uid) });
+});
+
+// ── 어드민: 쿠폰 발행/조회 + 제휴 통계 (ADMIN_SECRET Bearer) ──
+app.post('/api/admin/coupon/create', async (c) => {
+  const g = requireAdmin(c);
+  if (g === 'unset') return c.json({ error: 'ADMIN_SECRET 미설정' }, 503);
+  if (g === 'unauth') return c.json({ error: 'Unauthorized' }, 401);
+  const { type, count = 1, max_redemptions = 1, per_user_limit = 1, valid_until, source } = await c.req.json().catch(() => ({}));
+  if (!PLAN[type] && !PACK[type]) return c.json({ error: 'type은 sub_light|sub_pro|pack10' }, 400);
+  const n = Math.min(Math.max(1, Number(count) | 0), 500);
+  const batch = 'B' + Date.now().toString(36).toUpperCase();
+  const codes: string[] = [];
+  for (let i = 0; i < n; i++) {
+    const code = genCode(8);
+    await c.env.DB.prepare('INSERT INTO coupons (code,type,max_redemptions,per_user_limit,valid_until,source,batch_id) VALUES (?,?,?,?,?,?,?)')
+      .bind(code, type, Number(max_redemptions) || 1, Number(per_user_limit) || 1, valid_until || null, source || 'admin', batch).run();
+    codes.push(code);
+  }
+  return c.json({ ok: true, type, batch_id: batch, count: n, codes });
+});
+app.get('/api/admin/coupon/list', async (c) => {
+  const g = requireAdmin(c);
+  if (g === 'unset') return c.json({ error: 'ADMIN_SECRET 미설정' }, 503);
+  if (g === 'unauth') return c.json({ error: 'Unauthorized' }, 401);
+  const { results } = await c.env.DB.prepare('SELECT code,type,max_redemptions,redeemed_count,per_user_limit,valid_until,active,source,batch_id,created_at FROM coupons ORDER BY created_at DESC LIMIT 500').all();
+  return c.json({ coupons: results });
+});
+app.get('/api/admin/referrals', async (c) => {
+  const g = requireAdmin(c);
+  if (g === 'unset') return c.json({ error: 'ADMIN_SECRET 미설정' }, 503);
+  if (g === 'unauth') return c.json({ error: 'Unauthorized' }, 401);
+  const { results } = await c.env.DB.prepare(
+    `SELECT r.ref AS ref, COUNT(DISTINCT r.maum_user_id) AS signups, COUNT(DISTINCT cr.maum_user_id) AS paid
+     FROM referrals r LEFT JOIN coupon_redemptions cr ON cr.maum_user_id=r.maum_user_id
+     GROUP BY r.ref ORDER BY signups DESC LIMIT 500`).all();
+  return c.json({ referrals: results });
 });
 
 // 정적 프론트(React CDN) — /api 외는 assets
