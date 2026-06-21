@@ -183,11 +183,12 @@ app.get('/api/health', (c) => c.json({ ok: true }));
 // ── 인증 (공용 maum-auth) ──
 app.post('/api/auth/register', async (c) => {
   if (!(await checkRateLimit(c.env.KV, `register:${clientIp(c)}`, 5, 3600))) return c.json({ error: '잠시 후 다시 시도해주세요.' }, 429);
-  const { email, password, name } = await c.req.json().catch(() => ({}));
+  const { email, password, name, ref } = await c.req.json().catch(() => ({}));
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) return c.json({ error: '올바른 이메일을 입력해주세요' }, 400);
   if (!password || String(password).length < 8) return c.json({ error: '비밀번호는 8자 이상이어야 해요' }, 400);
   try {
     const user = await registerUser(c.env.AUTH_DB, { email, password, name });
+    if (ref) { try { await c.env.DB.prepare('INSERT OR IGNORE INTO referrals (maum_user_id,ref) VALUES (?,?)').bind(user.id, String(ref).slice(0, 64)).run(); } catch {} }
     return c.json({ token: await issueToken(c.env.JWT_SECRET, user), user });
   } catch (e: any) {
     if (e?.message === 'DUPLICATE_EMAIL') return c.json({ error: '이미 가입된 이메일이에요' }, 409);
@@ -316,6 +317,17 @@ app.get('/api/admin/coupon/list', async (c) => {
   if (g === 'unauth') return c.json({ error: 'Unauthorized' }, 401);
   const { results } = await c.env.DB.prepare('SELECT code,type,max_redemptions,redeemed_count,per_user_limit,valid_until,active,source,batch_id,created_at FROM coupons ORDER BY created_at DESC LIMIT 500').all();
   return c.json({ coupons: results });
+});
+// 제휴 통계: 파트너별 가입수 + 유료전환(쿠폰 등록자) 수
+app.get('/api/admin/referrals', async (c) => {
+  const g = requireAdmin(c);
+  if (g === 'unset') return c.json({ error: 'ADMIN_SECRET 미설정' }, 503);
+  if (g === 'unauth') return c.json({ error: 'Unauthorized' }, 401);
+  const { results } = await c.env.DB.prepare(
+    `SELECT r.ref AS ref, COUNT(DISTINCT r.maum_user_id) AS signups, COUNT(DISTINCT cr.maum_user_id) AS paid
+     FROM referrals r LEFT JOIN coupon_redemptions cr ON cr.maum_user_id=r.maum_user_id
+     GROUP BY r.ref ORDER BY signups DESC LIMIT 500`).all();
+  return c.json({ referrals: results });
 });
 
 // ── 리포트 ──

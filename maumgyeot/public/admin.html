@@ -55,6 +55,12 @@
   <div id="list"></div>
 </div>
 
+<div class="card">
+  <h2 style="margin-top:0">제휴(?ref) 통계 <button class="ghost" style="float:right;padding:6px 12px" onclick="loadRefs()">새로고침</button></h2>
+  <div class="muted">파트너 링크 예: <code>https://maumgyeot.com/?ref=파트너이름</code> · 가입수 / 유료전환(코드등록자)</div>
+  <div id="refs"></div>
+</div>
+
 <script>
 var S=document.getElementById('secret');
 S.value=localStorage.getItem('mg_admin_secret')||'';
@@ -87,7 +93,16 @@ async function load(){
     document.getElementById('list').innerHTML='<table><tr><th>코드</th><th>종류</th><th>사용</th><th>출처</th><th>발행일</th></tr>'+rows+'</table>';
   }catch(e){ document.getElementById('list').innerHTML='<div class="err">'+e.message+'</div>'; }
 }
-if(S.value) load();
+async function loadRefs(){
+  try{
+    var r=await fetch('/api/admin/referrals',{headers:hdr()}); var d=await r.json(); if(!r.ok) throw new Error(d.error||'실패');
+    var list=d.referrals||[];
+    if(list.length===0){ document.getElementById('refs').innerHTML='<div class="muted" style="margin-top:8px">아직 제휴 유입 가입이 없어요.</div>'; return; }
+    var rows=list.map(function(x){ var cv=x.signups?Math.round(x.paid/x.signups*100):0; return '<tr><td><code>'+x.ref+'</code></td><td>'+x.signups+'</td><td>'+x.paid+'</td><td>'+cv+'%</td></tr>'; }).join('');
+    document.getElementById('refs').innerHTML='<table><tr><th>파트너(ref)</th><th>가입</th><th>유료전환</th><th>전환율</th></tr>'+rows+'</table>';
+  }catch(e){ document.getElementById('refs').innerHTML='<div class="err">'+e.message+'</div>'; }
+}
+if(S.value){ load(); loadRefs(); }
 </script>
 </body>
 </html>

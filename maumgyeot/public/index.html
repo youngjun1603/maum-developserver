@@ -45,7 +45,10 @@ function Auth({ onLogin, onGuest }) {
   const [mode,setMode]=useState('login'); const [email,setEmail]=useState(''); const [pw,setPw]=useState(''); const [name,setName]=useState('');
   const [err,setErr]=useState(''); const [loading,setLoading]=useState(false);
   async function submit(){ setErr(''); setLoading(true);
-    try{ const d=await api('/auth/'+mode,{method:'POST',body: mode==='register'?{email,password:pw,name}:{email,password:pw}}); localStorage.setItem(TOKEN_KEY,d.token); onLogin(d.token,d.user); }
+    try{ const ref=localStorage.getItem('maumgyeot_ref')||undefined;
+      const d=await api('/auth/'+mode,{method:'POST',body: mode==='register'?{email,password:pw,name,ref}:{email,password:pw}});
+      if(mode==='register') localStorage.removeItem('maumgyeot_ref');
+      localStorage.setItem(TOKEN_KEY,d.token); onLogin(d.token,d.user); }
     catch(e){ setErr(e.message); } finally{ setLoading(false); } }
   return html`<div class="wrap">
     <div style=${{textAlign:'center',padding:'34px 0 18px'}}>
@@ -300,6 +303,8 @@ function App() {
   const [user,setUser]=useState(null); const [view,setView]=useState('dashboard'); const [pet,setPet]=useState(null); const [reportData,setReportData]=useState(null); const [guest,setGuest]=useState(false);
   // 마음 시리즈 SSO: 다른 앱에서 #token=…로 넘어오면 그대로 로그인(공용 maum-auth·JWT 공유)
   useEffect(()=>{ const m=(location.hash||'').match(/token=([^&]+)/); if(m){ const t=decodeURIComponent(m[1]); localStorage.setItem(TOKEN_KEY,t); setToken(t); history.replaceState(null,'',location.pathname+location.search); } },[]);
+  // 제휴 추적: ?ref=파트너 최초 유입 1회 저장(first-touch). 가입 시 귀속.
+  useEffect(()=>{ try{ const r=new URLSearchParams(location.search).get('ref'); if(r && !localStorage.getItem('maumgyeot_ref')) localStorage.setItem('maumgyeot_ref', r.slice(0,64)); }catch{} },[]);
   useEffect(()=>{ if(token) api('/auth/me',{token}).then(d=>setUser(d.user)).catch(()=>{ localStorage.removeItem(TOKEN_KEY); setToken(''); }); },[token]);
   function logout(){ localStorage.removeItem(TOKEN_KEY); setToken(''); setUser(null); }
   function back(){ setView('dashboard'); setPet(null); setReportData(null); }
