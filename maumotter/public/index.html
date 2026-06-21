@@ -46,7 +46,33 @@ function api(path, { method='GET', body, token } = {}) {
     method,
     headers: { 'Content-Type':'application/json', ...(token ? { Authorization:'Bearer '+token } : {}) },
     body: body ? JSON.stringify(body) : undefined,
-  }).then(async r => { const d = await r.json().catch(()=>({})); if(!r.ok) throw new Error(d.error||'오류가 발생했어요'); return d; });
+  }).then(async r => { const d = await r.json().catch(()=>({})); if(!r.ok){ const e=new Error(d.error||'오류가 발생했어요'); e.code=d.code; e.status=r.status; throw e; } return d; });
+}
+// 제휴 추적: ?ref=파트너 최초 유입 1회 저장(first-touch)
+try{ var _r=new URLSearchParams(location.search).get('ref'); if(_r && !localStorage.getItem('maumotter_ref')) localStorage.setItem('maumotter_ref', _r.slice(0,64)); }catch(e){}
+
+// 이용권(쿼터) 표시 + 코드 등록 (부모 화면)
+function EntitlementCard({ token }) {
+  const [ent,setEnt]=useState(null); const [code,setCode]=useState(''); const [msg,setMsg]=useState(''); const [err,setErr]=useState(''); const [busy,setBusy]=useState(false);
+  useEffect(()=>{ api('/entitlement',{token}).then(d=>setEnt(d.entitlement)).catch(()=>{}); },[]);
+  async function redeem(){ if(!code.trim())return; setErr('');setMsg('');setBusy(true);
+    try{ const d=await api('/coupon/redeem',{method:'POST',token,body:{code}}); setEnt(d.entitlement); setCode(''); setMsg('등록 완료! 이용권이 적용됐어요.'); }
+    catch(e){ setErr(e.message); } finally{ setBusy(false); } }
+  const planLabel = ent ? (ent.plan==='pro'?'프로':ent.plan==='light'?'라이트':'무료') : '';
+  return html`<div class="card" style=${{marginTop:16}}>
+    <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+      <b>🎟️ 이용권</b>
+      ${ent && html`<span class="pill">${planLabel} · 남은 통역 ${ent.totalRemaining}회</span>`}
+    </div>
+    ${ent && html`<div class="muted" style=${{marginTop:6,fontSize:12}}>이번 달 ${ent.used}/${ent.monthlyAllowance}회 사용${ent.packRemaining?` · 회차권 ${ent.packRemaining}회`:''}${ent.subActive?` · 구독 ~${(ent.subExpires||'').slice(0,10)}`:''}</div>`}
+    <div style=${{display:'flex',gap:8,marginTop:10}}>
+      <input class="field" style=${{margin:0,flex:1}} placeholder="이용권 코드 입력" value=${code} onInput=${e=>setCode(e.target.value)} onKeyDown=${e=>{if(e.key==='Enter')redeem();}} />
+      <button class="btn" style=${{width:'auto',padding:'12px 16px'}} disabled=${busy||!code.trim()} onClick=${redeem}>등록</button>
+    </div>
+    ${msg && html`<div class="muted" style=${{color:'#3B6FB5',marginTop:8}}>${msg}</div>`}
+    ${err && html`<div class="err" style=${{marginTop:8}}>${err}</div>`}
+    <div class="muted" style=${{marginTop:8,fontSize:12}}>통역(또또와의 대화 1번)에 1회 차감 · 스마트스토어 구매 코드를 등록하세요.</div>
+  </div>`;
 }
 
 // face-api.js 지연 로더 (카메라 켤 때만). 온디바이스 표정 분석 — 영상 원본은 기기 밖으로 안 나감(spec 2-8/7-C).
@@ -77,7 +103,9 @@ function Auth({ onLogin }) {
   async function submit(){
     setErr(''); setLoading(true);
     try{
-      const d = await api('/auth/'+(mode==='login'?'login':'register'), { method:'POST', body:{ email, password:pw, name } });
+      const ref = localStorage.getItem('maumotter_ref')||undefined;
+      const d = await api('/auth/'+(mode==='login'?'login':'register'), { method:'POST', body: mode==='register'?{ email, password:pw, name, ref }:{ email, password:pw } });
+      if(mode==='register') localStorage.removeItem('maumotter_ref');
       localStorage.setItem(TOKEN_KEY, d.token); onLogin(d.token, d.user);
     }catch(e){ setErr(e.message); } finally{ setLoading(false); }
   }
@@ -145,6 +173,7 @@ function Dashboard({ token, user, onLogout, onStart, onReports, onSettings }) {
         <button class="btn" onClick=${add}>등록</button>
         <button class="btn btn-ghost" style=${{marginTop:8}} onClick=${()=>setAdding(false)}>취소</button>
       </div>` : html`<button class="btn btn-ghost" onClick=${()=>setAdding(true)}>+ 아이 등록</button>`}
+      <${EntitlementCard} token=${token} />
     </div>
   </div>`;
 }
