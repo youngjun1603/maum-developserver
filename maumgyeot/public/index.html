@@ -58,6 +58,21 @@ function Auth({ onLogin, onGuest }) {
       <div class="h1">마음곁</div>
       <div class="muted">반려동물의 행동을 읽어 마음을 통역해요</div>
     </div>
+    <div class="card" style=${{background:'#F2FBF7'}}>
+      <b>🐾 우리 아이, 지금 무슨 마음일까요?</b>
+      <div class="muted" style=${{marginTop:8,lineHeight:1.7,color:'var(--ink)'}}>강아지·고양이가 보내는 행동 신호(꼬리·귀·자세·소리)와 상황을 입력하면, 동물행동학 관점에서 <b>"이런 마음일 수 있어요"</b>를 따뜻하게 풀어드려요.</div>
+    </div>
+    <div class="card">
+      <div class="muted" style=${{fontSize:13,marginBottom:8}}>이렇게 통역해요</div>
+      <div style=${{lineHeight:1.9}}>
+        <div><b>1.</b> 행동·상황을 고르거나 <b>짧은 영상</b>을 찍어요</div>
+        <div><b>2.</b> AI가 동물행동학으로 <b>통역</b>해요</div>
+        <div><b>3.</b> 보호자가 우리 아이를 이해하고 대응해요</div>
+      </div>
+    </div>
+    <div style=${{display:'flex',flexWrap:'wrap',gap:6,justifyContent:'center',marginBottom:14}}>
+      <span class="pill">단정하지 않는 통역</span><span class="pill">영상 저장 안 함</span><span class="pill">개·고양이 행동 도감</span><span class="pill">건강 신호 안내</span>
+    </div>
     <div class="card">
       ${mode==='register' && html`<input class="field" placeholder="이름(선택)" value=${name} onInput=${e=>setName(e.target.value)} />`}
       <input class="field" type="email" placeholder="이메일" value=${email} onInput=${e=>setEmail(e.target.value)} />
@@ -116,7 +131,7 @@ function Dashboard({ token, user, onLogout, onObserve, onReports, onGuide }) {
         <b>🦦 마음수달</b><div class="muted" style=${{marginTop:6}}>아이의 속마음을 또또가 통역해요 — 같은 계정으로 바로 입장 →</div>
       </a>
       <div class="muted" style=${{textAlign:'center',marginTop:24,fontSize:12,lineHeight:1.9}}>
-        <a href="/privacy" style=${{color:'inherit'}}>개인정보처리방침</a> · <a href="/account-deletion" style=${{color:'inherit'}}>회원 탈퇴</a>
+        <a href="/privacy" style=${{color:'inherit'}}>개인정보처리방침</a> · <a href="/terms" style=${{color:'inherit'}}>이용약관</a> · <a href="/account-deletion" style=${{color:'inherit'}}>회원 탈퇴</a>
       </div>
     </div>
   </div>`;

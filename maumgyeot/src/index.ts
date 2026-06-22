@@ -370,13 +370,16 @@ app.delete('/api/account', requireAuth, async (c) => {
 });
 
 // ── 공개 정책 페이지(Play 심사·데이터보안에 URL 제출) ──
+const BIZ = '상호: 마음서비스 · 대표자: 김근혜 · 사업자등록번호: 780-31-01832 · 통신판매업 신고번호: 제 2026-서울영등포-1157 호 · 소재지: 서울특별시 영등포구 문래로26길 6(문래동3가) · 문의: limyj007@gmail.com';
 const PAGE = (title: string, body: string) => `<!doctype html><html lang="ko"><head><meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/><title>${title} · 마음곁</title>
 <style>body{font-family:system-ui,-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;max-width:720px;margin:0 auto;padding:28px 20px 60px;color:#222;line-height:1.7}
 h1{font-size:22px}h2{font-size:16px;margin-top:28px}.muted{color:#777;font-size:13px}a{color:#16a34a}
 .btn{display:inline-block;background:#dc2626;color:#fff;border:0;border-radius:10px;padding:12px 20px;font-size:15px;font-weight:700;cursor:pointer}
-.card{border:1px solid #eee;border-radius:12px;padding:16px;margin-top:16px}</style></head><body>${body}
-<p class="muted" style="margin-top:40px">🐾 마음곁 · 문의 limyj007@gmail.com</p></body></html>`;
+.card{border:1px solid #eee;border-radius:12px;padding:16px;margin-top:16px}
+.biz{margin-top:34px;padding-top:16px;border-top:1px solid #eee;color:#888;font-size:12px;line-height:1.9}.nav{font-size:13px;margin-bottom:8px}</style></head><body>
+<div class="nav"><a href="/privacy">개인정보처리방침</a> · <a href="/terms">이용약관</a> · <a href="/account-deletion">회원 탈퇴</a></div>
+${body}<div class="biz">🐾 마음곁 · ${BIZ}</div></body></html>`;
 
 app.get('/privacy', (c) => c.html(PAGE('개인정보처리방침', `
 <h1>마음곁 개인정보처리방침</h1>
@@ -402,8 +405,19 @@ app.get('/privacy', (c) => c.html(PAGE('개인정보처리방침', `
 <p>전송 구간은 HTTPS로 암호화되며, 데이터 열람·삭제를 요청할 수 있습니다.</p>
 <h2>6. 아동</h2>
 <p>본 서비스는 만 13세 미만 아동을 대상으로 하지 않습니다.</p>
-<h2>7. 문의</h2>
-<p>limyj007@gmail.com</p>`)));
+<h2>7. 개인정보보호책임자</h2>
+<p>김근혜 · limyj007@gmail.com</p>`)));
+
+app.get('/terms', (c) => c.html(PAGE('이용약관', `
+<h1>마음곁 이용약관</h1><p class="muted">시행일: 2026-06-21</p>
+<h2>제1조(목적)</h2><p>본 약관은 마음서비스가 제공하는 '마음곁' 서비스 이용에 관한 회사와 이용자의 권리·의무를 정함을 목적으로 합니다.</p>
+<h2>제2조(서비스 내용)</h2><p>마음곁은 반려동물의 행동 신호와 맥락을 동물행동학 관점에서 통역하는 서비스입니다. 통역 결과는 <b>참고용</b>이며 수의학적 진단·치료가 아닙니다.</p>
+<h2>제3조(계정)</h2><p>이용자는 이메일 계정으로 가입하며, 계정 정보 관리 책임은 이용자에게 있습니다.</p>
+<h2>제4조(이용권·결제)</h2><p>유료 이용권은 외부 판매처(예: 네이버 스마트스토어)에서 구매 후 발급받은 코드를 서비스에 등록하여 이용합니다. 이용권 종류·제공량은 구매 시점 안내에 따릅니다.</p>
+<h2>제5조(청약철회·환불)</h2><p>디지털 콘텐츠(이용권 코드)는 「전자상거래 등에서의 소비자보호에 관한 법률」에 따라, 코드 발송 및 사용(등록) 후에는 청약철회가 제한될 수 있습니다. 미사용·미발송 건은 관련 법령에 따라 환불됩니다.</p>
+<h2>제6조(금지행위)</h2><p>코드의 부정 사용·재판매, 타인 계정 도용, 서비스 부정 접근·자동화 남용을 금지합니다.</p>
+<h2>제7조(면책)</h2><p>통역 결과는 참고 정보이며, 회사는 이를 근거로 한 의사결정의 결과에 대해 법적 책임을 지지 않습니다. 건강이 우려되는 경우 수의사 상담을 권장합니다.</p>
+<h2>제8조(분쟁해결·준거법)</h2><p>본 약관은 대한민국 법령에 따르며, 분쟁은 관계 법령 및 회사 소재지 관할 법원에 따릅니다.</p>`)));
 
 app.get('/account-deletion', (c) => c.html(PAGE('회원 탈퇴', `
 <h1>마음곁 회원 탈퇴 · 계정 삭제</h1>
