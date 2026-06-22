@@ -114,7 +114,8 @@ D1 스키마 → 인증/JWT(공유 규약) → 세션·발화 API → 통역 엔
 **유료/쿼터**: `통역 1회 = 세션 1건`(`/api/session/start`에서 차감 — 또또와의 대화 1번). 무료 월 5 + 구독(sub_light 30/sub_pro 100) + 회차권(pack10 10/60일). 한도초과 402 시 **아이 모드 진입 전 부모화면 차단**(`tryStart`→quotaWall, 아이가 에러 안 봄).
 **쿠폰/제휴/게스트**: `/api/coupon/redeem`, `?ref=`→referrals, `/admin`(ADMIN_SECRET — **설정됨**). 게스트 미리보기는 아동 PIN/세션 구조라 **미포함**.
 **법적**: `/privacy /terms /faq /account-deletion`(PAGE+`BIZ`=마음서비스 780-31-01832·통신판매업 제2026-서울영등포-1157·대표 김근혜). **회원탈퇴** `DELETE /api/account`(children·sessions·utterances·reports·빌링행 + KV pin + 공용계정). **위기대응 정책**: §3 참조(운영자 비열람·부모 리포트로만).
-**이메일(Resend)**: 비번재설정·이메일인증 — ⚠️ `RESEND_API_KEY` 미설정 시 no-op. maum-auth `email_verified`(시리즈 공유).
+**이메일(Resend) — 상용화 시점까지 보류(키 미설정·no-op)**: 비번재설정·이메일인증 코드 완성·배포됨. `RESEND_API_KEY` 미설정 시 no-op. maum-auth `email_verified`(시리즈 공유).
+> ⚠️ **치명 주의**: 도메인 미검증 상태로 키만 넣으면 발송 실패+`email_required=true`로 **미인증 유저 쿠폰등록이 전부 403**으로 막힘. **Resend 도메인 검증(Cloudflare DNS SPF/DKIM/MX) 완료 후에만** 키 설정.
 **운영**: error_logs+logError+onError, `/api/admin/stats`·`/admin` 대시보드.
 **프론트(public/index.html)**: `EntitlementCard`(이용권·구매링크 `STORE_URL`[미설정]·이용내역), `VerifyBanner`, 온보딩(아이 0명시), 랜딩 소개, og.png+OG메타.
 **미설정**: `RESEND_API_KEY`·`STORE_URL`·토스 라이브키. 웹 애널리틱스=Cloudflare 자동설정(수동 beacon 금지).
