@@ -136,3 +136,19 @@ D1 스키마 → 인증/JWT(공유 규약) → 반려동물 등록 → 관찰·�
 ### 유료화·제휴는 앱과 분리되어 계속 (웹 기준)
 - 앱 보류와 무관하게 **웹 유료화**는 진행 가능. 방향: **구독+월 사용캡**, 런칭 결제는 **스마트스토어+쿠폰(CTS 쿠폰 시스템 포팅)** — 토스 승인 지연 회피. 제휴는 `?ref=` 추적.
 - 상세: 메모리 `project_maum_series_monetization`.
+
+---
+
+## 11. 유료·법적·운영 기능 (2026-06 구축 완료)
+
+> 숫자 상수는 모두 `src/index.ts` 상단. 마이그레이션 `migrations/0001_billing·0002_referrals·0003_errors.sql`(적용됨).
+
+**유료/쿼터**: `통역 1회 = /api/observe 1건`. 무료 월 5(`FREE_MONTHLY`) + 구독(`sub_light` 30/`sub_pro` 100, 30일) + 회차권(`pack10` 10회/60일). 차감순 무료→구독→회차권. 테이블 subscriptions·packs·usage_monthly. `getEntitlement`/`consumeQuota`. 한도초과 402(code:QUOTA).
+**쿠폰(스마트스토어 결제경로)**: 구매→코드→`/api/coupon/redeem` 등록. 발행/조회 `/admin`(ADMIN_SECRET, **설정됨**). 테이블 coupons·coupon_redemptions.
+**게스트 미리보기**: `/api/observe/guest`(IP당 평생 2회, 저장X). **제휴**: `?ref=`→referrals→`/api/admin/referrals`.
+**법적 페이지**: `/privacy /terms /faq /account-deletion`(PAGE 헬퍼 + `BIZ` 사업자정보=마음서비스 780-31-01832·통신판매업 제2026-서울영등포-1157·대표 김근혜). **회원탈퇴** `DELETE /api/account`(도메인+빌링·제휴행 전부 삭제).
+**이메일(Resend)**: 비번재설정(`/api/auth/forgot-password`·`/reset`)·이메일인증(가입메일·`/verify`·`resend-verify`). ⚠️ **`RESEND_API_KEY` 미설정 시 완전 no-op**(기존 흐름 무영향). 설정 시 미인증→쿠폰등록 차단(403). maum-auth에 `email_verified` 컬럼(시리즈 공유). `EMAIL_FROM` 선택.
+**운영 모니터링**: error_logs+`logError`+`app.onError`, `/api/admin/stats`(대시보드)·`/admin` 패널.
+**프론트(public/index.html)**: `EntitlementCard`(이용권·코드등록·구매링크 `STORE_URL` 상수[미설정]·이용내역 `/api/history`), `VerifyBanner`(설정+미인증시만), 온보딩 가이드(0마리시), 랜딩 서비스소개. `og.png`+OG메타. 광고 훅 `initBannerAd`(앱 전용, 웹 no-op).
+**웹 애널리틱스**: Cloudflare 자동설정 집계중 — ⚠️ 코드에 수동 beacon 금지(이중집계).
+**미설정 항목**: `RESEND_API_KEY`·`STORE_URL`(스토어 URL)·토스 라이브키.
