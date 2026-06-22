@@ -91,6 +91,11 @@ npm run deploy:cts    # lightoflife-couple (wrangler.lightoflife.toml)
 
 ## 주요 기능 구현 현황
 
+### AI 상담 핸즈프리 음성 (2026-06, 마음풀·CTS 공통)
+- ChatBox `🔊 음성 상담` 토글: 연속 음성인식(`webkitSpeechRecognition` continuous) + 답변 자동 TTS. 노인·아동 핸즈프리(탭1번→말하면 됨).
+- **에코(자문자답) 방지**: 마이크 상시 ON(모바일 자동재개 — stop 방식은 재시작 제스처 필요해 폐기) + AI 발화 중·직후 0.8초 무시(`pausedForSpeechRef`) + **내용기반 에코필터**(직전 AI 발화 텍스트의 일부면 무시, `lastSpokenTextRef`).
+- ⚠️ **CTS는 메시지 배열이 `chatMespurples`**(마음풀은 `chatMessages`) — 포팅 시 주의. 기존 수동 🎤·Enter 전송 무변경(추가형).
+
 ### AI 감정 추적 (Mood Logging)
 - AI 응답에 `[MOOD:N]` 태그(0~100) → `ChatBox` processStream done에서 추출·제거 후 `/api/chat/mood-log` POST
 - DB: `mood_logs(user_id, mood_score, test_type, created_at)` (migration 0020). 트렌드: `GET /api/chat/mood-trend?days=14`(최대 90)
