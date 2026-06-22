@@ -61,6 +61,11 @@
   <div id="refs"></div>
 </div>
 
+<div class="card">
+  <h2 style="margin-top:0">최근 오류 (모니터링) <button class="ghost" style="float:right;padding:6px 12px" onclick="loadErrors()">새로고침</button></h2>
+  <div id="errs"></div>
+</div>
+
 <script>
 var S=document.getElementById('secret');
 S.value=localStorage.getItem('mg_admin_secret')||'';
@@ -102,7 +107,15 @@ async function loadRefs(){
     document.getElementById('refs').innerHTML='<table><tr><th>파트너(ref)</th><th>가입</th><th>유료전환</th><th>전환율</th></tr>'+rows+'</table>';
   }catch(e){ document.getElementById('refs').innerHTML='<div class="err">'+e.message+'</div>'; }
 }
-if(S.value){ load(); loadRefs(); }
+async function loadErrors(){
+  try{ var r=await fetch('/api/admin/errors',{headers:hdr()}); var d=await r.json(); if(!r.ok) throw new Error(d.error||'실패');
+    var list=d.errors||[];
+    if(list.length===0){ document.getElementById('errs').innerHTML='<div class="muted" style="margin-top:8px">최근 오류 없음 ✓</div>'; return; }
+    var rows=list.map(function(x){ return '<tr><td>'+(x.created_at||'').slice(0,19)+'</td><td><code>'+x.place+'</code></td><td>'+String(x.message||'').replace(/</g,'&lt;').slice(0,140)+'</td></tr>'; }).join('');
+    document.getElementById('errs').innerHTML='<div class="muted" style="margin:6px 0">최근 '+list.length+'건</div><table><tr><th>시각</th><th>위치</th><th>메시지</th></tr>'+rows+'</table>';
+  }catch(e){ document.getElementById('errs').innerHTML='<div class="err">'+e.message+'</div>'; }
+}
+if(S.value){ load(); loadRefs(); loadErrors(); }
 </script>
 </body>
 </html>

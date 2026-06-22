@@ -139,6 +139,10 @@ function requireAdmin(c: any): 'ok' | 'unset' | 'unauth' {
   return (c.req.header('Authorization') || '') === `Bearer ${c.env.ADMIN_SECRET}` ? 'ok' : 'unauth';
 }
 const genCode = (len = 8) => { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; const r = crypto.getRandomValues(new Uint8Array(len)); let s = ''; for (let i = 0; i < len; i++) s += A[r[i] % A.length]; return s; };
+// 운영 에러 로그(모니터링) — best-effort
+async function logError(env: Bindings, place: string, e: any) {
+  try { await env.DB.prepare('INSERT INTO error_logs (place,message) VALUES (?,?)').bind(String(place).slice(0, 80), String((e && e.message) || e).slice(0, 500)).run(); } catch {}
+}
 
 // ── 통역 코어(회원/비회원 공용) ──
 async function runTranslation(env: Bindings, p: { species: 'cat' | 'dog'; name?: string; age?: any; personality?: string; codes: string[]; context?: string; frames?: any[] }) {
@@ -167,7 +171,7 @@ ${lines || '- (선택된 신호 없음)'}
         raw2 = raw2.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
         try { const p2 = JSON.parse(raw2); if (!VET_TERMS.some((t) => JSON.stringify(p2).includes(t))) report = p2; } catch {}
       }
-    } catch (e) { console.log('OBSERVE_FAIL', String((e as any)?.message || e)); }
+    } catch (e) { console.log('OBSERVE_FAIL', String((e as any)?.message || e)); await logError(env, 'observe_llm', e); }
   }
   const HEALTH_KW = ['아파', '아픈', '절뚝', '토했', '구토', '설사', '안 먹', '못 먹', '식욕', '기운 없', '무기력', '피', '다쳤', '떨'];
   const ctxHit = typeof p.context === 'string' && HEALTH_KW.some((k) => p.context!.includes(k));
@@ -329,6 +333,15 @@ app.get('/api/admin/referrals', async (c) => {
      GROUP BY r.ref ORDER BY signups DESC LIMIT 500`).all();
   return c.json({ referrals: results });
 });
+app.get('/api/admin/errors', async (c) => {
+  const g = requireAdmin(c);
+  if (g === 'unset') return c.json({ error: 'ADMIN_SECRET 미설정' }, 503);
+  if (g === 'unauth') return c.json({ error: 'Unauthorized' }, 401);
+  const { results } = await c.env.DB.prepare('SELECT id,place,message,created_at FROM error_logs ORDER BY id DESC LIMIT 200').all();
+  return c.json({ errors: results });
+});
+// 미처리 예외 → 로그 + 일반 메시지
+app.onError(async (err, c) => { await logError(c.env, 'unhandled:' + c.req.path, err); return c.json({ error: '일시적인 오류가 발생했어요. 잠시 후 다시 시도해 주세요.' }, 500); });
 
 // ── 리포트 ──
 app.get('/api/reports', requireAuth, async (c) => {
@@ -400,7 +413,7 @@ app.get('/privacy', (c) => c.html(PAGE('개인정보처리방침', `
 <li><b>Google AdMob</b>: 무료 운영을 위한 광고 표시(도입 시) — 이 경우 광고 식별자(Advertising ID)가 맞춤형 광고 목적으로 수집·이용될 수 있습니다.</li>
 </ul>
 <h2>4. 보유 및 파기</h2>
-<p>회원 탈퇴 시 위 모든 데이터를 <b>즉시 삭제</b>합니다(법령상 보관 의무가 있는 경우 제외). 탈퇴는 앱 내 "회원 탈퇴" 또는 <a href="/account-deletion">여기</a>에서 가능합니다.</p>
+<p>회원 탈퇴 시 위 모든 데이터를 <b>즉시 삭제</b>합니다. 다만 「전자상거래 등에서의 소비자보호에 관한 법률」 등 관계 법령에 따라 보존이 필요한 경우 해당 기간 동안 보관합니다 — 계약·청약철회 기록 5년, 대금결제·재화공급 기록 5년, 소비자 불만·분쟁처리 기록 3년. 탈퇴는 앱 내 "회원 탈퇴" 또는 <a href="/account-deletion">여기</a>에서 가능합니다.</p>
 <h2>5. 이용자 권리</h2>
 <p>전송 구간은 HTTPS로 암호화되며, 데이터 열람·삭제를 요청할 수 있습니다.</p>
 <h2>6. 아동</h2>

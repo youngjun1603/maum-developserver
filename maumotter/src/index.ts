@@ -141,6 +141,10 @@ function requireAdmin(c: any): 'ok' | 'unset' | 'unauth' {
   return (c.req.header('Authorization') || '') === `Bearer ${c.env.ADMIN_SECRET}` ? 'ok' : 'unauth';
 }
 const genCode = (len = 8) => { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; const r = crypto.getRandomValues(new Uint8Array(len)); let s = ''; for (let i = 0; i < len; i++) s += A[r[i] % A.length]; return s; };
+// 운영 에러 로그(모니터링) — best-effort
+async function logError(env: Bindings, place: string, e: any) {
+  try { await env.DB.prepare('INSERT INTO error_logs (place,message) VALUES (?,?)').bind(String(place).slice(0, 80), String((e && e.message) || e).slice(0, 500)).run(); } catch {}
+}
 
 const CHAT_MODEL = 'claude-haiku-4-5-20251001';
 const REPORT_MODEL = 'claude-sonnet-4-6';
@@ -268,7 +272,7 @@ app.post('/api/session/:id/utterance', requireAuth, async (c) => {
   let reply = '응, 그렇구나. 더 이야기해줄래?';
   try {
     reply = await callClaude(c.env, { model: CHAT_MODEL, system: ottoSystem(child?.age ?? null, child?.name ?? '', s.buddy), messages: history, max_tokens: 200, temperature: 0.7 }) || reply;
-  } catch (e) { console.log('chat LLM fail:', String((e as any)?.message || e)); /* 폴백 reply 유지 */ }
+  } catch (e) { console.log('chat LLM fail:', String((e as any)?.message || e)); await logError(c.env, 'chat_llm', e); /* 폴백 reply 유지 */ }
   await c.env.DB.prepare('INSERT INTO utterances (session_id,role,content) VALUES (?,?,?)').bind(sid, 'otter', reply).run();
   return c.json({ reply });
 });
@@ -307,7 +311,7 @@ app.post('/api/session/:id/end', requireAuth, async (c) => {
         raw2 = raw2.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
         try { const p2 = JSON.parse(raw2); if (!MED_TERMS.some((t) => JSON.stringify(p2).includes(t))) report = p2; } catch {}
       }
-    } catch (e) { console.log('REPORT_FAIL', String((e as any)?.message || e)); }
+    } catch (e) { console.log('REPORT_FAIL', String((e as any)?.message || e)); await logError(c.env, 'report_llm', e); }
   }
 
   // 위기 사전 키워드 스크리닝 (LLM 판정과 이중·보수적, spec 2-6). 단정 아님 — 부모 검토용 플래그.
@@ -405,6 +409,13 @@ app.get('/api/admin/referrals', async (c) => {
      GROUP BY r.ref ORDER BY signups DESC LIMIT 500`).all();
   return c.json({ referrals: results });
 });
+app.get('/api/admin/errors', async (c) => {
+  const g = requireAdmin(c);
+  if (g === 'unset') return c.json({ error: 'ADMIN_SECRET 미설정' }, 503);
+  if (g === 'unauth') return c.json({ error: 'Unauthorized' }, 401);
+  const { results } = await c.env.DB.prepare('SELECT id,place,message,created_at FROM error_logs ORDER BY id DESC LIMIT 200').all();
+  return c.json({ errors: results });
+});
 
 // ── 회원 탈퇴(계정·데이터 완전 삭제) ──
 app.delete('/api/account', requireAuth, async (c) => {
@@ -448,7 +459,7 @@ app.get('/privacy', (c) => c.html(PAGE('개인정보처리방침', `
 <h2>2. 이용 목적</h2><p>정서 통역 서비스 제공, 계정·이용권 관리, 안전(위기 신호의 보호자 안내).</p>
 <h2>3. 표정 영상(비저장)</h2><p>표정 분석은 <b>기기 내에서만</b> 처리되며 원본 영상은 저장·전송하지 않습니다.</p>
 <h2>4. 처리 위탁</h2><ul><li>Anthropic — 통역 생성을 위한 AI 처리</li><li>Cloudflare — 서버·데이터베이스 인프라</li></ul>
-<h2>5. 보유 및 파기</h2><p>회원 탈퇴 시 모든 개인정보를 <b>즉시 파기</b>합니다(관계 법령상 보관 의무가 있는 경우 제외). 탈퇴는 <a href="/account-deletion">여기</a> 또는 앱 내에서 가능합니다.</p>
+<h2>5. 보유 및 파기</h2><p>회원 탈퇴 시 모든 개인정보를 <b>즉시 파기</b>합니다. 다만 「전자상거래 등에서의 소비자보호에 관한 법률」 등 관계 법령에 따라 보존이 필요한 경우 해당 기간 동안 보관합니다 — 계약·청약철회 기록 5년, 대금결제·재화공급 기록 5년, 소비자 불만·분쟁처리 기록 3년. 탈퇴는 <a href="/account-deletion">여기</a> 또는 앱 내에서 가능합니다.</p>
 <h2>6. 아동의 개인정보</h2><p>본 서비스는 <b>보호자(법정대리인)가 동반·운영</b>하는 서비스입니다. 만 14세 미만 아동의 개인정보는 법정대리인의 동의 하에 처리됩니다.</p>
 <h2>7. 이용자 권리</h2><p>이용자는 개인정보 열람·정정·삭제를 요청할 수 있으며, 전송 구간은 HTTPS로 암호화됩니다.</p>
 <h2>8. 개인정보보호책임자</h2><p>김근혜 · limyj007@gmail.com</p>`)));
@@ -475,6 +486,9 @@ app.get('/account-deletion', (c) => c.html(PAGE('회원 탈퇴', `
 if(t){m.textContent='현재 로그인되어 있습니다. 아래 버튼으로 계정을 영구 삭제할 수 있습니다.';d.style.display='inline-block';}else{m.textContent='로그인되어 있지 않습니다. 앱에서 로그인 후 이 페이지를 다시 열어 주세요.';}
 function doDelete(){if(!confirm('정말 계정과 모든 데이터를 영구 삭제할까요? 되돌릴 수 없습니다.'))return;d.disabled=true;d.textContent='삭제 중…';
 fetch('/api/account',{method:'DELETE',headers:{Authorization:'Bearer '+t}}).then(function(r){if(!r.ok)throw 0;localStorage.removeItem(K);m.textContent='계정이 삭제되었습니다. 그동안 이용해 주셔서 감사합니다.';d.style.display='none';}).catch(function(){d.disabled=false;d.textContent='계정 영구 삭제';alert('삭제 중 문제가 발생했어요. 잠시 후 다시 시도해 주세요.');});}</script>`)));
+
+// 미처리 예외 → 로그 + 일반 메시지
+app.onError(async (err, c) => { await logError(c.env, 'unhandled:' + c.req.path, err); return c.json({ error: '일시적인 오류가 발생했어요. 잠시 후 다시 시도해 주세요.' }, 500); });
 
 // 정적 프론트(React CDN) — /api 외는 assets
 app.all('*', (c) => c.env.ASSETS.fetch(c.req.raw));
