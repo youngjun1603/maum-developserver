@@ -215,7 +215,7 @@ app.post('/api/auth/register', async (c) => {
     if (c.env.RESEND_API_KEY) {
       const vtok = genCode(24);
       await c.env.KV.put(`emailverify:${vtok}`, String(user.id), { expirationTtl: 7 * 86400 });
-      c.executionCtx.waitUntil(sendEmail(c.env, user.email, '[마음곁] 이메일 인증', verifyEmailHtml(new URL(c.req.url).origin + '/verify?token=' + vtok)));
+      await sendEmail(c.env, user.email, '[마음곁] 이메일 인증', verifyEmailHtml(new URL(c.req.url).origin + '/verify?token=' + vtok));
     }
     return c.json({ token: await issueToken(c.env.JWT_SECRET, user), user });
   } catch (e: any) {
@@ -242,7 +242,7 @@ app.post('/api/auth/forgot-password', async (c) => {
     if (u) {
       const tok = genCode(24);
       await c.env.KV.put(`pwreset:${tok}`, String(u.id), { expirationTtl: 3600 });
-      c.executionCtx.waitUntil(sendEmail(c.env, u.email, '[마음곁] 비밀번호 재설정', resetEmailHtml(new URL(c.req.url).origin + '/reset?token=' + tok)));
+      await sendEmail(c.env, u.email, '[마음곁] 비밀번호 재설정', resetEmailHtml(new URL(c.req.url).origin + '/reset?token=' + tok));
     }
   }
   return c.json({ ok: true }); // 이메일 존재 여부 비노출
@@ -264,7 +264,7 @@ app.post('/api/auth/resend-verify', requireAuth, async (c) => {
   if (!u) return c.json({ error: '계정을 찾을 수 없어요' }, 404);
   const vtok = genCode(24);
   await c.env.KV.put(`emailverify:${vtok}`, String(u.id), { expirationTtl: 7 * 86400 });
-  c.executionCtx.waitUntil(sendEmail(c.env, u.email, '[마음곁] 이메일 인증', verifyEmailHtml(new URL(c.req.url).origin + '/verify?token=' + vtok)));
+  await sendEmail(c.env, u.email, '[마음곁] 이메일 인증', verifyEmailHtml(new URL(c.req.url).origin + '/verify?token=' + vtok));
   return c.json({ ok: true });
 });
 
