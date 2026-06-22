@@ -4,6 +4,13 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 <title>마음수달 — 우리 아이 마음 통역</title>
+<meta name="description" content="아이가 수달 친구 '또또'와 나눈 대화를 부모님이 이해할 수 있는 따뜻한 코칭으로 통역해 드려요. 정서 통역 참고용 서비스." />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="마음수달 — 우리 아이 마음 통역" />
+<meta property="og:description" content="아이의 속마음을 또또가 듣고 부모님께 통역해요. 무료로 체험해 보세요." />
+<meta property="og:url" content="https://maumotter.com" />
+<meta property="og:image" content="https://maumotter.com/og.png" />
+<meta name="twitter:card" content="summary_large_image" />
 <style>
   :root { --cream:#F4F1EA; --ink:#2E2A26; --muted:#8A8276; --water:#5B7C7D; --water-d:#456062; --brown:#8C6A4E; --line:#E3DDD1; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -219,7 +226,7 @@ function Dashboard({ token, user, onLogout, onStart, onReports, onSettings }) {
       </div>` : html`<button class="btn btn-ghost" onClick=${()=>setAdding(true)}>+ 아이 등록</button>`}
       <${EntitlementCard} token=${token} />
       <div class="muted" style=${{textAlign:'center',marginTop:24,fontSize:12,lineHeight:1.9}}>
-        <a href="/privacy" style=${{color:'inherit'}}>개인정보처리방침</a> · <a href="/terms" style=${{color:'inherit'}}>이용약관</a> · <a href="/account-deletion" style=${{color:'inherit'}}>회원 탈퇴</a>
+        <a href="/privacy" style=${{color:'inherit'}}>개인정보처리방침</a> · <a href="/terms" style=${{color:'inherit'}}>이용약관</a> · <a href="/faq" style=${{color:'inherit'}}>고객센터</a> · <a href="/account-deletion" style=${{color:'inherit'}}>회원 탈퇴</a>
       </div>
     </div>
   </div>`;

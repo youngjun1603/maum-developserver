@@ -29,6 +29,11 @@
 </div>
 
 <div class="card">
+  <h2 style="margin-top:0">운영 현황 <button class="ghost" style="float:right;padding:6px 12px" onclick="loadStats()">새로고침</button></h2>
+  <div id="stats" class="muted">시크릿 입력 후 표시됩니다.</div>
+</div>
+
+<div class="card">
   <h2 style="margin-top:0">코드 발행</h2>
   <label>상품 종류 (1통역 = 세션 1건)</label>
   <select id="type">
@@ -111,7 +116,13 @@ async function loadErrors(){
     document.getElementById('errs').innerHTML='<div class="muted" style="margin:6px 0">최근 '+list.length+'건</div><table><tr><th>시각</th><th>위치</th><th>메시지</th></tr>'+rows+'</table>';
   }catch(e){ document.getElementById('errs').innerHTML='<div class="err">'+e.message+'</div>'; }
 }
-if(S.value){ load(); loadRefs(); loadErrors(); }
+async function loadStats(){
+  try{ var r=await fetch('/api/admin/stats',{headers:hdr()}); var d=await r.json(); if(!r.ok) throw new Error(d.error||'실패'); var s=d.stats;
+    function cell(l,v){ return '<div style="display:inline-block;min-width:120px;margin:4px 10px 4px 0;vertical-align:top"><div style="font-size:22px;font-weight:800">'+v+'</div><div class="muted" style="font-size:12px">'+l+'</div></div>'; }
+    document.getElementById('stats').innerHTML=cell(s.label_unit+' 총',s.usage_total)+cell('최근 7일',s.usage_week)+cell('이번달 사용('+s.ym+')',s.month_usage)+cell('이번달 활성유저',s.month_active_users)+cell('활성 구독',s.active_subscriptions)+cell('쿠폰 사용/발행',s.coupons_redeemed+'/'+s.coupons_issued)+cell('제휴 가입',s.referral_signups)+cell('등록',s.entities)+(s.sessions!==undefined?cell('세션',s.sessions):'')+cell('최근7일 오류',s.errors_week);
+  }catch(e){ document.getElementById('stats').innerHTML='<div class="err">'+e.message+'</div>'; }
+}
+if(S.value){ loadStats(); load(); loadRefs(); loadErrors(); }
 </script>
 </body>
 </html>

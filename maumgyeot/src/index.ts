@@ -401,6 +401,26 @@ app.get('/api/admin/errors', async (c) => {
   const { results } = await c.env.DB.prepare('SELECT id,place,message,created_at FROM error_logs ORDER BY id DESC LIMIT 200').all();
   return c.json({ errors: results });
 });
+// 운영 통계(대시보드)
+app.get('/api/admin/stats', async (c) => {
+  const g = requireAdmin(c);
+  if (g === 'unset') return c.json({ error: 'ADMIN_SECRET 미설정' }, 503);
+  if (g === 'unauth') return c.json({ error: 'Unauthorized' }, 401);
+  const one = async (sql: string, ...b: any[]) => (await c.env.DB.prepare(sql).bind(...b).first<any>()) || {};
+  const obs = await one("SELECT COUNT(*) total, COALESCE(SUM(CASE WHEN created_at>=datetime('now','-7 day') THEN 1 ELSE 0 END),0) week FROM observations");
+  const pets = await one('SELECT COUNT(*) c FROM pets');
+  const subs = await one('SELECT COUNT(*) c FROM subscriptions WHERE expires_at>?', nowIso());
+  const usage = await one('SELECT COALESCE(SUM(used),0) s, COUNT(*) u FROM usage_monthly WHERE ym=?', ym());
+  const cps = await one('SELECT COALESCE(SUM(redeemed_count),0) redeemed, COUNT(*) issued FROM coupons');
+  const refs = await one('SELECT COUNT(*) c FROM referrals');
+  const errs = await one("SELECT COUNT(*) c FROM error_logs WHERE created_at>=datetime('now','-7 day')");
+  return c.json({ stats: {
+    label_unit: '통역', ym: ym(),
+    usage_total: obs.total || 0, usage_week: obs.week || 0, entities: pets.c || 0,
+    active_subscriptions: subs.c || 0, month_usage: usage.s || 0, month_active_users: usage.u || 0,
+    coupons_redeemed: cps.redeemed || 0, coupons_issued: cps.issued || 0, referral_signups: refs.c || 0, errors_week: errs.c || 0,
+  } });
+});
 // 미처리 예외 → 로그 + 일반 메시지
 app.onError(async (err, c) => { await logError(c.env, 'unhandled:' + c.req.path, err); return c.json({ error: '일시적인 오류가 발생했어요. 잠시 후 다시 시도해 주세요.' }, 500); });
 
@@ -452,7 +472,7 @@ h1{font-size:22px}h2{font-size:16px;margin-top:28px}.muted{color:#777;font-size:
 .btn{display:inline-block;background:#dc2626;color:#fff;border:0;border-radius:10px;padding:12px 20px;font-size:15px;font-weight:700;cursor:pointer}
 .card{border:1px solid #eee;border-radius:12px;padding:16px;margin-top:16px}
 .biz{margin-top:34px;padding-top:16px;border-top:1px solid #eee;color:#888;font-size:12px;line-height:1.9}.nav{font-size:13px;margin-bottom:8px}</style></head><body>
-<div class="nav"><a href="/privacy">개인정보처리방침</a> · <a href="/terms">이용약관</a> · <a href="/account-deletion">회원 탈퇴</a></div>
+<div class="nav"><a href="/privacy">개인정보처리방침</a> · <a href="/terms">이용약관</a> · <a href="/faq">고객센터</a> · <a href="/account-deletion">회원 탈퇴</a></div>
 ${body}<div class="biz">🐾 마음곁 · ${BIZ}</div></body></html>`;
 
 app.get('/privacy', (c) => c.html(PAGE('개인정보처리방침', `
@@ -511,6 +531,16 @@ app.get('/reset', (c) => c.html(PAGE('비밀번호 재설정', `
 function go(){var pw=document.getElementById('pw').value,m=document.getElementById('msg');if((pw||'').length<8){m.style.color='#C0492F';m.textContent='8자 이상 입력해 주세요';return;}
 fetch('/api/auth/reset-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:t,password:pw})}).then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d};});}).then(function(x){if(!x.ok)throw new Error(x.d.error||'실패');m.style.color='#16a34a';m.textContent='변경되었습니다. 앱에서 새 비밀번호로 로그인해 주세요.';}).catch(function(e){m.style.color='#C0492F';m.textContent=e.message;});}
 </script>`)));
+
+app.get('/faq', (c) => c.html(PAGE('자주 묻는 질문', `
+<h1>자주 묻는 질문 · 고객센터</h1>
+<h2>이용권 코드는 어떻게 등록하나요?</h2><p>홈 화면의 '🎟️ 이용권' 칸에 구매하신 코드를 입력하고 '등록'을 누르면 즉시 적용됩니다.</p>
+<h2>이용권은 어디서 사나요?</h2><p>네이버 스마트스토어에서 구매 후 코드를 받아 등록합니다(앱 내 '구매하기'에서 스토어로 이동).</p>
+<h2>환불이 되나요?</h2><p>디지털 콘텐츠(코드)는 발송·등록 후 청약철회가 제한될 수 있습니다. 미사용·미발송 건은 관계 법령에 따라 환불됩니다. 문의: limyj007@gmail.com</p>
+<h2>비밀번호를 잊었어요</h2><p>로그인 화면의 '비밀번호를 잊으셨나요?'에서 재설정 메일을 받을 수 있어요.</p>
+<h2>촬영한 영상은 저장되나요?</h2><p>아니요. 통역 분석에만 잠깐 쓰이고 저장하지 않습니다.</p>
+<h2>회원 탈퇴는 어떻게 하나요?</h2><p>홈 하단 '회원 탈퇴' 또는 <a href="/account-deletion">여기</a>에서 가능합니다.</p>
+<h2>문의</h2><p>limyj007@gmail.com</p>`)));
 
 app.get('/account-deletion', (c) => c.html(PAGE('회원 탈퇴', `
 <h1>마음곁 회원 탈퇴 · 계정 삭제</h1>
