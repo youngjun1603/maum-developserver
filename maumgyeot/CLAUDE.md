@@ -147,7 +147,8 @@ D1 스키마 → 인증/JWT(공유 규약) → 반려동물 등록 → 관찰·�
 **쿠폰(스마트스토어 결제경로)**: 구매→코드→`/api/coupon/redeem` 등록. 발행/조회 `/admin`(ADMIN_SECRET, **설정됨**). 테이블 coupons·coupon_redemptions.
 **게스트 미리보기**: `/api/observe/guest`(IP당 평생 2회, 저장X). **제휴**: `?ref=`→referrals→`/api/admin/referrals`.
 **법적 페이지**: `/privacy /terms /faq /account-deletion`(PAGE 헬퍼 + `BIZ` 사업자정보=마음서비스 780-31-01832·통신판매업 제2026-서울영등포-1157·대표 김근혜). **회원탈퇴** `DELETE /api/account`(도메인+빌링·제휴행 전부 삭제).
-**이메일(Resend)**: 비번재설정(`/api/auth/forgot-password`·`/reset`)·이메일인증(가입메일·`/verify`·`resend-verify`). ⚠️ **`RESEND_API_KEY` 미설정 시 완전 no-op**(기존 흐름 무영향). 설정 시 미인증→쿠폰등록 차단(403). maum-auth에 `email_verified` 컬럼(시리즈 공유). `EMAIL_FROM` 선택.
+**이메일(Resend) — 상용화 시점까지 보류(키 미설정·no-op)**: 비번재설정(`/api/auth/forgot-password`·`/reset`)·이메일인증(가입메일·`/verify`·`resend-verify`) 코드는 완성·배포됨. **`RESEND_API_KEY` 미설정 시 완전 no-op**(기존 흐름 무영향). maum-auth `email_verified` 컬럼(시리즈 공유). `EMAIL_FROM` 선택(기본 `noreply@maumgyeot.com`).
+> ⚠️ **치명 주의**: Resend **도메인 미검증 상태로 키만 넣지 말 것**. 발송은 실패하는데 `email_required=true`가 되어 **미인증 유저 쿠폰등록이 전부 403으로 막힘**. → **Resend 도메인 검증(Cloudflare DNS에 SPF/DKIM/MX) 완료 후에만** `wrangler secret put RESEND_API_KEY`.
 **운영 모니터링**: error_logs+`logError`+`app.onError`, `/api/admin/stats`(대시보드)·`/admin` 패널.
 **프론트(public/index.html)**: `EntitlementCard`(이용권·코드등록·구매링크 `STORE_URL` 상수[미설정]·이용내역 `/api/history`), `VerifyBanner`(설정+미인증시만), 온보딩 가이드(0마리시), 랜딩 서비스소개. `og.png`+OG메타. 광고 훅 `initBannerAd`(앱 전용, 웹 no-op).
 **웹 애널리틱스**: Cloudflare 자동설정 집계중 — ⚠️ 코드에 수동 beacon 금지(이중집계).
