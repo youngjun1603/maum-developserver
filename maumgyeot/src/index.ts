@@ -2,10 +2,10 @@
 // 계정/인증은 공용 maum-auth(AUTH_DB) + 공유 모듈 ./auth (마음수달과 동일 사본).
 // 안전: 단정 금지(confidence 필수)·수의학 용어 금지·health_flag·종 분리 — docs/ 준수.
 import { Hono } from 'hono';
-import { registerUser, loginUser, getUser, issueToken, requireAuth, deleteUser } from './auth';
+import { registerUser, loginUser, getUser, issueToken, requireAuth, deleteUser, findByEmail, setPassword, markEmailVerified, isEmailVerified } from './auth';
 import { BEHAVIOR, signalsToLines } from './behavior';
 
-type Bindings = { DB: D1Database; AUTH_DB: D1Database; KV: KVNamespace; JWT_SECRET: string; ANTHROPIC_API_KEY: string; ASSETS: Fetcher; ADMIN_SECRET?: string };
+type Bindings = { DB: D1Database; AUTH_DB: D1Database; KV: KVNamespace; JWT_SECRET: string; ANTHROPIC_API_KEY: string; ASSETS: Fetcher; ADMIN_SECRET?: string; RESEND_API_KEY?: string; EMAIL_FROM?: string };
 const app = new Hono<{ Bindings: Bindings; Variables: { uid: number } }>();
 
 const REPORT_MODEL = 'claude-sonnet-4-6';
@@ -143,6 +143,25 @@ const genCode = (len = 8) => { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; con
 async function logError(env: Bindings, place: string, e: any) {
   try { await env.DB.prepare('INSERT INTO error_logs (place,message) VALUES (?,?)').bind(String(place).slice(0, 80), String((e && e.message) || e).slice(0, 500)).run(); } catch {}
 }
+// 이메일 발송(Resend) — RESEND_API_KEY 미설정 시 no-op(false). 기존 흐름 무영향.
+async function sendEmail(env: Bindings, to: string, subject: string, html: string): Promise<boolean> {
+  if (!env.RESEND_API_KEY) return false;
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${env.RESEND_API_KEY}` },
+      body: JSON.stringify({ from: env.EMAIL_FROM || '마음곁 <noreply@maumgyeot.com>', to, subject, html }),
+    });
+    if (!res.ok) { await logError(env, 'email', 'resend ' + res.status + ' ' + (await res.text()).slice(0, 200)); return false; }
+    return true;
+  } catch (e) { await logError(env, 'email', e); return false; }
+}
+const emailWrap = (title: string, body: string, btn: string, link: string) => `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#222">
+<h2 style="color:#2E8B7A">${title}</h2>${body}
+<p style="margin:20px 0"><a href="${link}" style="background:#2E8B7A;color:#fff;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:700">${btn}</a></p>
+<p style="color:#888;font-size:12px">버튼이 안 되면 이 링크를 복사해 주세요:<br>${link}</p></div>`;
+const verifyEmailHtml = (link: string) => emailWrap('마음곁 이메일 인증', '<p>아래 버튼을 눌러 이메일 인증을 완료해 주세요.</p>', '이메일 인증하기', link);
+const resetEmailHtml = (link: string) => emailWrap('마음곁 비밀번호 재설정', '<p>아래 버튼을 눌러 새 비밀번호를 설정해 주세요. (요청 후 1시간 내 유효)</p>', '비밀번호 재설정', link);
 
 // ── 통역 코어(회원/비회원 공용) ──
 async function runTranslation(env: Bindings, p: { species: 'cat' | 'dog'; name?: string; age?: any; personality?: string; codes: string[]; context?: string; frames?: any[] }) {
@@ -193,6 +212,11 @@ app.post('/api/auth/register', async (c) => {
   try {
     const user = await registerUser(c.env.AUTH_DB, { email, password, name });
     if (ref) { try { await c.env.DB.prepare('INSERT OR IGNORE INTO referrals (maum_user_id,ref) VALUES (?,?)').bind(user.id, String(ref).slice(0, 64)).run(); } catch {} }
+    if (c.env.RESEND_API_KEY) {
+      const vtok = genCode(24);
+      await c.env.KV.put(`emailverify:${vtok}`, String(user.id), { expirationTtl: 7 * 86400 });
+      c.executionCtx.waitUntil(sendEmail(c.env, user.email, '[마음곁] 이메일 인증', verifyEmailHtml(new URL(c.req.url).origin + '/verify?token=' + vtok)));
+    }
     return c.json({ token: await issueToken(c.env.JWT_SECRET, user), user });
   } catch (e: any) {
     if (e?.message === 'DUPLICATE_EMAIL') return c.json({ error: '이미 가입된 이메일이에요' }, 409);
@@ -207,7 +231,42 @@ app.post('/api/auth/login', async (c) => {
   if (!user) return c.json({ error: '이메일 또는 비밀번호가 맞지 않아요' }, 401);
   return c.json({ token: await issueToken(c.env.JWT_SECRET, user), user });
 });
-app.get('/api/auth/me', requireAuth, async (c) => c.json({ user: await getUser(c.env.AUTH_DB, c.get('uid')) }));
+app.get('/api/auth/me', requireAuth, async (c) => c.json({ user: await getUser(c.env.AUTH_DB, c.get('uid')), email_verified: await isEmailVerified(c.env.AUTH_DB, c.get('uid')), email_required: !!c.env.RESEND_API_KEY }));
+
+// ── 비밀번호 재설정 / 이메일 인증 (RESEND 미설정 시 no-op) ──
+app.post('/api/auth/forgot-password', async (c) => {
+  if (!(await checkRateLimit(c.env.KV, `forgot:${clientIp(c)}`, 5, 3600))) return c.json({ error: '잠시 후 다시 시도해주세요.' }, 429);
+  const { email } = await c.req.json().catch(() => ({}));
+  if (email && c.env.RESEND_API_KEY) {
+    const u = await findByEmail(c.env.AUTH_DB, String(email));
+    if (u) {
+      const tok = genCode(24);
+      await c.env.KV.put(`pwreset:${tok}`, String(u.id), { expirationTtl: 3600 });
+      c.executionCtx.waitUntil(sendEmail(c.env, u.email, '[마음곁] 비밀번호 재설정', resetEmailHtml(new URL(c.req.url).origin + '/reset?token=' + tok)));
+    }
+  }
+  return c.json({ ok: true }); // 이메일 존재 여부 비노출
+});
+app.post('/api/auth/reset-password', async (c) => {
+  if (!(await checkRateLimit(c.env.KV, `resetpw:${clientIp(c)}`, 5, 3600))) return c.json({ error: '잠시 후 다시 시도해주세요.' }, 429);
+  const { token, password } = await c.req.json().catch(() => ({}));
+  if (!password || String(password).length < 8) return c.json({ error: '비밀번호는 8자 이상이어야 해요' }, 400);
+  const uid = token ? await c.env.KV.get(`pwreset:${token}`) : null;
+  if (!uid) return c.json({ error: '링크가 만료되었거나 유효하지 않아요. 다시 요청해 주세요.' }, 400);
+  await setPassword(c.env.AUTH_DB, Number(uid), String(password));
+  await c.env.KV.delete(`pwreset:${token}`);
+  return c.json({ ok: true });
+});
+app.post('/api/auth/resend-verify', requireAuth, async (c) => {
+  if (!c.env.RESEND_API_KEY) return c.json({ error: '이메일 발송이 아직 설정되지 않았어요' }, 503);
+  if (!(await checkRateLimit(c.env.KV, `resendv:${c.get('uid')}`, 3, 3600))) return c.json({ error: '잠시 후 다시 시도해주세요.' }, 429);
+  const u = await getUser(c.env.AUTH_DB, c.get('uid'));
+  if (!u) return c.json({ error: '계정을 찾을 수 없어요' }, 404);
+  const vtok = genCode(24);
+  await c.env.KV.put(`emailverify:${vtok}`, String(u.id), { expirationTtl: 7 * 86400 });
+  c.executionCtx.waitUntil(sendEmail(c.env, u.email, '[마음곁] 이메일 인증', verifyEmailHtml(new URL(c.req.url).origin + '/verify?token=' + vtok)));
+  return c.json({ ok: true });
+});
 
 // ── 반려동물 (도메인 DB) ──
 app.get('/api/pets', requireAuth, async (c) => {
@@ -280,6 +339,8 @@ app.get('/api/entitlement', requireAuth, async (c) => c.json({ entitlement: awai
 app.post('/api/coupon/redeem', requireAuth, async (c) => {
   const uid = c.get('uid');
   if (!(await checkRateLimit(c.env.KV, `redeem:${clientIp(c)}`, 10, 3600))) return c.json({ error: '잠시 후 다시 시도해주세요.' }, 429);
+  // 이메일 인증 시 어뷰징 방어(발송 설정된 경우에만 적용 — 미설정 시 무영향)
+  if (c.env.RESEND_API_KEY && !(await isEmailVerified(c.env.AUTH_DB, uid))) return c.json({ error: '이메일 인증 후 이용권을 등록할 수 있어요. 가입 시 받은 인증 메일을 확인해 주세요.', code: 'VERIFY' }, 403);
   const { code } = await c.req.json().catch(() => ({}));
   const norm = normCode(code);
   if (!norm) return c.json({ error: '코드를 입력해주세요' }, 400);
@@ -431,6 +492,25 @@ app.get('/terms', (c) => c.html(PAGE('이용약관', `
 <h2>제6조(금지행위)</h2><p>코드의 부정 사용·재판매, 타인 계정 도용, 서비스 부정 접근·자동화 남용을 금지합니다.</p>
 <h2>제7조(면책)</h2><p>통역 결과는 참고 정보이며, 회사는 이를 근거로 한 의사결정의 결과에 대해 법적 책임을 지지 않습니다. 건강이 우려되는 경우 수의사 상담을 권장합니다.</p>
 <h2>제8조(분쟁해결·준거법)</h2><p>본 약관은 대한민국 법령에 따르며, 분쟁은 관계 법령 및 회사 소재지 관할 법원에 따릅니다.</p>`)));
+
+app.get('/verify', async (c) => {
+  const tok = c.req.query('token');
+  const uid = tok ? await c.env.KV.get(`emailverify:${tok}`) : null;
+  if (uid) { await markEmailVerified(c.env.AUTH_DB, Number(uid)); await c.env.KV.delete(`emailverify:${tok}`); }
+  return c.html(PAGE('이메일 인증', uid
+    ? `<h1>이메일 인증 완료 ✅</h1><p>이제 마음곁을 모두 이용할 수 있어요. 앱(또는 maumgyeot.com)으로 돌아가 주세요.</p>`
+    : `<h1>인증 링크가 유효하지 않아요</h1><p>만료되었거나 이미 사용된 링크예요. 앱에서 인증 메일을 다시 보내 주세요.</p>`));
+});
+app.get('/reset', (c) => c.html(PAGE('비밀번호 재설정', `
+<h1>비밀번호 재설정</h1>
+<div class="card"><p>새 비밀번호(8자 이상)를 입력해 주세요.</p>
+<input id="pw" type="password" placeholder="새 비밀번호" style="width:100%;padding:11px;border:1px solid #ddd;border-radius:10px;box-sizing:border-box"/>
+<p id="msg" class="muted" style="margin-top:8px"></p>
+<button class="btn" style="background:#16a34a;margin-top:10px" onclick="go()">변경하기</button></div>
+<script>var t=new URLSearchParams(location.search).get('token');
+function go(){var pw=document.getElementById('pw').value,m=document.getElementById('msg');if((pw||'').length<8){m.style.color='#C0492F';m.textContent='8자 이상 입력해 주세요';return;}
+fetch('/api/auth/reset-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:t,password:pw})}).then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d};});}).then(function(x){if(!x.ok)throw new Error(x.d.error||'실패');m.style.color='#16a34a';m.textContent='변경되었습니다. 앱에서 새 비밀번호로 로그인해 주세요.';}).catch(function(e){m.style.color='#C0492F';m.textContent=e.message;});}
+</script>`)));
 
 app.get('/account-deletion', (c) => c.html(PAGE('회원 탈퇴', `
 <h1>마음곁 회원 탈퇴 · 계정 삭제</h1>
