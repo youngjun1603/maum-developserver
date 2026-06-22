@@ -53,6 +53,19 @@ function api(path, { method='GET', body, token } = {}) {
 // 제휴 추적: ?ref=파트너 최초 유입 1회 저장(first-touch)
 try{ var _r=new URLSearchParams(location.search).get('ref'); if(_r && !localStorage.getItem('maumotter_ref')) localStorage.setItem('maumotter_ref', _r.slice(0,64)); }catch(e){}
 
+// 이메일 인증 안내 — 발송 설정됨 && 미인증일 때만 표시
+function VerifyBanner({ token }) {
+  const [st,setSt]=useState(null); const [msg,setMsg]=useState('');
+  useEffect(()=>{ api('/auth/me',{token}).then(setSt).catch(()=>{}); },[]);
+  if(!st || !st.email_required || st.email_verified) return null;
+  async function resend(){ setMsg('보내는 중…'); try{ await api('/auth/resend-verify',{method:'POST',token}); setMsg('인증 메일을 다시 보냈어요. 메일함(스팸함 포함)을 확인해 주세요.'); }catch(e){ setMsg(e.message); } }
+  return html`<div class="card" style=${{background:'#FFF7ED',border:'1px solid #FED7AA'}}>
+    <b>✉️ 이메일 인증이 필요해요</b>
+    <div class="muted" style=${{marginTop:6}}>가입 시 보낸 인증 메일의 링크를 눌러주세요. 인증 후 이용권 등록 등 모든 기능을 이용할 수 있어요.</div>
+    <button class="btn btn-ghost" style=${{marginTop:10}} onClick=${resend}>인증 메일 다시 보내기</button>
+    ${msg && html`<div class="muted" style=${{marginTop:8,color:'#3B6FB5'}}>${msg}</div>`}
+  </div>`;
+}
 // 이용권(쿼터) 표시 + 코드 등록 (부모 화면)
 function EntitlementCard({ token }) {
   const [ent,setEnt]=useState(null); const [code,setCode]=useState(''); const [msg,setMsg]=useState(''); const [err,setErr]=useState(''); const [busy,setBusy]=useState(false);
@@ -108,7 +121,8 @@ const EXPR_LABEL = { happy:'웃음', neutral:'무표정', sad:'시무룩', angry
 function Auth({ onLogin }) {
   const [mode,setMode]=useState('login');
   const [email,setEmail]=useState(''); const [pw,setPw]=useState(''); const [name,setName]=useState('');
-  const [err,setErr]=useState(''); const [loading,setLoading]=useState(false);
+  const [err,setErr]=useState(''); const [loading,setLoading]=useState(false); const [sent,setSent]=useState(false);
+  async function forgot(){ setErr(''); setLoading(true); try{ await api('/auth/forgot-password',{method:'POST',body:{email}}); setSent(true); }catch(e){ setErr(e.message); } finally{ setLoading(false); } }
   async function submit(){
     setErr(''); setLoading(true);
     try{
@@ -142,14 +156,19 @@ function Auth({ onLogin }) {
     <div class="card">
       ${mode==='register' && html`<input class="field" placeholder="이름(선택)" value=${name} onInput=${e=>setName(e.target.value)} />`}
       <input class="field" type="email" placeholder="이메일" value=${email} onInput=${e=>setEmail(e.target.value)} />
-      <input class="field" type="password" placeholder="비밀번호 (8자 이상)" value=${pw} onInput=${e=>setPw(e.target.value)} />
+      ${mode!=='forgot' && html`<input class="field" type="password" placeholder="비밀번호 (8자 이상)" value=${pw} onInput=${e=>setPw(e.target.value)} />`}
       ${err && html`<div class="err">${err}</div>`}
-      <button class="btn" disabled=${loading} onClick=${submit}>${loading?'잠시만요…':(mode==='login'?'로그인':'가입하기')}</button>
+      ${mode==='forgot'
+        ? (sent
+          ? html`<div class="muted" style=${{color:'#3B6FB5'}}>재설정 메일을 보냈어요. 메일함(스팸함 포함)을 확인해 주세요.</div>`
+          : html`<button class="btn" disabled=${loading} onClick=${forgot}>${loading?'보내는 중…':'재설정 메일 보내기'}</button>`)
+        : html`<button class="btn" disabled=${loading} onClick=${submit}>${loading?'잠시만요…':(mode==='login'?'로그인':'가입하기')}</button>`}
       <div style=${{textAlign:'center', marginTop:12}}>
-        <span class="muted" style=${{cursor:'pointer'}} onClick=${()=>{setMode(mode==='login'?'register':'login');setErr('');}}>
-          ${mode==='login'?'처음이신가요? 가입하기':'이미 계정이 있어요 · 로그인'}
+        <span class="muted" style=${{cursor:'pointer'}} onClick=${()=>{setMode(mode==='login'?'register':'login');setErr('');setSent(false);}}>
+          ${mode==='login'?'처음이신가요? 가입하기':(mode==='forgot'?'← 로그인으로':'이미 계정이 있어요 · 로그인')}
         </span>
       </div>
+      ${mode==='login' && html`<div class="muted" style=${{textAlign:'center',marginTop:8,fontSize:13,cursor:'pointer'}} onClick=${()=>{setMode('forgot');setErr('');setSent(false);}}>비밀번호를 잊으셨나요?</div>`}
     </div>
     <div class="muted" style=${{textAlign:'center'}}>부모님 휴대폰에서, 아이와 함께 사용하는 서비스예요.<br/>본 서비스는 의학적 진단이 아닙니다.</div>
   </div>`;
@@ -171,6 +190,7 @@ function Dashboard({ token, user, onLogout, onStart, onReports, onSettings }) {
       <span class="muted" style=${{cursor:'pointer'}} onClick=${onLogout}>로그아웃</span>
     </div></div>
     <div class="wrap">
+      <${VerifyBanner} token=${token} />
       <div class="h1" style=${{marginBottom:12}}>우리 아이</div>
       ${children.map(ch => { let lb=null; try{lb=localStorage.getItem('maumotter_buddy_'+ch.id);}catch{} const bud=BUDDIES.find(b=>b.key===lb); return html`<div class="card" key=${ch.id}>
         <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center'}}>

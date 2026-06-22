@@ -80,6 +80,19 @@ export async function getUser(authDb: D1Database, id: number): Promise<MaumUser 
 export async function deleteUser(authDb: D1Database, id: number): Promise<void> {
   await authDb.prepare('DELETE FROM users WHERE id=?').bind(id).run();
 }
+// 비밀번호 재설정 / 이메일 인증 (canonical — 마음수달·마음곁 동일 사본)
+export async function findByEmail(authDb: D1Database, email: string): Promise<MaumUser | null> {
+  return (await authDb.prepare('SELECT id,email,name FROM users WHERE email=?').bind(String(email).toLowerCase()).first<MaumUser>()) ?? null;
+}
+export async function setPassword(authDb: D1Database, id: number, pw: string): Promise<void> {
+  await authDb.prepare('UPDATE users SET password_hash=? WHERE id=?').bind(await hashPassword(pw), id).run();
+}
+export async function markEmailVerified(authDb: D1Database, id: number): Promise<void> {
+  try { await authDb.prepare('UPDATE users SET email_verified=1 WHERE id=?').bind(id).run(); } catch {}
+}
+export async function isEmailVerified(authDb: D1Database, id: number): Promise<boolean> {
+  try { const r = await authDb.prepare('SELECT email_verified FROM users WHERE id=?').bind(id).first<any>(); return !!(r && r.email_verified); } catch { return true; }
+}
 
 // ── Hono 미들웨어: Bearer 검증 → c.set('uid', maum_user_id) ─
 // 사용처에서 c.env.JWT_SECRET, c.env.AUTH_DB 가 있어야 한다.
