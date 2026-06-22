@@ -336,6 +336,14 @@ app.post('/api/observe/guest', async (c) => {
 // ── 이용권(쿼터) 조회 + 쿠폰 등록 ──
 app.get('/api/entitlement', requireAuth, async (c) => c.json({ entitlement: await getEntitlement(c.env, c.get('uid')) }));
 
+// 이용 내역(영수증·이용권 등록 이력)
+app.get('/api/history', requireAuth, async (c) => {
+  const uid = c.get('uid');
+  const ent = await getEntitlement(c.env, uid);
+  const { results } = await c.env.DB.prepare('SELECT code,type,created_at FROM coupon_redemptions WHERE maum_user_id=? ORDER BY id DESC LIMIT 100').bind(uid).all();
+  return c.json({ entitlement: ent, redemptions: results });
+});
+
 app.post('/api/coupon/redeem', requireAuth, async (c) => {
   const uid = c.get('uid');
   if (!(await checkRateLimit(c.env.KV, `redeem:${clientIp(c)}`, 10, 3600))) return c.json({ error: '잠시 후 다시 시도해주세요.' }, 429);

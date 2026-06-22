@@ -119,6 +119,10 @@ function Dashboard({ token, user, onLogout, onObserve, onReports, onGuide }) {
     <div class="wrap">
       <${VerifyBanner} token=${token} />
       <div class="h1" style=${{marginBottom:12}}>우리 아이</div>
+      ${pets.length===0 && html`<div class="card" style=${{background:'#F2FBF7'}}>
+        <b>🐾 시작해 볼까요?</b>
+        <div class="muted" style=${{marginTop:6,lineHeight:1.8,color:'var(--ink)'}}>1. 아래에서 <b>우리 아이를 등록</b>하세요<br/>2. 행동·상황을 고르거나 <b>짧은 영상</b>을 찍어요<br/>3. AI가 마음을 <b>통역</b>해 드려요</div>
+      </div>`}
       ${pets.map(p => html`<div class="card" key=${p.id}>
         <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
           <div><b>${p.species==='cat'?'🐱':'🐶'} ${p.name}</b> <span class="muted">${SPECIES_LABEL[p.species]||''}${p.age?' · '+p.age+'살':''}</span></div>
@@ -278,11 +282,13 @@ function VerifyBanner({ token }) {
 }
 // 이용권(쿼터) 표시 + 코드 등록
 function EntitlementCard({ token }) {
-  const [ent,setEnt]=useState(null); const [code,setCode]=useState(''); const [msg,setMsg]=useState(''); const [err,setErr]=useState(''); const [busy,setBusy]=useState(false);
+  const [ent,setEnt]=useState(null); const [code,setCode]=useState(''); const [msg,setMsg]=useState(''); const [err,setErr]=useState(''); const [busy,setBusy]=useState(false); const [hist,setHist]=useState(null);
   useEffect(()=>{ api('/entitlement',{token}).then(d=>setEnt(d.entitlement)).catch(()=>{}); },[]);
+  const TYPE_LABEL={sub_light:'구독 라이트',sub_pro:'구독 프로',pack10:'회차권 10회'};
   async function redeem(){ if(!code.trim())return; setErr('');setMsg('');setBusy(true);
     try{ const d=await api('/coupon/redeem',{method:'POST',token,body:{code}}); setEnt(d.entitlement); setCode(''); setMsg('등록 완료! 이용권이 적용됐어요.'); }
     catch(e){ setErr(e.message); } finally{ setBusy(false); } }
+  async function toggleHist(){ if(hist!==null){ setHist(null); return; } try{ const d=await api('/history',{token}); setHist(d.redemptions||[]); }catch(e){ setHist([]); } }
   const planLabel = ent ? (ent.plan==='pro'?'프로':ent.plan==='light'?'라이트':'무료') : '';
   return html`<div class="card">
     <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
@@ -296,6 +302,10 @@ function EntitlementCard({ token }) {
     </div>
     ${msg && html`<div class="muted" style=${{color:'var(--teal)',marginTop:8}}>${msg}</div>`}
     ${err && html`<div class="err" style=${{marginTop:8}}>${err}</div>`}
+    <div class="muted" style=${{marginTop:8,fontSize:12,cursor:'pointer'}} onClick=${toggleHist}>이용 내역 ${hist===null?'보기':'닫기'} ▾</div>
+    ${hist!==null && html`<div style=${{marginTop:4}}>${hist.length===0
+      ? html`<div class="muted" style=${{fontSize:12}}>아직 등록한 이용권이 없어요.</div>`
+      : hist.map((h,i)=>html`<div key=${i} class="muted" style=${{fontSize:12,padding:'3px 0',borderTop:i?'1px solid #F0EBE3':'none'}}>${(h.created_at||'').slice(0,10)} · ${TYPE_LABEL[h.type]||h.type} · <span style=${{fontFamily:'monospace'}}>${h.code}</span></div>`)}</div>`}
     <div style=${{marginTop:12,paddingTop:12,borderTop:'1px solid #ECE6DD'}}>
       <div class="muted" style=${{fontSize:12,marginBottom:6}}>🛒 이용권 구매 (스마트스토어)</div>
       <div class="muted" style=${{fontSize:13,lineHeight:1.7,color:'var(--ink)'}}>라이트 30일·월 30회 4,900원 · 프로 30일·월 100회 9,900원 · 회차권 10회(60일) 4,900원</div>
