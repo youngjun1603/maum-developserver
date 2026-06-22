@@ -124,6 +124,21 @@ function Auth({ onLogin }) {
       <div class="h1" style=${{marginTop:14}}>마음수달</div>
       <div class="muted">우리 아이의 속마음, 또또가 들어주고<br/>부모님께 따뜻하게 통역해드려요</div>
     </div>
+    <div class="card" style=${{background:'#F2F7FD'}}>
+      <b>🦦 아이의 속마음, 또또가 통역해요</b>
+      <div class="muted" style=${{marginTop:8,lineHeight:1.7,color:'#234E86'}}>아이가 수달 친구 '또또'와 도란도란 이야기하면, 그 대화를 부모님이 이해·행동할 수 있는 <b>따뜻한 코칭</b>으로 통역해 드려요. 또또는 아이의 친구를 대신하지 않는, 아이와 부모님 사이의 <b>다리</b>예요.</div>
+    </div>
+    <div class="card">
+      <div class="muted" style=${{fontSize:13,marginBottom:8}}>이렇게 통역해요</div>
+      <div style=${{lineHeight:1.9}}>
+        <div><b>1.</b> 아이가 또또와 짧게 이야기해요(말·글)</div>
+        <div><b>2.</b> AI가 아이의 정서를 <b>통역</b>해요</div>
+        <div><b>3.</b> 부모님이 리포트로 이해하고 다가가요</div>
+      </div>
+    </div>
+    <div style=${{display:'flex',flexWrap:'wrap',gap:6,justifyContent:'center',marginBottom:14}}>
+      <span class="pill">부모님 기기 전용</span><span class="pill">"진짜가 아닌 친구" 고지</span><span class="pill">비밀 강요 없음</span><span class="pill">영상 저장 안 함</span>
+    </div>
     <div class="card">
       ${mode==='register' && html`<input class="field" placeholder="이름(선택)" value=${name} onInput=${e=>setName(e.target.value)} />`}
       <input class="field" type="email" placeholder="이메일" value=${email} onInput=${e=>setEmail(e.target.value)} />
@@ -183,6 +198,9 @@ function Dashboard({ token, user, onLogout, onStart, onReports, onSettings }) {
         <button class="btn btn-ghost" style=${{marginTop:8}} onClick=${()=>setAdding(false)}>취소</button>
       </div>` : html`<button class="btn btn-ghost" onClick=${()=>setAdding(true)}>+ 아이 등록</button>`}
       <${EntitlementCard} token=${token} />
+      <div class="muted" style=${{textAlign:'center',marginTop:24,fontSize:12,lineHeight:1.9}}>
+        <a href="/privacy" style=${{color:'inherit'}}>개인정보처리방침</a> · <a href="/terms" style=${{color:'inherit'}}>이용약관</a> · <a href="/account-deletion" style=${{color:'inherit'}}>회원 탈퇴</a>
+      </div>
     </div>
   </div>`;
 }

@@ -2,7 +2,7 @@
 // 계정/인증은 공용 maum-auth(AUTH_DB) + 공유 모듈 ./auth (마음곁과 동일 사본).
 // 안전원칙(단정금지·의료용어금지·비밀거짓말금지·위기 보수판정)은 docs/ 준수.
 import { Hono } from 'hono';
-import { registerUser, loginUser, getUser, issueToken, requireAuth, hashPassword, verifyPassword } from './auth';
+import { registerUser, loginUser, getUser, issueToken, requireAuth, hashPassword, verifyPassword, deleteUser } from './auth';
 
 type Bindings = {
   DB: D1Database;          // 마음수달 도메인 (children/sessions/utterances/reports)
@@ -405,6 +405,76 @@ app.get('/api/admin/referrals', async (c) => {
      GROUP BY r.ref ORDER BY signups DESC LIMIT 500`).all();
   return c.json({ referrals: results });
 });
+
+// ── 회원 탈퇴(계정·데이터 완전 삭제) ──
+app.delete('/api/account', requireAuth, async (c) => {
+  const uid = c.get('uid');
+  await c.env.DB.batch([
+    c.env.DB.prepare('DELETE FROM utterances WHERE session_id IN (SELECT id FROM sessions WHERE maum_user_id=?)').bind(uid),
+    c.env.DB.prepare('DELETE FROM reports WHERE maum_user_id=?').bind(uid),
+    c.env.DB.prepare('DELETE FROM sessions WHERE maum_user_id=?').bind(uid),
+    c.env.DB.prepare('DELETE FROM children WHERE maum_user_id=?').bind(uid),
+    c.env.DB.prepare('DELETE FROM subscriptions WHERE maum_user_id=?').bind(uid),
+    c.env.DB.prepare('DELETE FROM packs WHERE maum_user_id=?').bind(uid),
+    c.env.DB.prepare('DELETE FROM usage_monthly WHERE maum_user_id=?').bind(uid),
+    c.env.DB.prepare('DELETE FROM coupon_redemptions WHERE maum_user_id=?').bind(uid),
+    c.env.DB.prepare('DELETE FROM referrals WHERE maum_user_id=?').bind(uid),
+  ]);
+  try { await c.env.KV.delete(`pin:${uid}`); } catch {}
+  await deleteUser(c.env.AUTH_DB, uid);
+  return c.json({ ok: true });
+});
+
+// ── 법적 고지 페이지 (개인정보·약관·탈퇴) ──
+const BIZ = '상호: 마음서비스 · 대표자: 김근혜 · 사업자등록번호: 780-31-01832 · 통신판매업 신고번호: 제 2026-서울영등포-1157 호 · 소재지: 서울특별시 영등포구 문래로26길 6(문래동3가) · 문의: limyj007@gmail.com';
+const PAGE = (title: string, body: string) => `<!doctype html><html lang="ko"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/><title>${title} · 마음수달</title>
+<style>body{font-family:system-ui,-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;max-width:720px;margin:0 auto;padding:28px 20px 60px;color:#222;line-height:1.7}
+h1{font-size:22px}h2{font-size:16px;margin-top:26px}.muted{color:#777;font-size:13px}a{color:#3B6FB5}
+.btn{display:inline-block;background:#dc2626;color:#fff;border:0;border-radius:10px;padding:12px 20px;font-size:15px;font-weight:700;cursor:pointer}
+.card{border:1px solid #eee;border-radius:12px;padding:16px;margin-top:16px}.biz{margin-top:34px;padding-top:16px;border-top:1px solid #eee;color:#888;font-size:12px;line-height:1.9}
+.nav{font-size:13px;margin-bottom:8px}</style></head><body>
+<div class="nav"><a href="/privacy">개인정보처리방침</a> · <a href="/terms">이용약관</a> · <a href="/account-deletion">회원 탈퇴</a></div>
+${body}<div class="biz">🦦 마음수달 · ${BIZ}</div></body></html>`;
+
+app.get('/privacy', (c) => c.html(PAGE('개인정보처리방침', `
+<h1>마음수달 개인정보처리방침</h1><p class="muted">시행일: 2026-06-21</p>
+<p>마음서비스(이하 "회사")는 아동 정서 통역 서비스 '마음수달'을 운영하며, 「개인정보 보호법」 등 관련 법령을 준수합니다.</p>
+<h2>1. 수집 항목</h2><ul>
+<li>계정: 이메일, 비밀번호(암호화 저장), 이름(선택)</li>
+<li>아이 정보: 애칭, 나이, 성별(선택), 관심사(선택)</li>
+<li>대화·통역 기록: 아이가 '또또'와 나눈 대화, 생성된 통역 리포트</li>
+<li>부모 PIN(암호화 저장), 이용권/구매 이력</li></ul>
+<h2>2. 이용 목적</h2><p>정서 통역 서비스 제공, 계정·이용권 관리, 안전(위기 신호의 보호자 안내).</p>
+<h2>3. 표정 영상(비저장)</h2><p>표정 분석은 <b>기기 내에서만</b> 처리되며 원본 영상은 저장·전송하지 않습니다.</p>
+<h2>4. 처리 위탁</h2><ul><li>Anthropic — 통역 생성을 위한 AI 처리</li><li>Cloudflare — 서버·데이터베이스 인프라</li></ul>
+<h2>5. 보유 및 파기</h2><p>회원 탈퇴 시 모든 개인정보를 <b>즉시 파기</b>합니다(관계 법령상 보관 의무가 있는 경우 제외). 탈퇴는 <a href="/account-deletion">여기</a> 또는 앱 내에서 가능합니다.</p>
+<h2>6. 아동의 개인정보</h2><p>본 서비스는 <b>보호자(법정대리인)가 동반·운영</b>하는 서비스입니다. 만 14세 미만 아동의 개인정보는 법정대리인의 동의 하에 처리됩니다.</p>
+<h2>7. 이용자 권리</h2><p>이용자는 개인정보 열람·정정·삭제를 요청할 수 있으며, 전송 구간은 HTTPS로 암호화됩니다.</p>
+<h2>8. 개인정보보호책임자</h2><p>김근혜 · limyj007@gmail.com</p>`)));
+
+app.get('/terms', (c) => c.html(PAGE('이용약관', `
+<h1>마음수달 이용약관</h1><p class="muted">시행일: 2026-06-21</p>
+<h2>제1조(목적)</h2><p>본 약관은 마음서비스가 제공하는 '마음수달' 서비스 이용에 관한 회사와 이용자의 권리·의무를 정함을 목적으로 합니다.</p>
+<h2>제2조(서비스 내용)</h2><p>마음수달은 아이가 '또또'와 나눈 대화를 보호자가 이해할 수 있도록 통역하는 서비스입니다. 통역 결과는 <b>참고용</b>이며 의학적 진단·치료가 아닙니다.</p>
+<h2>제3조(계정)</h2><p>서비스는 보호자 계정으로 가입하며, 보호자의 기기에서 아이와 함께 사용합니다. 계정 정보 관리 책임은 이용자에게 있습니다.</p>
+<h2>제4조(이용권·결제)</h2><p>유료 이용권은 외부 판매처(예: 네이버 스마트스토어)에서 구매 후 발급받은 코드를 서비스에 등록하여 이용합니다. 이용권 종류·제공량은 구매 시점 안내에 따릅니다.</p>
+<h2>제5조(청약철회·환불)</h2><p>디지털 콘텐츠(이용권 코드)는 「전자상거래 등에서의 소비자보호에 관한 법률」에 따라, 코드 발송 및 사용(등록) 후에는 청약철회가 제한될 수 있습니다. 미사용·미발송 건은 관련 법령에 따라 환불됩니다.</p>
+<h2>제6조(금지행위)</h2><p>코드의 부정 사용·재판매, 타인 계정 도용, 서비스 부정 접근·자동화 남용을 금지합니다.</p>
+<h2>제7조(면책)</h2><p>통역 결과는 참고 정보이며, 회사는 이를 근거로 한 의사결정의 결과에 대해 법적 책임을 지지 않습니다. 안전이 우려되는 경우 전문기관 상담을 권장합니다.</p>
+<h2>제8조(분쟁해결·준거법)</h2><p>본 약관은 대한민국 법령에 따르며, 분쟁은 관계 법령 및 회사 소재지 관할 법원에 따릅니다.</p>`)));
+
+app.get('/account-deletion', (c) => c.html(PAGE('회원 탈퇴', `
+<h1>마음수달 회원 탈퇴 · 계정 삭제</h1>
+<p>탈퇴 시 <b>계정과 모든 데이터(아이 정보·대화·통역 리포트·이용권)가 즉시 영구 삭제</b>되며 복구할 수 없습니다. 표정 영상은 애초에 저장하지 않습니다.</p>
+<p class="muted">⚠️ 마음수달 계정은 마음 시리즈 통합 로그인 계정입니다. 탈퇴하면 같은 계정의 다른 마음 서비스에서도 함께 삭제됩니다.</p>
+<div class="card"><p id="msg">로그인 상태를 확인하는 중…</p>
+<button class="btn" id="del" style="display:none" onclick="doDelete()">계정 영구 삭제</button></div>
+<p class="muted">앱 내에서도 <b>설정 → 회원 탈퇴</b>로 진행할 수 있습니다. 로그인 없이 삭제를 원하시면 limyj007@gmail.com 으로 가입 이메일과 함께 요청해 주세요.</p>
+<script>var K='maumotter_token',t=localStorage.getItem(K),m=document.getElementById('msg'),d=document.getElementById('del');
+if(t){m.textContent='현재 로그인되어 있습니다. 아래 버튼으로 계정을 영구 삭제할 수 있습니다.';d.style.display='inline-block';}else{m.textContent='로그인되어 있지 않습니다. 앱에서 로그인 후 이 페이지를 다시 열어 주세요.';}
+function doDelete(){if(!confirm('정말 계정과 모든 데이터를 영구 삭제할까요? 되돌릴 수 없습니다.'))return;d.disabled=true;d.textContent='삭제 중…';
+fetch('/api/account',{method:'DELETE',headers:{Authorization:'Bearer '+t}}).then(function(r){if(!r.ok)throw 0;localStorage.removeItem(K);m.textContent='계정이 삭제되었습니다. 그동안 이용해 주셔서 감사합니다.';d.style.display='none';}).catch(function(){d.disabled=false;d.textContent='계정 영구 삭제';alert('삭제 중 문제가 발생했어요. 잠시 후 다시 시도해 주세요.');});}</script>`)));
 
 // 정적 프론트(React CDN) — /api 외는 assets
 app.all('*', (c) => c.env.ASSETS.fetch(c.req.raw));
