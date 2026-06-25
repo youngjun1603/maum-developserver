@@ -170,15 +170,6 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
     setView(item.view);
   };
 
-  // 마음수달 진입(별개 서비스): 로그인 시 SSO 단일로그인, 비로그인 시 maumotter.com 이동
-  const openOtter = () => {
-    if (!isLoggedIn) { window.open('https://maumotter.com', '_blank', 'noopener noreferrer'); return; }
-    fetch('/api/maum-sso-token', { headers: { Authorization: 'Bearer ' + (localStorage.getItem('access_token') || '') } })
-      .then(r => r.json())
-      .then(data => { if (data.success && data.ssoToken) window.open('https://maumotter.com/?sso=' + encodeURIComponent(data.ssoToken), '_blank', 'noopener noreferrer'); else window.open('https://maumotter.com', '_blank', 'noopener noreferrer'); })
-      .catch(() => window.open('https://maumotter.com', '_blank', 'noopener noreferrer'));
-  };
-
   return (
     <nav style={{
       position: 'sticky', top: 0, zIndex: 1000,
@@ -461,6 +452,14 @@ function MfSnsFooter({ tl }) {
 // ============================================================
 function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory, setAutoOpenExternal }) {
   const tl = (ko, en) => lang === 'en' ? en : ko;
+  // 마음수달 진입(별개 서비스): 로그인 시 SSO 단일로그인, 비로그인 시 maumotter.com 이동
+  const openOtter = () => {
+    if (!isLoggedIn) { window.open('https://maumotter.com', '_blank', 'noopener noreferrer'); return; }
+    fetch('/api/maum-sso-token', { headers: { Authorization: 'Bearer ' + (localStorage.getItem('access_token') || '') } })
+      .then(r => r.json())
+      .then(data => { if (data.success && data.ssoToken) window.open('https://maumotter.com/?sso=' + encodeURIComponent(data.ssoToken), '_blank', 'noopener noreferrer'); else window.open('https://maumotter.com', '_blank', 'noopener noreferrer'); })
+      .catch(() => window.open('https://maumotter.com', '_blank', 'noopener noreferrer'));
+  };
   const { useState: useS, useEffect: useE, useRef } = React;
   const [activeTestIdx, setActiveTestIdx] = useS(0);
   const [visibleSections, setVisibleSections] = useS({});
