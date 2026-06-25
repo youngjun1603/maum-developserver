@@ -1516,15 +1516,15 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
       </div>
 
       {/* ── 함께하면 좋은 서비스 (패밀리 사이트) ──────────── */}
-      <section style={{ background: '#FAFAF7', padding: '48px 24px', borderTop: '1px solid #ECEAE3' }}>
-        <div style={{ maxWidth: 880, margin: '0 auto' }}>
+      <section style={{ background: '#FAFAF7', padding: '36px 24px', borderTop: '1px solid #ECEAE3' }}>
+        <div style={{ maxWidth: 1160, margin: '0 auto' }}>
           <h3 style={{ textAlign: 'center', fontSize: 18, fontWeight: 700, color: '#2C2C2C', marginBottom: 6, fontFamily: "'Noto Sans KR', sans-serif" }}>
             {tl('함께하면 좋은 마음 서비스', 'Related Services')}
           </h3>
-          <p style={{ textAlign: 'center', fontSize: 13, color: '#8A8A82', marginBottom: 28 }}>
+          <p style={{ textAlign: 'center', fontSize: 13, color: '#8A8A82', marginBottom: 22 }}>
             {tl('마음풀과 함께 이용하면 좋은 서비스들이에요', 'Services that pair well with Maumful')}
           </p>
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
             {[
               { emoji: '✝️', name: 'The Light of Life', desc: tl('성경적 상담·심리검사', 'Biblical counseling & assessments'), url: 'https://jesusmaum.com', domain: 'jesusmaum.com', accent: '#0F2044' },
               { emoji: '🦦', name: tl('마음수달', 'Maumotter'), desc: tl('아이의 속마음 통역', "Read your child's feelings"), url: 'https://maumotter.com', domain: 'maumotter.com', accent: '#3E78C0' },
@@ -1532,14 +1532,14 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
               { emoji: '🏢', name: 'phyweb', desc: tl('기업·기관 전문 심리검사', 'Assessments for organizations'), url: 'https://phyweb.pages.dev', domain: 'phyweb.pages.dev', accent: '#2E7D6B' },
             ].map(s => (
               <a key={s.domain} href={s.url} target="_blank" rel="noopener noreferrer"
-                style={{ flex: '1 1 320px', maxWidth: 400, display: 'flex', alignItems: 'center', gap: 14, padding: '18px 20px', background: 'white', border: '1px solid #ECEAE3', borderRadius: 16, textDecoration: 'none', transition: 'all 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+                style={{ flex: '1 1 230px', maxWidth: 280, display: 'flex', alignItems: 'center', gap: 11, padding: '12px 14px', background: 'white', border: '1px solid #ECEAE3', borderRadius: 14, textDecoration: 'none', transition: 'all 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
                 onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.08)'; }}
                 onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'; }}>
-                <div style={{ width: 44, height: 44, borderRadius: 12, background: s.accent + '14', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>{s.emoji}</div>
+                <div style={{ width: 38, height: 38, borderRadius: 11, background: s.accent + '14', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 19, flexShrink: 0 }}>{s.emoji}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: '#2C2C2C', fontFamily: "'Noto Sans KR', sans-serif" }}>{s.name}</div>
-                  <div style={{ fontSize: 12.5, color: '#8A8A82', marginTop: 2 }}>{s.desc}</div>
-                  <div style={{ fontSize: 11.5, color: s.accent, marginTop: 4, fontWeight: 600 }}>{s.domain} →</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#2C2C2C', fontFamily: "'Noto Sans KR', sans-serif" }}>{s.name}</div>
+                  <div style={{ fontSize: 11.5, color: '#8A8A82', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.desc}</div>
+                  <div style={{ fontSize: 11, color: s.accent, marginTop: 3, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.domain} →</div>
                 </div>
               </a>
             ))}
