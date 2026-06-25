@@ -1891,6 +1891,20 @@ function PsychologicalTestSystem() {
     }
   }
 
+  // 마음수달 — 마음풀 계정으로 단일로그인(SSO) 진입. 미설정/실패 시 일반 링크로 폴백.
+  async function openMaumOtter() {
+    if (!isLoggedIn) { setView('memberLogin'); return; }
+    try {
+      const res = await fetch('/api/maum-sso-token', { headers: api._authHeader() });
+      const data = await res.json();
+      if (data.success && data.ssoToken) {
+        window.open('https://maumotter.com/?sso=' + encodeURIComponent(data.ssoToken), '_blank', 'noopener noreferrer');
+        return;
+      }
+    } catch {}
+    window.open('https://maumotter.com', '_blank', 'noopener noreferrer');
+  }
+
   // ============================================================
   // 검사 이력 로드
   // ============================================================
@@ -3720,6 +3734,12 @@ function PsychologicalTestSystem() {
                 className="text-gray-500 hover:text-rose-600 text-sm px-2 py-1.5 rounded-lg hover:bg-rose-50 transition flex items-center gap-1"
                 title="마음커플 — 파트너와 심리 궁합 분석">
                 💕 <span className="hidden sm:inline">{t("마음커플","MaumCouple")}</span>
+              </button>
+              {/* 마음수달 진입 — 마음풀 계정 SSO 단일로그인(미설정 시 일반 링크 폴백) */}
+              <button onClick={() => openMaumOtter()}
+                className="text-gray-500 hover:text-sky-600 text-sm px-2 py-1.5 rounded-lg hover:bg-sky-50 transition flex items-center gap-1"
+                title="마음수달 — 아이의 속마음 통역">
+                🦦 <span className="hidden sm:inline">{t("마음수달","Maumotter")}</span>
               </button>
               <button onClick={() => setView('myPage')} className="text-gray-500 hover:text-gray-700 text-sm px-2 py-1.5 rounded-lg hover:bg-gray-100 transition">
                 👤 {currentUser?.nickname || t('내 정보','My Info')}

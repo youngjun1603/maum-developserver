@@ -174,6 +174,16 @@ async function signJwt(payload: Record<string, unknown>, secret: string): Promis
   return `${header}.${body}.${sigB64}`
 }
 
+// 마음 시리즈 SSO 토큰(payload_b64u.sig_b64u, HMAC-SHA256). 마음수달/곁이 동일 MAUM_SSO_SECRET로 검증.
+async function signSso(secret: string, payload: Record<string, unknown>): Promise<string> {
+  const b64u = (s: string) => btoa(s).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
+  const payloadB64 = b64u(JSON.stringify(payload))
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+  const sigBuf = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payloadB64))
+  const sig = btoa(String.fromCharCode(...new Uint8Array(sigBuf))).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
+  return payloadB64 + '.' + sig
+}
+
 async function verifyJwt(token: string, secret: string): Promise<Record<string, unknown> | null> {
   try {
     const [header, body, sig] = token.split('.')
@@ -1438,6 +1448,21 @@ app.get('/api/couple-token', async (c) => {
     secret
   )
   return c.json({ success: true, coupleToken })
+})
+
+// ── 마음 시리즈(마음수달 등) SSO 토큰 — 마음풀 계정으로 단일로그인 진입 ──
+// MAUM_SSO_SECRET(시크릿) 미설정 시 503 → 프론트는 일반 링크로 폴백(무영향).
+app.get('/api/maum-sso-token', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false, error: '로그인이 필요합니다.' }, 401)
+  const secret = (c.env as Record<string, any>).MAUM_SSO_SECRET
+  if (!secret) return c.json({ success: false, error: 'SSO 미설정' }, 503)
+  const u = await DB.prepare('SELECT email FROM users WHERE id=?').bind(userId).first<{ email: string }>()
+  if (!u?.email) return c.json({ success: false, error: '이메일이 없는 계정' }, 400)
+  const now = Math.floor(Date.now() / 1000)
+  const ssoToken = await signSso(secret, { uid: userId, email: String(u.email).toLowerCase(), exp: now + 300 })
+  return c.json({ success: true, ssoToken })
 })
 
 // ── BIG5/LOST/DSI 결과 저장 (마음커플 연동용) ─────────────

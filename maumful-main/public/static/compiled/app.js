@@ -1892,6 +1892,22 @@ function PsychologicalTestSystem() {
       window.open(gameUrl, "_blank", "noopener noreferrer");
     }
   }
+  async function openMaumOtter() {
+    if (!isLoggedIn) {
+      setView("memberLogin");
+      return;
+    }
+    try {
+      const res = await fetch("/api/maum-sso-token", { headers: api._authHeader() });
+      const data = await res.json();
+      if (data.success && data.ssoToken) {
+        window.open("https://maumotter.com/?sso=" + encodeURIComponent(data.ssoToken), "_blank", "noopener noreferrer");
+        return;
+      }
+    } catch {
+    }
+    window.open("https://maumotter.com", "_blank", "noopener noreferrer");
+  }
   async function loadTestHistory() {
     try {
       const r = await api.getTestHistory();
@@ -3248,6 +3264,15 @@ Visit Maumful and take the same test again to compare your progress.`));
       },
       "\u{1F495} ",
       /* @__PURE__ */ React.createElement("span", { className: "hidden sm:inline" }, t("\uB9C8\uC74C\uCEE4\uD50C", "MaumCouple"))
+    ), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        onClick: () => openMaumOtter(),
+        className: "text-gray-500 hover:text-sky-600 text-sm px-2 py-1.5 rounded-lg hover:bg-sky-50 transition flex items-center gap-1",
+        title: "\uB9C8\uC74C\uC218\uB2EC \u2014 \uC544\uC774\uC758 \uC18D\uB9C8\uC74C \uD1B5\uC5ED"
+      },
+      "\u{1F9A6} ",
+      /* @__PURE__ */ React.createElement("span", { className: "hidden sm:inline" }, t("\uB9C8\uC74C\uC218\uB2EC", "Maumotter"))
     ), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("myPage"), className: "text-gray-500 hover:text-gray-700 text-sm px-2 py-1.5 rounded-lg hover:bg-gray-100 transition" }, "\u{1F464} ", (currentUser == null ? void 0 : currentUser.nickname) || t("\uB0B4 \uC815\uBCF4", "My Info")), /* @__PURE__ */ React.createElement(
       "button",
       {
