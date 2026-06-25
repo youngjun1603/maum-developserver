@@ -14,6 +14,7 @@ type Bindings = {
   ADMIN_SECRET?: string;   // 쿠폰 발행 어드민
   RESEND_API_KEY?: string; // 이메일 발송(비번재설정·이메일인증)
   EMAIL_FROM?: string;
+  MAUM_SSO_SECRET?: string; // 마음풀↔마음수달 SSO 공유 시크릿(HMAC)
 };
 
 const app = new Hono<{ Bindings: Bindings; Variables: { uid: number } }>();
@@ -143,6 +144,19 @@ function requireAdmin(c: any): 'ok' | 'unset' | 'unauth' {
   return (c.req.header('Authorization') || '') === `Bearer ${c.env.ADMIN_SECRET}` ? 'ok' : 'unauth';
 }
 const genCode = (len = 8) => { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; const r = crypto.getRandomValues(new Uint8Array(len)); let s = ''; for (let i = 0; i < len; i++) s += A[r[i] % A.length]; return s; };
+// 마음풀 SSO 토큰 검증(payload_b64u.sig_b64u, HMAC-SHA256). 반환=payload | null
+async function verifySso(secret: string, token: string): Promise<any | null> {
+  try {
+    const i = String(token).lastIndexOf('.');
+    if (i < 0) return null;
+    const payloadB64 = token.slice(0, i), sig = token.slice(i + 1);
+    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const expBuf = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payloadB64));
+    const expSig = btoa(String.fromCharCode(...new Uint8Array(expBuf))).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+    if (expSig !== sig) return null;
+    return JSON.parse(atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/')));
+  } catch { return null; }
+}
 // 운영 에러 로그(모니터링) — best-effort
 async function logError(env: Bindings, place: string, e: any) {
   try { await env.DB.prepare('INSERT INTO error_logs (place,message) VALUES (?,?)').bind(String(place).slice(0, 80), String((e && e.message) || e).slice(0, 500)).run(); } catch {}
@@ -264,6 +278,27 @@ app.post('/api/auth/resend-verify', requireAuth, async (c) => {
   await c.env.KV.put(`emailverify:${vtok}`, String(u.id), { expirationTtl: 7 * 86400 });
   await sendEmail(c.env, u.email, '[마음수달] 이메일 인증', verifyEmailHtml(new URL(c.req.url).origin + '/verify?token=' + vtok));
   return c.json({ ok: true });
+});
+
+// ── 마음풀 SSO 수신 — 마음풀 계정으로 단일로그인(이메일로 수달 계정 자동 연결, 결제는 수달 자체 유지) ──
+app.post('/api/auth/sso', async (c) => {
+  const secret = c.env.MAUM_SSO_SECRET;
+  if (!secret) return c.json({ error: 'SSO가 설정되지 않았어요' }, 503);
+  if (!(await checkRateLimit(c.env.KV, `sso:${clientIp(c)}`, 20, 60))) return c.json({ error: '잠시 후 다시 시도해주세요.' }, 429);
+  const { sso } = await c.req.json().catch(() => ({}));
+  const payload = sso ? await verifySso(secret, String(sso)) : null;
+  if (!payload) return c.json({ error: 'SSO 검증 실패' }, 401);
+  if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) return c.json({ error: 'SSO 토큰이 만료되었어요' }, 401);
+  const email = String(payload.email || '').toLowerCase();
+  if (!email) return c.json({ error: '이메일이 없는 토큰' }, 400);
+  let user = await findByEmail(c.env.AUTH_DB, email);
+  if (!user) {
+    try { user = await registerUser(c.env.AUTH_DB, { email, password: crypto.randomUUID() + crypto.randomUUID() }); }
+    catch { user = await findByEmail(c.env.AUTH_DB, email); }
+  }
+  if (!user) return c.json({ error: '계정 처리 실패' }, 500);
+  await markEmailVerified(c.env.AUTH_DB, user.id);
+  return c.json({ token: await issueToken(c.env.JWT_SECRET, user), user });
 });
 
 // ── 부모 PIN (아이 모드 게이팅, spec 2-2) — KV 저장 ──

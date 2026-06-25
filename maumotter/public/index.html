@@ -464,6 +464,8 @@ function App() {
   const [child,setChild]=useState(null); const [reportData,setReportData]=useState(null);
   // 마음 시리즈 SSO: 다른 앱에서 #token=…로 넘어오면 그대로 로그인(공용 maum-auth·JWT 공유)
   useEffect(()=>{ const m=(location.hash||'').match(/token=([^&]+)/); if(m){ const t=decodeURIComponent(m[1]); localStorage.setItem(TOKEN_KEY,t); setToken(t); history.replaceState(null,'',location.pathname+location.search); } },[]);
+  // 마음풀 SSO 진입: ?sso=… → 수달 계정 단일로그인(계정 자동 연결)
+  useEffect(()=>{ try{ const sso=new URLSearchParams(location.search).get('sso'); if(sso){ api('/auth/sso',{method:'POST',body:{sso}}).then(d=>{ localStorage.setItem(TOKEN_KEY,d.token); setToken(d.token); history.replaceState(null,'',location.pathname); }).catch(()=>{}); } }catch(e){} },[]);
   useEffect(()=>{ if(token) api('/auth/me',{token}).then(d=>setUser(d.user)).catch(()=>{ localStorage.removeItem(TOKEN_KEY); setToken(''); }); },[token]);
   function logout(){ localStorage.removeItem(TOKEN_KEY); setToken(''); setUser(null); }
   function back(){ setView('dashboard'); setChild(null); setReportData(null); }
