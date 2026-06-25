@@ -1613,7 +1613,7 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
               상호: 마음서비스 · 대표자: 김근혜 · 사업자등록번호: 780-31-01832 · 통신판매업 신고번호: 제 2026-서울영등포-1157 호
             </p>
             <p style={{ marginBottom: 6 }}>
-              사업장: 서울특별시 영등포구 문래로26길 6, 102동 603호 (문래동3가) · 이메일: support@maumful.com
+              사업장: 서울특별시 영등포구 문래로26길 6, 102동 603호 (문래동3가) · 이메일: support@maumful.com · 연락처: 050-6789-0845
             </p>
             <p style={{ marginBottom: 6 }}>
               개인정보 침해신고: 개인정보보호위원회 182 · 호스팅: Cloudflare, Inc.
