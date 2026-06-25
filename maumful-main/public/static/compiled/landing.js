@@ -178,7 +178,8 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
     { label: tl("AI \uC0C1\uB2F4", "AI Counseling"), view: "aiCounsel", requireLogin: true },
     { label: tl("\uC0C1\uB2F4\uC13C\uD130", "Centers"), view: "counseling" },
     { label: tl("\uB9C8\uC74C \uAC8C\uC784", "Healing Games"), view: "gameIntro", isGame: true },
-    { label: tl("\uB9C8\uC74C\uCEE4\uD50C", "Maumful Couple"), view: "couple", isCouple: true }
+    { label: tl("\uB9C8\uC74C\uCEE4\uD50C", "Maumful Couple"), view: "couple", isCouple: true },
+    { label: tl("\uB9C8\uC74C\uC218\uB2EC", "Maumotter"), isOtter: true }
   ];
   const handleNavClick = (item) => {
     setMobileOpen(false);
@@ -208,6 +209,17 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
         const token = localStorage.getItem("access_token") || "";
         window.open(`${coupleBase}${token ? "?t=" + encodeURIComponent(token) : ""}`, "_blank", "noopener noreferrer");
       });
+      return;
+    }
+    if (item.isOtter) {
+      if (!isLoggedIn) {
+        window.open("https://maumotter.com", "_blank", "noopener noreferrer");
+        return;
+      }
+      fetch("/api/maum-sso-token", { headers: { Authorization: "Bearer " + (localStorage.getItem("access_token") || "") } }).then((r) => r.json()).then((data) => {
+        if (data.success && data.ssoToken) window.open("https://maumotter.com/?sso=" + encodeURIComponent(data.ssoToken), "_blank", "noopener noreferrer");
+        else window.open("https://maumotter.com", "_blank", "noopener noreferrer");
+      }).catch(() => window.open("https://maumotter.com", "_blank", "noopener noreferrer"));
       return;
     }
     if (item.requireLogin && !isLoggedIn) {

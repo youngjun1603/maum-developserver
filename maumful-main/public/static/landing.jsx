@@ -113,6 +113,7 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
     { label: tl('상담센터',   'Centers'),         view: 'counseling' },
     { label: tl('마음 게임',  'Healing Games'),   view: 'gameIntro', isGame: true },
     { label: tl('마음커플',   'Maumful Couple'),  view: 'couple',    isCouple: true },
+    { label: tl('마음수달',   'Maumotter'),       isOtter: true },
   ];
 
   const handleNavClick = (item) => {
@@ -144,6 +145,18 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
           const token = localStorage.getItem('access_token') || '';
           window.open(`${coupleBase}${token ? '?t=' + encodeURIComponent(token) : ''}`, '_blank', 'noopener noreferrer');
         });
+      return;
+    }
+    // 마음수달: 별개 서비스. 로그인 상태면 SSO 단일로그인, 미로그인이면 maumotter.com으로 그냥 이동(마음풀 로그인 강제 X)
+    if (item.isOtter) {
+      if (!isLoggedIn) { window.open('https://maumotter.com', '_blank', 'noopener noreferrer'); return; }
+      fetch('/api/maum-sso-token', { headers: { Authorization: 'Bearer ' + (localStorage.getItem('access_token') || '') } })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success && data.ssoToken) window.open('https://maumotter.com/?sso=' + encodeURIComponent(data.ssoToken), '_blank', 'noopener noreferrer');
+          else window.open('https://maumotter.com', '_blank', 'noopener noreferrer');
+        })
+        .catch(() => window.open('https://maumotter.com', '_blank', 'noopener noreferrer'));
       return;
     }
     if (item.requireLogin && !isLoggedIn) {
