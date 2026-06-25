@@ -170,6 +170,15 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
     setView(item.view);
   };
 
+  // 마음수달 진입(별개 서비스): 로그인 시 SSO 단일로그인, 비로그인 시 maumotter.com 이동
+  const openOtter = () => {
+    if (!isLoggedIn) { window.open('https://maumotter.com', '_blank', 'noopener noreferrer'); return; }
+    fetch('/api/maum-sso-token', { headers: { Authorization: 'Bearer ' + (localStorage.getItem('access_token') || '') } })
+      .then(r => r.json())
+      .then(data => { if (data.success && data.ssoToken) window.open('https://maumotter.com/?sso=' + encodeURIComponent(data.ssoToken), '_blank', 'noopener noreferrer'); else window.open('https://maumotter.com', '_blank', 'noopener noreferrer'); })
+      .catch(() => window.open('https://maumotter.com', '_blank', 'noopener noreferrer'));
+  };
+
   return (
     <nav style={{
       position: 'sticky', top: 0, zIndex: 1000,
@@ -1475,6 +1484,96 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
               </button>
               <div style={{ marginTop: 12, fontSize: 12, color: '#9A9A9A' }}>
                 {tl('로그인 후 별도 로그인 없이 바로 이동합니다', 'No separate login needed — seamlessly linked after sign-in')}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+
+
+      {/* ── 마음수달 ─────────────────────────────────────── */}
+      <section style={{ padding: '80px 24px', background: '#EEF5FD' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}
+            className="ai-grid">
+
+            {/* 수달 카드 2×2 */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              {tl([
+                { emoji: '🦦', name: '또또와 대화',     tag: '아이의 마음 친구',   color: '#3B6FB5', bg: '#E7F0FB' },
+                { emoji: '🤖', name: 'AI 정서 통역',    tag: '부모용 코칭 리포트', color: '#9333EA', bg: '#F3E8FF' },
+                { emoji: '📷', name: '표정 영상 분석',  tag: '기기 내·저장 안 함', color: '#0891B2', bg: '#E0F7FA' },
+                { emoji: '🔒', name: '안전 설계',       tag: 'PIN·위기 안내',      color: '#16A34A', bg: '#E7F6EC' },
+              ], [
+                { emoji: '🦦', name: 'Talk with Otto',  tag: "A child's heart-friend", color: '#3B6FB5', bg: '#E7F0FB' },
+                { emoji: '🤖', name: 'AI Emotion Read', tag: 'Coaching report for parents', color: '#9333EA', bg: '#F3E8FF' },
+                { emoji: '📷', name: 'Facial Reading',  tag: 'On-device · not stored', color: '#0891B2', bg: '#E0F7FA' },
+                { emoji: '🔒', name: 'Safe by Design',  tag: 'Parent PIN · crisis flags', color: '#16A34A', bg: '#E7F6EC' },
+              ]).map(g => (
+                <div key={g.name} onClick={openOtter}
+                  style={{
+                    background: g.bg, borderRadius: 16, padding: '22px 18px',
+                    cursor: 'pointer', transition: 'all 0.2s', border: `1.5px solid ${g.color}22`,
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 8px 28px rgba(0,0,0,0.10)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
+                >
+                  <div style={{ fontSize: 36, marginBottom: 10 }}>{g.emoji}</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: '#1A1A1A', marginBottom: 6 }}>{g.name}</div>
+                  <span style={{
+                    fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 100,
+                    background: 'white', color: g.color, border: `1px solid ${g.color}44`,
+                  }}>{g.tag}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* 텍스트 */}
+            <div>
+              <div style={{
+                display: 'inline-block', background: '#E1EDFB', color: '#3B6FB5',
+                fontSize: 12, fontWeight: 700, letterSpacing: '1.5px',
+                textTransform: 'uppercase', padding: '5px 14px', borderRadius: 100, marginBottom: 20,
+              }}>Maumotter</div>
+              <h2 style={{ fontSize: 36, fontWeight: 700, lineHeight: 1.3, marginBottom: 16 }}>
+                {tl(<>아이의 속마음을 통역하는<br /><span style={{ color: '#3B6FB5' }}>마음수달</span></>, <>Translating your child's heart<br /><span style={{ color: '#3B6FB5' }}>Maumotter</span></>)}
+              </h2>
+              <p style={{ fontSize: 16, color: '#5A5A5A', lineHeight: 1.8, marginBottom: 28 }}>
+                {tl(<>아이가 수달 친구 '또또'와 도란도란 이야기하면,<br />그 대화를 부모님이 이해·행동할 수 있는 따뜻한 코칭으로 통역해 드려요.</>, <>When your child chats with the otter friend 'Otto',<br />we translate it into warm coaching parents can understand and act on.</>)}
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
+                {tl([
+                  { icon: '🦦', text: '또또와 대화 — 아이가 편하게 속마음을 꺼내요' },
+                  { icon: '🤖', text: 'AI 정서 통역 — 부모님용 코칭 리포트' },
+                  { icon: '📷', text: '표정 영상 — 기기 내 분석·저장 안 함' },
+                  { icon: '🔒', text: '안전 설계 — 부모 PIN·위기 신호 안내' },
+                ], [
+                  { icon: '🦦', text: "Talk with Otto — kids open up comfortably" },
+                  { icon: '🤖', text: 'AI Emotion Read — coaching report for parents' },
+                  { icon: '📷', text: 'Facial Reading — analyzed on-device, not stored' },
+                  { icon: '🔒', text: 'Safe by Design — parent PIN · crisis flags' },
+                ]).map(item => (
+                  <div key={item.text} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 18 }}>{item.icon}</span>
+                    <span style={{ fontSize: 14, color: '#5A5A5A' }}>{item.text}</span>
+                  </div>
+                ))}
+              </div>
+              <button onClick={openOtter}
+                style={{
+                  background: '#3B6FB5', color: 'white', border: 'none',
+                  borderRadius: 12, padding: '14px 32px', fontSize: 16, fontWeight: 700,
+                  cursor: 'pointer', fontFamily: "'Noto Sans KR', sans-serif", transition: 'all 0.2s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#2F5C99'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = '#3B6FB5'; e.currentTarget.style.transform = 'none'; }}
+              >
+                {tl('마음수달 시작하기 →', 'Start Maumotter →')}
+              </button>
+              <div style={{ marginTop: 12, fontSize: 12, color: '#9A9A9A' }}>
+                {tl('로그인 시 별도 로그인 없이 바로 이동합니다 (마음수달은 별도 서비스예요)', 'Seamless single sign-on when logged in (Maumotter is a separate service)')}
               </div>
             </div>
 

@@ -232,6 +232,16 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
     }
     setView(item.view);
   };
+  const openOtter2 = () => {
+    if (!isLoggedIn) {
+      window.open("https://maumotter.com", "_blank", "noopener noreferrer");
+      return;
+    }
+    fetch("/api/maum-sso-token", { headers: { Authorization: "Bearer " + (localStorage.getItem("access_token") || "") } }).then((r) => r.json()).then((data) => {
+      if (data.success && data.ssoToken) window.open("https://maumotter.com/?sso=" + encodeURIComponent(data.ssoToken), "_blank", "noopener noreferrer");
+      else window.open("https://maumotter.com", "_blank", "noopener noreferrer");
+    }).catch(() => window.open("https://maumotter.com", "_blank", "noopener noreferrer"));
+  };
   return /* @__PURE__ */ React.createElement("nav", { style: {
     position: "sticky",
     top: 0,
@@ -1621,6 +1631,104 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
       },
       tl("\uB9C8\uC74C\uCEE4\uD50C \uC2DC\uC791\uD558\uAE30 \u2192", "Start Maumful Couple \u2192")
     ), /* @__PURE__ */ React.createElement("div", { style: { marginTop: 12, fontSize: 12, color: "#9A9A9A" } }, tl("\uB85C\uADF8\uC778 \uD6C4 \uBCC4\uB3C4 \uB85C\uADF8\uC778 \uC5C6\uC774 \uBC14\uB85C \uC774\uB3D9\uD569\uB2C8\uB2E4", "No separate login needed \u2014 seamlessly linked after sign-in")))
+  ))), /* @__PURE__ */ React.createElement("section", { style: { padding: "80px 24px", background: "#EEF5FD" } }, /* @__PURE__ */ React.createElement("div", { style: { maxWidth: 1200, margin: "0 auto" } }, /* @__PURE__ */ React.createElement(
+    "div",
+    {
+      style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 80, alignItems: "center" },
+      className: "ai-grid"
+    },
+    /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 } }, tl([
+      { emoji: "\u{1F9A6}", name: "\uB610\uB610\uC640 \uB300\uD654", tag: "\uC544\uC774\uC758 \uB9C8\uC74C \uCE5C\uAD6C", color: "#3B6FB5", bg: "#E7F0FB" },
+      { emoji: "\u{1F916}", name: "AI \uC815\uC11C \uD1B5\uC5ED", tag: "\uBD80\uBAA8\uC6A9 \uCF54\uCE6D \uB9AC\uD3EC\uD2B8", color: "#9333EA", bg: "#F3E8FF" },
+      { emoji: "\u{1F4F7}", name: "\uD45C\uC815 \uC601\uC0C1 \uBD84\uC11D", tag: "\uAE30\uAE30 \uB0B4\xB7\uC800\uC7A5 \uC548 \uD568", color: "#0891B2", bg: "#E0F7FA" },
+      { emoji: "\u{1F512}", name: "\uC548\uC804 \uC124\uACC4", tag: "PIN\xB7\uC704\uAE30 \uC548\uB0B4", color: "#16A34A", bg: "#E7F6EC" }
+    ], [
+      { emoji: "\u{1F9A6}", name: "Talk with Otto", tag: "A child's heart-friend", color: "#3B6FB5", bg: "#E7F0FB" },
+      { emoji: "\u{1F916}", name: "AI Emotion Read", tag: "Coaching report for parents", color: "#9333EA", bg: "#F3E8FF" },
+      { emoji: "\u{1F4F7}", name: "Facial Reading", tag: "On-device \xB7 not stored", color: "#0891B2", bg: "#E0F7FA" },
+      { emoji: "\u{1F512}", name: "Safe by Design", tag: "Parent PIN \xB7 crisis flags", color: "#16A34A", bg: "#E7F6EC" }
+    ]).map((g) => /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        key: g.name,
+        onClick: openOtter,
+        style: {
+          background: g.bg,
+          borderRadius: 16,
+          padding: "22px 18px",
+          cursor: "pointer",
+          transition: "all 0.2s",
+          border: `1.5px solid ${g.color}22`
+        },
+        onMouseEnter: (e) => {
+          e.currentTarget.style.transform = "translateY(-4px)";
+          e.currentTarget.style.boxShadow = "0 8px 28px rgba(0,0,0,0.10)";
+        },
+        onMouseLeave: (e) => {
+          e.currentTarget.style.transform = "none";
+          e.currentTarget.style.boxShadow = "none";
+        }
+      },
+      /* @__PURE__ */ React.createElement("div", { style: { fontSize: 36, marginBottom: 10 } }, g.emoji),
+      /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 700, color: "#1A1A1A", marginBottom: 6 } }, g.name),
+      /* @__PURE__ */ React.createElement("span", { style: {
+        fontSize: 11,
+        fontWeight: 700,
+        padding: "3px 10px",
+        borderRadius: 100,
+        background: "white",
+        color: g.color,
+        border: `1px solid ${g.color}44`
+      } }, g.tag)
+    ))),
+    /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: {
+      display: "inline-block",
+      background: "#E1EDFB",
+      color: "#3B6FB5",
+      fontSize: 12,
+      fontWeight: 700,
+      letterSpacing: "1.5px",
+      textTransform: "uppercase",
+      padding: "5px 14px",
+      borderRadius: 100,
+      marginBottom: 20
+    } }, "Maumotter"), /* @__PURE__ */ React.createElement("h2", { style: { fontSize: 36, fontWeight: 700, lineHeight: 1.3, marginBottom: 16 } }, tl(/* @__PURE__ */ React.createElement(React.Fragment, null, "\uC544\uC774\uC758 \uC18D\uB9C8\uC74C\uC744 \uD1B5\uC5ED\uD558\uB294", /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { style: { color: "#3B6FB5" } }, "\uB9C8\uC74C\uC218\uB2EC")), /* @__PURE__ */ React.createElement(React.Fragment, null, "Translating your child's heart", /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { style: { color: "#3B6FB5" } }, "Maumotter")))), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 16, color: "#5A5A5A", lineHeight: 1.8, marginBottom: 28 } }, tl(/* @__PURE__ */ React.createElement(React.Fragment, null, "\uC544\uC774\uAC00 \uC218\uB2EC \uCE5C\uAD6C '\uB610\uB610'\uC640 \uB3C4\uB780\uB3C4\uB780 \uC774\uC57C\uAE30\uD558\uBA74,", /* @__PURE__ */ React.createElement("br", null), "\uADF8 \uB300\uD654\uB97C \uBD80\uBAA8\uB2D8\uC774 \uC774\uD574\xB7\uD589\uB3D9\uD560 \uC218 \uC788\uB294 \uB530\uB73B\uD55C \uCF54\uCE6D\uC73C\uB85C \uD1B5\uC5ED\uD574 \uB4DC\uB824\uC694."), /* @__PURE__ */ React.createElement(React.Fragment, null, "When your child chats with the otter friend 'Otto',", /* @__PURE__ */ React.createElement("br", null), "we translate it into warm coaching parents can understand and act on."))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12, marginBottom: 32 } }, tl([
+      { icon: "\u{1F9A6}", text: "\uB610\uB610\uC640 \uB300\uD654 \u2014 \uC544\uC774\uAC00 \uD3B8\uD558\uAC8C \uC18D\uB9C8\uC74C\uC744 \uAEBC\uB0B4\uC694" },
+      { icon: "\u{1F916}", text: "AI \uC815\uC11C \uD1B5\uC5ED \u2014 \uBD80\uBAA8\uB2D8\uC6A9 \uCF54\uCE6D \uB9AC\uD3EC\uD2B8" },
+      { icon: "\u{1F4F7}", text: "\uD45C\uC815 \uC601\uC0C1 \u2014 \uAE30\uAE30 \uB0B4 \uBD84\uC11D\xB7\uC800\uC7A5 \uC548 \uD568" },
+      { icon: "\u{1F512}", text: "\uC548\uC804 \uC124\uACC4 \u2014 \uBD80\uBAA8 PIN\xB7\uC704\uAE30 \uC2E0\uD638 \uC548\uB0B4" }
+    ], [
+      { icon: "\u{1F9A6}", text: "Talk with Otto \u2014 kids open up comfortably" },
+      { icon: "\u{1F916}", text: "AI Emotion Read \u2014 coaching report for parents" },
+      { icon: "\u{1F4F7}", text: "Facial Reading \u2014 analyzed on-device, not stored" },
+      { icon: "\u{1F512}", text: "Safe by Design \u2014 parent PIN \xB7 crisis flags" }
+    ]).map((item) => /* @__PURE__ */ React.createElement("div", { key: item.text, style: { display: "flex", alignItems: "center", gap: 10 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 18 } }, item.icon), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, color: "#5A5A5A" } }, item.text)))), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        onClick: openOtter,
+        style: {
+          background: "#3B6FB5",
+          color: "white",
+          border: "none",
+          borderRadius: 12,
+          padding: "14px 32px",
+          fontSize: 16,
+          fontWeight: 700,
+          cursor: "pointer",
+          fontFamily: "'Noto Sans KR', sans-serif",
+          transition: "all 0.2s"
+        },
+        onMouseEnter: (e) => {
+          e.currentTarget.style.background = "#2F5C99";
+          e.currentTarget.style.transform = "translateY(-1px)";
+        },
+        onMouseLeave: (e) => {
+          e.currentTarget.style.background = "#3B6FB5";
+          e.currentTarget.style.transform = "none";
+        }
+      },
+      tl("\uB9C8\uC74C\uC218\uB2EC \uC2DC\uC791\uD558\uAE30 \u2192", "Start Maumotter \u2192")
+    ), /* @__PURE__ */ React.createElement("div", { style: { marginTop: 12, fontSize: 12, color: "#9A9A9A" } }, tl("\uB85C\uADF8\uC778 \uC2DC \uBCC4\uB3C4 \uB85C\uADF8\uC778 \uC5C6\uC774 \uBC14\uB85C \uC774\uB3D9\uD569\uB2C8\uB2E4 (\uB9C8\uC74C\uC218\uB2EC\uC740 \uBCC4\uB3C4 \uC11C\uBE44\uC2A4\uC608\uC694)", "Seamless single sign-on when logged in (Maumotter is a separate service)")))
   ))), /* @__PURE__ */ React.createElement("div", { style: {
     background: "#F0FDF4",
     borderTop: "1px solid #86EFAC",
