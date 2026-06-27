@@ -96,6 +96,16 @@ npm run deploy:cts    # lightoflife-couple (wrangler.lightoflife.toml)
 - **에코(자문자답) 방지**: 마이크 상시 ON(모바일 자동재개 — stop 방식은 재시작 제스처 필요해 폐기) + AI 발화 중·직후 0.8초 무시(`pausedForSpeechRef`) + **내용기반 에코필터**(직전 AI 발화 텍스트의 일부면 무시, `lastSpokenTextRef`).
 - ⚠️ **CTS는 메시지 배열이 `chatMespurples`**(마음풀은 `chatMessages`) — 포팅 시 주의. 기존 수동 🎤·Enter 전송 무변경(추가형).
 
+### 마음 시리즈 SSO 허브 + 랜딩 쇼케이스 (2026-06)
+> **마음풀 = 마음 시리즈 통합 허브.** 게임·커플은 마음풀 생태계(같은 계정/크레딧, `?t=` 토큰). **마음수달은 별개 생태계**(maum-auth·쿠폰결제) → **SSO 브리지**로 연결(곁은 추후 동일 패턴).
+- **SSO 발급(마음풀)**: `GET /api/maum-sso-token` — 로그인 유저 이메일을 `MAUM_SSO_SECRET`로 HMAC 서명(`payload_b64u.sig`, 5분) → `maumotter.com/?sso=`. 헬퍼 `signSso()`(src/index.tsx).
+- **SSO 수신(마음수달)**: `POST /api/auth/sso` — `verifySso` HMAC 검증 → **이메일로 maum-auth 계정 자동 연결/생성** → maum JWT(email_verified=1). 프론트 App `?sso=` 처리. **결제는 수달 자체(쿠폰/구독) 유지, 계정만 연결.**
+- **시크릿 `MAUM_SSO_SECRET`**: 두 워커(maumful·maumotter) **동일값**(설정됨). 미설정 시 발급 503 → 프론트는 maumotter.com **일반 링크 폴백**(기존 무영향). 발급 엔드포인트는 범용이라 곁 추가 시 버튼만.
+- **진입 버튼 위치**: landing.jsx `navItems`(상단 nav) + app.jsx `GlobalNav`(로그인 후 헤더, `openMaumOtter`) + 패밀리 서비스 카드(1줄) + 마음수달 전용 소개 섹션.
+- **히어로 우측 롤링 쇼케이스(C안)**: **좌측 헤드라인·CTA 고정, 우측만 5초 자동전환**(심리검사·게임·커플·수달). 마우스오버 정지·`prefers-reduced-motion` 존중·언마운트 인터벌 정리·화살표/점. `SHOWCASE`/`slideIdx`/`pausedRef` + 헬퍼 `openGame/openCouple/openOtter`는 **모두 `LandingPage` 스코프**.
+- ⚠️ **프론트 헬퍼는 반드시 사용 컴포넌트(LandingPage) 스코프에 정의**. GlobalNav에 두면 `ReferenceError`로 랜딩 렌더 크래시(실발생·핫픽스). **배포 전 `node scripts/render_smoke.cjs public/static/compiled/landing.js`로 검증**(빌드/200은 런타임 ReferenceError 못 잡음). [[feedback_frontend_render_smoke]]
+- **카피**: 랜딩의 마음수달/곁은 "통역"(직역) 대신 **"마음을 읽어 전해요"** 톤. 단 **maumotter 앱 자체는 "통역"이 핵심 개념**이라 유지(별개 서비스). 푸터 연락처 050-6789-0845.
+
 ### AI 감정 추적 (Mood Logging)
 - AI 응답에 `[MOOD:N]` 태그(0~100) → `ChatBox` processStream done에서 추출·제거 후 `/api/chat/mood-log` POST
 - DB: `mood_logs(user_id, mood_score, test_type, created_at)` (migration 0020). 트렌드: `GET /api/chat/mood-trend?days=14`(최대 90)
