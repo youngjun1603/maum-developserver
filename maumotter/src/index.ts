@@ -15,6 +15,7 @@ type Bindings = {
   RESEND_API_KEY?: string; // 이메일 발송(비번재설정·이메일인증)
   EMAIL_FROM?: string;
   MAUM_SSO_SECRET?: string; // 마음풀↔마음수달 SSO 공유 시크릿(HMAC)
+  OPENAI_API_KEY?: string;  // 또또 음성(TTS) — 미설정 시 프론트는 기기 음성 폴백
 };
 
 const app = new Hono<{ Bindings: Bindings; Variables: { uid: number } }>();
@@ -458,6 +459,31 @@ app.get('/api/history', requireAuth, async (c) => {
   return c.json({ entitlement: ent, redemptions: results });
 });
 
+// ── 또또 음성(OpenAI TTS) — 답변 텍스트만 합성(아이 발화 미전송). 캐시·버디별 음성. 미설정 시 503→프론트 기기 폴백 ──
+app.post('/api/tts', requireAuth, async (c) => {
+  if (!c.env.OPENAI_API_KEY) return c.json({ error: 'TTS 미설정' }, 503);
+  if (!(await checkRateLimit(c.env.KV, `tts:${c.get('uid')}`, 60, 60))) return c.json({ error: '잠시 후 다시 시도해주세요.' }, 429);
+  const { text, buddy } = await c.req.json().catch(() => ({}));
+  const t = String(text || '').replace(/[*#`_~>]/g, '').trim().slice(0, 500);
+  if (!t) return c.json({ error: '내용이 없어요' }, 400);
+  const voice = (buddy === 'lala' || buddy === '라라') ? 'nova' : 'shimmer'; // 또또=차분(shimmer)/라라=발랄(nova)
+  const hashBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(voice + '|' + t));
+  const key = 'ttscache:' + [...new Uint8Array(hashBuf)].map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 40);
+  const cached = await c.env.KV.get(key, 'arrayBuffer');
+  if (cached) return new Response(cached, { headers: { 'content-type': 'audio/mpeg', 'cache-control': 'public, max-age=86400' } });
+  try {
+    const res = await fetch('https://api.openai.com/v1/audio/speech', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${c.env.OPENAI_API_KEY}` },
+      body: JSON.stringify({ model: 'tts-1', voice, input: t, response_format: 'mp3', speed: 1.0 }),
+    });
+    if (!res.ok) { await logError(c.env, 'tts', 'openai ' + res.status + ' ' + (await res.text()).slice(0, 150)); return c.json({ error: '음성 생성 실패' }, 502); }
+    const buf = await res.arrayBuffer();
+    await c.env.KV.put(key, buf, { expirationTtl: 30 * 86400 }).catch(() => {});
+    return new Response(buf, { headers: { 'content-type': 'audio/mpeg', 'cache-control': 'public, max-age=86400' } });
+  } catch (e) { await logError(c.env, 'tts', e); return c.json({ error: '음성 생성 오류' }, 502); }
+});
+
 app.post('/api/coupon/redeem', requireAuth, async (c) => {
   const uid = c.get('uid');
   if (!(await checkRateLimit(c.env.KV, `redeem:${clientIp(c)}`, 10, 3600))) return c.json({ error: '잠시 후 다시 시도해주세요.' }, 429);
@@ -584,7 +610,7 @@ app.get('/privacy', (c) => c.html(PAGE('개인정보처리방침', `
 <li>부모 PIN(암호화 저장), 이용권/구매 이력</li></ul>
 <h2>2. 이용 목적</h2><p>정서 통역 서비스 제공, 계정·이용권 관리, 안전(위기 신호의 보호자 안내).</p>
 <h2>3. 표정 영상(비저장)</h2><p>표정 분석은 <b>기기 내에서만</b> 처리되며 원본 영상은 저장·전송하지 않습니다.</p>
-<h2>4. 처리 위탁</h2><ul><li>Anthropic — 통역 생성을 위한 AI 처리</li><li>Cloudflare — 서버·데이터베이스 인프라</li></ul>
+<h2>4. 처리 위탁</h2><ul><li>Anthropic — 통역 생성을 위한 AI 처리</li><li>OpenAI — 또또 답변의 음성 합성(TTS) 시 답변 텍스트 전송(아이 발화·음성은 미전송)</li><li>Cloudflare — 서버·데이터베이스 인프라</li></ul>
 <h2>5. 보유 및 파기</h2><p>회원 탈퇴 시 모든 개인정보를 <b>즉시 파기</b>합니다. 다만 「전자상거래 등에서의 소비자보호에 관한 법률」 등 관계 법령에 따라 보존이 필요한 경우 해당 기간 동안 보관합니다 — 계약·청약철회 기록 5년, 대금결제·재화공급 기록 5년, 소비자 불만·분쟁처리 기록 3년. 탈퇴는 <a href="/account-deletion">여기</a> 또는 앱 내에서 가능합니다.</p>
 <h2>6. 아동의 개인정보</h2><p>본 서비스는 <b>보호자(법정대리인)가 동반·운영</b>하는 서비스입니다. 만 14세 미만 아동의 개인정보는 법정대리인의 동의 하에 처리됩니다.</p>
 <h2>7. 이용자 권리</h2><p>이용자는 개인정보 열람·정정·삭제를 요청할 수 있으며, 전송 구간은 HTTPS로 암호화됩니다.</p>

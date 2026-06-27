@@ -256,19 +256,36 @@ function ChildChat({ token, child, onEnd, onBack }) {
   const SRsupported = typeof window!=='undefined' && !!(window.SpeechRecognition||window.webkitSpeechRecognition);
   const [camOn,setCamOn]=useState(false); const [camLoading,setCamLoading]=useState(false);   // 표정 카메라(온디바이스, spec 2-8/7-C)
   const videoRef=useRef(null); const streamRef=useRef(null); const detTimerRef=useRef(null); const exprRef=useRef({});
+  const audioRef=useRef(null);   // OpenAI TTS 재생용(모바일 자동재생 잠금해제 후 사용)
 
   function pickVoice(){ try{ const vs=(window.speechSynthesis?.getVoices()||[]).filter(v=>(v.lang||'').toLowerCase().startsWith('ko')); if(vs.length) voiceRef.current = vs.find(v=>/google|naver|네이버|microsoft|yuna|sora|heami|seoyeon|nara/i.test(v.name)) || vs[0]; }catch{} }
   function setSpk(v){ speakingRef.current=v; setSpeaking(v); }
-  // cancel() 없이 speak(모바일 무음 충돌 방지) + 최적 보이스. 말하는 동안엔 연속 인식이 입력을 무시(에코 방지).
-  function speak(text){ if(!voiceOn||!text) return; try{ const s=window.speechSynthesis; if(!s) return; const u=new SpeechSynthesisUtterance(text); u.lang='ko-KR'; if(voiceRef.current) u.voice=voiceRef.current; u.rate=1.0; u.pitch=1.2; u.onstart=()=>setSpk(true); u.onend=()=>setSpk(false); u.onerror=()=>setSpk(false); s.speak(u); try{s.resume();}catch{} }catch{ setSpk(false); } }
+  // 기기 내장 음성(폴백)
+  function deviceSpeak(text){ try{ const s=window.speechSynthesis; if(!s){ setSpk(false); return; } const u=new SpeechSynthesisUtterance(text); u.lang='ko-KR'; if(voiceRef.current) u.voice=voiceRef.current; u.rate=1.0; u.pitch=1.2; u.onstart=()=>setSpk(true); u.onend=()=>setSpk(false); u.onerror=()=>setSpk(false); s.speak(u); try{s.resume();}catch{} }catch{ setSpk(false); } }
+  // 또또 음성: OpenAI TTS(자연스러움) 우선 → 실패/미설정 시 기기 음성 폴백. 말하는 동안 연속 인식 입력 무시(에코 방지).
+  async function speak(text){ if(!voiceOn||!text) return; setSpk(true);
+    try{
+      const res = await fetch('/api/tts',{ method:'POST', headers:{'Content-Type':'application/json', Authorization:'Bearer '+token}, body: JSON.stringify({ text, buddy: buddy && buddy.key }) });
+      if(!res.ok) throw 0;
+      const url = URL.createObjectURL(await res.blob());
+      const a = audioRef.current || (audioRef.current = new Audio());
+      a.onended=()=>{ setSpk(false); try{URL.revokeObjectURL(url);}catch{} };
+      a.onerror=()=>{ setSpk(false); deviceSpeak(text); };
+      a.src=url; await a.play();
+    }catch{ deviceSpeak(text); }
+  }
   // 탭 한 번=오디오 잠금해제 + 연속 마이크 시작(둘 다 이 제스처 안에서). 이후 아이는 말만 하면 됨.
-  function startConversation(){ setStarted(true); startListen(); const greet=(msgs[0]&&msgs[0].content)||''; speak(greet); }
+  function startConversation(){ setStarted(true);
+    // 모바일 자동재생 잠금해제(이 탭 제스처 안에서): Audio(클라우드 TTS) + speechSynthesis(기기 폴백) 둘 다 — 비동기 speak()로도 iOS 재생되도록
+    try{ const a = audioRef.current || (audioRef.current = new Audio()); a.src='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA='; a.play().then(()=>{try{a.pause();a.currentTime=0;}catch{}}).catch(()=>{}); }catch{}
+    try{ const s=window.speechSynthesis; if(s){ s.resume(); const w=new SpeechSynthesisUtterance(' '); w.volume=0; s.speak(w); } }catch{}
+    startListen(); const greet=(msgs[0]&&msgs[0].content)||''; speak(greet); }
 
   useEffect(()=>{ pickVoice(); if(window.speechSynthesis) window.speechSynthesis.onvoiceschanged=pickVoice; },[]);
   function pickBuddy(b){ try{localStorage.setItem('maumotter_buddy_'+child.id,b.key);}catch{} setBuddy(b); api('/session/start',{method:'POST',token,body:{child_id:child.id,buddy:b.key}}).then(d=>{ setSid(d.session_id); setMsgs([{role:'otter',content:d.greeting}]); }).catch(()=>{}); }
   useEffect(()=>{ endRef.current?.scrollIntoView({behavior:'smooth'}); },[msgs,busy]);
   useEffect(()=>{ const t=setInterval(()=>setSecsLeft(s=>{ if(s<=1){ clearInterval(t); finishRef.current&&finishRef.current(); return 0; } return s-1; }),1000); return ()=>clearInterval(t); },[]);
-  useEffect(()=>()=>{ manualStopRef.current=true; try{window.speechSynthesis&&window.speechSynthesis.cancel();}catch{} try{recRef.current&&recRef.current.stop();}catch{} try{detTimerRef.current&&clearInterval(detTimerRef.current);}catch{} try{streamRef.current&&streamRef.current.getTracks().forEach(t=>t.stop());}catch{} },[]);
+  useEffect(()=>()=>{ manualStopRef.current=true; try{window.speechSynthesis&&window.speechSynthesis.cancel();}catch{} try{audioRef.current&&audioRef.current.pause();}catch{} try{recRef.current&&recRef.current.stop();}catch{} try{detTimerRef.current&&clearInterval(detTimerRef.current);}catch{} try{streamRef.current&&streamRef.current.getTracks().forEach(t=>t.stop());}catch{} },[]);
   useEffect(()=>{ const v=videoRef.current; if(camOn&&v&&streamRef.current){ v.srcObject=streamRef.current; v.muted=true; v.playsInline=true; v.play().catch(()=>{}); } },[camOn]);
 
   async function sendText(raw){ const t=(raw||'').trim(); if(!t||!sid||busyRef.current) return; setInput(''); setMsgs(m=>[...m,{role:'child',content:t}]); busyRef.current=true; setBusy(true);
@@ -303,7 +320,7 @@ function ChildChat({ token, child, onEnd, onBack }) {
   function stopCam(){ try{detTimerRef.current&&clearInterval(detTimerRef.current);}catch{} detTimerRef.current=null; try{streamRef.current&&streamRef.current.getTracks().forEach(t=>t.stop());}catch{} streamRef.current=null; setCamOn(false); }
   function exprSummary(){ const ent=Object.entries(exprRef.current).sort((a,b)=>b[1]-a[1]); if(!ent.length) return ''; return '세션 동안 표정은 주로 '+ent.slice(0,2).map(([k])=>EXPR_LABEL[k]||k).join(', ')+'으로 보였어요'; }
 
-  async function finish(){ if(!sid||ending) return; setEnding(true); manualStopRef.current=true; try{recRef.current&&recRef.current.stop();}catch{} try{window.speechSynthesis&&window.speechSynthesis.cancel();}catch{} const es=exprSummary(); stopCam(); try{ const d=await api('/session/'+sid+'/end',{method:'POST',token,body:es?{expression_summary:es}:{}}); onEnd(d); }catch{ onEnd(null); } }
+  async function finish(){ if(!sid||ending) return; setEnding(true); manualStopRef.current=true; try{recRef.current&&recRef.current.stop();}catch{} try{window.speechSynthesis&&window.speechSynthesis.cancel();}catch{} try{audioRef.current&&audioRef.current.pause();}catch{} const es=exprSummary(); stopCam(); try{ const d=await api('/session/'+sid+'/end',{method:'POST',token,body:es?{expression_summary:es}:{}}); onEnd(d); }catch{ onEnd(null); } }
   finishRef.current=finish;
   const mm=Math.floor(secsLeft/60), ss=String(secsLeft%60).padStart(2,'0');
   let lastOtter=''; for(let i=msgs.length-1;i>=0;i--){ if(msgs[i].role==='otter'){ lastOtter=msgs[i].content; break; } }
@@ -322,7 +339,7 @@ function ChildChat({ token, child, onEnd, onBack }) {
   return html`<div style=${{minHeight:'100vh',display:'flex',flexDirection:'column',background:'linear-gradient(165deg,#F4EFE6,#FBF8F1)'}}>
     <div class="topbar"><b>🦦 ${buddy.name}</b><div style=${{display:'flex',alignItems:'center',gap:10}}>
       <button onClick=${camOn?stopCam:startCam} disabled=${camLoading} title="표정 카메라(기기 안에서만)" style=${{background:'none',border:'none',fontSize:20,cursor:camLoading?'default':'pointer',opacity:camLoading?0.5:1}}>${camOn?'📷':'📵'}</button>
-      <button onClick=${()=>{ if(voiceOn){try{window.speechSynthesis.cancel();}catch{}} setVoiceOn(v=>!v); }} title="또또 목소리" style=${{background:'none',border:'none',fontSize:20,cursor:'pointer'}}>${voiceOn?'🔊':'🔇'}</button>
+      <button onClick=${()=>{ if(voiceOn){try{window.speechSynthesis.cancel();}catch{} try{audioRef.current&&audioRef.current.pause();}catch{} setSpk(false);} setVoiceOn(v=>!v); }} title="또또 목소리" style=${{background:'none',border:'none',fontSize:20,cursor:'pointer'}}>${voiceOn?'🔊':'🔇'}</button>
       <span class="muted" style=${{fontSize:12}}>${mm}:${ss}</span>
       <button class="btn-ghost" style=${{padding:'7px 12px',borderRadius:10,cursor:'pointer'}} disabled=${ending} onClick=${finish}>${ending?'정리 중…':'오늘은 여기까지'}</button>
     </div></div>
