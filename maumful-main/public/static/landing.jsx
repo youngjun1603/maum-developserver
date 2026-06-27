@@ -460,9 +460,29 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
       .then(data => { if (data.success && data.ssoToken) window.open('https://maumotter.com/?sso=' + encodeURIComponent(data.ssoToken), '_blank', 'noopener noreferrer'); else window.open('https://maumotter.com', '_blank', 'noopener noreferrer'); })
       .catch(() => window.open('https://maumotter.com', '_blank', 'noopener noreferrer'));
   };
+  // 마음게임 진입(미로그인 시 로그인 유도)
+  const openGame = () => {
+    if (!isLoggedIn) { setView('memberLogin'); return; }
+    fetch('/api/game-token', { headers: { Authorization: 'Bearer ' + (localStorage.getItem('access_token') || '') } })
+      .then(r => r.json())
+      .then(data => { const t = data.success ? data.gameToken : (localStorage.getItem('access_token') || ''); window.open(`https://game.maumful.com${t ? '?t=' + encodeURIComponent(t) : ''}`, '_blank', 'noopener noreferrer'); })
+      .catch(() => window.open('https://game.maumful.com', '_blank', 'noopener noreferrer'));
+  };
+  // 마음커플 진입(couple-token SSO)
+  const openCouple = () => {
+    if (!isLoggedIn) { setView('memberLogin'); return; }
+    const h = window.location.hostname;
+    const coupleBase = (h.includes('workers.dev') || h.includes('-dev.')) ? 'https://maumcouple-dev.limyj007.workers.dev' : 'https://couple.maumful.com';
+    fetch('/api/couple-token', { headers: { Authorization: 'Bearer ' + (localStorage.getItem('access_token') || '') } })
+      .then(r => r.json())
+      .then(data => { const t = data.success ? data.coupleToken : (localStorage.getItem('access_token') || ''); window.open(`${coupleBase}?t=${encodeURIComponent(t)}`, '_blank', 'noopener noreferrer'); })
+      .catch(() => window.open(coupleBase, '_blank', 'noopener noreferrer'));
+  };
   const { useState: useS, useEffect: useE, useRef } = React;
   const [activeTestIdx, setActiveTestIdx] = useS(0);
   const [visibleSections, setVisibleSections] = useS({});
+  const [slideIdx, setSlideIdx] = useS(0);
+  const pausedRef = useRef(false);
 
   // 스크롤 애니메이션
   useE(() => {
@@ -480,11 +500,52 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
     return () => observer.disconnect();
   }, []);
 
+  // 히어로 우측 쇼케이스 자동 롤링(5초). 마우스오버 정지 + prefers-reduced-motion 존중 + 언마운트 정리.
+  useE(() => {
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) return;
+    const id = setInterval(() => { if (!pausedRef.current) setSlideIdx(p => (p + 1) % 4); }, 5000);
+    return () => clearInterval(id);
+  }, []);
+
   const fadeIn = (id) => ({
     opacity: visibleSections[id] ? 1 : 0,
     transform: visibleSections[id] ? 'translateY(0)' : 'translateY(28px)',
     transition: 'opacity 0.6s ease, transform 0.6s ease',
   });
+
+  // 히어로 우측 롤링 쇼케이스 — 4서비스(심리검사·게임·커플·수달). 좌측 CTA는 고정.
+  const SHOWCASE = [
+    { key: 'test', accent: '#2D6A4F', header: tl('🔍 심리검사 선택', '🔍 Select Assessment'),
+      badge: { icon: '✅', title: tl('PHQ-9 완료', 'PHQ-9 done'), sub: tl('검사 후 AI 분석', 'AI analysis ready') },
+      cta: () => setView(isLoggedIn ? 'memberDashboard' : 'testsIntro'), ctaLabel: tl('전체 검사 10종 보기 →', 'View all 10 →'),
+      rows: TEST_META.slice(0, 4).map(t => ({ icon: t.icon, bg: COLOR_MAP[t.color].bg, name: tl(t.name, t.nameEn), sub: tl(t.time, t.timeEn) + ' · ' + tl(t.count, t.countEn), tag: t.free ? tl('무료', 'Free') : tl('10 크레딧', '10 Cr'), free: t.free })) },
+    { key: 'game', accent: '#7C3AED', header: tl('🎮 마음게임 · 치유 게임 8종', '🎮 Healing Games'),
+      badge: { icon: '🌱', title: tl('하루 한 판, 마음 쉼', 'A daily breather'), sub: tl('무료로 시작', 'Free to start') },
+      cta: () => openGame(), ctaLabel: tl('게임 보러가기 →', 'Explore games →'),
+      rows: [
+        { icon: '🌱', bg: '#F3E8FF', name: tl('마음 정원', 'Mind Garden'), sub: tl('감정 식물 키우기', 'Grow your mood'), tag: tl('무료', 'Free') },
+        { icon: '📓', bg: '#F3E8FF', name: tl('감사 일기', 'Gratitude Diary'), sub: tl('3줄 감사 기록', '3 lines a day'), tag: tl('무료', 'Free') },
+        { icon: '🫁', bg: '#F3E8FF', name: tl('호흡 훈련', 'Breathing'), sub: tl('불안 진정 4-7-8', 'Calm 4-7-8'), tag: tl('무료', 'Free') },
+        { icon: '📦', bg: '#F3E8FF', name: tl('걱정 상자', 'Worry Box'), sub: tl('걱정 비우기', 'Let worries go'), tag: tl('무료', 'Free') } ] },
+    { key: 'couple', accent: '#E05A8A', header: tl('💕 마음커플 · 관계 인사이트', '💕 Couple Insights'),
+      badge: { icon: '💕', title: tl('우리 궁합 분석', 'Compatibility'), sub: tl('BIG5 기반 · 무료', 'BIG5-based · Free') },
+      cta: () => openCouple(), ctaLabel: tl('마음커플 시작 →', 'Start Couple →'),
+      rows: [
+        { icon: '💕', bg: '#FFE4EE', name: tl('BIG5 궁합 분석', 'BIG5 Match'), sub: tl('성격 차이를 강점으로', 'Differences→strengths'), tag: tl('인기', 'Hot') },
+        { icon: '🤖', bg: '#FFE4EE', name: tl('AI 커플 리포트', 'AI Report'), sub: tl('맞춤 관계 인사이트', 'Tailored insights'), tag: tl('무료', 'Free') },
+        { icon: '📊', bg: '#FFE4EE', name: tl('관계 건강도 체크', 'Check-In'), sub: tl('월 1회 무료', 'Free monthly'), tag: tl('무료', 'Free') },
+        { icon: '🗓️', bg: '#FFE4EE', name: tl('데이트 코스 추천', 'Date Ideas'), sub: tl('취향 기반 AI', 'AI-personalized'), tag: tl('AI', 'AI') } ] },
+    { key: 'otter', accent: '#3B6FB5', header: tl('🦦 마음수달 · 아이 마음 통역', '🦦 Maumotter'),
+      badge: { icon: '🦦', title: tl('또또와 대화', 'Talk with Otto'), sub: tl('표정 영상 무저장', 'Video not stored') },
+      cta: () => openOtter(), ctaLabel: tl('마음수달 보러가기 →', 'Open Maumotter →'),
+      rows: [
+        { icon: '🦦', bg: '#E7F0FB', name: tl('또또와 대화', 'Talk with Otto'), sub: tl('아이가 편하게 속마음', 'kids open up'), tag: tl('대화', 'Chat') },
+        { icon: '🤖', bg: '#E7F0FB', name: tl('AI 정서 통역', 'Emotion Read'), sub: tl('부모용 코칭 리포트', 'for parents'), tag: tl('통역', 'Read') },
+        { icon: '📷', bg: '#E7F0FB', name: tl('표정 영상 분석', 'Facial Reading'), sub: tl('기기 내·저장 안 함', 'on-device'), tag: tl('무저장', 'No-save') },
+        { icon: '🔒', bg: '#E7F0FB', name: tl('안전 설계', 'Safe Design'), sub: tl('부모 PIN·위기 안내', 'PIN·crisis'), tag: tl('안전', 'Safe') } ] },
+  ];
+  const slide = SHOWCASE[slideIdx] || SHOWCASE[0];
 
   return (
     <div style={{ fontFamily: "'Noto Sans KR', sans-serif", color: '#1A1A1A', background: '#FAFAF8' }}>
@@ -586,91 +647,45 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
           </div>
 
           {/* 오른쪽: 검사 카드 미리보기 */}
-          <div style={{ position: 'relative' }} className="hero-visual">
-            {/* 플로팅 배지 */}
-            <div style={{
-              position: 'absolute', top: -16, right: -10, zIndex: 10,
-              background: 'white', borderRadius: 12, padding: '10px 14px',
-              boxShadow: '0 8px 30px rgba(0,0,0,0.10)',
-              display: 'flex', alignItems: 'center', gap: 8,
-            }}>
-              <span style={{ fontSize: 18 }}>✅</span>
+          <div style={{ position: 'relative' }} className="hero-visual"
+            onMouseEnter={() => { pausedRef.current = true; }} onMouseLeave={() => { pausedRef.current = false; }}>
+            {/* 플로팅 배지(슬라이드별) */}
+            <div style={{ position: 'absolute', top: -16, right: -10, zIndex: 10, background: 'white', borderRadius: 12, padding: '10px 14px', boxShadow: '0 8px 30px rgba(0,0,0,0.10)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 18 }}>{slide.badge.icon}</span>
               <div>
-                <div style={{ fontSize: 12, fontWeight: 600 }}>PHQ-9 완료</div>
-                <div style={{ fontSize: 11, color: '#9A9A9A' }}>방금 전</div>
+                <div style={{ fontSize: 12, fontWeight: 600 }}>{slide.badge.title}</div>
+                <div style={{ fontSize: 11, color: '#9A9A9A' }}>{slide.badge.sub}</div>
               </div>
             </div>
 
-            <div style={{
-              background: 'white', borderRadius: 20,
-              boxShadow: '0 12px 48px rgba(0,0,0,0.10)',
-              padding: '28px 28px 24px', overflow: 'hidden',
-            }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: '#9A9A9A', marginBottom: 16, letterSpacing: '0.5px' }}>
-                🔍 {tl("심리검사 선택", "Select Assessment")}
-              </div>
+            {/* 롤링 카드 (좌측 CTA는 고정, 우측만 회전) */}
+            <div style={{ position: 'relative', background: 'white', borderRadius: 20, boxShadow: '0 12px 48px rgba(0,0,0,0.10)', padding: '28px 30px 22px', overflow: 'hidden', minHeight: 392 }}>
+              <button onClick={() => setSlideIdx((slideIdx + 3) % 4)} aria-label={tl('이전', 'Prev')} style={{ position: 'absolute', left: 4, top: '50%', transform: 'translateY(-50%)', width: 32, height: 32, borderRadius: '50%', border: '1px solid #E8E8E8', background: 'white', cursor: 'pointer', fontSize: 18, color: '#666', zIndex: 5, lineHeight: '28px' }}>‹</button>
+              <button onClick={() => setSlideIdx((slideIdx + 1) % 4)} aria-label={tl('다음', 'Next')} style={{ position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)', width: 32, height: 32, borderRadius: '50%', border: '1px solid #E8E8E8', background: 'white', cursor: 'pointer', fontSize: 18, color: '#666', zIndex: 5, lineHeight: '28px' }}>›</button>
 
-              {TEST_META.slice(0, 4).map((t, i) => {
-                const c = COLOR_MAP[t.color];
-                return (
-                  <div
-                    key={t.id}
-                    onClick={() => setView(isLoggedIn ? 'memberDashboard' : 'testsIntro')}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 12,
-                      padding: '11px 12px', borderRadius: 10,
-                      background: activeTestIdx === i ? c.bg : '#F9F9F7',
-                      cursor: 'pointer', marginBottom: 8,
-                      transition: 'all 0.2s', border: activeTestIdx === i ? `1px solid ${c.bar}33` : '1px solid transparent',
-                    }}
-                    onMouseEnter={() => setActiveTestIdx(i)}
-                  >
-                    <div style={{
-                      width: 36, height: 36, borderRadius: 10,
-                      background: c.bg, display: 'flex', alignItems: 'center',
-                      justifyContent: 'center', fontSize: 18, flexShrink: 0,
-                    }}>{t.icon}</div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: '#1A1A1A' }}>{tl(t.name, t.nameEn)}</div>
-                      <div style={{ fontSize: 12, color: '#9A9A9A' }}>{tl(t.time, t.timeEn)} · {tl(t.count, t.countEn)}</div>
-                    </div>
-                    <div style={{
-                      fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 100,
-                      background: t.free ? '#D8F3DC' : '#FFF0E6',
-                      color: t.free ? '#1A6B3C' : '#C05621', whiteSpace: 'nowrap',
-                    }}>
-                      {t.free ? tl('무료', 'Free') : tl('10 크레딧', '10 Credits')}
-                    </div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: slide.accent, marginBottom: 16, letterSpacing: '0.3px', textAlign: 'center' }}>{slide.header}</div>
+              {slide.rows.map((r, i) => (
+                <div key={slide.key + i} onClick={slide.cta}
+                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 12px', borderRadius: 10, background: i === 0 ? r.bg : '#F9F9F7', cursor: 'pointer', marginBottom: 8, border: i === 0 ? `1px solid ${slide.accent}33` : '1px solid transparent', transition: 'all 0.2s' }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: r.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{r.icon}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#1A1A1A' }}>{r.name}</div>
+                    <div style={{ fontSize: 12, color: '#9A9A9A' }}>{r.sub}</div>
                   </div>
-                );
-              })}
-
-              <button
-                onClick={() => setView('testsIntro')}
-                style={{
-                  width: '100%', marginTop: 12, padding: '10px 0',
-                  background: '#F0FAF4', border: '1px solid #B7E4C7',
-                  borderRadius: 10, fontSize: 13, fontWeight: 600,
-                  color: '#2D6A4F', cursor: 'pointer',
-                  fontFamily: "'Noto Sans KR', sans-serif",
-                }}
-              >
-                {tl("전체 검사 10종 보기 →", "View all 10 assessments →")}
-              </button>
+                  <div style={{ fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 100, whiteSpace: 'nowrap',
+                    background: slide.key === 'test' ? (r.free ? '#D8F3DC' : '#FFF0E6') : slide.accent + '18',
+                    color: slide.key === 'test' ? (r.free ? '#1A6B3C' : '#C05621') : slide.accent }}>{r.tag}</div>
+                </div>
+              ))}
+              <button onClick={slide.cta} style={{ width: '100%', marginTop: 10, padding: '10px 0', background: slide.accent + '12', border: `1px solid ${slide.accent}44`, borderRadius: 10, fontSize: 13, fontWeight: 700, color: slide.accent, cursor: 'pointer', fontFamily: "'Noto Sans KR', sans-serif" }}>{slide.ctaLabel}</button>
             </div>
 
-            {/* 플로팅 배지 하단 */}
-            <div style={{
-              position: 'absolute', bottom: -14, left: -10, zIndex: 10,
-              background: 'white', borderRadius: 12, padding: '10px 14px',
-              boxShadow: '0 8px 30px rgba(0,0,0,0.10)',
-              display: 'flex', alignItems: 'center', gap: 8,
-            }}>
-              <span style={{ fontSize: 18 }}>🤖</span>
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 600 }}>{tl("AI 결과 분석 준비됨", "AI Analysis Ready")}</div>
-                <div style={{ fontSize: 11, color: '#9A9A9A' }}>{tl("검사 후 바로 상담 시작", "Start counseling right after")}</div>
-              </div>
+            {/* 점 인디케이터 */}
+            <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginTop: 16 }}>
+              {SHOWCASE.map((s, i) => (
+                <span key={s.key} onClick={() => setSlideIdx(i)} role="button" aria-label={String(i + 1)}
+                  style={{ width: i === slideIdx ? 24 : 8, height: 8, borderRadius: 4, background: i === slideIdx ? slide.accent : '#D5D5D5', cursor: 'pointer', transition: 'all 0.25s' }} />
+              ))}
             </div>
           </div>
         </div>

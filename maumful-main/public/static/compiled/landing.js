@@ -617,9 +617,33 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
       else window.open("https://maumotter.com", "_blank", "noopener noreferrer");
     }).catch(() => window.open("https://maumotter.com", "_blank", "noopener noreferrer"));
   };
+  const openGame = () => {
+    if (!isLoggedIn) {
+      setView("memberLogin");
+      return;
+    }
+    fetch("/api/game-token", { headers: { Authorization: "Bearer " + (localStorage.getItem("access_token") || "") } }).then((r) => r.json()).then((data) => {
+      const t = data.success ? data.gameToken : localStorage.getItem("access_token") || "";
+      window.open(`https://game.maumful.com${t ? "?t=" + encodeURIComponent(t) : ""}`, "_blank", "noopener noreferrer");
+    }).catch(() => window.open("https://game.maumful.com", "_blank", "noopener noreferrer"));
+  };
+  const openCouple = () => {
+    if (!isLoggedIn) {
+      setView("memberLogin");
+      return;
+    }
+    const h = window.location.hostname;
+    const coupleBase = h.includes("workers.dev") || h.includes("-dev.") ? "https://maumcouple-dev.limyj007.workers.dev" : "https://couple.maumful.com";
+    fetch("/api/couple-token", { headers: { Authorization: "Bearer " + (localStorage.getItem("access_token") || "") } }).then((r) => r.json()).then((data) => {
+      const t = data.success ? data.coupleToken : localStorage.getItem("access_token") || "";
+      window.open(`${coupleBase}?t=${encodeURIComponent(t)}`, "_blank", "noopener noreferrer");
+    }).catch(() => window.open(coupleBase, "_blank", "noopener noreferrer"));
+  };
   const { useState: useS, useEffect: useE, useRef } = React;
   const [activeTestIdx, setActiveTestIdx] = useS(0);
   const [visibleSections, setVisibleSections] = useS({});
+  const [slideIdx, setSlideIdx] = useS(0);
+  const pausedRef = useRef(false);
   useE(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -634,11 +658,73 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
     document.querySelectorAll("[data-animate]").forEach((el) => observer.observe(el));
     return () => observer.disconnect();
   }, []);
+  useE(() => {
+    const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) return;
+    const id = setInterval(() => {
+      if (!pausedRef.current) setSlideIdx((p) => (p + 1) % 4);
+    }, 5e3);
+    return () => clearInterval(id);
+  }, []);
   const fadeIn = (id) => ({
     opacity: visibleSections[id] ? 1 : 0,
     transform: visibleSections[id] ? "translateY(0)" : "translateY(28px)",
     transition: "opacity 0.6s ease, transform 0.6s ease"
   });
+  const SHOWCASE = [
+    {
+      key: "test",
+      accent: "#2D6A4F",
+      header: tl("\u{1F50D} \uC2EC\uB9AC\uAC80\uC0AC \uC120\uD0DD", "\u{1F50D} Select Assessment"),
+      badge: { icon: "\u2705", title: tl("PHQ-9 \uC644\uB8CC", "PHQ-9 done"), sub: tl("\uAC80\uC0AC \uD6C4 AI \uBD84\uC11D", "AI analysis ready") },
+      cta: () => setView(isLoggedIn ? "memberDashboard" : "testsIntro"),
+      ctaLabel: tl("\uC804\uCCB4 \uAC80\uC0AC 10\uC885 \uBCF4\uAE30 \u2192", "View all 10 \u2192"),
+      rows: TEST_META.slice(0, 4).map((t) => ({ icon: t.icon, bg: COLOR_MAP[t.color].bg, name: tl(t.name, t.nameEn), sub: tl(t.time, t.timeEn) + " \xB7 " + tl(t.count, t.countEn), tag: t.free ? tl("\uBB34\uB8CC", "Free") : tl("10 \uD06C\uB808\uB527", "10 Cr"), free: t.free }))
+    },
+    {
+      key: "game",
+      accent: "#7C3AED",
+      header: tl("\u{1F3AE} \uB9C8\uC74C\uAC8C\uC784 \xB7 \uCE58\uC720 \uAC8C\uC784 8\uC885", "\u{1F3AE} Healing Games"),
+      badge: { icon: "\u{1F331}", title: tl("\uD558\uB8E8 \uD55C \uD310, \uB9C8\uC74C \uC27C", "A daily breather"), sub: tl("\uBB34\uB8CC\uB85C \uC2DC\uC791", "Free to start") },
+      cta: () => openGame(),
+      ctaLabel: tl("\uAC8C\uC784 \uBCF4\uB7EC\uAC00\uAE30 \u2192", "Explore games \u2192"),
+      rows: [
+        { icon: "\u{1F331}", bg: "#F3E8FF", name: tl("\uB9C8\uC74C \uC815\uC6D0", "Mind Garden"), sub: tl("\uAC10\uC815 \uC2DD\uBB3C \uD0A4\uC6B0\uAE30", "Grow your mood"), tag: tl("\uBB34\uB8CC", "Free") },
+        { icon: "\u{1F4D3}", bg: "#F3E8FF", name: tl("\uAC10\uC0AC \uC77C\uAE30", "Gratitude Diary"), sub: tl("3\uC904 \uAC10\uC0AC \uAE30\uB85D", "3 lines a day"), tag: tl("\uBB34\uB8CC", "Free") },
+        { icon: "\u{1FAC1}", bg: "#F3E8FF", name: tl("\uD638\uD761 \uD6C8\uB828", "Breathing"), sub: tl("\uBD88\uC548 \uC9C4\uC815 4-7-8", "Calm 4-7-8"), tag: tl("\uBB34\uB8CC", "Free") },
+        { icon: "\u{1F4E6}", bg: "#F3E8FF", name: tl("\uAC71\uC815 \uC0C1\uC790", "Worry Box"), sub: tl("\uAC71\uC815 \uBE44\uC6B0\uAE30", "Let worries go"), tag: tl("\uBB34\uB8CC", "Free") }
+      ]
+    },
+    {
+      key: "couple",
+      accent: "#E05A8A",
+      header: tl("\u{1F495} \uB9C8\uC74C\uCEE4\uD50C \xB7 \uAD00\uACC4 \uC778\uC0AC\uC774\uD2B8", "\u{1F495} Couple Insights"),
+      badge: { icon: "\u{1F495}", title: tl("\uC6B0\uB9AC \uAD81\uD569 \uBD84\uC11D", "Compatibility"), sub: tl("BIG5 \uAE30\uBC18 \xB7 \uBB34\uB8CC", "BIG5-based \xB7 Free") },
+      cta: () => openCouple(),
+      ctaLabel: tl("\uB9C8\uC74C\uCEE4\uD50C \uC2DC\uC791 \u2192", "Start Couple \u2192"),
+      rows: [
+        { icon: "\u{1F495}", bg: "#FFE4EE", name: tl("BIG5 \uAD81\uD569 \uBD84\uC11D", "BIG5 Match"), sub: tl("\uC131\uACA9 \uCC28\uC774\uB97C \uAC15\uC810\uC73C\uB85C", "Differences\u2192strengths"), tag: tl("\uC778\uAE30", "Hot") },
+        { icon: "\u{1F916}", bg: "#FFE4EE", name: tl("AI \uCEE4\uD50C \uB9AC\uD3EC\uD2B8", "AI Report"), sub: tl("\uB9DE\uCDA4 \uAD00\uACC4 \uC778\uC0AC\uC774\uD2B8", "Tailored insights"), tag: tl("\uBB34\uB8CC", "Free") },
+        { icon: "\u{1F4CA}", bg: "#FFE4EE", name: tl("\uAD00\uACC4 \uAC74\uAC15\uB3C4 \uCCB4\uD06C", "Check-In"), sub: tl("\uC6D4 1\uD68C \uBB34\uB8CC", "Free monthly"), tag: tl("\uBB34\uB8CC", "Free") },
+        { icon: "\u{1F5D3}\uFE0F", bg: "#FFE4EE", name: tl("\uB370\uC774\uD2B8 \uCF54\uC2A4 \uCD94\uCC9C", "Date Ideas"), sub: tl("\uCDE8\uD5A5 \uAE30\uBC18 AI", "AI-personalized"), tag: tl("AI", "AI") }
+      ]
+    },
+    {
+      key: "otter",
+      accent: "#3B6FB5",
+      header: tl("\u{1F9A6} \uB9C8\uC74C\uC218\uB2EC \xB7 \uC544\uC774 \uB9C8\uC74C \uD1B5\uC5ED", "\u{1F9A6} Maumotter"),
+      badge: { icon: "\u{1F9A6}", title: tl("\uB610\uB610\uC640 \uB300\uD654", "Talk with Otto"), sub: tl("\uD45C\uC815 \uC601\uC0C1 \uBB34\uC800\uC7A5", "Video not stored") },
+      cta: () => openOtter(),
+      ctaLabel: tl("\uB9C8\uC74C\uC218\uB2EC \uBCF4\uB7EC\uAC00\uAE30 \u2192", "Open Maumotter \u2192"),
+      rows: [
+        { icon: "\u{1F9A6}", bg: "#E7F0FB", name: tl("\uB610\uB610\uC640 \uB300\uD654", "Talk with Otto"), sub: tl("\uC544\uC774\uAC00 \uD3B8\uD558\uAC8C \uC18D\uB9C8\uC74C", "kids open up"), tag: tl("\uB300\uD654", "Chat") },
+        { icon: "\u{1F916}", bg: "#E7F0FB", name: tl("AI \uC815\uC11C \uD1B5\uC5ED", "Emotion Read"), sub: tl("\uBD80\uBAA8\uC6A9 \uCF54\uCE6D \uB9AC\uD3EC\uD2B8", "for parents"), tag: tl("\uD1B5\uC5ED", "Read") },
+        { icon: "\u{1F4F7}", bg: "#E7F0FB", name: tl("\uD45C\uC815 \uC601\uC0C1 \uBD84\uC11D", "Facial Reading"), sub: tl("\uAE30\uAE30 \uB0B4\xB7\uC800\uC7A5 \uC548 \uD568", "on-device"), tag: tl("\uBB34\uC800\uC7A5", "No-save") },
+        { icon: "\u{1F512}", bg: "#E7F0FB", name: tl("\uC548\uC804 \uC124\uACC4", "Safe Design"), sub: tl("\uBD80\uBAA8 PIN\xB7\uC704\uAE30 \uC548\uB0B4", "PIN\xB7crisis"), tag: tl("\uC548\uC804", "Safe") }
+      ]
+    }
+  ];
+  const slide = SHOWCASE[slideIdx] || SHOWCASE[0];
   return /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "'Noto Sans KR', sans-serif", color: "#1A1A1A", background: "#FAFAF8" } }, /* @__PURE__ */ React.createElement("section", { style: {
     minHeight: "88vh",
     display: "flex",
@@ -749,99 +835,49 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
       { num: "10", label: tl("\uAC00\uC785 \uC989\uC2DC \uD06C\uB808\uB527", "Free Credits") },
       { num: "AI", label: tl("\uACB0\uACFC \uBD84\uC11D \uC0C1\uB2F4", "Result Analysis") }
     ].map((s) => /* @__PURE__ */ React.createElement("div", { key: s.label }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 26, fontWeight: 700, color: "#2D6A4F", lineHeight: 1 } }, s.num), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "#9A9A9A", marginTop: 4 } }, s.label))))),
-    /* @__PURE__ */ React.createElement("div", { style: { position: "relative" }, className: "hero-visual" }, /* @__PURE__ */ React.createElement("div", { style: {
-      position: "absolute",
-      top: -16,
-      right: -10,
-      zIndex: 10,
-      background: "white",
-      borderRadius: 12,
-      padding: "10px 14px",
-      boxShadow: "0 8px 30px rgba(0,0,0,0.10)",
-      display: "flex",
-      alignItems: "center",
-      gap: 8
-    } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 18 } }, "\u2705"), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 600 } }, "PHQ-9 \uC644\uB8CC"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "#9A9A9A" } }, "\uBC29\uAE08 \uC804"))), /* @__PURE__ */ React.createElement("div", { style: {
-      background: "white",
-      borderRadius: 20,
-      boxShadow: "0 12px 48px rgba(0,0,0,0.10)",
-      padding: "28px 28px 24px",
-      overflow: "hidden"
-    } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 600, color: "#9A9A9A", marginBottom: 16, letterSpacing: "0.5px" } }, "\u{1F50D} ", tl("\uC2EC\uB9AC\uAC80\uC0AC \uC120\uD0DD", "Select Assessment")), TEST_META.slice(0, 4).map((t, i) => {
-      const c = COLOR_MAP[t.color];
-      return /* @__PURE__ */ React.createElement(
+    /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        style: { position: "relative" },
+        className: "hero-visual",
+        onMouseEnter: () => {
+          pausedRef.current = true;
+        },
+        onMouseLeave: () => {
+          pausedRef.current = false;
+        }
+      },
+      /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", top: -16, right: -10, zIndex: 10, background: "white", borderRadius: 12, padding: "10px 14px", boxShadow: "0 8px 30px rgba(0,0,0,0.10)", display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 18 } }, slide.badge.icon), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 600 } }, slide.badge.title), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "#9A9A9A" } }, slide.badge.sub))),
+      /* @__PURE__ */ React.createElement("div", { style: { position: "relative", background: "white", borderRadius: 20, boxShadow: "0 12px 48px rgba(0,0,0,0.10)", padding: "28px 30px 22px", overflow: "hidden", minHeight: 392 } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setSlideIdx((slideIdx + 3) % 4), "aria-label": tl("\uC774\uC804", "Prev"), style: { position: "absolute", left: 4, top: "50%", transform: "translateY(-50%)", width: 32, height: 32, borderRadius: "50%", border: "1px solid #E8E8E8", background: "white", cursor: "pointer", fontSize: 18, color: "#666", zIndex: 5, lineHeight: "28px" } }, "\u2039"), /* @__PURE__ */ React.createElement("button", { onClick: () => setSlideIdx((slideIdx + 1) % 4), "aria-label": tl("\uB2E4\uC74C", "Next"), style: { position: "absolute", right: 4, top: "50%", transform: "translateY(-50%)", width: 32, height: 32, borderRadius: "50%", border: "1px solid #E8E8E8", background: "white", cursor: "pointer", fontSize: 18, color: "#666", zIndex: 5, lineHeight: "28px" } }, "\u203A"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: slide.accent, marginBottom: 16, letterSpacing: "0.3px", textAlign: "center" } }, slide.header), slide.rows.map((r, i) => /* @__PURE__ */ React.createElement(
         "div",
         {
-          key: t.id,
-          onClick: () => setView(isLoggedIn ? "memberDashboard" : "testsIntro"),
-          style: {
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            padding: "11px 12px",
-            borderRadius: 10,
-            background: activeTestIdx === i ? c.bg : "#F9F9F7",
-            cursor: "pointer",
-            marginBottom: 8,
-            transition: "all 0.2s",
-            border: activeTestIdx === i ? `1px solid ${c.bar}33` : "1px solid transparent"
-          },
-          onMouseEnter: () => setActiveTestIdx(i)
+          key: slide.key + i,
+          onClick: slide.cta,
+          style: { display: "flex", alignItems: "center", gap: 12, padding: "11px 12px", borderRadius: 10, background: i === 0 ? r.bg : "#F9F9F7", cursor: "pointer", marginBottom: 8, border: i === 0 ? `1px solid ${slide.accent}33` : "1px solid transparent", transition: "all 0.2s" }
         },
-        /* @__PURE__ */ React.createElement("div", { style: {
-          width: 36,
-          height: 36,
-          borderRadius: 10,
-          background: c.bg,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: 18,
-          flexShrink: 0
-        } }, t.icon),
-        /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 600, color: "#1A1A1A" } }, tl(t.name, t.nameEn)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "#9A9A9A" } }, tl(t.time, t.timeEn), " \xB7 ", tl(t.count, t.countEn))),
+        /* @__PURE__ */ React.createElement("div", { style: { width: 36, height: 36, borderRadius: 10, background: r.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 } }, r.icon),
+        /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 600, color: "#1A1A1A" } }, r.name), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "#9A9A9A" } }, r.sub)),
         /* @__PURE__ */ React.createElement("div", { style: {
           fontSize: 11,
           fontWeight: 600,
           padding: "3px 9px",
           borderRadius: 100,
-          background: t.free ? "#D8F3DC" : "#FFF0E6",
-          color: t.free ? "#1A6B3C" : "#C05621",
-          whiteSpace: "nowrap"
-        } }, t.free ? tl("\uBB34\uB8CC", "Free") : tl("10 \uD06C\uB808\uB527", "10 Credits"))
-      );
-    }), /* @__PURE__ */ React.createElement(
-      "button",
-      {
-        onClick: () => setView("testsIntro"),
-        style: {
-          width: "100%",
-          marginTop: 12,
-          padding: "10px 0",
-          background: "#F0FAF4",
-          border: "1px solid #B7E4C7",
-          borderRadius: 10,
-          fontSize: 13,
-          fontWeight: 600,
-          color: "#2D6A4F",
-          cursor: "pointer",
-          fontFamily: "'Noto Sans KR', sans-serif"
+          whiteSpace: "nowrap",
+          background: slide.key === "test" ? r.free ? "#D8F3DC" : "#FFF0E6" : slide.accent + "18",
+          color: slide.key === "test" ? r.free ? "#1A6B3C" : "#C05621" : slide.accent
+        } }, r.tag)
+      )), /* @__PURE__ */ React.createElement("button", { onClick: slide.cta, style: { width: "100%", marginTop: 10, padding: "10px 0", background: slide.accent + "12", border: `1px solid ${slide.accent}44`, borderRadius: 10, fontSize: 13, fontWeight: 700, color: slide.accent, cursor: "pointer", fontFamily: "'Noto Sans KR', sans-serif" } }, slide.ctaLabel)),
+      /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, justifyContent: "center", marginTop: 16 } }, SHOWCASE.map((s, i) => /* @__PURE__ */ React.createElement(
+        "span",
+        {
+          key: s.key,
+          onClick: () => setSlideIdx(i),
+          role: "button",
+          "aria-label": String(i + 1),
+          style: { width: i === slideIdx ? 24 : 8, height: 8, borderRadius: 4, background: i === slideIdx ? slide.accent : "#D5D5D5", cursor: "pointer", transition: "all 0.25s" }
         }
-      },
-      tl("\uC804\uCCB4 \uAC80\uC0AC 10\uC885 \uBCF4\uAE30 \u2192", "View all 10 assessments \u2192")
-    )), /* @__PURE__ */ React.createElement("div", { style: {
-      position: "absolute",
-      bottom: -14,
-      left: -10,
-      zIndex: 10,
-      background: "white",
-      borderRadius: 12,
-      padding: "10px 14px",
-      boxShadow: "0 8px 30px rgba(0,0,0,0.10)",
-      display: "flex",
-      alignItems: "center",
-      gap: 8
-    } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 18 } }, "\u{1F916}"), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 600 } }, tl("AI \uACB0\uACFC \uBD84\uC11D \uC900\uBE44\uB428", "AI Analysis Ready")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "#9A9A9A" } }, tl("\uAC80\uC0AC \uD6C4 \uBC14\uB85C \uC0C1\uB2F4 \uC2DC\uC791", "Start counseling right after")))))
+      )))
+    )
   )), /* @__PURE__ */ React.createElement("section", { style: { padding: "80px 24px", background: "white" } }, /* @__PURE__ */ React.createElement("div", { style: { maxWidth: 1200, margin: "0 auto" } }, /* @__PURE__ */ React.createElement("div", { id: "sec-tests", "data-animate": true, style: { textAlign: "center", marginBottom: 56, ...fadeIn("sec-tests") } }, /* @__PURE__ */ React.createElement("div", { style: {
     display: "inline-block",
     background: "#D8F3DC",
