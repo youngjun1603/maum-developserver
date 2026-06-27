@@ -47,6 +47,8 @@ app.options('/api/*', (c) => {
 // ── Anthropic 호출 ────────────────────────────────────────────
 // Anthropic은 Cloudflare AI Gateway 경유(직접 api.anthropic.com 호출은 Workers egress에서 403 차단됨)
 const AI_GATEWAY = 'https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages';
+// OpenAI(TTS)도 동일 게이트웨이 경유 — 직접 api.openai.com은 Workers egress에서 403(unsupported_country_region) 차단됨
+const OPENAI_GATEWAY = 'https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/openai';
 async function callClaude(env: Bindings, opts: { model: string; system: string; messages: any[]; max_tokens: number; temperature?: number }) {
   const once = async () => {
     const ctrl = new AbortController();
@@ -472,7 +474,7 @@ app.post('/api/tts', requireAuth, async (c) => {
   const cached = await c.env.KV.get(key, 'arrayBuffer');
   if (cached) return new Response(cached, { headers: { 'content-type': 'audio/mpeg', 'cache-control': 'public, max-age=86400' } });
   try {
-    const res = await fetch('https://api.openai.com/v1/audio/speech', {
+    const res = await fetch(`${OPENAI_GATEWAY}/audio/speech`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${c.env.OPENAI_API_KEY}` },
       body: JSON.stringify({ model: 'tts-1', voice, input: t, response_format: 'mp3', speed: 1.0 }),
