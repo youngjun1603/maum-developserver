@@ -117,5 +117,6 @@ D1 스키마 → 인증/JWT(공유 규약) → 세션·발화 API → 통역 엔
 **이메일(Resend) — 상용화 시점까지 보류(키 미설정·no-op)**: 비번재설정·이메일인증 코드 완성·배포됨. `RESEND_API_KEY` 미설정 시 no-op. maum-auth `email_verified`(시리즈 공유).
 > ⚠️ **치명 주의**: 도메인 미검증 상태로 키만 넣으면 발송 실패+`email_required=true`로 **미인증 유저 쿠폰등록이 전부 403**으로 막힘. **Resend 도메인 검증(Cloudflare DNS SPF/DKIM/MX) 완료 후에만** 키 설정.
 **운영**: error_logs+logError+onError, `/api/admin/stats`·`/admin` 대시보드.
+**또또 음성(TTS, 2026-06 구축)**: `POST /api/tts`(authed) → **OpenAI tts-1**, 답변 텍스트만 합성(아이 발화 미전송). 버디별 음성 **또또=shimmer·라라=nova**, KV 캐시(`ttscache:` 30일·인사/공통문구 재생성 0). ⚠️ **반드시 AI Gateway 경유**(`OPENAI_GATEWAY` const) — 직접 api.openai.com은 Workers egress에서 **403 `unsupported_country_region_territory`** 차단(Anthropic과 동일). `OPENAI_API_KEY` **설정됨**(sk-ant- 클로드키 아님, OpenAI 별도계정 sk-proj-). 미설정/실패 시 프론트 `speak()`가 **기기 speechSynthesis 폴백**(무영향). 모바일 자동재생: `startConversation`에서 Audio+speechSynthesis **둘 다 잠금해제**(silent wav·빈 utterance). 개인정보 처리위탁에 OpenAI 명시.
 **프론트(public/index.html)**: `EntitlementCard`(이용권·구매링크 `STORE_URL`[미설정]·이용내역), `VerifyBanner`, 온보딩(아이 0명시), 랜딩 소개, og.png+OG메타.
 **미설정**: `RESEND_API_KEY`·`STORE_URL`·토스 라이브키. 웹 애널리틱스=Cloudflare 자동설정(수동 beacon 금지).
