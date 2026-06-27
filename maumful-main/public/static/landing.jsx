@@ -536,12 +536,12 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
         { icon: '🤖', bg: '#FFE4EE', name: tl('AI 커플 리포트', 'AI Report'), sub: tl('맞춤 관계 인사이트', 'Tailored insights'), tag: tl('무료', 'Free') },
         { icon: '📊', bg: '#FFE4EE', name: tl('관계 건강도 체크', 'Check-In'), sub: tl('월 1회 무료', 'Free monthly'), tag: tl('무료', 'Free') },
         { icon: '🗓️', bg: '#FFE4EE', name: tl('데이트 코스 추천', 'Date Ideas'), sub: tl('취향 기반 AI', 'AI-personalized'), tag: tl('AI', 'AI') } ] },
-    { key: 'otter', accent: '#3B6FB5', header: tl('🦦 마음수달 · 아이 마음 통역', '🦦 Maumotter'),
+    { key: 'otter', accent: '#3B6FB5', header: tl('🦦 마음수달 · 아이 마음을 읽어 전해요', '🦦 Maumotter'),
       badge: { icon: '🦦', title: tl('또또와 대화', 'Talk with Otto'), sub: tl('표정 영상 무저장', 'Video not stored') },
       cta: () => openOtter(), ctaLabel: tl('마음수달 보러가기 →', 'Open Maumotter →'),
       rows: [
         { icon: '🦦', bg: '#E7F0FB', name: tl('또또와 대화', 'Talk with Otto'), sub: tl('아이가 편하게 속마음', 'kids open up'), tag: tl('대화', 'Chat') },
-        { icon: '🤖', bg: '#E7F0FB', name: tl('AI 정서 통역', 'Emotion Read'), sub: tl('부모용 코칭 리포트', 'for parents'), tag: tl('통역', 'Read') },
+        { icon: '🤖', bg: '#E7F0FB', name: tl('마음 읽어 전하기', 'Heart, read & shared'), sub: tl('부모님께 따뜻하게', 'gently for parents'), tag: tl('읽기', 'Read') },
         { icon: '📷', bg: '#E7F0FB', name: tl('표정 영상 분석', 'Facial Reading'), sub: tl('기기 내·저장 안 함', 'on-device'), tag: tl('무저장', 'No-save') },
         { icon: '🔒', bg: '#E7F0FB', name: tl('안전 설계', 'Safe Design'), sub: tl('부모 PIN·위기 안내', 'PIN·crisis'), tag: tl('안전', 'Safe') } ] },
   ];
@@ -1517,7 +1517,7 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               {tl([
                 { emoji: '🦦', name: '또또와 대화',     tag: '아이의 마음 친구',   color: '#3B6FB5', bg: '#E7F0FB' },
-                { emoji: '🤖', name: 'AI 정서 통역',    tag: '부모용 코칭 리포트', color: '#9333EA', bg: '#F3E8FF' },
+                { emoji: '🤖', name: '마음 읽어 전하기', tag: '부모님께 따뜻하게', color: '#9333EA', bg: '#F3E8FF' },
                 { emoji: '📷', name: '표정 영상 분석',  tag: '기기 내·저장 안 함', color: '#0891B2', bg: '#E0F7FA' },
                 { emoji: '🔒', name: '안전 설계',       tag: 'PIN·위기 안내',      color: '#16A34A', bg: '#E7F6EC' },
               ], [
@@ -1552,15 +1552,15 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
                 textTransform: 'uppercase', padding: '5px 14px', borderRadius: 100, marginBottom: 20,
               }}>Maumotter</div>
               <h2 style={{ fontSize: 36, fontWeight: 700, lineHeight: 1.3, marginBottom: 16 }}>
-                {tl(<>아이의 속마음을 통역하는<br /><span style={{ color: '#3B6FB5' }}>마음수달</span></>, <>Translating your child's heart<br /><span style={{ color: '#3B6FB5' }}>Maumotter</span></>)}
+                {tl(<>아이의 속마음을 읽어 전하는<br /><span style={{ color: '#3B6FB5' }}>마음수달</span></>, <>Reading your child's heart<br /><span style={{ color: '#3B6FB5' }}>Maumotter</span></>)}
               </h2>
               <p style={{ fontSize: 16, color: '#5A5A5A', lineHeight: 1.8, marginBottom: 28 }}>
-                {tl(<>아이가 수달 친구 '또또'와 도란도란 이야기하면,<br />그 대화를 부모님이 이해·행동할 수 있는 따뜻한 코칭으로 통역해 드려요.</>, <>When your child chats with the otter friend 'Otto',<br />we translate it into warm coaching parents can understand and act on.</>)}
+                {tl(<>아이가 수달 친구 '또또'와 도란도란 이야기하면,<br />그 마음을 읽어 부모님이 이해·행동할 수 있는 따뜻한 코칭으로 전해 드려요.</>, <>When your child chats with the otter friend 'Otto',<br />we read their heart and share it as warm coaching parents can act on.</>)}
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
                 {tl([
                   { icon: '🦦', text: '또또와 대화 — 아이가 편하게 속마음을 꺼내요' },
-                  { icon: '🤖', text: 'AI 정서 통역 — 부모님용 코칭 리포트' },
+                  { icon: '🤖', text: '마음 읽어 전하기 — 부모님께 따뜻한 코칭으로' },
                   { icon: '📷', text: '표정 영상 — 기기 내 분석·저장 안 함' },
                   { icon: '🔒', text: '안전 설계 — 부모 PIN·위기 신호 안내' },
                 ], [
@@ -1640,8 +1640,8 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
             {[
               { emoji: '✝️', name: 'The Light of Life', desc: tl('성경적 상담·심리검사', 'Biblical counseling & assessments'), url: 'https://jesusmaum.com', domain: 'jesusmaum.com', accent: '#0F2044' },
-              { emoji: '🦦', name: tl('마음수달', 'Maumotter'), desc: tl('아이의 속마음 통역', "Read your child's feelings"), url: 'https://maumotter.com', domain: 'maumotter.com', accent: '#3E78C0' },
-              { emoji: '🐾', name: tl('마음곁', 'Maumgyeot'), desc: tl('반려동물 마음 통역', "Read your pet's feelings"), url: 'https://maumgyeot.com', domain: 'maumgyeot.com', accent: '#2E8B7A' },
+              { emoji: '🦦', name: tl('마음수달', 'Maumotter'), desc: tl('아이의 속마음 읽어 전하기', "Read your child's feelings"), url: 'https://maumotter.com', domain: 'maumotter.com', accent: '#3E78C0' },
+              { emoji: '🐾', name: tl('마음곁', 'Maumgyeot'), desc: tl('반려동물 마음 읽어 전하기', "Read your pet's feelings"), url: 'https://maumgyeot.com', domain: 'maumgyeot.com', accent: '#2E8B7A' },
               { emoji: '🏢', name: 'phyweb', desc: tl('기업·기관 전문 심리검사', 'Assessments for organizations'), url: 'https://phyweb.pages.dev', domain: 'phyweb.pages.dev', accent: '#2E7D6B' },
             ].map(s => (
               <a key={s.domain} href={s.url} target="_blank" rel="noopener noreferrer"
