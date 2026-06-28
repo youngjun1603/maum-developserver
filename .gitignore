@@ -26,3 +26,6 @@ Thumbs.db
 
 # Build output
 *.tsbuildinfo
+
+# 개인정보 포함 자료 — git 업로드 금지 (정부지원사업 신청서 등 PII)
+_assets/소상공인/
