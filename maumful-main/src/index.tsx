@@ -2266,7 +2266,7 @@ ${summary ?? (counselingType === 'biblical' ? 'No test result — proceed as fai
 // ============================================================
 // ── 패키지 정의 (credits: 지급량, amount: 결제금액, currency 단위에 맞게)
 // KRW: 원 단위 / USD: 센트 단위 (Stripe 기준)
-const PACKAGES: Record<string, { credits: number; amount: number; label: string }> = {
+const PACKAGES: Record<string, { credits: number; amount: number; label: string; product?: boolean }> = {
   starter_kr:  { credits: 50,  amount: 2900,  label: '스타터' },
   standard_kr: { credits: 120, amount: 5900,  label: '표준'   },
   premium_kr:  { credits: 300, amount: 12900, label: '프리미엄' },
@@ -2275,6 +2275,11 @@ const PACKAGES: Record<string, { credits: number; amount: number; label: string 
   standard_g:  { credits: 120, amount: 599,   label: 'Standard' },
   premium_g:   { credits: 300, amount: 1299,  label: 'Premium'  },
   pro_g:       { credits: 700, amount: 2499,  label: 'Pro'      },
+  // ── 단품 상품(하이브리드: 화면=상품, 백엔드=크레딧 지급). KR 상품제 ──
+  test_one:  { credits: 10, amount: 2000, label: '심리검사 1회(해석 포함)', product: true },
+  ai_10:     { credits: 20, amount: 2000, label: 'AI 상담 10회권',          product: true },
+  pdf_one:   { credits: 3,  amount: 1000, label: 'PDF 결과해석',            product: true },
+  allinone:  { credits: 33, amount: 3900, label: '올인원(검사+AI10회+PDF)', product: true },
 }
 
 // ── 구독 플랜 정의 ─────────────────────────────────────────
@@ -2581,7 +2586,7 @@ app.post('/api/payment/toss/checkout', async (c) => {
       clientKey:     tossClientKey,
       customerKey:   `maumful_user_${userId}`,
       orderId,
-      orderName:     `${pkg.label} 크레딧 ${pkg.credits}개`,
+      orderName:     pkg.product ? pkg.label : `${pkg.label} 크레딧 ${pkg.credits}개`,
       amount:        pkg.amount,
       customerName:  user.nickname || user.email.split('@')[0],
       customerEmail: user.email,

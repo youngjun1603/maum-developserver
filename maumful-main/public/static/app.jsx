@@ -4885,11 +4885,12 @@ function PsychologicalTestSystem() {
     const isKorea   = !regionConfig || regionConfig.pg === 'toss';
     const currency  = isKorea ? 'KRW' : 'USD';
 
+    // 단품 상품 (하이브리드: 구매 시 해당 크레딧 지급, 화면은 단품으로 표기). 백엔드 PACKAGES와 키·금액 일치
     const PACKAGES_KR = [
-      { key:'starter_kr',  credits:50,  amount:2900,  label:t('스타터','Starter'),   badge:null },
-      { key:'standard_kr', credits:120, amount:5900,  label:t('표준','Standard'),    badge:t('인기','Popular') },
-      { key:'premium_kr',  credits:300, amount:12900, label:t('프리미엄','Premium'), badge:t('추천','Best') },
-      { key:'pro_kr',      credits:700, amount:24900, label:t('대용량','Pro'),        badge:null },
+      { key:'test_one', credits:10, amount:2000, label:t('심리검사 1회','Assessment'),      desc:t('검사 1회 + 결과 해석','1 test + report'),  badge:null },
+      { key:'ai_10',    credits:20, amount:2000, label:t('AI 상담 10회권','AI chat ×10'),    desc:t('AI 채팅 10회','10 AI chats'),            badge:t('인기','Popular') },
+      { key:'pdf_one',  credits:3,  amount:1000, label:t('PDF 결과해석','PDF report'),        desc:t('심층 해석 PDF 1회','In-depth PDF'),       badge:null },
+      { key:'allinone', credits:33, amount:3900, label:t('올인원 패키지','All-in-One'),       desc:t('검사+AI 10회+PDF','Test+AI+PDF'),        badge:t('추천','Best') },
     ];
     const PACKAGES_GLOBAL = [
       { key:'starter_g',  credits:50,  amount:2.99,  label:'Starter',  badge:null },
@@ -4975,13 +4976,15 @@ function PsychologicalTestSystem() {
             </div>
             <div style={{ marginTop:14, fontSize:12, opacity:0.85,
               background:'rgba(255,255,255,0.15)', borderRadius:8, padding:'6px 12px', display:'inline-block' }}>
-              {t("심리검사 1회 = 10 크레딧 · AI 채팅 1회 = 2 크레딧","Assessment = 10 cr · AI chat = 2 cr")}
+              {isKorea
+                ? t("필요한 것만 단품으로 구매하세요 · 무료검사(PHQ-9·GAD-7)는 그대로 무료","Buy only what you need · Free tests (PHQ-9·GAD-7) stay free")
+                : t("심리검사 1회 = 10 크레딧 · AI 채팅 1회 = 2 크레딧","Assessment = 10 cr · AI chat = 2 cr")}
             </div>
           </div>
 
           {/* 탭 */}
           <div style={{ display:'flex', borderBottom:'1px solid #E5E7EB' }}>
-            {[['credits',t('✦ 크레딧 충전','✦ Top Up')],['plans',t('💎 멤버십 플랜','💎 Plans')]].map(([tab, label]) => (
+            {(isKorea ? [['credits',t('🛒 상품 구매','🛒 Shop')]] : [['credits',t('✦ 크레딧 충전','✦ Top Up')],['plans',t('💎 멤버십 플랜','💎 Plans')]]).map(([tab, label]) => (
               <button key={tab} onClick={() => setActiveTab(tab)}
                 style={{
                   flex:1, padding:'12px', border:'none', cursor:'pointer', fontFamily:F,
@@ -4997,7 +5000,7 @@ function PsychologicalTestSystem() {
 
             {/* ── 크레딧 충전 탭 ── */}
             {activeTab === 'credits' && (<>
-              <div style={{ fontSize:13, fontWeight:700, color:'#374151', marginBottom:12 }}>{t("패키지 선택","Select Package")}</div>
+              <div style={{ fontSize:13, fontWeight:700, color:'#374151', marginBottom:12 }}>{t(isKorea?'상품 선택':'패키지 선택', isKorea?'Select a Product':'Select a Package')}</div>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:9, marginBottom:18 }}>
                 {pkgs.map(pkg => {
                   const isSel = selected === pkg.key;
@@ -5016,13 +5019,20 @@ function PsychologicalTestSystem() {
                           color:'white', fontSize:9, fontWeight:800,
                           padding:'2px 7px', borderRadius:20 }}>{pkg.badge}</div>
                       )}
-                      <div style={{ fontSize:12, fontWeight:700, color: isSel ? '#2D6A4F' : '#374151',
-                        marginBottom:3 }}>{pkg.label}</div>
-                      <div style={{ fontSize:20, fontWeight:800,
-                        color: isSel ? '#2D6A4F' : '#111' }}>✦ {pkg.credits}</div>
-                      <div style={{ fontSize:11, color:'#6B7280', marginTop:1 }}>{perCredit}</div>
-                      <div style={{ fontSize:14, fontWeight:700, color: isSel ? '#2D6A4F' : '#374151',
-                        marginTop:5 }}>{fmt(pkg.amount)}</div>
+                      {isKorea ? (<>
+                        <div style={{ fontSize:12.5, fontWeight:800, color: isSel ? '#2D6A4F' : '#374151',
+                          marginBottom:3 }}>{pkg.label}</div>
+                        <div style={{ fontSize:11, color:'#6B7280', marginBottom:8, minHeight:30, lineHeight:1.35 }}>{pkg.desc}</div>
+                        <div style={{ fontSize:18, fontWeight:800, color: isSel ? '#2D6A4F' : '#111' }}>{fmt(pkg.amount)}</div>
+                      </>) : (<>
+                        <div style={{ fontSize:12, fontWeight:700, color: isSel ? '#2D6A4F' : '#374151',
+                          marginBottom:3 }}>{pkg.label}</div>
+                        <div style={{ fontSize:20, fontWeight:800,
+                          color: isSel ? '#2D6A4F' : '#111' }}>✦ {pkg.credits}</div>
+                        <div style={{ fontSize:11, color:'#6B7280', marginTop:1 }}>{perCredit}</div>
+                        <div style={{ fontSize:14, fontWeight:700, color: isSel ? '#2D6A4F' : '#374151',
+                          marginTop:5 }}>{fmt(pkg.amount)}</div>
+                      </>)}
                     </button>
                   );
                 })}
@@ -5031,7 +5041,7 @@ function PsychologicalTestSystem() {
                 <div style={{ background:'#F9FAFB', borderRadius:12, padding:'12px 16px',
                   marginBottom:10, border:'1px solid rgba(0,0,0,0.07)' }}>
                   <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'#6B7280' }}>
-                    <span>{selPkg.label} · ✦ {selPkg.credits} {t("크레딧","cr")}</span>
+                    <span>{selPkg.label}{isKorea ? (selPkg.desc ? ' · ' + selPkg.desc : '') : (' · ✦ ' + selPkg.credits + ' ' + t("크레딧","cr"))}</span>
                     <div style={{ textAlign:'right' }}>
                       <div style={{ fontWeight:700, color:'#111', fontSize:15 }}>
                         {fmt(selPkg.amount)}
@@ -5045,8 +5055,8 @@ function PsychologicalTestSystem() {
                     </div>
                   </div>
                   <div style={{ marginTop:6, fontSize:11, color:'#9CA3AF' }}>
-                    {t(`충전 후 잔액: ✦ ${credits + selPkg.credits} 크레딧 · 검사 ${Math.floor((credits + selPkg.credits) / 10)}회 가능`,
-                       `After top-up: ✦ ${credits + selPkg.credits} cr · ${Math.floor((credits + selPkg.credits) / 10)} assessments`)}
+                    {t(`구매 후 잔액: ✦ ${credits + selPkg.credits} 크레딧 · 검사 ${Math.floor((credits + selPkg.credits) / 10)}회 가능`,
+                       `After purchase: ✦ ${credits + selPkg.credits} cr · ${Math.floor((credits + selPkg.credits) / 10)} assessments`)}
                   </div>
                 </div>
               )}
@@ -5182,7 +5192,9 @@ function PsychologicalTestSystem() {
                   : loading
                     ? t('결제 준비 중...', 'Processing...')
                     : selPkg
-                      ? t(`${selPkg.label} · ✦ ${selPkg.credits} 크레딧 결제하기`, `Pay · ✦ ${selPkg.credits} Credits`)
+                      ? (isKorea
+                          ? t(`${selPkg.label} 결제하기`, `Pay · ${selPkg.label}`)
+                          : t(`${selPkg.label} · ✦ ${selPkg.credits} 크레딧 결제하기`, `Pay · ✦ ${selPkg.credits} Credits`))
                       : t('패키지를 선택하세요', 'Select a package')}
               </button>
             </div>

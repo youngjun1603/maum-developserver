@@ -3996,10 +3996,10 @@ Visit Maumful and take the same test again to compare your progress.`));
     const isKorea = !regionConfig2 || regionConfig2.pg === "toss";
     const currency = isKorea ? "KRW" : "USD";
     const PACKAGES_KR = [
-      { key: "starter_kr", credits: 50, amount: 2900, label: t("\uC2A4\uD0C0\uD130", "Starter"), badge: null },
-      { key: "standard_kr", credits: 120, amount: 5900, label: t("\uD45C\uC900", "Standard"), badge: t("\uC778\uAE30", "Popular") },
-      { key: "premium_kr", credits: 300, amount: 12900, label: t("\uD504\uB9AC\uBBF8\uC5C4", "Premium"), badge: t("\uCD94\uCC9C", "Best") },
-      { key: "pro_kr", credits: 700, amount: 24900, label: t("\uB300\uC6A9\uB7C9", "Pro"), badge: null }
+      { key: "test_one", credits: 10, amount: 2e3, label: t("\uC2EC\uB9AC\uAC80\uC0AC 1\uD68C", "Assessment"), desc: t("\uAC80\uC0AC 1\uD68C + \uACB0\uACFC \uD574\uC11D", "1 test + report"), badge: null },
+      { key: "ai_10", credits: 20, amount: 2e3, label: t("AI \uC0C1\uB2F4 10\uD68C\uAD8C", "AI chat \xD710"), desc: t("AI \uCC44\uD305 10\uD68C", "10 AI chats"), badge: t("\uC778\uAE30", "Popular") },
+      { key: "pdf_one", credits: 3, amount: 1e3, label: t("PDF \uACB0\uACFC\uD574\uC11D", "PDF report"), desc: t("\uC2EC\uCE35 \uD574\uC11D PDF 1\uD68C", "In-depth PDF"), badge: null },
+      { key: "allinone", credits: 33, amount: 3900, label: t("\uC62C\uC778\uC6D0 \uD328\uD0A4\uC9C0", "All-in-One"), desc: t("\uAC80\uC0AC+AI 10\uD68C+PDF", "Test+AI+PDF"), badge: t("\uCD94\uCC9C", "Best") }
     ];
     const PACKAGES_GLOBAL = [
       { key: "starter_g", credits: 50, amount: 2.99, label: "Starter", badge: null },
@@ -4122,7 +4122,7 @@ Visit Maumful and take the same test again to compare your progress.`));
         borderRadius: 8,
         padding: "6px 12px",
         display: "inline-block"
-      } }, t("\uC2EC\uB9AC\uAC80\uC0AC 1\uD68C = 10 \uD06C\uB808\uB527 \xB7 AI \uCC44\uD305 1\uD68C = 2 \uD06C\uB808\uB527", "Assessment = 10 cr \xB7 AI chat = 2 cr"))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", borderBottom: "1px solid #E5E7EB" } }, [["credits", t("\u2726 \uD06C\uB808\uB527 \uCDA9\uC804", "\u2726 Top Up")], ["plans", t("\u{1F48E} \uBA64\uBC84\uC2ED \uD50C\uB79C", "\u{1F48E} Plans")]].map(([tab, label]) => /* @__PURE__ */ React.createElement(
+      } }, isKorea ? t("\uD544\uC694\uD55C \uAC83\uB9CC \uB2E8\uD488\uC73C\uB85C \uAD6C\uB9E4\uD558\uC138\uC694 \xB7 \uBB34\uB8CC\uAC80\uC0AC(PHQ-9\xB7GAD-7)\uB294 \uADF8\uB300\uB85C \uBB34\uB8CC", "Buy only what you need \xB7 Free tests (PHQ-9\xB7GAD-7) stay free") : t("\uC2EC\uB9AC\uAC80\uC0AC 1\uD68C = 10 \uD06C\uB808\uB527 \xB7 AI \uCC44\uD305 1\uD68C = 2 \uD06C\uB808\uB527", "Assessment = 10 cr \xB7 AI chat = 2 cr"))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", borderBottom: "1px solid #E5E7EB" } }, (isKorea ? [["credits", t("\u{1F6D2} \uC0C1\uD488 \uAD6C\uB9E4", "\u{1F6D2} Shop")]] : [["credits", t("\u2726 \uD06C\uB808\uB527 \uCDA9\uC804", "\u2726 Top Up")], ["plans", t("\u{1F48E} \uBA64\uBC84\uC2ED \uD50C\uB79C", "\u{1F48E} Plans")]]).map(([tab, label]) => /* @__PURE__ */ React.createElement(
         "button",
         {
           key: tab,
@@ -4142,7 +4142,7 @@ Visit Maumful and take the same test again to compare your progress.`));
           }
         },
         label
-      ))), /* @__PURE__ */ React.createElement("div", { style: { padding: "20px 24px 24px", maxHeight: "65vh", overflowY: "auto" } }, activeTab === "credits" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: "#374151", marginBottom: 12 } }, t("\uD328\uD0A4\uC9C0 \uC120\uD0DD", "Select Package")), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9, marginBottom: 18 } }, pkgs.map((pkg) => {
+      ))), /* @__PURE__ */ React.createElement("div", { style: { padding: "20px 24px 24px", maxHeight: "65vh", overflowY: "auto" } }, activeTab === "credits" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: "#374151", marginBottom: 12 } }, t(isKorea ? "\uC0C1\uD488 \uC120\uD0DD" : "\uD328\uD0A4\uC9C0 \uC120\uD0DD", isKorea ? "Select a Product" : "Select a Package")), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9, marginBottom: 18 } }, pkgs.map((pkg) => {
         const isSel = selected === pkg.key;
         const perCredit = isKorea ? Math.round(pkg.amount / pkg.credits) + "\uC6D0/cr" : "$" + (pkg.amount / pkg.credits).toFixed(2) + "/cr";
         return /* @__PURE__ */ React.createElement(
@@ -4174,24 +4174,26 @@ Visit Maumful and take the same test again to compare your progress.`));
             padding: "2px 7px",
             borderRadius: 20
           } }, pkg.badge),
-          /* @__PURE__ */ React.createElement("div", { style: {
+          isKorea ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: {
+            fontSize: 12.5,
+            fontWeight: 800,
+            color: isSel ? "#2D6A4F" : "#374151",
+            marginBottom: 3
+          } }, pkg.label), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "#6B7280", marginBottom: 8, minHeight: 30, lineHeight: 1.35 } }, pkg.desc), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 18, fontWeight: 800, color: isSel ? "#2D6A4F" : "#111" } }, fmt(pkg.amount))) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: {
             fontSize: 12,
             fontWeight: 700,
             color: isSel ? "#2D6A4F" : "#374151",
             marginBottom: 3
-          } }, pkg.label),
-          /* @__PURE__ */ React.createElement("div", { style: {
+          } }, pkg.label), /* @__PURE__ */ React.createElement("div", { style: {
             fontSize: 20,
             fontWeight: 800,
             color: isSel ? "#2D6A4F" : "#111"
-          } }, "\u2726 ", pkg.credits),
-          /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "#6B7280", marginTop: 1 } }, perCredit),
-          /* @__PURE__ */ React.createElement("div", { style: {
+          } }, "\u2726 ", pkg.credits), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "#6B7280", marginTop: 1 } }, perCredit), /* @__PURE__ */ React.createElement("div", { style: {
             fontSize: 14,
             fontWeight: 700,
             color: isSel ? "#2D6A4F" : "#374151",
             marginTop: 5
-          } }, fmt(pkg.amount))
+          } }, fmt(pkg.amount)))
         );
       })), selPkg && /* @__PURE__ */ React.createElement("div", { style: {
         background: "#F9FAFB",
@@ -4199,9 +4201,9 @@ Visit Maumful and take the same test again to compare your progress.`));
         padding: "12px 16px",
         marginBottom: 10,
         border: "1px solid rgba(0,0,0,0.07)"
-      } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 13, color: "#6B7280" } }, /* @__PURE__ */ React.createElement("span", null, selPkg.label, " \xB7 \u2726 ", selPkg.credits, " ", t("\uD06C\uB808\uB527", "cr")), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "right" } }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 700, color: "#111", fontSize: 15 } }, fmt(selPkg.amount), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, color: "#9CA3AF", fontWeight: 400, marginLeft: 4 } }, "(", t("VAT \uD3EC\uD568", "incl. VAT"), ")")), isKorea && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: "#9CA3AF", marginTop: 2 } }, t("\uACF5\uAE09\uAC00", "Net"), " ", Math.round(selPkg.amount / 1.1).toLocaleString("ko-KR"), "\uC6D0 + ", t("\uBD80\uAC00\uC138", "VAT"), " ", Math.round(selPkg.amount - selPkg.amount / 1.1).toLocaleString("ko-KR"), "\uC6D0"))), /* @__PURE__ */ React.createElement("div", { style: { marginTop: 6, fontSize: 11, color: "#9CA3AF" } }, t(
-        `\uCDA9\uC804 \uD6C4 \uC794\uC561: \u2726 ${credits2 + selPkg.credits} \uD06C\uB808\uB527 \xB7 \uAC80\uC0AC ${Math.floor((credits2 + selPkg.credits) / 10)}\uD68C \uAC00\uB2A5`,
-        `After top-up: \u2726 ${credits2 + selPkg.credits} cr \xB7 ${Math.floor((credits2 + selPkg.credits) / 10)} assessments`
+      } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 13, color: "#6B7280" } }, /* @__PURE__ */ React.createElement("span", null, selPkg.label, isKorea ? selPkg.desc ? " \xB7 " + selPkg.desc : "" : " \xB7 \u2726 " + selPkg.credits + " " + t("\uD06C\uB808\uB527", "cr")), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "right" } }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 700, color: "#111", fontSize: 15 } }, fmt(selPkg.amount), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, color: "#9CA3AF", fontWeight: 400, marginLeft: 4 } }, "(", t("VAT \uD3EC\uD568", "incl. VAT"), ")")), isKorea && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: "#9CA3AF", marginTop: 2 } }, t("\uACF5\uAE09\uAC00", "Net"), " ", Math.round(selPkg.amount / 1.1).toLocaleString("ko-KR"), "\uC6D0 + ", t("\uBD80\uAC00\uC138", "VAT"), " ", Math.round(selPkg.amount - selPkg.amount / 1.1).toLocaleString("ko-KR"), "\uC6D0"))), /* @__PURE__ */ React.createElement("div", { style: { marginTop: 6, fontSize: 11, color: "#9CA3AF" } }, t(
+        `\uAD6C\uB9E4 \uD6C4 \uC794\uC561: \u2726 ${credits2 + selPkg.credits} \uD06C\uB808\uB527 \xB7 \uAC80\uC0AC ${Math.floor((credits2 + selPkg.credits) / 10)}\uD68C \uAC00\uB2A5`,
+        `After purchase: \u2726 ${credits2 + selPkg.credits} cr \xB7 ${Math.floor((credits2 + selPkg.credits) / 10)} assessments`
       ))), /* @__PURE__ */ React.createElement("div", { style: {
         background: "#FEF9EC",
         border: "1px solid #FDE68A",
@@ -4332,7 +4334,7 @@ Visit Maumful and take the same test again to compare your progress.`));
             opacity: !PAYMENT_LIVE ? 1 : loading || !selPkg ? 0.7 : 1
           }
         },
-        !PAYMENT_LIVE ? t("\u{1F527} \uACB0\uC81C \uC900\uBE44 \uC911\uC785\uB2C8\uB2E4", "\u{1F527} Payment coming soon") : loading ? t("\uACB0\uC81C \uC900\uBE44 \uC911...", "Processing...") : selPkg ? t(`${selPkg.label} \xB7 \u2726 ${selPkg.credits} \uD06C\uB808\uB527 \uACB0\uC81C\uD558\uAE30`, `Pay \xB7 \u2726 ${selPkg.credits} Credits`) : t("\uD328\uD0A4\uC9C0\uB97C \uC120\uD0DD\uD558\uC138\uC694", "Select a package")
+        !PAYMENT_LIVE ? t("\u{1F527} \uACB0\uC81C \uC900\uBE44 \uC911\uC785\uB2C8\uB2E4", "\u{1F527} Payment coming soon") : loading ? t("\uACB0\uC81C \uC900\uBE44 \uC911...", "Processing...") : selPkg ? isKorea ? t(`${selPkg.label} \uACB0\uC81C\uD558\uAE30`, `Pay \xB7 ${selPkg.label}`) : t(`${selPkg.label} \xB7 \u2726 ${selPkg.credits} \uD06C\uB808\uB527 \uACB0\uC81C\uD558\uAE30`, `Pay \xB7 \u2726 ${selPkg.credits} Credits`) : t("\uD328\uD0A4\uC9C0\uB97C \uC120\uD0DD\uD558\uC138\uC694", "Select a package")
       )))
     );
   }

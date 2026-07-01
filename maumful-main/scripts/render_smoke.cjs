@@ -8,11 +8,13 @@ const file = process.argv[2] || 'public/static/compiled/landing.js';
 global.window = { location:{search:'',pathname:'/',hostname:'maumful.com',origin:'https://maumful.com',hash:''}, addEventListener(){},removeEventListener(){},open(){},scrollTo(){}, matchMedia:()=>({matches:false,addEventListener(){},removeEventListener(){}}) };
 global.document = { createElement:()=>({style:{},appendChild(){},setAttribute(){}}), addEventListener(){}, getElementById:()=>({}), querySelector:()=>null, head:{appendChild(){}} };
 global.localStorage = { getItem:()=>null,setItem(){},removeItem(){} };
+global.sessionStorage = { getItem:()=>null,setItem(){},removeItem(){} };
 global.fetch = ()=>Promise.resolve({json:()=>Promise.resolve({}),ok:true});
 global.navigator = { clipboard:{writeText:()=>Promise.resolve()} };
 global.IntersectionObserver = class{observe(){}disconnect(){}unobserve(){}};
 global.React = { useState:(v)=>[typeof v==='function'?v():v,()=>{}], useEffect:()=>{}, useRef:(v)=>({current:v??null}), useMemo:(f)=>f(), useCallback:(f)=>f, createElement:()=>({}), Fragment:'F' };
 global.htm = { bind:()=> (s,...v)=>({__:1}) };
+global.ReactDOM = { createRoot:()=>({render(){},unmount(){}}), render(){} };
 
 let code = fs.readFileSync(file,'utf8');
 const names = [...code.matchAll(/function\s+([A-Z]\w*)\s*\(/g)].map(m=>m[1]);
