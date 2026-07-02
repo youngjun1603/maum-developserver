@@ -1556,7 +1556,7 @@ function PsychologicalTestSystem() {
             const d = await r.json();
             if (d.success) setCredits(d.data.credits);
           } catch { /* 무시 */ }
-          setLoginMsg({ type: 'success', text: '✦ 크레딧 충전이 완료되었습니다!' });
+          setLoginMsg({ type: 'success', text: '✦ 크레딧 구매가 완료되었습니다!' });
           setTimeout(() => setLoginMsg({ type: '', text: '' }), 4000);
         }, 1500);
       } else if (paymentStatus === 'fail' || paymentStatus === 'cancel') {
@@ -2471,7 +2471,7 @@ function PsychologicalTestSystem() {
         <button
           onClick={() => { setShowCreditModal(false); setShowChargeView(true); }}
           className="w-full bg-green-700 text-white py-3 rounded-xl font-bold hover:bg-green-800 transition mb-3"
-        >{t('크레딧 충전하기', 'Buy Credits')}</button>
+        >{t('크레딧 구매하기', 'Buy Credits')}</button>
         <button
           onClick={() => setShowCreditModal(false)}
           className="w-full bg-gray-100 text-gray-600 py-3 rounded-xl font-semibold hover:bg-gray-200 transition"
@@ -2532,7 +2532,7 @@ function PsychologicalTestSystem() {
             <div className="space-y-3 mb-4">
               <button onClick={() => { setShowAiLimitModal(false); setShowChargeView(true); }}
                 className="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition text-sm">
-                ✦ {t("크레딧 충전하여 계속 상담하기","Top up credits to continue")}
+                ✦ {t("크레딧 구매하여 계속 상담하기","Top up credits to continue")}
               </button>
             </div>
             <button onClick={() => setShowAiLimitModal(false)}
@@ -3898,7 +3898,7 @@ function PsychologicalTestSystem() {
           <div className="bg-gradient-to-r from-green-500 to-purple-600 rounded-2xl p-5 text-white mb-6">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm opacity-80">{t("현재 크레딧", "Current Credits")}</span>
-              <button onClick={() => setShowChargeView(true)} className="text-xs bg-white/20 px-3 py-1 rounded-full hover:bg-white/30 transition">{t("충전 →", "Top up →")}</button>
+              <button onClick={() => setShowChargeView(true)} className="text-xs bg-white/20 px-3 py-1 rounded-full hover:bg-white/30 transition">{t("구매 →", "Buy →")}</button>
             </div>
             <div className="text-4xl font-bold">✦ {credits}</div>
             <div className="text-xs opacity-70 mt-1">{t(`검사 ${Math.floor(credits / 10)}회 · AI 채팅 ${Math.floor(credits / 2)}회 가능`, `${Math.floor(credits / 10)} tests · ${Math.floor(credits / 2)} AI chats available`)}</div>
@@ -4310,7 +4310,7 @@ function PsychologicalTestSystem() {
           const reasonLabel = (r) => ({
             signup_bonus:t('가입 보너스','Signup Bonus'),
             test:t('심리검사','Assessment'), chat:t('AI 채팅','AI Chat'),
-            charge:t('크레딧 충전','Credit Purchase'), refund_api_error:t('오류 환불','Error Refund'),
+            charge:t('크레딧 구매','Credit Purchase'), refund_api_error:t('오류 환불','Error Refund'),
             admin_grant:t('관리자 지급','Admin Grant'), referral:t('친구 초대','Referral'),
             couple:t('마음커플 분석','MaumCouple Analysis'), couple_session:t('마음커플 세션','MaumCouple Session'),
             game:t('마음게임','MaumGame'), game_spend:t('마음게임 아이템','MaumGame Item'),
@@ -4352,14 +4352,14 @@ function PsychologicalTestSystem() {
                   <button onClick={() => setShowChargeView(true)}
                     className="text-sm bg-white text-green-700 font-bold px-5 py-2.5 rounded-full hover:bg-green-50 transition"
                     style={{fontFamily:"'Noto Sans KR',sans-serif"}}>
-                    {t("충전하기 →","Top up →")}
+                    {t("구매하기 →","Top up →")}
                   </button>
                 </div>
 
                 {/* 빠른 통계 */}
                 <div className="mt-4 grid grid-cols-3 gap-2">
                   {[
-                    { label:t('총 충전','Total charged'), val: chargeTxns.filter(tx=>tx.reason==='charge').reduce((s,tx)=>s+tx.amount,0) + ' cr' },
+                    { label:t('총 구매','Total charged'), val: chargeTxns.filter(tx=>tx.reason==='charge').reduce((s,tx)=>s+tx.amount,0) + ' cr' },
                     { label:t('사용 건수','Usage count'), val: usageTxns.length + t('건',' uses') },
                     { label:t('이번 달 사용','This month'), val: usageTxns.filter(tx=>new Date(tx.created_at).getMonth()===new Date().getMonth()).reduce((s,tx)=>s+tx.amount,0) + ' cr' },
                   ].map(s => (
@@ -4373,7 +4373,7 @@ function PsychologicalTestSystem() {
 
               {/* 소탭 */}
               <div className="flex gap-2 mb-4">
-                {[['usage',t('사용 내역','Usage')],['charge',t('충전/지급 내역','Charges')]].map(([tab,l]) => (
+                {[['usage',t('사용 내역','Usage')],['charge',t('구매/지급 내역','Charges')]].map(([tab,l]) => (
                   <button key={tab} onClick={() => setCreditSubTab(tab)}
                     className={`px-4 py-1.5 rounded-full text-xs font-bold transition ${creditSubTab===tab ? 'bg-gray-800 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}
                     style={{fontFamily:"'Noto Sans KR',sans-serif"}}>{l}</button>
@@ -4404,7 +4404,7 @@ function PsychologicalTestSystem() {
               {/* 충전/지급 내역 */}
               {creditSubTab === 'charge' && (
                 <div className="space-y-2">
-                  {chargeTxns.length === 0 && <p className="text-gray-400 text-sm text-center py-6">{t("충전 내역이 없습니다","No charge history")}</p>}
+                  {chargeTxns.length === 0 && <p className="text-gray-400 text-sm text-center py-6">{t("구매 내역이 없습니다","No charge history")}</p>}
                   {chargeTxns.map((tx, i) => (
                     <div key={i} className="bg-white rounded-xl p-3.5 flex items-center justify-between border border-gray-100">
                       <div className="flex items-center gap-3">
@@ -4430,7 +4430,7 @@ function PsychologicalTestSystem() {
                       <button onClick={() => setShowChargeView(true)}
                         className="text-sm font-bold text-blue-600 hover:text-blue-800"
                         style={{fontFamily:"'Noto Sans KR',sans-serif"}}>
-                        + {t("크레딧 충전하기","Top up credits")}
+                        + {t("크레딧 구매하기","Top up credits")}
                       </button>
                     </div>
                   )}
@@ -4984,7 +4984,7 @@ function PsychologicalTestSystem() {
 
           {/* 탭 */}
           <div style={{ display:'flex', borderBottom:'1px solid #E5E7EB' }}>
-            {(isKorea ? [['credits',t('🛒 상품 구매','🛒 Shop')]] : [['credits',t('✦ 크레딧 충전','✦ Top Up')],['plans',t('💎 멤버십 플랜','💎 Plans')]]).map(([tab, label]) => (
+            {(isKorea ? [['credits',t('🛒 상품 구매','🛒 Shop')]] : [['credits',t('✦ 크레딧 구매','✦ Top Up')],['plans',t('💎 멤버십 플랜','💎 Plans')]]).map(([tab, label]) => (
               <button key={tab} onClick={() => setActiveTab(tab)}
                 style={{
                   flex:1, padding:'12px', border:'none', cursor:'pointer', fontFamily:F,
@@ -5071,7 +5071,7 @@ function PsychologicalTestSystem() {
                   {t(<li>미사용 크레딧은 구매일로부터 <strong>7일 이내</strong> 전액 환불 가능합니다.</li>,
                      <li>Unused credits are fully refundable within <strong>7 days</strong> of purchase.</li>)}
                   {/* TODO: PG 정식 승인 후 삭제 — 한시적 유효기간 안내 문구 */}
-                  {t(<li>충전한 크레딧은 충전일로부터 <strong>1년간 유효</strong>합니다.</li>,
+                  {t(<li>구매한 크레딧은 구매일로부터 <strong>1년간 유효</strong>합니다.</li>,
                      <li>Charged credits are valid for <strong>1 year</strong> from the date of purchase.</li>)}
                   {isKorea && t(<li>결제 시 이메일·결제금액이 <strong>토스페이먼츠(주)</strong>에 제공됩니다. (결제 처리 목적)</li>,
                                 <li>Your email and payment amount will be shared with <strong>TossPayments</strong> for processing.</li>)}
@@ -7519,7 +7519,7 @@ function PsychologicalTestSystem() {
         });
         const data = await res.json();
         if (res.status === 402) {
-          setPdfMsg(data.error || '크레딧이 부족합니다. 충전 후 이용해 주세요.');
+          setPdfMsg(data.error || '크레딧이 부족합니다. 구매 후 이용해 주세요.');
           setPdfStatus('error');
         } else if (data.success) {
           setPdfAnalysis(data.analysis);

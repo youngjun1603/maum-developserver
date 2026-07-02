@@ -1554,7 +1554,7 @@ function PsychologicalTestSystem() {
             if (d.success) setCredits(d.data.credits);
           } catch {
           }
-          setLoginMsg({ type: "success", text: "\u2726 \uD06C\uB808\uB527 \uCDA9\uC804\uC774 \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4!" });
+          setLoginMsg({ type: "success", text: "\u2726 \uD06C\uB808\uB527 \uAD6C\uB9E4\uAC00 \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4!" });
           setTimeout(() => setLoginMsg({ type: "", text: "" }), 4e3);
         }, 1500);
       } else if (paymentStatus === "fail" || paymentStatus === "cancel") {
@@ -2434,7 +2434,7 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
       },
       className: "w-full bg-green-700 text-white py-3 rounded-xl font-bold hover:bg-green-800 transition mb-3"
     },
-    t("\uD06C\uB808\uB527 \uCDA9\uC804\uD558\uAE30", "Buy Credits")
+    t("\uD06C\uB808\uB527 \uAD6C\uB9E4\uD558\uAE30", "Buy Credits")
   ), /* @__PURE__ */ React.createElement(
     "button",
     {
@@ -2527,7 +2527,7 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
       className: "w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition text-sm"
     },
     "\u2726 ",
-    t("\uD06C\uB808\uB527 \uCDA9\uC804\uD558\uC5EC \uACC4\uC18D \uC0C1\uB2F4\uD558\uAE30", "Top up credits to continue")
+    t("\uD06C\uB808\uB527 \uAD6C\uB9E4\uD558\uC5EC \uACC4\uC18D \uC0C1\uB2F4\uD558\uAE30", "Top up credits to continue")
   )), /* @__PURE__ */ React.createElement(
     "button",
     {
@@ -3402,7 +3402,7 @@ Visit Maumful and take the same test again to compare your progress.`));
       { step: "1", icon: "\u{1F4CB}", title: t("\uAC80\uC0AC \uC120\uD0DD", "Pick a Test"), desc: t("\uC544\uB798\uC5D0\uC11C \uC6D0\uD558\uB294 \uC2EC\uB9AC\uAC80\uC0AC\uB97C \uC120\uD0DD\uD558\uC138\uC694", "Choose an assessment below") },
       { step: "2", icon: "\u{1F9E0}", title: t("AI \uBD84\uC11D", "AI Analysis"), desc: t("\uAC80\uC0AC \uC644\uB8CC \uD6C4 AI\uAC00 \uACB0\uACFC\uB97C \uD574\uC11D\uD574 \uB4DC\uB824\uC694", "AI interprets your results after the test") },
       { step: "3", icon: "\u{1F4AC}", title: t("AI \uC0C1\uB2F4", "AI Counseling"), desc: t("\uAD81\uAE08\uD55C \uC810\uC744 AI \uC0C1\uB2F4\uC0AC\uC5D0\uAC8C \uBB3C\uC5B4\uBCF4\uC138\uC694", "Ask the AI counselor any questions") }
-    ].map(({ step, icon, title, desc }) => /* @__PURE__ */ React.createElement("div", { key: step, className: "bg-white rounded-xl p-3 text-center border border-green-100" }, /* @__PURE__ */ React.createElement("div", { className: "text-xl mb-1" }, icon), /* @__PURE__ */ React.createElement("div", { className: "text-xs font-bold text-green-800" }, "STEP ", step), /* @__PURE__ */ React.createElement("div", { className: "text-xs font-semibold text-gray-700 mt-0.5" }, title), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 mt-0.5 leading-tight" }, desc)))), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-green-600 text-center" }, t("\uC544\uB798 \uAC80\uC0AC \uCE74\uB4DC\uB97C \uB20C\uB7EC \uC9C0\uAE08 \uBC14\uB85C \uC2DC\uC791\uD574 \uBCF4\uC138\uC694 \u{1F447}", "Tap a test card below to get started right now \u{1F447}"))), /* @__PURE__ */ React.createElement("div", { className: "mb-6" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 flex-wrap" }, /* @__PURE__ */ React.createElement("h2", { className: "text-xl font-bold text-gray-800" }, t(`\uC548\uB155\uD558\uC138\uC694, ${(currentUser == null ? void 0 : currentUser.nickname) || "\uD68C\uC6D0"}\uB2D8 \u{1F44B}`, `Hello, ${(currentUser == null ? void 0 : currentUser.nickname) || "there"} \u{1F44B}`)), counselingMode === "biblical" && /* @__PURE__ */ React.createElement("span", { className: "text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium" }, "\u271D\uFE0F \uAE30\uB3C5\uAD50 \uC0C1\uB2F4")), /* @__PURE__ */ React.createElement("p", { className: "text-gray-500 text-sm mt-1" }, t("\uAC80\uC0AC 1\uD68C\uC5D0 10 \uD06C\uB808\uB527\uC774 \uCC28\uAC10\uB429\uB2C8\uB2E4", "10 credits per assessment"))), /* @__PURE__ */ React.createElement("div", { className: "bg-gradient-to-r from-green-500 to-purple-600 rounded-2xl p-5 text-white mb-6" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mb-3" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm opacity-80" }, t("\uD604\uC7AC \uD06C\uB808\uB527", "Current Credits")), /* @__PURE__ */ React.createElement("button", { onClick: () => setShowChargeView(true), className: "text-xs bg-white/20 px-3 py-1 rounded-full hover:bg-white/30 transition" }, t("\uCDA9\uC804 \u2192", "Top up \u2192"))), /* @__PURE__ */ React.createElement("div", { className: "text-4xl font-bold" }, "\u2726 ", credits), /* @__PURE__ */ React.createElement("div", { className: "text-xs opacity-70 mt-1" }, t(`\uAC80\uC0AC ${Math.floor(credits / 10)}\uD68C \xB7 AI \uCC44\uD305 ${Math.floor(credits / 2)}\uD68C \uAC00\uB2A5`, `${Math.floor(credits / 10)} tests \xB7 ${Math.floor(credits / 2)} AI chats available`))), (() => {
+    ].map(({ step, icon, title, desc }) => /* @__PURE__ */ React.createElement("div", { key: step, className: "bg-white rounded-xl p-3 text-center border border-green-100" }, /* @__PURE__ */ React.createElement("div", { className: "text-xl mb-1" }, icon), /* @__PURE__ */ React.createElement("div", { className: "text-xs font-bold text-green-800" }, "STEP ", step), /* @__PURE__ */ React.createElement("div", { className: "text-xs font-semibold text-gray-700 mt-0.5" }, title), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 mt-0.5 leading-tight" }, desc)))), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-green-600 text-center" }, t("\uC544\uB798 \uAC80\uC0AC \uCE74\uB4DC\uB97C \uB20C\uB7EC \uC9C0\uAE08 \uBC14\uB85C \uC2DC\uC791\uD574 \uBCF4\uC138\uC694 \u{1F447}", "Tap a test card below to get started right now \u{1F447}"))), /* @__PURE__ */ React.createElement("div", { className: "mb-6" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 flex-wrap" }, /* @__PURE__ */ React.createElement("h2", { className: "text-xl font-bold text-gray-800" }, t(`\uC548\uB155\uD558\uC138\uC694, ${(currentUser == null ? void 0 : currentUser.nickname) || "\uD68C\uC6D0"}\uB2D8 \u{1F44B}`, `Hello, ${(currentUser == null ? void 0 : currentUser.nickname) || "there"} \u{1F44B}`)), counselingMode === "biblical" && /* @__PURE__ */ React.createElement("span", { className: "text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium" }, "\u271D\uFE0F \uAE30\uB3C5\uAD50 \uC0C1\uB2F4")), /* @__PURE__ */ React.createElement("p", { className: "text-gray-500 text-sm mt-1" }, t("\uAC80\uC0AC 1\uD68C\uC5D0 10 \uD06C\uB808\uB527\uC774 \uCC28\uAC10\uB429\uB2C8\uB2E4", "10 credits per assessment"))), /* @__PURE__ */ React.createElement("div", { className: "bg-gradient-to-r from-green-500 to-purple-600 rounded-2xl p-5 text-white mb-6" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mb-3" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm opacity-80" }, t("\uD604\uC7AC \uD06C\uB808\uB527", "Current Credits")), /* @__PURE__ */ React.createElement("button", { onClick: () => setShowChargeView(true), className: "text-xs bg-white/20 px-3 py-1 rounded-full hover:bg-white/30 transition" }, t("\uAD6C\uB9E4 \u2192", "Buy \u2192"))), /* @__PURE__ */ React.createElement("div", { className: "text-4xl font-bold" }, "\u2726 ", credits), /* @__PURE__ */ React.createElement("div", { className: "text-xs opacity-70 mt-1" }, t(`\uAC80\uC0AC ${Math.floor(credits / 10)}\uD68C \xB7 AI \uCC44\uD305 ${Math.floor(credits / 2)}\uD68C \uAC00\uB2A5`, `${Math.floor(credits / 10)} tests \xB7 ${Math.floor(credits / 2)} AI chats available`))), (() => {
       if (testHistory.length === 0) return null;
       const now = /* @__PURE__ */ new Date();
       const doneTypes = new Set(testHistory.map((h) => h.test_type));
@@ -3685,7 +3685,7 @@ Visit Maumful and take the same test again to compare your progress.`));
       signup_bonus: t("\uAC00\uC785 \uBCF4\uB108\uC2A4", "Signup Bonus"),
       test: t("\uC2EC\uB9AC\uAC80\uC0AC", "Assessment"),
       chat: t("AI \uCC44\uD305", "AI Chat"),
-      charge: t("\uD06C\uB808\uB527 \uCDA9\uC804", "Credit Purchase"),
+      charge: t("\uD06C\uB808\uB527 \uAD6C\uB9E4", "Credit Purchase"),
       refund_api_error: t("\uC624\uB958 \uD658\uBD88", "Error Refund"),
       admin_grant: t("\uAD00\uB9AC\uC790 \uC9C0\uAE09", "Admin Grant"),
       referral: t("\uCE5C\uAD6C \uCD08\uB300", "Referral"),
@@ -3731,14 +3731,14 @@ Visit Maumful and take the same test again to compare your progress.`));
           className: "text-sm bg-white text-green-700 font-bold px-5 py-2.5 rounded-full hover:bg-green-50 transition",
           style: { fontFamily: "'Noto Sans KR',sans-serif" }
         },
-        t("\uCDA9\uC804\uD558\uAE30 \u2192", "Top up \u2192")
+        t("\uAD6C\uB9E4\uD558\uAE30 \u2192", "Top up \u2192")
       )),
       /* @__PURE__ */ React.createElement("div", { className: "mt-4 grid grid-cols-3 gap-2" }, [
-        { label: t("\uCD1D \uCDA9\uC804", "Total charged"), val: chargeTxns.filter((tx) => tx.reason === "charge").reduce((s, tx) => s + tx.amount, 0) + " cr" },
+        { label: t("\uCD1D \uAD6C\uB9E4", "Total charged"), val: chargeTxns.filter((tx) => tx.reason === "charge").reduce((s, tx) => s + tx.amount, 0) + " cr" },
         { label: t("\uC0AC\uC6A9 \uAC74\uC218", "Usage count"), val: usageTxns.length + t("\uAC74", " uses") },
         { label: t("\uC774\uBC88 \uB2EC \uC0AC\uC6A9", "This month"), val: usageTxns.filter((tx) => new Date(tx.created_at).getMonth() === (/* @__PURE__ */ new Date()).getMonth()).reduce((s, tx) => s + tx.amount, 0) + " cr" }
       ].map((s) => /* @__PURE__ */ React.createElement("div", { key: s.label, className: "bg-white/15 rounded-xl p-2 text-center" }, /* @__PURE__ */ React.createElement("div", { className: "text-xs opacity-75" }, s.label), /* @__PURE__ */ React.createElement("div", { className: "font-bold text-sm mt-0.5" }, s.val))))
-    ), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mb-4" }, [["usage", t("\uC0AC\uC6A9 \uB0B4\uC5ED", "Usage")], ["charge", t("\uCDA9\uC804/\uC9C0\uAE09 \uB0B4\uC5ED", "Charges")]].map(([tab, l]) => /* @__PURE__ */ React.createElement(
+    ), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mb-4" }, [["usage", t("\uC0AC\uC6A9 \uB0B4\uC5ED", "Usage")], ["charge", t("\uAD6C\uB9E4/\uC9C0\uAE09 \uB0B4\uC5ED", "Charges")]].map(([tab, l]) => /* @__PURE__ */ React.createElement(
       "button",
       {
         key: tab,
@@ -3747,7 +3747,7 @@ Visit Maumful and take the same test again to compare your progress.`));
         style: { fontFamily: "'Noto Sans KR',sans-serif" }
       },
       l
-    ))), creditSubTab === "usage" && /* @__PURE__ */ React.createElement("div", { className: "space-y-2" }, usageTxns.length === 0 && /* @__PURE__ */ React.createElement("p", { className: "text-gray-400 text-sm text-center py-6" }, t("\uC0AC\uC6A9 \uB0B4\uC5ED\uC774 \uC5C6\uC2B5\uB2C8\uB2E4", "No usage history")), usageTxns.map((tx, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "bg-white rounded-xl p-3.5 flex items-center justify-between border border-gray-100" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3" }, /* @__PURE__ */ React.createElement("div", { className: "w-9 h-9 rounded-full bg-red-50 flex items-center justify-center text-base" }, reasonIcon(tx)), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "text-sm font-semibold text-gray-700" }, reasonLabel(tx.reason)), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400" }, fmtDt(tx.created_at)))), /* @__PURE__ */ React.createElement("span", { className: "font-bold text-sm text-red-500" }, "-", tx.amount, " cr")))), creditSubTab === "charge" && /* @__PURE__ */ React.createElement("div", { className: "space-y-2" }, chargeTxns.length === 0 && /* @__PURE__ */ React.createElement("p", { className: "text-gray-400 text-sm text-center py-6" }, t("\uCDA9\uC804 \uB0B4\uC5ED\uC774 \uC5C6\uC2B5\uB2C8\uB2E4", "No charge history")), chargeTxns.map((tx, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "bg-white rounded-xl p-3.5 flex items-center justify-between border border-gray-100" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3" }, /* @__PURE__ */ React.createElement("div", { className: "w-9 h-9 rounded-full bg-green-50 flex items-center justify-center text-base" }, reasonIcon(tx)), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "text-sm font-semibold text-gray-700" }, reasonLabel(tx.reason)), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400" }, fmtDt(tx.created_at)), tx.reason === "charge" && tx.pg_amount && /* @__PURE__ */ React.createElement("div", { className: "text-xs text-blue-500 mt-0.5" }, "\u20A9", Number(tx.pg_amount).toLocaleString("ko-KR"), " ", t("\uACB0\uC81C \uC644\uB8CC", "payment complete")))), /* @__PURE__ */ React.createElement("span", { className: "font-bold text-sm text-green-600" }, "+", tx.amount, " cr"))), chargeTxns.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "mt-2 bg-blue-50 rounded-xl p-3 text-center" }, /* @__PURE__ */ React.createElement(
+    ))), creditSubTab === "usage" && /* @__PURE__ */ React.createElement("div", { className: "space-y-2" }, usageTxns.length === 0 && /* @__PURE__ */ React.createElement("p", { className: "text-gray-400 text-sm text-center py-6" }, t("\uC0AC\uC6A9 \uB0B4\uC5ED\uC774 \uC5C6\uC2B5\uB2C8\uB2E4", "No usage history")), usageTxns.map((tx, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "bg-white rounded-xl p-3.5 flex items-center justify-between border border-gray-100" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3" }, /* @__PURE__ */ React.createElement("div", { className: "w-9 h-9 rounded-full bg-red-50 flex items-center justify-center text-base" }, reasonIcon(tx)), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "text-sm font-semibold text-gray-700" }, reasonLabel(tx.reason)), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400" }, fmtDt(tx.created_at)))), /* @__PURE__ */ React.createElement("span", { className: "font-bold text-sm text-red-500" }, "-", tx.amount, " cr")))), creditSubTab === "charge" && /* @__PURE__ */ React.createElement("div", { className: "space-y-2" }, chargeTxns.length === 0 && /* @__PURE__ */ React.createElement("p", { className: "text-gray-400 text-sm text-center py-6" }, t("\uAD6C\uB9E4 \uB0B4\uC5ED\uC774 \uC5C6\uC2B5\uB2C8\uB2E4", "No charge history")), chargeTxns.map((tx, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "bg-white rounded-xl p-3.5 flex items-center justify-between border border-gray-100" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3" }, /* @__PURE__ */ React.createElement("div", { className: "w-9 h-9 rounded-full bg-green-50 flex items-center justify-center text-base" }, reasonIcon(tx)), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "text-sm font-semibold text-gray-700" }, reasonLabel(tx.reason)), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400" }, fmtDt(tx.created_at)), tx.reason === "charge" && tx.pg_amount && /* @__PURE__ */ React.createElement("div", { className: "text-xs text-blue-500 mt-0.5" }, "\u20A9", Number(tx.pg_amount).toLocaleString("ko-KR"), " ", t("\uACB0\uC81C \uC644\uB8CC", "payment complete")))), /* @__PURE__ */ React.createElement("span", { className: "font-bold text-sm text-green-600" }, "+", tx.amount, " cr"))), chargeTxns.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "mt-2 bg-blue-50 rounded-xl p-3 text-center" }, /* @__PURE__ */ React.createElement(
       "button",
       {
         onClick: () => setShowChargeView(true),
@@ -3755,7 +3755,7 @@ Visit Maumful and take the same test again to compare your progress.`));
         style: { fontFamily: "'Noto Sans KR',sans-serif" }
       },
       "+ ",
-      t("\uD06C\uB808\uB527 \uCDA9\uC804\uD558\uAE30", "Top up credits")
+      t("\uD06C\uB808\uB527 \uAD6C\uB9E4\uD558\uAE30", "Top up credits")
     ))));
   })(), myPageTab === "history" && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(ExternalResultSection, { onSaved: loadTestHistory, externalShow: showExternalModal, setExternalShow: setShowExternalModal }), testHistory.length === 0 && /* @__PURE__ */ React.createElement("p", { className: "text-gray-400 text-sm text-center py-4" }, t("\uAC80\uC0AC \uC774\uB825\uC774 \uC5C6\uC2B5\uB2C8\uB2E4", "No assessment history")), (() => {
     const scored = ["PHQ9", "GAD7", "BURNOUT", "DSI"];
@@ -4122,7 +4122,7 @@ Visit Maumful and take the same test again to compare your progress.`));
         borderRadius: 8,
         padding: "6px 12px",
         display: "inline-block"
-      } }, isKorea ? t("\uD544\uC694\uD55C \uAC83\uB9CC \uB2E8\uD488\uC73C\uB85C \uAD6C\uB9E4\uD558\uC138\uC694 \xB7 \uBB34\uB8CC\uAC80\uC0AC(PHQ-9\xB7GAD-7)\uB294 \uADF8\uB300\uB85C \uBB34\uB8CC", "Buy only what you need \xB7 Free tests (PHQ-9\xB7GAD-7) stay free") : t("\uC2EC\uB9AC\uAC80\uC0AC 1\uD68C = 10 \uD06C\uB808\uB527 \xB7 AI \uCC44\uD305 1\uD68C = 2 \uD06C\uB808\uB527", "Assessment = 10 cr \xB7 AI chat = 2 cr"))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", borderBottom: "1px solid #E5E7EB" } }, (isKorea ? [["credits", t("\u{1F6D2} \uC0C1\uD488 \uAD6C\uB9E4", "\u{1F6D2} Shop")]] : [["credits", t("\u2726 \uD06C\uB808\uB527 \uCDA9\uC804", "\u2726 Top Up")], ["plans", t("\u{1F48E} \uBA64\uBC84\uC2ED \uD50C\uB79C", "\u{1F48E} Plans")]]).map(([tab, label]) => /* @__PURE__ */ React.createElement(
+      } }, isKorea ? t("\uD544\uC694\uD55C \uAC83\uB9CC \uB2E8\uD488\uC73C\uB85C \uAD6C\uB9E4\uD558\uC138\uC694 \xB7 \uBB34\uB8CC\uAC80\uC0AC(PHQ-9\xB7GAD-7)\uB294 \uADF8\uB300\uB85C \uBB34\uB8CC", "Buy only what you need \xB7 Free tests (PHQ-9\xB7GAD-7) stay free") : t("\uC2EC\uB9AC\uAC80\uC0AC 1\uD68C = 10 \uD06C\uB808\uB527 \xB7 AI \uCC44\uD305 1\uD68C = 2 \uD06C\uB808\uB527", "Assessment = 10 cr \xB7 AI chat = 2 cr"))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", borderBottom: "1px solid #E5E7EB" } }, (isKorea ? [["credits", t("\u{1F6D2} \uC0C1\uD488 \uAD6C\uB9E4", "\u{1F6D2} Shop")]] : [["credits", t("\u2726 \uD06C\uB808\uB527 \uAD6C\uB9E4", "\u2726 Top Up")], ["plans", t("\u{1F48E} \uBA64\uBC84\uC2ED \uD50C\uB79C", "\u{1F48E} Plans")]]).map(([tab, label]) => /* @__PURE__ */ React.createElement(
         "button",
         {
           key: tab,
@@ -4220,7 +4220,7 @@ Visit Maumful and take the same test again to compare your progress.`));
         /* @__PURE__ */ React.createElement("li", null, "\uBBF8\uC0AC\uC6A9 \uD06C\uB808\uB527\uC740 \uAD6C\uB9E4\uC77C\uB85C\uBD80\uD130 ", /* @__PURE__ */ React.createElement("strong", null, "7\uC77C \uC774\uB0B4"), " \uC804\uC561 \uD658\uBD88 \uAC00\uB2A5\uD569\uB2C8\uB2E4."),
         /* @__PURE__ */ React.createElement("li", null, "Unused credits are fully refundable within ", /* @__PURE__ */ React.createElement("strong", null, "7 days"), " of purchase.")
       ), t(
-        /* @__PURE__ */ React.createElement("li", null, "\uCDA9\uC804\uD55C \uD06C\uB808\uB527\uC740 \uCDA9\uC804\uC77C\uB85C\uBD80\uD130 ", /* @__PURE__ */ React.createElement("strong", null, "1\uB144\uAC04 \uC720\uD6A8"), "\uD569\uB2C8\uB2E4."),
+        /* @__PURE__ */ React.createElement("li", null, "\uAD6C\uB9E4\uD55C \uD06C\uB808\uB527\uC740 \uAD6C\uB9E4\uC77C\uB85C\uBD80\uD130 ", /* @__PURE__ */ React.createElement("strong", null, "1\uB144\uAC04 \uC720\uD6A8"), "\uD569\uB2C8\uB2E4."),
         /* @__PURE__ */ React.createElement("li", null, "Charged credits are valid for ", /* @__PURE__ */ React.createElement("strong", null, "1 year"), " from the date of purchase.")
       ), isKorea && t(
         /* @__PURE__ */ React.createElement("li", null, "\uACB0\uC81C \uC2DC \uC774\uBA54\uC77C\xB7\uACB0\uC81C\uAE08\uC561\uC774 ", /* @__PURE__ */ React.createElement("strong", null, "\uD1A0\uC2A4\uD398\uC774\uBA3C\uCE20(\uC8FC)"), "\uC5D0 \uC81C\uACF5\uB429\uB2C8\uB2E4. (\uACB0\uC81C \uCC98\uB9AC \uBAA9\uC801)"),
@@ -6449,7 +6449,7 @@ AI \uBD84\uC11D \uAE30\uB2A5\uC774 \uC911\uB2E8\uB429\uB2C8\uB2E4.`)) return;
         });
         const data = await res.json();
         if (res.status === 402) {
-          setPdfMsg(data.error || "\uD06C\uB808\uB527\uC774 \uBD80\uC871\uD569\uB2C8\uB2E4. \uCDA9\uC804 \uD6C4 \uC774\uC6A9\uD574 \uC8FC\uC138\uC694.");
+          setPdfMsg(data.error || "\uD06C\uB808\uB527\uC774 \uBD80\uC871\uD569\uB2C8\uB2E4. \uAD6C\uB9E4 \uD6C4 \uC774\uC6A9\uD574 \uC8FC\uC138\uC694.");
           setPdfStatus("error");
         } else if (data.success) {
           setPdfAnalysis(data.analysis);
