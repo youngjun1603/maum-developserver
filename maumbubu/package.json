@@ -1,0 +1,19 @@
+{
+  "name": "maumbubu",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "typecheck": "tsc --noEmit",
+    "build:jsx": "npx esbuild public/static/bubu_hub.jsx --bundle=false --loader:.jsx=jsx \"--tsconfig-raw={\\\"compilerOptions\\\":{\\\"jsx\\\":\\\"react\\\"}}\" --outdir=public/static/compiled",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "hono": "^4.11.9"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260317.1",
+    "esbuild": "^0.28.0",
+    "typescript": "^5.6.3",
+    "wrangler": "^4.4.0"
+  }
+}

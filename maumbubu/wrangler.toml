@@ -1,0 +1,22 @@
+name = "maumbubu"
+main = "src/index.ts"
+compatibility_date = "2024-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+# ⚠️ 배포 전 DNS: bubu.maumful.com CNAME 등록 필요(custom_domain)
+routes = [
+  { pattern = "bubu.maumful.com", custom_domain = true }
+]
+
+[assets]
+directory = "./public"
+
+# 마음풀 생태계 공유 — maumful-db(계정·크레딧·JWT 공유). 신규 D1 없음(테이블만 ADD)
+[[d1_databases]]
+binding       = "DB"
+database_name = "maumful-db"
+database_id   = "f8046693-876a-4ae4-b734-20c515f9994f"
+
+[[kv_namespaces]]
+binding = "KV"
+id      = "9f7426807e924916be4dec75793422d9"
