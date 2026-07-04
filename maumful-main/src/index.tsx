@@ -1450,6 +1450,21 @@ app.get('/api/couple-token', async (c) => {
   return c.json({ success: true, coupleToken })
 })
 
+// 마음부부(bubu.maumful.com) 진입 SSO — couple-token과 동일 방식, type:'bubu'
+app.get('/api/bubu-token', async (c) => {
+  const { KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ error: '로그인이 필요합니다.' }, 401)
+
+  const secret = await getJwtSecret(KV)
+  const now    = Math.floor(Date.now() / 1000)
+  const bubuToken = await signJwt(
+    { sub: userId, type: 'bubu', iat: now, exp: now + 7 * 86400 },
+    secret
+  )
+  return c.json({ success: true, bubuToken })
+})
+
 // ── 마음 시리즈(마음수달 등) SSO 토큰 — 마음풀 계정으로 단일로그인 진입 ──
 // MAUM_SSO_SECRET(시크릿) 미설정 시 503 → 프론트는 일반 링크로 폴백(무영향).
 app.get('/api/maum-sso-token', async (c) => {

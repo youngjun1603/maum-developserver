@@ -114,6 +114,7 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
     { label: tl('마음 게임',  'Healing Games'),   view: 'gameIntro', isGame: true },
     { label: tl('마음커플',   'Maumful Couple'),  view: 'couple',    isCouple: true },
     { label: tl('마음수달',   'Maumotter'),       isOtter: true },
+    { label: tl('마음부부',   'Maumful Bubu'),    isBubu: true },
   ];
 
   const handleNavClick = (item) => {
@@ -157,6 +158,27 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
           else window.open('https://maumotter.com', '_blank', 'noopener noreferrer');
         })
         .catch(() => window.open('https://maumotter.com', '_blank', 'noopener noreferrer'));
+      return;
+    }
+    // 마음부부: 로그인 상태면 bubu-token SSO, 미로그인이면 로그인 화면
+    if (item.isBubu) {
+      if (!isLoggedIn) { setView('memberLogin'); return; }
+      const h = window.location.hostname;
+      const bubuBase = (h.includes('workers.dev') || h.includes('-dev.'))
+        ? 'https://maumbubu.limyj007.workers.dev'
+        : 'https://bubu.maumful.com';
+      fetch('/api/bubu-token', {
+        headers: { Authorization: 'Bearer ' + (localStorage.getItem('access_token') || '') }
+      })
+        .then(r => r.json())
+        .then(data => {
+          const token = data.success ? data.bubuToken : (localStorage.getItem('access_token') || '');
+          window.open(`${bubuBase}?t=${encodeURIComponent(token)}`, '_blank', 'noopener noreferrer');
+        })
+        .catch(() => {
+          const token = localStorage.getItem('access_token') || '';
+          window.open(`${bubuBase}${token ? '?t=' + encodeURIComponent(token) : ''}`, '_blank', 'noopener noreferrer');
+        });
       return;
     }
     if (item.requireLogin && !isLoggedIn) {

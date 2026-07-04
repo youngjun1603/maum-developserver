@@ -179,7 +179,8 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
     { label: tl("\uC0C1\uB2F4\uC13C\uD130", "Centers"), view: "counseling" },
     { label: tl("\uB9C8\uC74C \uAC8C\uC784", "Healing Games"), view: "gameIntro", isGame: true },
     { label: tl("\uB9C8\uC74C\uCEE4\uD50C", "Maumful Couple"), view: "couple", isCouple: true },
-    { label: tl("\uB9C8\uC74C\uC218\uB2EC", "Maumotter"), isOtter: true }
+    { label: tl("\uB9C8\uC74C\uC218\uB2EC", "Maumotter"), isOtter: true },
+    { label: tl("\uB9C8\uC74C\uBD80\uBD80", "Maumful Bubu"), isBubu: true }
   ];
   const handleNavClick = (item) => {
     setMobileOpen(false);
@@ -220,6 +221,24 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
         if (data.success && data.ssoToken) window.open("https://maumotter.com/?sso=" + encodeURIComponent(data.ssoToken), "_blank", "noopener noreferrer");
         else window.open("https://maumotter.com", "_blank", "noopener noreferrer");
       }).catch(() => window.open("https://maumotter.com", "_blank", "noopener noreferrer"));
+      return;
+    }
+    if (item.isBubu) {
+      if (!isLoggedIn) {
+        setView("memberLogin");
+        return;
+      }
+      const h = window.location.hostname;
+      const bubuBase = h.includes("workers.dev") || h.includes("-dev.") ? "https://maumbubu.limyj007.workers.dev" : "https://bubu.maumful.com";
+      fetch("/api/bubu-token", {
+        headers: { Authorization: "Bearer " + (localStorage.getItem("access_token") || "") }
+      }).then((r) => r.json()).then((data) => {
+        const token = data.success ? data.bubuToken : localStorage.getItem("access_token") || "";
+        window.open(`${bubuBase}?t=${encodeURIComponent(token)}`, "_blank", "noopener noreferrer");
+      }).catch(() => {
+        const token = localStorage.getItem("access_token") || "";
+        window.open(`${bubuBase}${token ? "?t=" + encodeURIComponent(token) : ""}`, "_blank", "noopener noreferrer");
+      });
       return;
     }
     if (item.requireLogin && !isLoggedIn) {
