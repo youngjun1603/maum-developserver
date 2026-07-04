@@ -273,6 +273,32 @@ function Home({ config, onMode, onCommunity, onMemory, onSettings, onMultimodal 
   );
 }
 
+// ── 안전 안내 화면 (T1/T2 발동 시 — 모드 결과 대신, 공유·활동·커뮤니티 버튼 미노출) ──
+function SafetyScreen({ s }) {
+  return (
+    <Card style={{ background: '#fff4ee', border: '1px solid #f5c6a5' }}>
+      <div style={{ fontSize: 15, fontWeight: 800, color: '#b45309', marginBottom: 8 }}>🛟 지금은 안전이 먼저예요</div>
+      <div style={{ fontSize: 14.5, lineHeight: 1.8, color: '#78350f' }}>{s.response}</div>
+      {s.reframe && <div style={{ fontSize: 14, lineHeight: 1.7, color: '#78350f', marginTop: 10 }}>{s.reframe}</div>}
+      {s.protect_actions && s.protect_actions.length > 0 && (
+        <div style={{ marginTop: 12 }}>
+          <div style={{ fontSize: 12.5, fontWeight: 800, color: '#b45309', marginBottom: 6 }}>지금 할 수 있는 것</div>
+          {s.protect_actions.map((a, i) => <div key={i} style={{ fontSize: 14, lineHeight: 1.7 }}>· {a}</div>)}
+        </div>
+      )}
+      {s.resources && s.resources.length > 0 && (
+        <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {s.resources.map((r, i) => {
+            const num = (String(r).match(/1577-1389|1\d{3}|1\d{2}/) || [])[0];
+            return <a key={i} href={num ? 'tel:' + num.replace(/-/g, '') : undefined} style={{ textDecoration: 'none', background: '#fff', border: '1px solid #f5c6a5', color: '#b45309', borderRadius: 20, padding: '8px 13px', fontSize: 13, fontWeight: 700 }}>📞 {r}</a>;
+          })}
+        </div>
+      )}
+      {s.door_open && <div style={{ fontSize: 13.5, color: MUT, marginTop: 14, lineHeight: 1.7 }}>{s.door_open}</div>}
+    </Card>
+  );
+}
+
 // ── 통역 결과 렌더 ─────────────────────────────────────────────────────────────
 function ResultBlock({ result }) {
   const entries = Object.keys(result).filter(k => k !== 'improvement');
@@ -389,8 +415,12 @@ function ModeView({ mode, config, relationId, onBack }) {
         </div>
       </>)}
       {result && (<>
-        <ResultBlock result={result} />
-        <Improvement imp={result.improvement} relationId={relationId} track={config.track} />
+        {result.safety_tier
+          ? <SafetyScreen s={result} />
+          : (<>
+            <ResultBlock result={result} />
+            <Improvement imp={result.improvement} relationId={relationId} track={config.track} />
+          </>)}
         <div style={{ height: 12 }} />
         <Btn kind="ghost" onClick={() => { setResult(null); setInput(''); }}>다시 통역하기</Btn>
       </>)}
@@ -623,7 +653,7 @@ function Multimodal({ relationId, config, onBack }) {
         {!trResult ? (<>
           <Btn onClick={translate} disabled={busy}>{busy ? '통역 중…' : '이 신호로 통역하기 (중재 · 3크레딧)'}</Btn>
           {msg && <div style={{ color: '#c0392b', fontSize: 13, marginTop: 10 }}>{msg}</div>}
-        </>) : (<>
+        </>) : trResult.safety_tier ? <SafetyScreen s={trResult} /> : (<>
           <ResultBlock result={trResult} />
           <Improvement imp={trResult.improvement} relationId={relationId} track={config.track} />
         </>)}
