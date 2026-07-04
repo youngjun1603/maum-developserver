@@ -2,22 +2,29 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 <title>마음부부 — 부부 관계 통역</title>
 <style>
-  body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; background: #eef6f1;
-    color: #1a2b22; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
-  .card { background: #fff; border: 1px solid #dbe7e0; border-radius: 22px; padding: 48px 40px;
-    box-shadow: 0 12px 40px rgba(0,0,0,.06); text-align: center; max-width: 440px; }
-  h1 { font-size: 30px; color: #2d6a4f; margin: 0 0 10px; }
-  p { color: #5a6b62; line-height: 1.7; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { font-family: 'Malgun Gothic','Apple SD Gothic Neo',sans-serif; background: #eef6f1; color: #1a2b22;
+    -webkit-font-smoothing: antialiased; }
+  button { font-family: inherit; }
+  textarea { font-family: inherit; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 </style>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 </head>
 <body>
-  <div class="card">
-    <h1>💬 마음부부</h1>
-    <p>부부 대화의 말과 마음 사이를 통역합니다.<br />화면(프론트)은 준비 중입니다.</p>
-    <p style="font-size:13px;color:#9aa8a0">maumbubu · 마음풀 생태계</p>
-  </div>
+<div id="root"></div>
+<script>
+  // 진입 토큰(?t=) 처리 — React 마운트 전 필수
+  (function () {
+    var t = new URLSearchParams(window.location.search).get('t');
+    if (t) { localStorage.setItem('bubu_token', t); window.history.replaceState({}, '', '/'); }
+  })();
+</script>
+<script src="/static/compiled/bubu_hub.js?v=1"></script>
 </body>
 </html>
