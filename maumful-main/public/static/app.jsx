@@ -3735,37 +3735,38 @@ function PsychologicalTestSystem() {
               <span className="text-2xl">🌿</span>
               <span className="font-bold text-gray-800">마음풀</span>
             </button>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-0.5 sm:gap-1">
               <CreditBadge />
-              {/* 마음 게임 진입 — 로그인 상태면 JWT SSO로 자동 연동 */}
+              {/* 마음 시리즈 진입 (마음풀 하위 서비스 — 접두어 생략, 로고 컬러로 구분) */}
+              {/* 마음 게임: 로그인 상태면 JWT SSO로 자동 연동 */}
               <button onClick={() => openMaumGame()}
-                className="text-gray-500 hover:text-green-700 text-sm px-2 py-1.5 rounded-lg hover:bg-green-50 transition flex items-center gap-1"
+                className="text-gray-500 hover:text-green-700 text-sm px-1.5 py-1.5 rounded-lg hover:bg-green-50 transition flex items-center gap-1 whitespace-nowrap"
                 title="마음 게임 — 별도 로그인 없이 바로 이동">
-                🎮 <span className="hidden sm:inline">{t("마음 게임","MaumGame")}</span>
+                🎮 <span className="hidden md:inline">{t("게임","Games")}</span>
               </button>
-              {/* 마음커플 진입 — 마음게임과 동일한 JWT SSO 방식 */}
+              {/* 마음커플 */}
               <button onClick={() => openMaumCouple()}
-                className="text-gray-500 hover:text-rose-600 text-sm px-2 py-1.5 rounded-lg hover:bg-rose-50 transition flex items-center gap-1"
+                className="text-gray-500 hover:text-rose-600 text-sm px-1.5 py-1.5 rounded-lg hover:bg-rose-50 transition flex items-center gap-1 whitespace-nowrap"
                 title="마음커플 — 파트너와 심리 궁합 분석">
-                💕 <span className="hidden sm:inline">{t("마음커플","MaumCouple")}</span>
+                💕 <span className="hidden md:inline">{t("커플","Couple")}</span>
               </button>
-              {/* 마음수달 진입 — 마음풀 계정 SSO 단일로그인(미설정 시 일반 링크 폴백) */}
+              {/* 마음수달 */}
               <button onClick={() => openMaumOtter()}
-                className="text-gray-500 hover:text-sky-600 text-sm px-2 py-1.5 rounded-lg hover:bg-sky-50 transition flex items-center gap-1"
+                className="text-gray-500 hover:text-sky-600 text-sm px-1.5 py-1.5 rounded-lg hover:bg-sky-50 transition flex items-center gap-1 whitespace-nowrap"
                 title="마음수달 — 아이의 속마음 통역">
-                🦦 <span className="hidden sm:inline">{t("마음수달","Maumotter")}</span>
+                🦦 <span className="hidden md:inline">{t("수달","Otter")}</span>
               </button>
-              {/* 마음부부 진입 — 마음풀 계정 SSO(bubu-token) */}
+              {/* 마음부부 */}
               <button onClick={() => openMaumBubu()}
-                className="text-gray-500 hover:text-emerald-700 text-sm px-2 py-1.5 rounded-lg hover:bg-emerald-50 transition flex items-center gap-1"
+                className="text-gray-500 hover:text-emerald-700 text-sm px-1.5 py-1.5 rounded-lg hover:bg-emerald-50 transition flex items-center gap-1 whitespace-nowrap"
                 title="마음부부 — 부부 대화 통역">
-                💬 <span className="hidden sm:inline">{t("마음부부","MaumBubu")}</span>
+                💬 <span className="hidden md:inline">{t("부부","Bubu")}</span>
               </button>
-              <button onClick={() => setView('myPage')} className="text-gray-500 hover:text-gray-700 text-sm px-2 py-1.5 rounded-lg hover:bg-gray-100 transition">
-                👤 {currentUser?.nickname || t('내 정보','My Info')}
+              <button onClick={() => setView('myPage')} className="text-gray-500 hover:text-gray-700 text-sm px-1.5 py-1.5 rounded-lg hover:bg-gray-100 transition flex items-center gap-1 whitespace-nowrap">
+                👤 <span className="hidden sm:inline">{currentUser?.nickname || t('내 정보','My Info')}</span>
               </button>
               <button onClick={() => { setAdminAuthenticated(false); setAdminMsg({type:'',text:''}); setView('admin'); }}
-                className="text-gray-400 hover:text-gray-600 text-xs px-2 py-1.5 rounded-lg hover:bg-gray-100 transition">
+                className="text-gray-400 hover:text-gray-600 text-xs px-1.5 py-1.5 rounded-lg hover:bg-gray-100 transition">
                 🔐
               </button>
             </div>

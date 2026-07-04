@@ -3262,43 +3262,43 @@ Visit Maumful and take the same test again to compare your progress.`));
       },
       /* @__PURE__ */ React.createElement("span", { className: "text-2xl" }, "\u{1F33F}"),
       /* @__PURE__ */ React.createElement("span", { className: "font-bold text-gray-800" }, "\uB9C8\uC74C\uD480")
-    ), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement(CreditBadge, null), /* @__PURE__ */ React.createElement(
+    ), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-0.5 sm:gap-1" }, /* @__PURE__ */ React.createElement(CreditBadge, null), /* @__PURE__ */ React.createElement(
       "button",
       {
         onClick: () => openMaumGame(),
-        className: "text-gray-500 hover:text-green-700 text-sm px-2 py-1.5 rounded-lg hover:bg-green-50 transition flex items-center gap-1",
+        className: "text-gray-500 hover:text-green-700 text-sm px-1.5 py-1.5 rounded-lg hover:bg-green-50 transition flex items-center gap-1 whitespace-nowrap",
         title: "\uB9C8\uC74C \uAC8C\uC784 \u2014 \uBCC4\uB3C4 \uB85C\uADF8\uC778 \uC5C6\uC774 \uBC14\uB85C \uC774\uB3D9"
       },
       "\u{1F3AE} ",
-      /* @__PURE__ */ React.createElement("span", { className: "hidden sm:inline" }, t("\uB9C8\uC74C \uAC8C\uC784", "MaumGame"))
+      /* @__PURE__ */ React.createElement("span", { className: "hidden md:inline" }, t("\uAC8C\uC784", "Games"))
     ), /* @__PURE__ */ React.createElement(
       "button",
       {
         onClick: () => openMaumCouple(),
-        className: "text-gray-500 hover:text-rose-600 text-sm px-2 py-1.5 rounded-lg hover:bg-rose-50 transition flex items-center gap-1",
+        className: "text-gray-500 hover:text-rose-600 text-sm px-1.5 py-1.5 rounded-lg hover:bg-rose-50 transition flex items-center gap-1 whitespace-nowrap",
         title: "\uB9C8\uC74C\uCEE4\uD50C \u2014 \uD30C\uD2B8\uB108\uC640 \uC2EC\uB9AC \uAD81\uD569 \uBD84\uC11D"
       },
       "\u{1F495} ",
-      /* @__PURE__ */ React.createElement("span", { className: "hidden sm:inline" }, t("\uB9C8\uC74C\uCEE4\uD50C", "MaumCouple"))
+      /* @__PURE__ */ React.createElement("span", { className: "hidden md:inline" }, t("\uCEE4\uD50C", "Couple"))
     ), /* @__PURE__ */ React.createElement(
       "button",
       {
         onClick: () => openMaumOtter(),
-        className: "text-gray-500 hover:text-sky-600 text-sm px-2 py-1.5 rounded-lg hover:bg-sky-50 transition flex items-center gap-1",
+        className: "text-gray-500 hover:text-sky-600 text-sm px-1.5 py-1.5 rounded-lg hover:bg-sky-50 transition flex items-center gap-1 whitespace-nowrap",
         title: "\uB9C8\uC74C\uC218\uB2EC \u2014 \uC544\uC774\uC758 \uC18D\uB9C8\uC74C \uD1B5\uC5ED"
       },
       "\u{1F9A6} ",
-      /* @__PURE__ */ React.createElement("span", { className: "hidden sm:inline" }, t("\uB9C8\uC74C\uC218\uB2EC", "Maumotter"))
+      /* @__PURE__ */ React.createElement("span", { className: "hidden md:inline" }, t("\uC218\uB2EC", "Otter"))
     ), /* @__PURE__ */ React.createElement(
       "button",
       {
         onClick: () => openMaumBubu(),
-        className: "text-gray-500 hover:text-emerald-700 text-sm px-2 py-1.5 rounded-lg hover:bg-emerald-50 transition flex items-center gap-1",
+        className: "text-gray-500 hover:text-emerald-700 text-sm px-1.5 py-1.5 rounded-lg hover:bg-emerald-50 transition flex items-center gap-1 whitespace-nowrap",
         title: "\uB9C8\uC74C\uBD80\uBD80 \u2014 \uBD80\uBD80 \uB300\uD654 \uD1B5\uC5ED"
       },
       "\u{1F4AC} ",
-      /* @__PURE__ */ React.createElement("span", { className: "hidden sm:inline" }, t("\uB9C8\uC74C\uBD80\uBD80", "MaumBubu"))
-    ), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("myPage"), className: "text-gray-500 hover:text-gray-700 text-sm px-2 py-1.5 rounded-lg hover:bg-gray-100 transition" }, "\u{1F464} ", (currentUser == null ? void 0 : currentUser.nickname) || t("\uB0B4 \uC815\uBCF4", "My Info")), /* @__PURE__ */ React.createElement(
+      /* @__PURE__ */ React.createElement("span", { className: "hidden md:inline" }, t("\uBD80\uBD80", "Bubu"))
+    ), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("myPage"), className: "text-gray-500 hover:text-gray-700 text-sm px-1.5 py-1.5 rounded-lg hover:bg-gray-100 transition flex items-center gap-1 whitespace-nowrap" }, "\u{1F464} ", /* @__PURE__ */ React.createElement("span", { className: "hidden sm:inline" }, (currentUser == null ? void 0 : currentUser.nickname) || t("\uB0B4 \uC815\uBCF4", "My Info"))), /* @__PURE__ */ React.createElement(
       "button",
       {
         onClick: () => {
@@ -3306,7 +3306,7 @@ Visit Maumful and take the same test again to compare your progress.`));
           setAdminMsg({ type: "", text: "" });
           setView("admin");
         },
-        className: "text-gray-400 hover:text-gray-600 text-xs px-2 py-1.5 rounded-lg hover:bg-gray-100 transition"
+        className: "text-gray-400 hover:text-gray-600 text-xs px-1.5 py-1.5 rounded-lg hover:bg-gray-100 transition"
       },
       "\u{1F510}"
     )))), /* @__PURE__ */ React.createElement("main", { className: "max-w-2xl mx-auto px-4 py-6" }, /* @__PURE__ */ React.createElement("div", { className: "sm:hidden flex justify-end mb-3" }, /* @__PURE__ */ React.createElement(
