@@ -10,6 +10,7 @@
 | `maumful-main/` | 마음풀 메인 (maumful.com) | `maumful-main/CLAUDE.md` (마음풀 + 트윈 공통) |
 | `maumgame-main/` | 마음풀 게임 (game.maumful.com) | `maumful-main/CLAUDE.md` |
 | `package/maumcouple/` | 마음커플 (couple.maumful.com) | `maumful-main/CLAUDE.md` |
+| `maumbubu/` | 마음부부 (부부 대화 통역, bubu.maumful.com) *신규* | `maumbubu/CLAUDE.md` (마음커플 패턴 공유) |
 | `cts-maum-main/` | CTS 메인 (jesusmaum.com) *submodule* | `cts-maum-main/CLAUDE.md` (+ 공통은 maumful-main) |
 | `cts-game-main/` | CTS 게임 | `cts-maum-main/CLAUDE.md` (+ maumful-main) |
 | `maumotter/` | 마음수달 (아이 정서 통역) *신규* | `maumotter/CLAUDE.md` + `_shared/` |
@@ -21,8 +22,9 @@
 - **마음 시리즈(수달·곁)는 별개 스택**(React CDN·no-build·GitHub 웹UI 배포) — 마음풀/CTS 규칙을 끌어오지 말 것.
 
 ## 공통 기술 스택
-- 마음풀·CTS·게임·커플: Hono + Cloudflare Workers + D1 + KV, React(esbuild 사전컴파일), Anthropic Claude
+- 마음풀·CTS·게임·커플·**부부**: Hono + Cloudflare Workers + D1 + KV, React(esbuild 사전컴파일), Anthropic Claude
 - 마음 시리즈(수달·곁): 동일 백엔드(Workers+Hono+D1+KV) + React **CDN(unpkg)·빌드 없음**
+- **마음부부**는 마음풀 생태계(별도 워커 `maumbubu` + `maumful-db`·KV·JWT_SECRET 공유, `?t=` 토큰 SSO). 마음 시리즈(수달·곁)와는 다른 생태계 — 규칙 혼동 금지.
 
 ---
 
