@@ -171,8 +171,12 @@ function Onboarding({ onDone }) {
 
 // ── 홈 ──────────────────────────────────────────────────────────────────────
 function Home({ config, onMode, onCommunity, onMemory, onSettings }) {
+  const [ask, setAsk] = useState(false);
+  const depthLabel = ['표면', '중간', '심층'][(config.emotionDepth || 2) - 1];
+  const theoLabel = ['통합형', '균형형', '성경형'][(config.theologyLevel || 2) - 1];
+  const toneLabel = config.pastoralTone === 'direct' ? '제한적 직면형' : '경청·은혜형';
   return (
-    <Shell right={<button onClick={onSettings} style={{ background: 'rgba(255,255,255,.18)', border: 'none', color: '#fff', padding: '6px 10px', borderRadius: 9, cursor: 'pointer', fontSize: 13 }}>설정</button>}>
+    <Shell right={<button onClick={() => setAsk(true)} style={{ background: 'rgba(255,255,255,.18)', border: 'none', color: '#fff', padding: '6px 10px', borderRadius: 9, cursor: 'pointer', fontSize: 13 }}>⚙️ 설정</button>}>
       <div style={{ fontSize: 15, color: MUT, marginBottom: 4 }}>
         {config.track === 'christian' ? '✝️ 기독교 트랙' : '🌱 심리상담 트랙'}
       </div>
@@ -193,6 +197,35 @@ function Home({ config, onMode, onCommunity, onMemory, onSettings }) {
         <Btn kind="ghost" onClick={onMemory}>🧠 관계 기억</Btn>
         <Btn kind="ghost" onClick={onCommunity}>💬 커뮤니티</Btn>
       </div>
+
+      {ask && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+          onClick={e => { if (e.target === e.currentTarget) setAsk(false); }}>
+          <div style={{ background: '#fff', borderRadius: 18, maxWidth: 400, width: '100%', padding: 22, animation: 'fadeUp .2s ease' }}>
+            <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>⚙️ 통역 설정이란?</div>
+            <div style={{ fontSize: 14, color: MUT, lineHeight: 1.75, marginBottom: 14 }}>
+              통역에 쓰는 <b style={{ color: INK }}>트랙(심리상담/기독교)과 강도</b> 설정이에요. 지금 대화를 <b style={{ color: INK }}>어떤 언어와 깊이</b>로 통역할지 정합니다.
+            </div>
+            <Card style={{ background: '#f6faf8', marginBottom: 14 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 800, color: GREEN, marginBottom: 6 }}>지금 내 설정</div>
+              <div style={{ fontSize: 13.5, lineHeight: 1.9 }}>
+                <div>· 트랙: <b>{config.track === 'christian' ? '✝️ 기독교' : '🌱 심리상담'}</b></div>
+                {config.track === 'christian'
+                  ? (<><div>· 신학 강도: <b>{theoLabel}</b></div><div>· 목양 톤: <b>{toneLabel}</b></div></>)
+                  : (<div>· 감정 깊이: <b>{depthLabel}</b></div>)}
+              </div>
+            </Card>
+            <div style={{ fontSize: 13.5, color: INK, marginBottom: 14, lineHeight: 1.7 }}>
+              이 설정을 <b>다시 변경</b>할까요?<br />
+              <span style={{ color: MUT, fontSize: 12.5 }}>지금까지의 관계 기억·기록은 그대로 유지돼요.</span>
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <Btn kind="ghost" onClick={() => setAsk(false)}>취소</Btn>
+              <Btn onClick={() => { setAsk(false); onSettings(); }}>설정 변경하기</Btn>
+            </div>
+          </div>
+        </div>
+      )}
     </Shell>
   );
 }
