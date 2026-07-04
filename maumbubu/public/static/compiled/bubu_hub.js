@@ -580,6 +580,30 @@ function Inbox({ relationId, onBack, onSeen }) {
     }
   ), /* @__PURE__ */ React.createElement(Btn, { onClick: join, style: { width: "auto", padding: "10px 16px" } }, "\uC5F0\uACB0")), msg && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: GREEN, marginTop: 8, lineHeight: 1.6 } }, msg)), items === null ? /* @__PURE__ */ React.createElement("div", { style: { color: MUT, textAlign: "center", padding: 30 } }, "\uBD88\uB7EC\uC624\uB294 \uC911\u2026") : items.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { color: MUT, textAlign: "center", padding: 30 } }, "\uC544\uC9C1 \uBC1B\uC740 \uACF5\uC720\uAC00 \uC5C6\uC5B4\uC694.") : items.map((it) => /* @__PURE__ */ React.createElement(InboxItem, { key: it.id, it, onAccept: accept })));
 }
+function AgeGate({ onPass }) {
+  const [y, setY] = useState("");
+  const [m, setM] = useState("");
+  const [d, setD] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const box = { flex: 1, border: `1.5px solid ${LINE}`, borderRadius: 10, padding: 12, fontSize: 16, textAlign: "center", outline: "none" };
+  const submit = async () => {
+    setErr("");
+    if (y.length !== 4 || !m || !d) {
+      setErr("\uC0DD\uB144\uC6D4\uC77C\uC744 \uC815\uD655\uD788 \uC785\uB825\uD574 \uC8FC\uC138\uC694.");
+      return;
+    }
+    setBusy(true);
+    const r = await api("/age/verify", "POST", { birthDate: `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}` });
+    setBusy(false);
+    if (r.ok) {
+      onPass();
+      return;
+    }
+    setErr(r.minor ? r.message || "\uB9CC 19\uC138 \uC774\uC0C1\uB9CC \uC774\uC6A9\uD560 \uC218 \uC788\uC5B4\uC694." : r.error || "\uD655\uC778\uC5D0 \uC2E4\uD328\uD588\uC5B4\uC694.");
+  };
+  return /* @__PURE__ */ React.createElement(Shell, null, /* @__PURE__ */ React.createElement(Card, { style: { marginTop: 30 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 34, textAlign: "center" } }, "\u{1F51E}"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 19, fontWeight: 800, textAlign: "center", margin: "10px 0 6px" } }, "\uC131\uC778 \uD655\uC778"), /* @__PURE__ */ React.createElement("div", { style: { color: MUT, fontSize: 13.5, textAlign: "center", lineHeight: 1.7, marginBottom: 18 } }, "\uB9C8\uC74C\uBD80\uBD80\uB294 ", /* @__PURE__ */ React.createElement("b", { style: { color: INK } }, "\uB9CC 19\uC138 \uC774\uC0C1 \uC131\uC778 \uBD80\uBD80"), "\uB97C \uC704\uD55C \uAD00\uACC4 \uD1B5\uC5ED \uC11C\uBE44\uC2A4\uC608\uC694. \uC0DD\uB144\uC6D4\uC77C\uB85C \uD55C \uBC88\uB9CC \uD655\uC778\uD560\uAC8C\uC694."), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React.createElement("input", { inputMode: "numeric", value: y, onChange: (e) => setY(e.target.value.replace(/\D/g, "").slice(0, 4)), placeholder: "YYYY", style: box }), /* @__PURE__ */ React.createElement("input", { inputMode: "numeric", value: m, onChange: (e) => setM(e.target.value.replace(/\D/g, "").slice(0, 2)), placeholder: "MM", style: { ...box, maxWidth: 80 } }), /* @__PURE__ */ React.createElement("input", { inputMode: "numeric", value: d, onChange: (e) => setD(e.target.value.replace(/\D/g, "").slice(0, 2)), placeholder: "DD", style: { ...box, maxWidth: 80 } })), err && /* @__PURE__ */ React.createElement("div", { style: { color: "#c0392b", fontSize: 13, marginTop: 10, lineHeight: 1.6 } }, err), /* @__PURE__ */ React.createElement("div", { style: { height: 14 } }), /* @__PURE__ */ React.createElement(Btn, { onClick: submit, disabled: busy }, busy ? "\uD655\uC778 \uC911\u2026" : "\uC131\uC778\uC785\uB2C8\uB2E4 \xB7 \uC2DC\uC791\uD558\uAE30"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: MUT, textAlign: "center", marginTop: 10 } }, "\uC0DD\uB144\uC6D4\uC77C\uC740 \uC131\uC778 \uC5EC\uBD80 \uD655\uC778\uC5D0\uB9CC \uC4F0\uC5EC\uC694.")));
+}
 function App() {
   const [ready, setReady] = useState(false);
   const [authed, setAuthed] = useState(true);
@@ -588,6 +612,7 @@ function App() {
   const [view, setView] = useState("home");
   const [mode, setMode] = useState(null);
   const [inboxCount, setInboxCount] = useState(0);
+  const [adult, setAdult] = useState(true);
   const refreshInbox = async (rid) => {
     const id = rid || relationId;
     if (!id) return;
@@ -609,6 +634,7 @@ function App() {
       }
       if (r.ok) {
         setRelationId(r.relationId);
+        setAdult(!!r.adult);
         refreshInbox(r.relationId);
       }
       setReady(true);
@@ -616,6 +642,7 @@ function App() {
   }, []);
   if (!ready) return /* @__PURE__ */ React.createElement(Shell, null, /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", color: MUT, padding: 50 } }, "\uBD88\uB7EC\uC624\uB294 \uC911\u2026"));
   if (!authed) return /* @__PURE__ */ React.createElement(Shell, null, /* @__PURE__ */ React.createElement(Card, { style: { textAlign: "center", marginTop: 40 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 40 } }, "\u{1F4AC}"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 20, fontWeight: 800, margin: "10px 0" } }, "\uB9C8\uC74C\uBD80\uBD80"), /* @__PURE__ */ React.createElement("div", { style: { color: MUT, fontSize: 14, lineHeight: 1.7 } }, "\uB9C8\uC74C\uD480\uC5D0 \uB85C\uADF8\uC778\uD55C \uB4A4,", /* @__PURE__ */ React.createElement("br", null), "\uBA54\uB274\uC758 ", /* @__PURE__ */ React.createElement("b", null, "\u{1F4AC} \uB9C8\uC74C\uBD80\uBD80"), "\uB85C \uB4E4\uC5B4\uC640 \uC8FC\uC138\uC694."), /* @__PURE__ */ React.createElement("div", { style: { height: 16 } }), /* @__PURE__ */ React.createElement(Btn, { onClick: () => window.open("https://maumful.com", "_blank") }, "\uB9C8\uC74C\uD480\uB85C \uAC00\uAE30")));
+  if (!adult) return /* @__PURE__ */ React.createElement(AgeGate, { onPass: () => setAdult(true) });
   if (!config) return /* @__PURE__ */ React.createElement(Onboarding, { onDone: () => setConfig(loadConfig()) });
   if (view === "mode" && mode) return /* @__PURE__ */ React.createElement(ModeView, { mode, config, relationId, onBack: () => setView("home") });
   if (view === "community") return /* @__PURE__ */ React.createElement(Community, { onBack: () => setView("home") });

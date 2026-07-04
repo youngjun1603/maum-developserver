@@ -761,6 +761,43 @@ function Inbox({ relationId, onBack, onSeen }) {
   );
 }
 
+// ── 성인 연령 게이트 (만 19세+, ADDENDUM 01 §3) ──────────────────────────────
+function AgeGate({ onPass }) {
+  const [y, setY] = useState('');
+  const [m, setM] = useState('');
+  const [d, setD] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const box = { flex: 1, border: `1.5px solid ${LINE}`, borderRadius: 10, padding: 12, fontSize: 16, textAlign: 'center', outline: 'none' };
+  const submit = async () => {
+    setErr('');
+    if (y.length !== 4 || !m || !d) { setErr('생년월일을 정확히 입력해 주세요.'); return; }
+    setBusy(true);
+    const r = await api('/age/verify', 'POST', { birthDate: `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}` });
+    setBusy(false);
+    if (r.ok) { onPass(); return; }
+    setErr(r.minor ? (r.message || '만 19세 이상만 이용할 수 있어요.') : (r.error || '확인에 실패했어요.'));
+  };
+  return (
+    <Shell>
+      <Card style={{ marginTop: 30 }}>
+        <div style={{ fontSize: 34, textAlign: 'center' }}>🔞</div>
+        <div style={{ fontSize: 19, fontWeight: 800, textAlign: 'center', margin: '10px 0 6px' }}>성인 확인</div>
+        <div style={{ color: MUT, fontSize: 13.5, textAlign: 'center', lineHeight: 1.7, marginBottom: 18 }}>마음부부는 <b style={{ color: INK }}>만 19세 이상 성인 부부</b>를 위한 관계 통역 서비스예요. 생년월일로 한 번만 확인할게요.</div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input inputMode="numeric" value={y} onChange={e => setY(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="YYYY" style={box} />
+          <input inputMode="numeric" value={m} onChange={e => setM(e.target.value.replace(/\D/g, '').slice(0, 2))} placeholder="MM" style={{ ...box, maxWidth: 80 }} />
+          <input inputMode="numeric" value={d} onChange={e => setD(e.target.value.replace(/\D/g, '').slice(0, 2))} placeholder="DD" style={{ ...box, maxWidth: 80 }} />
+        </div>
+        {err && <div style={{ color: '#c0392b', fontSize: 13, marginTop: 10, lineHeight: 1.6 }}>{err}</div>}
+        <div style={{ height: 14 }} />
+        <Btn onClick={submit} disabled={busy}>{busy ? '확인 중…' : '성인입니다 · 시작하기'}</Btn>
+        <div style={{ fontSize: 11.5, color: MUT, textAlign: 'center', marginTop: 10 }}>생년월일은 성인 여부 확인에만 쓰여요.</div>
+      </Card>
+    </Shell>
+  );
+}
+
 // ── 앱 라우터 ─────────────────────────────────────────────────────────────────
 function App() {
   const [ready, setReady] = useState(false);
@@ -770,6 +807,7 @@ function App() {
   const [view, setView] = useState('home');   // home | mode | community | memory | inbox
   const [mode, setMode] = useState(null);
   const [inboxCount, setInboxCount] = useState(0);
+  const [adult, setAdult] = useState(true);
 
   const refreshInbox = async (rid) => {
     const id = rid || relationId; if (!id) return;
@@ -782,7 +820,7 @@ function App() {
       if (!token()) { setAuthed(false); setReady(true); return; }
       const r = await api('/relation', 'POST', {});
       if (r.status === 401) { setAuthed(false); setReady(true); return; }
-      if (r.ok) { setRelationId(r.relationId); refreshInbox(r.relationId); }
+      if (r.ok) { setRelationId(r.relationId); setAdult(!!r.adult); refreshInbox(r.relationId); }
       setReady(true);
     })();
   }, []);
@@ -800,6 +838,8 @@ function App() {
       </Card>
     </Shell>
   );
+
+  if (!adult) return <AgeGate onPass={() => setAdult(true)} />;
 
   if (!config) return <Onboarding onDone={() => setConfig(loadConfig())} />;
 

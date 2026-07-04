@@ -744,11 +744,33 @@ translate.post('/relation', async (c) => {
         .bind(uid)
         .first<{ id: number }>();
     }
-    return c.json({ ok: true, relationId: rel?.id ?? null });
+    const adult = (await c.env.KV.get(`bubu_adult:${uid}`)) != null; // 성인 게이트 상태 (Stage C)
+    return c.json({ ok: true, relationId: rel?.id ?? null, adult });
   } catch (e) {
     console.error('relation error:', e);
     return c.json({ error: '관계 정보 처리에 실패했어요.' }, 500);
   }
+});
+
+// ----------------------------------------------------------------------------
+// POST /api/age/verify — 성인(만 19세+) 전용 게이트 (ADDENDUM 01 §3)
+//   마음부부는 부부 관계 통역 → 성인 전용. 생년월일로 검증 후 KV에 성인 플래그 저장.
+// ----------------------------------------------------------------------------
+translate.post('/age/verify', async (c) => {
+  try {
+    const uid = c.get('uid');
+    const { birthDate } = await c.req.json<{ birthDate: string }>();
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec((birthDate || '').trim());
+    if (!m) return c.json({ error: '생년월일을 정확히 입력해 주세요.' }, 400);
+    const by = +m[1], bm = +m[2], bd = +m[3];
+    const now = new Date();
+    let age = now.getUTCFullYear() - by;
+    if (now.getUTCMonth() + 1 < bm || (now.getUTCMonth() + 1 === bm && now.getUTCDate() < bd)) age--;
+    if (by < 1900 || age < 0 || age > 120) return c.json({ error: '생년월일을 확인해 주세요.' }, 400);
+    if (age < 19) return c.json({ ok: false, minor: true, message: '마음부부는 만 19세 이상 성인 부부를 위한 서비스예요.' });
+    await c.env.KV.put(`bubu_adult:${uid}`, birthDate);
+    return c.json({ ok: true, adult: true });
+  } catch (e) { console.error('age verify error:', e); return c.json({ error: '확인에 실패했어요.' }, 500); }
 });
 
 // ============================================================================
