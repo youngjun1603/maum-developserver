@@ -51,6 +51,41 @@ const ROOMS = [
   { key: 'teen_parent', label: '자녀·육아' }, { key: 'caregiving', label: '돌봄·간병' },
 ];
 
+// ── 온디바이스 표정 분석 (마음수달 방식: face-api.js CDN 지연로드, 원본 미저장·미전송) ──
+const EXPR_LABEL = { happy: '웃음', neutral: '무표정', sad: '시무룩·슬픔', angry: '화남·찡그림', surprised: '놀람', fearful: '긴장·불안', disgusted: '불쾌' };
+let _faceApi = null;
+function loadFaceApi() {
+  if (_faceApi) return _faceApi;
+  _faceApi = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js';
+    s.onload = async () => {
+      try {
+        const M = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights';
+        await window.faceapi.nets.tinyFaceDetector.loadFromUri(M);
+        await window.faceapi.nets.faceExpressionNet.loadFromUri(M);
+        resolve(window.faceapi);
+      } catch (e) { reject(e); }
+    };
+    s.onerror = reject; document.head.appendChild(s);
+  });
+  return _faceApi;
+}
+// 표정 카운트 → 요약 텍스트(비언어 visualCues)
+function exprSummary(counts) {
+  const ent = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  if (!ent.length) return '';
+  return '표정은 주로 ' + ent.slice(0, 2).map(([k]) => EXPR_LABEL[k] || k).join(', ') + '으로 나타났어요';
+}
+// 어조 요약(Web Audio 온디바이스 — 음량 평균/피크). 원본 오디오 미저장·미전송
+function toneSummary(vol) {
+  if (!vol.n) return '';
+  const avg = vol.sum / vol.n;
+  const level = avg > 0.14 ? '전반적으로 큰 편' : avg > 0.06 ? '보통' : '차분한 편';
+  const spikes = vol.spikes > 2 ? `, 목소리가 크게 높아진 순간이 ${vol.spikes}회` : '';
+  return `말할 때 음량은 ${level}${spikes}이었어요`;
+}
+
 // ── 공통 UI ──────────────────────────────────────────────────────────────────
 function Shell({ children, title, onBack, right }) {
   return (
@@ -170,7 +205,7 @@ function Onboarding({ onDone }) {
 }
 
 // ── 홈 ──────────────────────────────────────────────────────────────────────
-function Home({ config, onMode, onCommunity, onMemory, onSettings }) {
+function Home({ config, onMode, onCommunity, onMemory, onSettings, onMultimodal }) {
   const [ask, setAsk] = useState(false);
   const depthLabel = ['표면', '중간', '심층'][(config.emotionDepth || 2) - 1];
   const theoLabel = ['통합형', '균형형', '성경형'][(config.theologyLevel || 2) - 1];
@@ -193,7 +228,15 @@ function Home({ config, onMode, onCommunity, onMemory, onSettings }) {
           <div style={{ color: MUT, fontSize: 20 }}>›</div>
         </div>
       ))}
-      <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+      <div onClick={onMultimodal} style={{ cursor: 'pointer', border: `1px dashed ${GREEN2}`, background: '#f4faf6', borderRadius: 16, padding: 14, marginTop: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ fontSize: 26 }}>🎥</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 800, fontSize: 15 }}>함께 분석 <span style={{ fontSize: 11, fontWeight: 700, color: '#fff', background: GREEN2, borderRadius: 10, padding: '1px 7px' }}>배우자 동의</span></div>
+          <div style={{ color: MUT, fontSize: 12.5, marginTop: 2 }}>동의 후 대화를 녹화·분석 (표정·어조, 원본은 기기 안에서만)</div>
+        </div>
+        <div style={{ color: MUT, fontSize: 20 }}>›</div>
+      </div>
+      <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
         <Btn kind="ghost" onClick={onMemory}>🧠 관계 기억</Btn>
         <Btn kind="ghost" onClick={onCommunity}>💬 커뮤니티</Btn>
       </div>
@@ -432,6 +475,165 @@ function Memory({ relationId, onBack }) {
   );
 }
 
+// ── 멀티모달: 쌍방 동의 → 온디바이스 녹화 분석(마음수달 방식) → 통역 ──
+function Multimodal({ relationId, config, onBack }) {
+  const [phase, setPhase] = useState('intro'); // intro|request|accept|accepted|capturing|result
+  const [code, setCode] = useState('');
+  const [inputCode, setInputCode] = useState('');
+  const [agreed, setAgreed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [signals, setSignals] = useState(null);
+  const [inputText, setInputText] = useState('');
+  const [trResult, setTrResult] = useState(null);
+  const videoRef = useRef(null), streamRef = useRef(null), detRef = useRef(null), exprRef = useRef({});
+  const audioCtxRef = useRef(null), volRef = useRef({ sum: 0, n: 0, spikes: 0 }), rafRef = useRef(null);
+
+  const request = async () => {
+    setBusy(true); setMsg('');
+    const r = await api('/consent/request', 'POST', { relationId, mediaType: 'video' });
+    setBusy(false);
+    if (r.ok && r.consentCode) { setCode(r.consentCode); setPhase('request'); } else setMsg(r.error || '요청에 실패했어요.');
+  };
+  const accept = async () => {
+    if (!agreed || !inputCode.trim()) return; setBusy(true); setMsg('');
+    const r = await api('/consent/accept', 'POST', { consentCode: inputCode.trim().toUpperCase(), agreed: true });
+    setBusy(false);
+    if (r.ok) { setPhase('accepted'); } else setMsg(r.error || '동의에 실패했어요 (코드 확인 · 요청자 본인은 동의 불가).');
+  };
+  const cleanup = () => {
+    try { detRef.current && clearInterval(detRef.current); } catch {}
+    try { rafRef.current && cancelAnimationFrame(rafRef.current); } catch {}
+    try { audioCtxRef.current && audioCtxRef.current.close(); } catch {}
+    try { streamRef.current && streamRef.current.getTracks().forEach(t => t.stop()); } catch {} // 원본 폐기
+    streamRef.current = null;
+  };
+  useEffect(() => cleanup, []);
+
+  const startCapture = async () => {
+    setBusy(true); setMsg('');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: true });
+      streamRef.current = stream;
+      const fa = await loadFaceApi();
+      exprRef.current = {}; volRef.current = { sum: 0, n: 0, spikes: 0 };
+      setPhase('capturing'); setBusy(false);
+      setTimeout(() => { const v = videoRef.current; if (v) { v.srcObject = stream; v.muted = true; v.playsInline = true; v.play().catch(() => {}); } }, 100);
+      detRef.current = setInterval(async () => {
+        const v = videoRef.current; if (!v || v.readyState < 2) return;
+        try {
+          const res = await fa.detectSingleFace(v, new fa.TinyFaceDetectorOptions()).withFaceExpressions();
+          if (res && res.expressions) { let top = '', mx = 0; for (const k in res.expressions) { if (res.expressions[k] > mx) { mx = res.expressions[k]; top = k; } } if (top && mx > 0.55) exprRef.current[top] = (exprRef.current[top] || 0) + 1; }
+        } catch {}
+      }, 1500);
+      const ctx = new (window.AudioContext || window.webkitAudioContext)(); audioCtxRef.current = ctx;
+      const an = ctx.createAnalyser(); an.fftSize = 512; ctx.createMediaStreamSource(stream).connect(an);
+      const buf = new Uint8Array(an.fftSize);
+      const tick = () => {
+        an.getByteTimeDomainData(buf); let sum = 0; for (let i = 0; i < buf.length; i++) { const x = (buf[i] - 128) / 128; sum += x * x; }
+        const rms = Math.sqrt(sum / buf.length); volRef.current.sum += rms; volRef.current.n++; if (rms > 0.25) volRef.current.spikes++;
+        rafRef.current = requestAnimationFrame(tick);
+      };
+      tick();
+    } catch { setBusy(false); setMsg('카메라·마이크를 시작할 수 없어요. 권한을 확인해 주세요.'); }
+  };
+  const stopCapture = () => {
+    cleanup();
+    setSignals({ visualCues: exprSummary(exprRef.current), toneAnalysis: toneSummary(volRef.current) });
+    setPhase('result');
+  };
+  const revoke = async (sid) => { try { await api('/consent/revoke', 'POST', { consentSessionId: sid }); } catch {} };
+
+  const translate = async () => {
+    setBusy(true); setMsg('');
+    const r = await api('/translate', 'POST', {
+      relationId, track: config.track, mode: 'mediate', input: inputText.trim() || '방금 나눈 대화',
+      emotionDepth: config.emotionDepth, theologyLevel: config.theologyLevel, pastoralTone: config.pastoralTone,
+      multimodal: { consentSessionId: code, toneAnalysis: signals.toneAnalysis, visualCues: signals.visualCues },
+    });
+    setBusy(false);
+    if (r.status === 403) { setMsg('배우자 동의가 아직 확인되지 않았어요. 배우자가 코드로 동의했는지 확인해 주세요.'); return; }
+    if (r.status === 402) { setMsg('크레딧이 부족해요. 마음풀에서 구매 후 이용해 주세요.'); return; }
+    if (r.ok && r.result) setTrResult(r.result); else setMsg(r.error || '통역에 실패했어요.');
+  };
+
+  return (
+    <Shell title="🎥 함께 분석" onBack={() => { cleanup(); onBack(); }}>
+      {phase === 'intro' && (<>
+        <Card style={{ background: '#fef9ec', border: '1px solid #fde68a', color: '#78350f', fontSize: 13.5, lineHeight: 1.8, marginBottom: 14 }}>
+          <b>쌍방 동의가 있어야만</b> 녹화·분석이 시작돼요. 원본 영상·음성은 <b>기기 밖으로 나가지 않고</b>, 분석(표정·어조 요약)이 끝나면 <b>삭제</b>돼요. 언제든 철회할 수 있어요.
+        </Card>
+        <Btn onClick={request} disabled={busy}>내가 분석을 요청할게요 (코드 발급)</Btn>
+        <div style={{ height: 8 }} />
+        <Btn kind="ghost" onClick={() => setPhase('accept')}>배우자에게 받은 코드로 동의하기</Btn>
+        {msg && <div style={{ color: '#c0392b', fontSize: 13, marginTop: 10 }}>{msg}</div>}
+      </>)}
+
+      {phase === 'request' && (<>
+        <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>배우자에게 이 코드를 전달하세요</div>
+        <Card style={{ textAlign: 'center', marginBottom: 12 }}><div style={{ fontSize: 30, fontWeight: 800, letterSpacing: 4, color: GREEN }}>{code}</div></Card>
+        <div style={{ fontSize: 13.5, color: MUT, lineHeight: 1.7, marginBottom: 14 }}>배우자 휴대폰에서 <b>마음부부 → 🎥 함께 분석 → "코드로 동의하기"</b>에 입력하고 동의하면, 아래 "녹화 시작"이 동작해요.</div>
+        <Btn onClick={startCapture} disabled={busy}>배우자가 동의했어요 · 녹화 시작</Btn>
+        <div style={{ height: 8 }} />
+        <Btn kind="ghost" onClick={() => setPhase('intro')}>취소</Btn>
+        {msg && <div style={{ color: '#c0392b', fontSize: 13, marginTop: 10 }}>{msg}</div>}
+      </>)}
+
+      {phase === 'accept' && (<>
+        <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 10 }}>배우자에게 받은 코드 입력</div>
+        <input value={inputCode} onChange={e => setInputCode(e.target.value)} placeholder="예: A1B2C3D4"
+          style={{ width: '100%', border: `1.5px solid ${LINE}`, borderRadius: 12, padding: 14, fontSize: 18, textAlign: 'center', letterSpacing: 2, outline: 'none', marginBottom: 12 }} />
+        <Card style={{ background: '#f6faf8', fontSize: 12.5, color: MUT, lineHeight: 1.7, marginBottom: 12 }}>동의하면 이 세션에서 <b>녹화·음성 분석</b>이 가능해져요. 수집은 표정·어조의 <b>요약</b>뿐, 원본은 저장·전송되지 않아요. 언제든 철회할 수 있어요.</Card>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, marginBottom: 12, cursor: 'pointer' }}>
+          <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} /> 위 내용을 확인했고 동의합니다.
+        </label>
+        <Btn onClick={accept} disabled={busy || !agreed || !inputCode.trim()}>동의하고 완료</Btn>
+        <div style={{ height: 8 }} />
+        <Btn kind="ghost" onClick={() => setPhase('intro')}>이전</Btn>
+        {msg && <div style={{ color: '#c0392b', fontSize: 13, marginTop: 10 }}>{msg}</div>}
+      </>)}
+
+      {phase === 'accepted' && (
+        <Card style={{ textAlign: 'center', marginTop: 20 }}>
+          <div style={{ fontSize: 34 }}>✅</div>
+          <div style={{ fontWeight: 800, fontSize: 17, margin: '8px 0' }}>동의 완료</div>
+          <div style={{ color: MUT, fontSize: 14, lineHeight: 1.7 }}>요청하신 분이 녹화를 시작할 수 있어요.<br />마음이 바뀌면 언제든 철회할 수 있어요.</div>
+          <div style={{ height: 14 }} />
+          <Btn kind="ghost" onClick={async () => { await revoke(inputCode.trim().toUpperCase()); onBack(); }}>동의 철회</Btn>
+        </Card>
+      )}
+
+      {phase === 'capturing' && (<>
+        <video ref={videoRef} style={{ width: '100%', borderRadius: 14, background: '#000', marginBottom: 12 }} />
+        <div style={{ textAlign: 'center', color: MUT, fontSize: 13, marginBottom: 12 }}>🔴 기기 안에서만 분석 중… (원본은 저장·전송되지 않아요)</div>
+        <Btn onClick={stopCapture}>녹화 종료 · 분석 보기</Btn>
+      </>)}
+
+      {phase === 'result' && (<>
+        <Card style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 12.5, fontWeight: 800, color: GREEN, marginBottom: 8 }}>온디바이스 분석 요약 (원본은 이미 삭제됨)</div>
+          <div style={{ fontSize: 14, lineHeight: 1.8 }}>
+            {signals.visualCues ? <div>· {signals.visualCues}</div> : <div style={{ color: MUT }}>· 표정이 충분히 감지되지 않았어요</div>}
+            {signals.toneAnalysis ? <div>· {signals.toneAnalysis}</div> : null}
+          </div>
+        </Card>
+        <div style={{ fontSize: 13.5, marginBottom: 8 }}>방금 나눈 대화가 있으면 적어주세요 (선택).</div>
+        <textarea value={inputText} onChange={e => setInputText(e.target.value)} placeholder="주고받은 말을 적으면 더 정확해요."
+          style={{ width: '100%', minHeight: 90, border: `1.5px solid ${LINE}`, borderRadius: 12, padding: 12, fontSize: 14, resize: 'vertical', outline: 'none', marginBottom: 12 }} />
+        {!trResult ? (<>
+          <Btn onClick={translate} disabled={busy}>{busy ? '통역 중…' : '이 신호로 통역하기 (중재 · 3크레딧)'}</Btn>
+          {msg && <div style={{ color: '#c0392b', fontSize: 13, marginTop: 10 }}>{msg}</div>}
+        </>) : (<>
+          <ResultBlock result={trResult} />
+          <Improvement imp={trResult.improvement} relationId={relationId} track={config.track} />
+        </>)}
+        <div style={{ height: 10 }} />
+        <Btn kind="ghost" onClick={async () => { await revoke(code); onBack(); }}>동의 철회하고 종료</Btn>
+      </>)}
+    </Shell>
+  );
+}
+
 // ── 앱 라우터 ─────────────────────────────────────────────────────────────────
 function App() {
   const [ready, setReady] = useState(false);
@@ -470,11 +672,13 @@ function App() {
   if (view === 'mode' && mode) return <ModeView mode={mode} config={config} relationId={relationId} onBack={() => setView('home')} />;
   if (view === 'community') return <Community onBack={() => setView('home')} />;
   if (view === 'memory') return <Memory relationId={relationId} onBack={() => setView('home')} />;
+  if (view === 'multimodal') return <Multimodal relationId={relationId} config={config} onBack={() => setView('home')} />;
 
   return <Home config={config}
     onMode={(m) => { setMode(m); setView('mode'); }}
     onCommunity={() => setView('community')}
     onMemory={() => setView('memory')}
+    onMultimodal={() => setView('multimodal')}
     onSettings={() => { localStorage.removeItem('bubu_config'); setConfig(null); }} />;
 }
 
