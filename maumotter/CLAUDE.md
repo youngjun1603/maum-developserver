@@ -120,3 +120,8 @@ D1 스키마 → 인증/JWT(공유 규약) → 세션·발화 API → 통역 엔
 **또또 음성(TTS, 2026-06 구축)**: `POST /api/tts`(authed) → **OpenAI tts-1**, 답변 텍스트만 합성(아이 발화 미전송). 버디별 음성 **또또=shimmer·라라=nova**, KV 캐시(`ttscache:` 30일·인사/공통문구 재생성 0). ⚠️ **반드시 AI Gateway 경유**(`OPENAI_GATEWAY` const) — 직접 api.openai.com은 Workers egress에서 **403 `unsupported_country_region_territory`** 차단(Anthropic과 동일). `OPENAI_API_KEY` **설정됨**(sk-ant- 클로드키 아님, OpenAI 별도계정 sk-proj-). 미설정/실패 시 프론트 `speak()`가 **기기 speechSynthesis 폴백**(무영향). 모바일 자동재생: `startConversation`에서 Audio+speechSynthesis **둘 다 잠금해제**(silent wav·빈 utterance). 개인정보 처리위탁에 OpenAI 명시.
 **프론트(public/index.html)**: `EntitlementCard`(이용권·구매링크 `STORE_URL`[미설정]·이용내역), `VerifyBanner`, 온보딩(아이 0명시), 랜딩 소개, og.png+OG메타.
 **미설정**: `RESEND_API_KEY`·`STORE_URL`·토스 라이브키. 웹 애널리틱스=Cloudflare 자동설정(수동 beacon 금지).
+
+## 10. 연동형 유료결제 (마음풀 통합결제 — 착수 대기)
+수달 유료결제는 **마음풀에서 상품 판매 후 수달로 자동 지급**하는 방식으로 통합 예정(토스 개별연동 회피). 사업자 단일(마음서비스).
+- **수달 추가 구현(착수 지시 시)**: `POST /api/grant`(HMAC=`MAUM_SSO_SECRET` 검증 → `{email,grantType,orderId}` → maum-auth email→uid[없으면 생성] → 기존 `applyGrant(uid, sub_light|sub_pro|pack10)`) + `external_orders` 멱등테이블 + `/api/grant/revoke`(환불). 기존 쿠폰·SSO·entitlement 재사용.
+- **⚠️ 토스페이먼츠 완전 반영 후에만 착수·배포**. 상세 스펙 = 메모리 `project_maum_unified_payment` / 루트 `../CLAUDE.md` 「연동형 유료결제」. 곁(maumgyeot)은 동일 엔진 대칭 구현.

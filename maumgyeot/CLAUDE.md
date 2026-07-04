@@ -153,3 +153,8 @@ D1 스키마 → 인증/JWT(공유 규약) → 반려동물 등록 → 관찰·�
 **프론트(public/index.html)**: `EntitlementCard`(이용권·코드등록·구매링크 `STORE_URL` 상수[미설정]·이용내역 `/api/history`), `VerifyBanner`(설정+미인증시만), 온보딩 가이드(0마리시), 랜딩 서비스소개. `og.png`+OG메타. 광고 훅 `initBannerAd`(앱 전용, 웹 no-op).
 **웹 애널리틱스**: Cloudflare 자동설정 집계중 — ⚠️ 코드에 수동 beacon 금지(이중집계).
 **미설정 항목**: `RESEND_API_KEY`·`STORE_URL`(스토어 URL)·토스 라이브키.
+
+## 12. 연동형 유료결제 (마음풀 통합결제 — 착수 대기)
+곁 유료결제는 **마음풀에서 상품 판매 후 곁으로 자동 지급**하는 방식으로 통합 예정. 사업자 단일(마음서비스). 수달과 **동일 엔진 대칭 구현**.
+- **곁 추가 구현(착수 지시 시)**: `POST /api/grant`(HMAC=`MAUM_SSO_SECRET` → `{email,grantType,orderId}` → maum-auth email→uid[없으면 생성] → 기존 `applyGrant(uid, sub_light|sub_pro|pack10)`) + `external_orders` 멱등테이블 + `/api/grant/revoke`(환불). 기존 쿠폰·SSO·entitlement 재사용.
+- **⚠️ 토스페이먼츠 완전 반영 후에만 착수·배포**. 상세 스펙 = 메모리 `project_maum_unified_payment` / 루트 `../CLAUDE.md` 「연동형 유료결제」.
