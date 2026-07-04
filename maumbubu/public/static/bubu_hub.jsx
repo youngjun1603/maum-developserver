@@ -26,10 +26,10 @@ const saveConfig = (c) => localStorage.setItem('bubu_config', JSON.stringify(c))
 
 // ── 4모드 ──────────────────────────────────────────────────────────────────
 const MODES = [
-  { key: 'receive', emoji: '👂', title: '수신 통역', desc: '"저 말이 무슨 뜻이야?"', placeholder: '배우자에게서 들은 말을 그대로 붙여넣어 보세요.' },
-  { key: 'send', emoji: '✍️', title: '발신 통역', desc: '"이걸 어떻게 말하지?"', placeholder: '배우자에게 하고 싶은 말을 적어 보세요.' },
-  { key: 'mediate', emoji: '🕊️', title: '중재 통역', desc: '싸운 대화 전체 분석', placeholder: '주고받은 대화(카톡 등)를 통째로 붙여넣어 보세요.' },
-  { key: 'perspective', emoji: '🔄', title: '관점 통역', desc: '"상대는 어떻게 느꼈을까?"', placeholder: '어떤 사건이나 대화를 적어 보세요. 배우자 입장에서 통역해 드려요.' },
+  { key: 'receive', emoji: '👂', title: '수신 통역', desc: '"저 말이 무슨 뜻이야?"', ex: '배우자가 한 말의 속뜻이 궁금할 때', placeholder: '배우자에게서 들은 말을 그대로 붙여넣어 보세요.' },
+  { key: 'send', emoji: '✍️', title: '발신 통역', desc: '"이걸 어떻게 말하지?"', ex: '싸우지 않게 부드럽게 말하고 싶을 때', placeholder: '배우자에게 하고 싶은 말을 적어 보세요.' },
+  { key: 'mediate', emoji: '🕊️', title: '중재 통역', desc: '싸운 대화 전체를 분석', ex: '다툰 대화를 통째로 짚어보고 싶을 때', placeholder: '주고받은 대화(카톡 등)를 통째로 붙여넣어 보세요.' },
+  { key: 'perspective', emoji: '🔄', title: '관점 통역', desc: '"상대는 어떻게 느꼈을까?"', ex: '상대 입장이 도무지 이해 안 될 때', placeholder: '어떤 사건이나 대화를 적어 보세요. 배우자 입장에서 통역해 드려요.' },
 ];
 
 // ── 통역 결과 필드 라벨 (모드 공통 렌더) ─────────────────────────────────────────
@@ -87,21 +87,27 @@ function Onboarding({ onDone }) {
   const [pastoralTone, setPastoralTone] = useState('grace');
   const [step, setStep] = useState(0);
 
-  const TrackCard = ({ v, title, desc }) => (
+  const TrackCard = ({ v, title, desc, tag }) => (
     <div onClick={() => setTrack(v)} style={{ cursor: 'pointer', border: `2px solid ${track === v ? ACCENT[v] : LINE}`, background: track === v ? '#f4faf6' : '#fff', borderRadius: 14, padding: 16, marginBottom: 10 }}>
-      <div style={{ fontWeight: 800, color: track === v ? ACCENT[v] : INK, fontSize: 16 }}>{title}</div>
-      <div style={{ color: MUT, fontSize: 13, marginTop: 4 }}>{desc}</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ fontWeight: 800, color: track === v ? ACCENT[v] : INK, fontSize: 16 }}>{title}</div>
+        {tag && <span style={{ fontSize: 11, fontWeight: 700, color: '#fff', background: GREEN2, borderRadius: 10, padding: '2px 8px' }}>{tag}</span>}
+      </div>
+      <div style={{ color: MUT, fontSize: 13, marginTop: 5, lineHeight: 1.6 }}>{desc}</div>
     </div>
   );
-  const Slider = ({ label, val, set, marks }) => (
-    <div style={{ marginBottom: 16 }}>
-      <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>{label}</div>
+  const Slider = ({ label, help, val, set, marks, descs, hint }) => (
+    <div style={{ marginBottom: 18 }}>
+      <div style={{ fontSize: 14, fontWeight: 700 }}>{label}</div>
+      {help && <div style={{ fontSize: 12.5, color: MUT, margin: '3px 0 8px' }}>{help}</div>}
       <div style={{ display: 'flex', gap: 8 }}>
         {marks.map((m, i) => (
           <div key={i} onClick={() => set(i + 1)} style={{ flex: 1, textAlign: 'center', cursor: 'pointer', padding: '10px 4px', borderRadius: 10, fontSize: 13, fontWeight: 700,
             border: `1.5px solid ${val === i + 1 ? GREEN : LINE}`, background: val === i + 1 ? LGREEN : '#fff', color: val === i + 1 ? GREEN : MUT }}>{m}</div>
         ))}
       </div>
+      {descs && <div style={{ fontSize: 12.5, color: INK, marginTop: 8, lineHeight: 1.6, background: '#f6faf8', border: `1px solid ${LINE}`, borderRadius: 9, padding: '9px 11px' }}>{descs[val - 1]}</div>}
+      {hint && <div style={{ fontSize: 12, color: GREEN, marginTop: 6 }}>💡 {hint}</div>}
     </div>
   );
 
@@ -109,9 +115,9 @@ function Onboarding({ onDone }) {
     <Shell title="시작하기">
       {step === 0 && (<>
         <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 6 }}>어떤 언어로 통역할까요?</div>
-        <div style={{ color: MUT, fontSize: 14, marginBottom: 16 }}>나에게 맞는 경로를 고르세요. 나중에 바꿀 수 있어요.</div>
-        <TrackCard v="psychology" title="🌱 심리상담 트랙" desc="애착·정서(EFT) 기반으로 마음을 풀어드려요." />
-        <TrackCard v="christian" title="✝️ 기독교 트랙" desc="복음의 순서(경청·은혜·회복)로 언약적 관점을 더해요." />
+        <div style={{ color: MUT, fontSize: 14, marginBottom: 16 }}>나에게 맞는 경로를 고르세요. 설정에서 언제든 바꿀 수 있어요.</div>
+        <TrackCard v="psychology" title="🌱 심리상담 트랙" tag="처음이라면 추천" desc="신앙과 무관하게, 검증된 심리학(애착·정서)으로 마음을 풀어드려요." />
+        <TrackCard v="christian" title="✝️ 기독교 트랙" desc="신앙 안에서, 성경적 관점(은혜·언약·회복)으로 통역해요. 크리스천 부부에게 맞아요." />
         <div style={{ height: 12 }} />
         <Btn onClick={() => setStep(1)}>다음</Btn>
       </>)}
@@ -119,16 +125,27 @@ function Onboarding({ onDone }) {
         <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 6 }}>강도를 맞춰볼까요?</div>
         <div style={{ color: MUT, fontSize: 14, marginBottom: 16 }}>편한 만큼만. 언제든 조절돼요.</div>
         {track === 'psychology'
-          ? <Slider label="감정 깊이" val={emotionDepth} set={setEmotionDepth} marks={['표면', '중간', '심층']} />
+          ? <Slider label="감정 깊이" help="마음을 얼마나 깊이 들여다볼까요?" val={emotionDepth} set={setEmotionDepth}
+              marks={['표면', '중간', '심층']}
+              descs={['화남·서운함처럼 겉으로 드러난 감정까지만 짚어요.', '그 아래 두려움·외로움 같은 진짜 감정까지 통역해요.', '애착 욕구와 두 사람의 반복되는 악순환 고리까지 깊이 봐요.']}
+              hint="잘 모르겠으면 '중간'을 추천해요." />
           : (<>
-            <Slider label="신학 강도" val={theologyLevel} set={setTheologyLevel} marks={['통합형', '균형형', '성경형']} />
-            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>목양 톤</div>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+            <Slider label="신학 강도" help="심리학 언어를 얼마나 섞을까요?" val={theologyLevel} set={setTheologyLevel}
+              marks={['통합형', '균형형', '성경형']}
+              descs={['심리 언어(감정·애착)와 성경 관점을 자연스럽게 함께 써요.', '성경 관점을 중심에 두고, 감정 설명은 심리 언어를 보조로 써요.', '성경 언어(마음·언약·은혜·회개)로만 통역해요.']}
+              hint="잘 모르겠으면 '통합형'을 추천해요." />
+            <div style={{ fontSize: 14, fontWeight: 700 }}>목양 톤</div>
+            <div style={{ fontSize: 12.5, color: MUT, margin: '3px 0 8px' }}>어떤 결로 말해드릴까요?</div>
+            <div style={{ display: 'flex', gap: 8 }}>
               {[['grace', '경청·은혜형'], ['direct', '제한적 직면형']].map(([k, l]) => (
                 <div key={k} onClick={() => setPastoralTone(k)} style={{ flex: 1, textAlign: 'center', cursor: 'pointer', padding: '10px', borderRadius: 10, fontSize: 13, fontWeight: 700,
                   border: `1.5px solid ${pastoralTone === k ? GREEN : LINE}`, background: pastoralTone === k ? LGREEN : '#fff', color: pastoralTone === k ? GREEN : MUT }}>{l}</div>
               ))}
             </div>
+            <div style={{ fontSize: 12.5, color: INK, marginTop: 8, lineHeight: 1.6, background: '#f6faf8', border: `1px solid ${LINE}`, borderRadius: 9, padding: '9px 11px' }}>
+              {pastoralTone === 'grace' ? '먼저 충분히 듣고 이해한 뒤, 은혜 안에서 부드럽게 짚어드려요.' : '더 직접적인 권면을 원할 때만. 그래도 자책·수치를 강화하진 않아요.'}
+            </div>
+            <div style={{ fontSize: 12, color: GREEN, marginTop: 6 }}>💡 대부분 '경청·은혜형'을 추천해요.</div>
           </>)}
         <div style={{ height: 12 }} />
         <Btn onClick={() => setStep(2)}>다음</Btn>
@@ -145,6 +162,8 @@ function Onboarding({ onDone }) {
         </Card>
         <div style={{ height: 14 }} />
         <Btn onClick={() => { saveConfig({ track, emotionDepth, theologyLevel, pastoralTone }); onDone(); }}>동의하고 시작하기</Btn>
+        <div style={{ height: 8 }} />
+        <Btn kind="ghost" onClick={() => setStep(1)}>‹ 이전</Btn>
       </>)}
     </Shell>
   );
@@ -157,13 +176,15 @@ function Home({ config, onMode, onCommunity, onMemory, onSettings }) {
       <div style={{ fontSize: 15, color: MUT, marginBottom: 4 }}>
         {config.track === 'christian' ? '✝️ 기독교 트랙' : '🌱 심리상담 트랙'}
       </div>
-      <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 16 }}>무엇을 통역해 드릴까요?</div>
+      <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>무엇을 통역해 드릴까요?</div>
+      <div style={{ color: MUT, fontSize: 13, marginBottom: 16 }}>상황에 맞는 걸 고르세요. 아래 "이럴 때"를 참고하면 쉬워요.</div>
       {MODES.map(m => (
         <div key={m.key} onClick={() => onMode(m)} style={{ cursor: 'pointer', border: `1px solid ${LINE}`, borderRadius: 16, padding: 16, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 14, background: '#fff' }}>
           <div style={{ fontSize: 30 }}>{m.emoji}</div>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 800, fontSize: 17 }}>{m.title}</div>
             <div style={{ color: MUT, fontSize: 13, marginTop: 2 }}>{m.desc}</div>
+            <div style={{ color: GREEN, fontSize: 12, marginTop: 4 }}>이럴 때 · {m.ex}</div>
           </div>
           <div style={{ color: MUT, fontSize: 20 }}>›</div>
         </div>
