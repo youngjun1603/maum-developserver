@@ -186,12 +186,12 @@ function Onboarding({ onDone }) {
     onDone();
   } }, "\uB3D9\uC758\uD558\uACE0 \uC2DC\uC791\uD558\uAE30"), /* @__PURE__ */ React.createElement("div", { style: { height: 8 } }), /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: () => setStep(1) }, "\u2039 \uC774\uC804")));
 }
-function Home({ config, onMode, onCommunity, onMemory, onSettings, onMultimodal }) {
+function Home({ config, onMode, onCommunity, onMemory, onSettings, onMultimodal, onInbox, inboxCount }) {
   const [ask, setAsk] = useState(false);
   const depthLabel = ["\uD45C\uBA74", "\uC911\uAC04", "\uC2EC\uCE35"][(config.emotionDepth || 2) - 1];
   const theoLabel = ["\uD1B5\uD569\uD615", "\uADE0\uD615\uD615", "\uC131\uACBD\uD615"][(config.theologyLevel || 2) - 1];
   const toneLabel = config.pastoralTone === "direct" ? "\uC81C\uD55C\uC801 \uC9C1\uBA74\uD615" : "\uACBD\uCCAD\xB7\uC740\uD61C\uD615";
-  return /* @__PURE__ */ React.createElement(Shell, { right: /* @__PURE__ */ React.createElement("button", { onClick: () => setAsk(true), style: { background: "rgba(255,255,255,.18)", border: "none", color: "#fff", padding: "6px 10px", borderRadius: 9, cursor: "pointer", fontSize: 13 } }, "\u2699\uFE0F \uC124\uC815") }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, color: MUT, marginBottom: 4 } }, config.track === "christian" ? "\u271D\uFE0F \uAE30\uB3C5\uAD50 \uD2B8\uB799" : "\u{1F331} \uC2EC\uB9AC\uC0C1\uB2F4 \uD2B8\uB799"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 22, fontWeight: 800, marginBottom: 4 } }, "\uBB34\uC5C7\uC744 \uD1B5\uC5ED\uD574 \uB4DC\uB9B4\uAE4C\uC694?"), /* @__PURE__ */ React.createElement("div", { style: { color: MUT, fontSize: 13, marginBottom: 16 } }, '\uC0C1\uD669\uC5D0 \uB9DE\uB294 \uAC78 \uACE0\uB974\uC138\uC694. \uC544\uB798 "\uC774\uB7F4 \uB54C"\uB97C \uCC38\uACE0\uD558\uBA74 \uC26C\uC6CC\uC694.'), MODES.map((m) => /* @__PURE__ */ React.createElement("div", { key: m.key, onClick: () => onMode(m), style: { cursor: "pointer", border: `1px solid ${LINE}`, borderRadius: 16, padding: 16, marginBottom: 10, display: "flex", alignItems: "center", gap: 14, background: "#fff" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 30 } }, m.emoji), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 800, fontSize: 17 } }, m.title), /* @__PURE__ */ React.createElement("div", { style: { color: MUT, fontSize: 13, marginTop: 2 } }, m.desc), /* @__PURE__ */ React.createElement("div", { style: { color: GREEN, fontSize: 12, marginTop: 4 } }, "\uC774\uB7F4 \uB54C \xB7 ", m.ex)), /* @__PURE__ */ React.createElement("div", { style: { color: MUT, fontSize: 20 } }, "\u203A"))), /* @__PURE__ */ React.createElement("div", { onClick: onMultimodal, style: { cursor: "pointer", border: `1px dashed ${GREEN2}`, background: "#f4faf6", borderRadius: 16, padding: 14, marginTop: 8, display: "flex", alignItems: "center", gap: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 26 } }, "\u{1F3A5}"), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 800, fontSize: 15 } }, "\uD568\uAED8 \uBD84\uC11D ", /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, fontWeight: 700, color: "#fff", background: GREEN2, borderRadius: 10, padding: "1px 7px" } }, "\uBC30\uC6B0\uC790 \uB3D9\uC758")), /* @__PURE__ */ React.createElement("div", { style: { color: MUT, fontSize: 12.5, marginTop: 2 } }, "\uB3D9\uC758 \uD6C4 \uB300\uD654\uB97C \uB179\uD654\xB7\uBD84\uC11D (\uD45C\uC815\xB7\uC5B4\uC870, \uC6D0\uBCF8\uC740 \uAE30\uAE30 \uC548\uC5D0\uC11C\uB9CC)")), /* @__PURE__ */ React.createElement("div", { style: { color: MUT, fontSize: 20 } }, "\u203A")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 10 } }, /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: onMemory }, "\u{1F9E0} \uAD00\uACC4 \uAE30\uC5B5"), /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: onCommunity }, "\u{1F4AC} \uCEE4\uBBA4\uB2C8\uD2F0")), ask && /* @__PURE__ */ React.createElement(
+  return /* @__PURE__ */ React.createElement(Shell, { right: /* @__PURE__ */ React.createElement("button", { onClick: () => setAsk(true), style: { background: "rgba(255,255,255,.18)", border: "none", color: "#fff", padding: "6px 10px", borderRadius: 9, cursor: "pointer", fontSize: 13 } }, "\u2699\uFE0F \uC124\uC815") }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, color: MUT, marginBottom: 4 } }, config.track === "christian" ? "\u271D\uFE0F \uAE30\uB3C5\uAD50 \uD2B8\uB799" : "\u{1F331} \uC2EC\uB9AC\uC0C1\uB2F4 \uD2B8\uB799"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 22, fontWeight: 800, marginBottom: 4 } }, "\uBB34\uC5C7\uC744 \uD1B5\uC5ED\uD574 \uB4DC\uB9B4\uAE4C\uC694?"), /* @__PURE__ */ React.createElement("div", { style: { color: MUT, fontSize: 13, marginBottom: 16 } }, '\uC0C1\uD669\uC5D0 \uB9DE\uB294 \uAC78 \uACE0\uB974\uC138\uC694. \uC544\uB798 "\uC774\uB7F4 \uB54C"\uB97C \uCC38\uACE0\uD558\uBA74 \uC26C\uC6CC\uC694.'), MODES.map((m) => /* @__PURE__ */ React.createElement("div", { key: m.key, onClick: () => onMode(m), style: { cursor: "pointer", border: `1px solid ${LINE}`, borderRadius: 16, padding: 16, marginBottom: 10, display: "flex", alignItems: "center", gap: 14, background: "#fff" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 30 } }, m.emoji), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 800, fontSize: 17 } }, m.title), /* @__PURE__ */ React.createElement("div", { style: { color: MUT, fontSize: 13, marginTop: 2 } }, m.desc), /* @__PURE__ */ React.createElement("div", { style: { color: GREEN, fontSize: 12, marginTop: 4 } }, "\uC774\uB7F4 \uB54C \xB7 ", m.ex)), /* @__PURE__ */ React.createElement("div", { style: { color: MUT, fontSize: 20 } }, "\u203A"))), /* @__PURE__ */ React.createElement("div", { onClick: onMultimodal, style: { cursor: "pointer", border: `1px dashed ${GREEN2}`, background: "#f4faf6", borderRadius: 16, padding: 14, marginTop: 8, display: "flex", alignItems: "center", gap: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 26 } }, "\u{1F3A5}"), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 800, fontSize: 15 } }, "\uD568\uAED8 \uBD84\uC11D ", /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, fontWeight: 700, color: "#fff", background: GREEN2, borderRadius: 10, padding: "1px 7px" } }, "\uBC30\uC6B0\uC790 \uB3D9\uC758")), /* @__PURE__ */ React.createElement("div", { style: { color: MUT, fontSize: 12.5, marginTop: 2 } }, "\uB3D9\uC758 \uD6C4 \uB300\uD654\uB97C \uB179\uD654\xB7\uBD84\uC11D (\uD45C\uC815\xB7\uC5B4\uC870, \uC6D0\uBCF8\uC740 \uAE30\uAE30 \uC548\uC5D0\uC11C\uB9CC)")), /* @__PURE__ */ React.createElement("div", { style: { color: MUT, fontSize: 20 } }, "\u203A")), /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: onInbox, style: { marginTop: 10, position: "relative" } }, "\u{1F4EC} \uC218\uC2E0\uD568 \xB7 \uBC30\uC6B0\uC790 \uC5F0\uACB0", inboxCount > 0 && /* @__PURE__ */ React.createElement("span", { style: { marginLeft: 6, fontSize: 11, fontWeight: 800, color: "#fff", background: GREEN2, borderRadius: 10, padding: "1px 7px" } }, inboxCount)), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 10 } }, /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: onMemory }, "\u{1F9E0} \uAD00\uACC4 \uAE30\uC5B5"), /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: onCommunity }, "\u{1F4AC} \uCEE4\uBBA4\uB2C8\uD2F0")), ask && /* @__PURE__ */ React.createElement(
     "div",
     {
       style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 },
@@ -204,6 +204,23 @@ function Home({ config, onMode, onCommunity, onMemory, onSettings, onMultimodal 
       onSettings();
     } }, "\uC124\uC815 \uBCC0\uACBD\uD558\uAE30")))
   ));
+}
+function Share({ relationId, itemType, payload, preview, label }) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState("");
+  const send = async () => {
+    setBusy(true);
+    const r = await api("/share/send", "POST", { relationId, itemType, payload });
+    setBusy(false);
+    setOpen(false);
+    if (r.ok) setDone(r.linked ? "\uBC30\uC6B0\uC790\uC5D0\uAC8C \uBCF4\uB0C8\uC5B4\uC694 \u2713" : '\uBCF4\uB0C8\uC5B4\uC694. \uBC30\uC6B0\uC790\uAC00 \uC544\uC9C1 \uC5F0\uACB0 \uC804\uC774\uBA74 \uC218\uC2E0\uD568\uC5D0\uC11C "\uBC30\uC6B0\uC790 \uC5F0\uACB0"\uB85C \uCD08\uB300\uD558\uC138\uC694.');
+    else if (r.status === 403) setDone("\uC9C0\uAE08\uC740 \uC548\uC804\uC744 \uC704\uD574 \uACF5\uC720\uAC00 \uC81C\uD55C\uB3FC\uC694.");
+    else setDone(r.error || "\uACF5\uC720\uC5D0 \uC2E4\uD328\uD588\uC5B4\uC694.");
+  };
+  return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: () => setOpen(true), style: { fontSize: 13, padding: 11, marginTop: 8 } }, label), done && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: GREEN, marginTop: 6, lineHeight: 1.6 } }, done), open && /* @__PURE__ */ React.createElement("div", { style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 120, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }, onClick: (e) => {
+    if (e.target === e.currentTarget) setOpen(false);
+  } }, /* @__PURE__ */ React.createElement("div", { style: { background: "#fff", borderRadius: 16, maxWidth: 400, width: "100%", padding: 20 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 800, marginBottom: 8 } }, "\uBC30\uC6B0\uC790\uC5D0\uAC8C \uC774\uB807\uAC8C \uBCF4\uC5EC\uC694"), /* @__PURE__ */ React.createElement(Card, { style: { background: "#f6faf8", fontSize: 14, lineHeight: 1.7, marginBottom: 14, whiteSpace: "pre-wrap" } }, preview), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10 } }, /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: () => setOpen(false) }, "\uCDE8\uC18C"), /* @__PURE__ */ React.createElement(Btn, { onClick: send, disabled: busy }, busy ? "\uBCF4\uB0B4\uB294 \uC911\u2026" : "\uBCF4\uB0B4\uAE30")))));
 }
 function SafetyScreen({ s }) {
   return /* @__PURE__ */ React.createElement(Card, { style: { background: "#fff4ee", border: "1px solid #f5c6a5" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 800, color: "#b45309", marginBottom: 8 } }, "\u{1F6DF} \uC9C0\uAE08\uC740 \uC548\uC804\uC774 \uBA3C\uC800\uC608\uC694"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14.5, lineHeight: 1.8, color: "#78350f" } }, s.response), s.reframe && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, lineHeight: 1.7, color: "#78350f", marginTop: 10 } }, s.reframe), s.protect_actions && s.protect_actions.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, fontWeight: 800, color: "#b45309", marginBottom: 6 } }, "\uC9C0\uAE08 \uD560 \uC218 \uC788\uB294 \uAC83"), s.protect_actions.map((a, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: { fontSize: 14, lineHeight: 1.7 } }, "\xB7 ", a))), s.resources && s.resources.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 12, display: "flex", flexWrap: "wrap", gap: 8 } }, s.resources.map((r, i) => {
@@ -243,7 +260,7 @@ function Improvement({ imp, relationId, track }) {
       style: { border: `1px solid ${LINE}`, background: "#fff", borderRadius: 20, padding: "7px 12px", fontSize: 12.5, cursor: "pointer" }
     },
     r.label
-  )))) : /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, borderTop: `1px dashed ${LINE}`, paddingTop: 12 } }, reframe ? /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, lineHeight: 1.75 } }, /* @__PURE__ */ React.createElement("div", null, reframe.response), reframe.reframe && /* @__PURE__ */ React.createElement("div", { style: { color: MUT, marginTop: 8 } }, reframe.reframe), reframe.next_suggestion && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 8, color: GREEN } }, "\uB2E4\uC74C\uC5D4 \xB7 ", reframe.next_suggestion)) : /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, color: MUT } }, "\uAE30\uB85D\uD588\uC5B4\uC694. \uC528\uC557\uC740 \uC2EC\uACBC\uC5B4\uC694 \u{1F331}")));
+  )))) : /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, borderTop: `1px dashed ${LINE}`, paddingTop: 12 } }, reframe ? /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, lineHeight: 1.75 } }, /* @__PURE__ */ React.createElement("div", null, reframe.response), reframe.reframe && /* @__PURE__ */ React.createElement("div", { style: { color: MUT, marginTop: 8 } }, reframe.reframe), reframe.next_suggestion && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 8, color: GREEN } }, "\uB2E4\uC74C\uC5D4 \xB7 ", reframe.next_suggestion)) : /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, color: MUT } }, "\uAE30\uB85D\uD588\uC5B4\uC694. \uC528\uC557\uC740 \uC2EC\uACBC\uC5B4\uC694 \u{1F331}")), /* @__PURE__ */ React.createElement(Share, { relationId, itemType: "activity_invite", payload: { action: imp.action }, preview: "\uAC19\uC774 \uD574\uBCFC\uB798?\n" + imp.action, label: "\u{1F48C} \uAC19\uC774 \uD574\uBCFC\uB798? \uBC30\uC6B0\uC790\uC5D0\uAC8C \uBCF4\uB0B4\uAE30" }));
 }
 function ModeView({ mode, config, relationId, onBack }) {
   const [input, setInput] = useState("");
@@ -283,7 +300,7 @@ function ModeView({ mode, config, relationId, onBack }) {
       placeholder: "\uC5EC\uAE30\uC5D0 \uC785\uB825\uD558\uC138\uC694",
       style: { width: "100%", minHeight: 140, border: `1.5px solid ${LINE}`, borderRadius: 13, padding: 14, fontSize: 15, lineHeight: 1.6, resize: "vertical", outline: "none" }
     }
-  ), err && /* @__PURE__ */ React.createElement("div", { style: { color: "#c0392b", fontSize: 13, margin: "8px 0" } }, err), /* @__PURE__ */ React.createElement("div", { style: { height: 10 } }), /* @__PURE__ */ React.createElement(Btn, { onClick: run, disabled: busy || !input.trim() }, busy ? "\uD1B5\uC5ED \uC911\u2026" : "\uD1B5\uC5ED\uD558\uAE30"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: MUT, textAlign: "center", marginTop: 8 } }, mode.key === "mediate" || mode.key === "perspective" ? "3 \uD06C\uB808\uB527" : "2 \uD06C\uB808\uB527", " \uC0AC\uC6A9")), result && /* @__PURE__ */ React.createElement(React.Fragment, null, result.safety_tier ? /* @__PURE__ */ React.createElement(SafetyScreen, { s: result }) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(ResultBlock, { result }), /* @__PURE__ */ React.createElement(Improvement, { imp: result.improvement, relationId, track: config.track })), /* @__PURE__ */ React.createElement("div", { style: { height: 12 } }), /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: () => {
+  ), err && /* @__PURE__ */ React.createElement("div", { style: { color: "#c0392b", fontSize: 13, margin: "8px 0" } }, err), /* @__PURE__ */ React.createElement("div", { style: { height: 10 } }), /* @__PURE__ */ React.createElement(Btn, { onClick: run, disabled: busy || !input.trim() }, busy ? "\uD1B5\uC5ED \uC911\u2026" : "\uD1B5\uC5ED\uD558\uAE30"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: MUT, textAlign: "center", marginTop: 8 } }, mode.key === "mediate" || mode.key === "perspective" ? "3 \uD06C\uB808\uB527" : "2 \uD06C\uB808\uB527", " \uC0AC\uC6A9")), result && /* @__PURE__ */ React.createElement(React.Fragment, null, result.safety_tier ? /* @__PURE__ */ React.createElement(SafetyScreen, { s: result }) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(ResultBlock, { result }), /* @__PURE__ */ React.createElement(Improvement, { imp: result.improvement, relationId, track: config.track }), mode.key === "send" && result.rewritten && /* @__PURE__ */ React.createElement(Share, { relationId, itemType: "message", payload: { text: result.rewritten }, preview: result.rewritten, label: "\u2709\uFE0F \uC774 \uBB38\uC7A5 \uBC30\uC6B0\uC790\uC5D0\uAC8C \uBCF4\uB0B4\uAE30" }), mode.key === "mediate" && /* @__PURE__ */ React.createElement(Share, { relationId, itemType: "mediate_view", payload: result, preview: "[\uC911\uC7AC \uD1B5\uC5ED \uD568\uAED8 \uBCF4\uAE30]\n\uB2E4\uC74C \uD55C\uB9C8\uB514 \xB7 " + (result.next_word || ""), label: "\u{1F517} \uD568\uAED8 \uBCF4\uAE30 \uBCF4\uB0B4\uAE30" }), mode.key === "perspective" && /* @__PURE__ */ React.createElement(Share, { relationId, itemType: "perspective_view", payload: result, preview: "[\uAD00\uC810 \uD1B5\uC5ED \uD568\uAED8 \uBCF4\uAE30]\n" + (result.bridge || ""), label: "\u{1F517} \uD568\uAED8 \uBCF4\uAE30 \uBCF4\uB0B4\uAE30" })), /* @__PURE__ */ React.createElement("div", { style: { height: 12 } }), /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: () => {
     setResult(null);
     setInput("");
   } }, "\uB2E4\uC2DC \uD1B5\uC5ED\uD558\uAE30")));
@@ -520,6 +537,49 @@ function Multimodal({ relationId, config, onBack }) {
     onBack();
   } }, "\uB3D9\uC758 \uCCA0\uD68C\uD558\uACE0 \uC885\uB8CC")));
 }
+const SHARE_LABEL = { message: "\u2709\uFE0F \uBC30\uC6B0\uC790\uAC00 \uB2E4\uB4EC\uC740 \uD55C\uB9C8\uB514", mediate_view: "\u{1F517} \uC911\uC7AC \uD1B5\uC5ED \uD568\uAED8 \uBCF4\uAE30", perspective_view: "\u{1F517} \uAD00\uC810 \uD1B5\uC5ED \uD568\uAED8 \uBCF4\uAE30", activity_invite: "\u{1F48C} \uAC19\uC774 \uD574\uBCFC\uB798?" };
+function InboxItem({ it, onAccept }) {
+  const p = it.payload || {};
+  return /* @__PURE__ */ React.createElement(Card, { style: { marginBottom: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, fontWeight: 800, color: GREEN, marginBottom: 6 } }, SHARE_LABEL[it.item_type] || "\uACF5\uC720"), it.item_type === "message" && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, lineHeight: 1.7, whiteSpace: "pre-wrap" } }, p.text), it.item_type === "activity_invite" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, lineHeight: 1.7, whiteSpace: "pre-wrap" } }, p.action), it.status === "accepted" ? /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: GREEN, marginTop: 8 } }, "\uAC19\uC774 \uD558\uAE30\uB85C \uD588\uC5B4\uC694 \u{1F331}") : /* @__PURE__ */ React.createElement(Btn, { onClick: () => onAccept(it.id), style: { marginTop: 10 } }, "\uAC19\uC774 \uD560\uAC8C\uC694")), (it.item_type === "mediate_view" || it.item_type === "perspective_view") && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, lineHeight: 1.7, whiteSpace: "pre-wrap" } }, p.bridge || p.next_word || p.translation || p.surface || "\uD568\uAED8 \uBCF4\uAE30 \uB0B4\uC6A9"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: MUT, marginTop: 8 } }, (it.created_at || "").slice(0, 16).replace("T", " ")));
+}
+function Inbox({ relationId, onBack, onSeen }) {
+  const [items, setItems] = useState(null);
+  const [code, setCode] = useState("");
+  const [joinCode, setJoinCode] = useState("");
+  const [msg, setMsg] = useState("");
+  const load = async () => {
+    const r = await api(`/share/inbox?relationId=${relationId}`);
+    setItems(r.ok ? r.items || [] : []);
+    if (onSeen) onSeen();
+  };
+  useEffect(() => {
+    load();
+  }, []);
+  const makeInvite = async () => {
+    const r = await api("/relation/invite", "POST", { relationId });
+    if (r.ok) setCode(r.inviteCode);
+  };
+  const join = async () => {
+    const c = joinCode.trim().toUpperCase();
+    if (!c) return;
+    const r = await api("/relation/join", "POST", { inviteCode: c });
+    setMsg(r.ok ? "\uBC30\uC6B0\uC790\uC640 \uC5F0\uACB0\uB410\uC5B4\uC694 \u2713 \uC774\uC81C \uACF5\uC720\uAC00 \uC571 \uC548\uC5D0\uC11C \uBC14\uB85C \uB3C4\uCC29\uD574\uC694." : r.error || "\uC5F0\uACB0\uC5D0 \uC2E4\uD328\uD588\uC5B4\uC694.");
+  };
+  const accept = async (id) => {
+    await api("/share/respond", "POST", { shareId: id, action: "accepted" });
+    load();
+  };
+  return /* @__PURE__ */ React.createElement(Shell, { title: "\u{1F4EC} \uC218\uC2E0\uD568", onBack }, /* @__PURE__ */ React.createElement(Card, { style: { marginBottom: 14, background: "#f6faf8" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 800, marginBottom: 6 } }, "\u{1F91D} \uBC30\uC6B0\uC790 \uC5F0\uACB0"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: MUT, lineHeight: 1.65, marginBottom: 10 } }, "\uC5F0\uACB0\uD558\uBA74 \uACF5\uC720\uD55C \uD56D\uBAA9\uC774 \uC571 \uC548\uC5D0\uC11C \uBC14\uB85C \uC624\uAC11\uB2C8\uB2E4. \uD55C\uCABD\uC774 \uCF54\uB4DC\uB97C \uB9CC\uB4E4\uACE0, \uB2E4\uB978 \uCABD\uC774 \uC785\uB825\uD558\uBA74 \uB05D."), /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: makeInvite }, "\uB0B4 \uCD08\uB300\uCF54\uB4DC \uB9CC\uB4E4\uAE30"), code && /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", fontSize: 22, fontWeight: 800, letterSpacing: 3, color: GREEN, margin: "10px 0", fontFamily: "monospace" } }, code), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 10 } }, /* @__PURE__ */ React.createElement(
+    "input",
+    {
+      value: joinCode,
+      onChange: (e) => setJoinCode(e.target.value),
+      placeholder: "\uBC30\uC6B0\uC790 \uCF54\uB4DC \uC785\uB825",
+      maxLength: 6,
+      style: { flex: 1, border: `1.5px solid ${LINE}`, borderRadius: 10, padding: 10, fontSize: 15, textTransform: "uppercase", outline: "none", fontFamily: "monospace", letterSpacing: 2 }
+    }
+  ), /* @__PURE__ */ React.createElement(Btn, { onClick: join, style: { width: "auto", padding: "10px 16px" } }, "\uC5F0\uACB0")), msg && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: GREEN, marginTop: 8, lineHeight: 1.6 } }, msg)), items === null ? /* @__PURE__ */ React.createElement("div", { style: { color: MUT, textAlign: "center", padding: 30 } }, "\uBD88\uB7EC\uC624\uB294 \uC911\u2026") : items.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { color: MUT, textAlign: "center", padding: 30 } }, "\uC544\uC9C1 \uBC1B\uC740 \uACF5\uC720\uAC00 \uC5C6\uC5B4\uC694.") : items.map((it) => /* @__PURE__ */ React.createElement(InboxItem, { key: it.id, it, onAccept: accept })));
+}
 function App() {
   const [ready, setReady] = useState(false);
   const [authed, setAuthed] = useState(true);
@@ -527,6 +587,13 @@ function App() {
   const [config, setConfig] = useState(loadConfig());
   const [view, setView] = useState("home");
   const [mode, setMode] = useState(null);
+  const [inboxCount, setInboxCount] = useState(0);
+  const refreshInbox = async (rid) => {
+    const id = rid || relationId;
+    if (!id) return;
+    const r = await api(`/share/inbox?relationId=${id}&peek=1`);
+    if (r.ok) setInboxCount((r.items || []).filter((x) => x.status === "sent").length);
+  };
   useEffect(() => {
     (async () => {
       if (!token()) {
@@ -540,7 +607,10 @@ function App() {
         setReady(true);
         return;
       }
-      if (r.ok) setRelationId(r.relationId);
+      if (r.ok) {
+        setRelationId(r.relationId);
+        refreshInbox(r.relationId);
+      }
       setReady(true);
     })();
   }, []);
@@ -551,10 +621,15 @@ function App() {
   if (view === "community") return /* @__PURE__ */ React.createElement(Community, { onBack: () => setView("home") });
   if (view === "memory") return /* @__PURE__ */ React.createElement(Memory, { relationId, onBack: () => setView("home") });
   if (view === "multimodal") return /* @__PURE__ */ React.createElement(Multimodal, { relationId, config, onBack: () => setView("home") });
+  if (view === "inbox") return /* @__PURE__ */ React.createElement(Inbox, { relationId, onBack: () => {
+    setView("home");
+    refreshInbox();
+  }, onSeen: () => setInboxCount(0) });
   return /* @__PURE__ */ React.createElement(
     Home,
     {
       config,
+      inboxCount,
       onMode: (m) => {
         setMode(m);
         setView("mode");
@@ -562,6 +637,7 @@ function App() {
       onCommunity: () => setView("community"),
       onMemory: () => setView("memory"),
       onMultimodal: () => setView("multimodal"),
+      onInbox: () => setView("inbox"),
       onSettings: () => {
         localStorage.removeItem("bubu_config");
         setConfig(null);

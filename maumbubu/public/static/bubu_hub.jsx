@@ -205,7 +205,7 @@ function Onboarding({ onDone }) {
 }
 
 // ── 홈 ──────────────────────────────────────────────────────────────────────
-function Home({ config, onMode, onCommunity, onMemory, onSettings, onMultimodal }) {
+function Home({ config, onMode, onCommunity, onMemory, onSettings, onMultimodal, onInbox, inboxCount }) {
   const [ask, setAsk] = useState(false);
   const depthLabel = ['표면', '중간', '심층'][(config.emotionDepth || 2) - 1];
   const theoLabel = ['통합형', '균형형', '성경형'][(config.theologyLevel || 2) - 1];
@@ -236,6 +236,10 @@ function Home({ config, onMode, onCommunity, onMemory, onSettings, onMultimodal 
         </div>
         <div style={{ color: MUT, fontSize: 20 }}>›</div>
       </div>
+      <Btn kind="ghost" onClick={onInbox} style={{ marginTop: 10, position: 'relative' }}>
+        📬 수신함 · 배우자 연결
+        {inboxCount > 0 && <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 800, color: '#fff', background: GREEN2, borderRadius: 10, padding: '1px 7px' }}>{inboxCount}</span>}
+      </Btn>
       <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
         <Btn kind="ghost" onClick={onMemory}>🧠 관계 기억</Btn>
         <Btn kind="ghost" onClick={onCommunity}>💬 커뮤니티</Btn>
@@ -271,6 +275,37 @@ function Home({ config, onMode, onCommunity, onMemory, onSettings, onMultimodal 
       )}
     </Shell>
   );
+}
+
+// ── 선택적 공유 (미리보기 확인 후 건별 전송, ADDENDUM 1) ──
+function Share({ relationId, itemType, payload, preview, label }) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState('');
+  const send = async () => {
+    setBusy(true);
+    const r = await api('/share/send', 'POST', { relationId, itemType, payload });
+    setBusy(false); setOpen(false);
+    if (r.ok) setDone(r.linked ? '배우자에게 보냈어요 ✓' : '보냈어요. 배우자가 아직 연결 전이면 수신함에서 "배우자 연결"로 초대하세요.');
+    else if (r.status === 403) setDone('지금은 안전을 위해 공유가 제한돼요.');
+    else setDone(r.error || '공유에 실패했어요.');
+  };
+  return (<>
+    <Btn kind="ghost" onClick={() => setOpen(true)} style={{ fontSize: 13, padding: 11, marginTop: 8 }}>{label}</Btn>
+    {done && <div style={{ fontSize: 12.5, color: GREEN, marginTop: 6, lineHeight: 1.6 }}>{done}</div>}
+    {open && (
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={e => { if (e.target === e.currentTarget) setOpen(false); }}>
+        <div style={{ background: '#fff', borderRadius: 16, maxWidth: 400, width: '100%', padding: 20 }}>
+          <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 8 }}>배우자에게 이렇게 보여요</div>
+          <Card style={{ background: '#f6faf8', fontSize: 14, lineHeight: 1.7, marginBottom: 14, whiteSpace: 'pre-wrap' }}>{preview}</Card>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <Btn kind="ghost" onClick={() => setOpen(false)}>취소</Btn>
+            <Btn onClick={send} disabled={busy}>{busy ? '보내는 중…' : '보내기'}</Btn>
+          </div>
+        </div>
+      </div>
+    )}
+  </>);
 }
 
 // ── 안전 안내 화면 (T1/T2 발동 시 — 모드 결과 대신, 공유·활동·커뮤니티 버튼 미노출) ──
@@ -377,6 +412,7 @@ function Improvement({ imp, relationId, track }) {
           ) : <div style={{ fontSize: 14, color: MUT }}>기록했어요. 씨앗은 심겼어요 🌱</div>}
         </div>
       )}
+      <Share relationId={relationId} itemType="activity_invite" payload={{ action: imp.action }} preview={'같이 해볼래?\n' + imp.action} label="💌 같이 해볼래? 배우자에게 보내기" />
     </Card>
   );
 }
@@ -420,6 +456,9 @@ function ModeView({ mode, config, relationId, onBack }) {
           : (<>
             <ResultBlock result={result} />
             <Improvement imp={result.improvement} relationId={relationId} track={config.track} />
+            {mode.key === 'send' && result.rewritten && <Share relationId={relationId} itemType="message" payload={{ text: result.rewritten }} preview={result.rewritten} label="✉️ 이 문장 배우자에게 보내기" />}
+            {mode.key === 'mediate' && <Share relationId={relationId} itemType="mediate_view" payload={result} preview={'[중재 통역 함께 보기]\n다음 한마디 · ' + (result.next_word || '')} label="🔗 함께 보기 보내기" />}
+            {mode.key === 'perspective' && <Share relationId={relationId} itemType="perspective_view" payload={result} preview={'[관점 통역 함께 보기]\n' + (result.bridge || '')} label="🔗 함께 보기 보내기" />}
           </>)}
         <div style={{ height: 12 }} />
         <Btn kind="ghost" onClick={() => { setResult(null); setInput(''); }}>다시 통역하기</Btn>
@@ -664,21 +703,86 @@ function Multimodal({ relationId, config, onBack }) {
   );
 }
 
+// ── 수신함 + 배우자 연결 ──────────────────────────────────────────────────────
+const SHARE_LABEL = { message: '✉️ 배우자가 다듬은 한마디', mediate_view: '🔗 중재 통역 함께 보기', perspective_view: '🔗 관점 통역 함께 보기', activity_invite: '💌 같이 해볼래?' };
+function InboxItem({ it, onAccept }) {
+  const p = it.payload || {};
+  return (
+    <Card style={{ marginBottom: 10 }}>
+      <div style={{ fontSize: 12.5, fontWeight: 800, color: GREEN, marginBottom: 6 }}>{SHARE_LABEL[it.item_type] || '공유'}</div>
+      {it.item_type === 'message' && <div style={{ fontSize: 15, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{p.text}</div>}
+      {it.item_type === 'activity_invite' && (<>
+        <div style={{ fontSize: 15, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{p.action}</div>
+        {it.status === 'accepted'
+          ? <div style={{ fontSize: 13, color: GREEN, marginTop: 8 }}>같이 하기로 했어요 🌱</div>
+          : <Btn onClick={() => onAccept(it.id)} style={{ marginTop: 10 }}>같이 할게요</Btn>}
+      </>)}
+      {(it.item_type === 'mediate_view' || it.item_type === 'perspective_view') && (
+        <div style={{ fontSize: 14, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+          {p.bridge || p.next_word || p.translation || p.surface || '함께 보기 내용'}
+        </div>
+      )}
+      <div style={{ fontSize: 11.5, color: MUT, marginTop: 8 }}>{(it.created_at || '').slice(0, 16).replace('T', ' ')}</div>
+    </Card>
+  );
+}
+function Inbox({ relationId, onBack, onSeen }) {
+  const [items, setItems] = useState(null);
+  const [code, setCode] = useState('');
+  const [joinCode, setJoinCode] = useState('');
+  const [msg, setMsg] = useState('');
+  const load = async () => { const r = await api(`/share/inbox?relationId=${relationId}`); setItems(r.ok ? (r.items || []) : []); if (onSeen) onSeen(); };
+  useEffect(() => { load(); }, []);
+  const makeInvite = async () => { const r = await api('/relation/invite', 'POST', { relationId }); if (r.ok) setCode(r.inviteCode); };
+  const join = async () => {
+    const c = joinCode.trim().toUpperCase(); if (!c) return;
+    const r = await api('/relation/join', 'POST', { inviteCode: c });
+    setMsg(r.ok ? '배우자와 연결됐어요 ✓ 이제 공유가 앱 안에서 바로 도착해요.' : (r.error || '연결에 실패했어요.'));
+  };
+  const accept = async (id) => { await api('/share/respond', 'POST', { shareId: id, action: 'accepted' }); load(); };
+  return (
+    <Shell title="📬 수신함" onBack={onBack}>
+      <Card style={{ marginBottom: 14, background: '#f6faf8' }}>
+        <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 6 }}>🤝 배우자 연결</div>
+        <div style={{ fontSize: 12.5, color: MUT, lineHeight: 1.65, marginBottom: 10 }}>연결하면 공유한 항목이 앱 안에서 바로 오갑니다. 한쪽이 코드를 만들고, 다른 쪽이 입력하면 끝.</div>
+        <Btn kind="ghost" onClick={makeInvite}>내 초대코드 만들기</Btn>
+        {code && <div style={{ textAlign: 'center', fontSize: 22, fontWeight: 800, letterSpacing: 3, color: GREEN, margin: '10px 0', fontFamily: 'monospace' }}>{code}</div>}
+        <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+          <input value={joinCode} onChange={e => setJoinCode(e.target.value)} placeholder="배우자 코드 입력" maxLength={6}
+            style={{ flex: 1, border: `1.5px solid ${LINE}`, borderRadius: 10, padding: 10, fontSize: 15, textTransform: 'uppercase', outline: 'none', fontFamily: 'monospace', letterSpacing: 2 }} />
+          <Btn onClick={join} style={{ width: 'auto', padding: '10px 16px' }}>연결</Btn>
+        </div>
+        {msg && <div style={{ fontSize: 12.5, color: GREEN, marginTop: 8, lineHeight: 1.6 }}>{msg}</div>}
+      </Card>
+      {items === null ? <div style={{ color: MUT, textAlign: 'center', padding: 30 }}>불러오는 중…</div>
+        : items.length === 0 ? <div style={{ color: MUT, textAlign: 'center', padding: 30 }}>아직 받은 공유가 없어요.</div>
+          : items.map(it => <InboxItem key={it.id} it={it} onAccept={accept} />)}
+    </Shell>
+  );
+}
+
 // ── 앱 라우터 ─────────────────────────────────────────────────────────────────
 function App() {
   const [ready, setReady] = useState(false);
   const [authed, setAuthed] = useState(true);
   const [relationId, setRelationId] = useState(null);
   const [config, setConfig] = useState(loadConfig());
-  const [view, setView] = useState('home');   // home | mode | community | memory
+  const [view, setView] = useState('home');   // home | mode | community | memory | inbox
   const [mode, setMode] = useState(null);
+  const [inboxCount, setInboxCount] = useState(0);
+
+  const refreshInbox = async (rid) => {
+    const id = rid || relationId; if (!id) return;
+    const r = await api(`/share/inbox?relationId=${id}&peek=1`);
+    if (r.ok) setInboxCount((r.items || []).filter(x => x.status === 'sent').length);
+  };
 
   useEffect(() => {
     (async () => {
       if (!token()) { setAuthed(false); setReady(true); return; }
       const r = await api('/relation', 'POST', {});
       if (r.status === 401) { setAuthed(false); setReady(true); return; }
-      if (r.ok) setRelationId(r.relationId);
+      if (r.ok) { setRelationId(r.relationId); refreshInbox(r.relationId); }
       setReady(true);
     })();
   }, []);
@@ -703,12 +807,14 @@ function App() {
   if (view === 'community') return <Community onBack={() => setView('home')} />;
   if (view === 'memory') return <Memory relationId={relationId} onBack={() => setView('home')} />;
   if (view === 'multimodal') return <Multimodal relationId={relationId} config={config} onBack={() => setView('home')} />;
+  if (view === 'inbox') return <Inbox relationId={relationId} onBack={() => { setView('home'); refreshInbox(); }} onSeen={() => setInboxCount(0)} />;
 
-  return <Home config={config}
+  return <Home config={config} inboxCount={inboxCount}
     onMode={(m) => { setMode(m); setView('mode'); }}
     onCommunity={() => setView('community')}
     onMemory={() => setView('memory')}
     onMultimodal={() => setView('multimodal')}
+    onInbox={() => setView('inbox')}
     onSettings={() => { localStorage.removeItem('bubu_config'); setConfig(null); }} />;
 }
 

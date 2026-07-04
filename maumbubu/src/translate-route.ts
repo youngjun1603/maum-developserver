@@ -385,6 +385,14 @@ translate.post('/translate', async (c) => {
       .bind(body.relationId, config.track, config.mode)
       .run();
 
+    // ── [StageB] 안전 티어(T1/T2) 감지 시 기록 → 공유 차단·이후 민감도 ──
+    const safetyTier = (parsed as Record<string, unknown>).safety_tier;
+    if (safetyTier === 'T1' || safetyTier === 'T2') {
+      c.executionCtx.waitUntil(
+        c.env.DB.prepare('INSERT INTO relation_safety (relation_id, tier) VALUES (?, ?)').bind(body.relationId, safetyTier).run().catch(() => {})
+      );
+    }
+
     // ── 관계 기억 비동기 갱신 (응답 지연 방지: waitUntil) ──
     c.executionCtx.waitUntil(
       (async () => {
@@ -727,7 +735,7 @@ translate.post('/relation', async (c) => {
   try {
     const uid = c.get('uid');
     let rel = await c.env.DB
-      .prepare('SELECT id FROM couple_relations WHERE user_a_id = ? OR user_b_id = ? ORDER BY id LIMIT 1')
+      .prepare('SELECT id FROM couple_relations WHERE user_a_id = ? OR user_b_id = ? ORDER BY (user_b_id IS NOT NULL) DESC, id LIMIT 1')
       .bind(uid, uid)
       .first<{ id: number }>();
     if (!rel) {
@@ -741,6 +749,96 @@ translate.post('/relation', async (c) => {
     console.error('relation error:', e);
     return c.json({ error: '관계 정보 처리에 실패했어요.' }, 500);
   }
+});
+
+// ============================================================================
+// Stage B — 선택적 공유 브리지 (ADDENDUM 01) + 배우자 연결
+// ============================================================================
+const SHARE_TYPES = ['message', 'mediate_view', 'perspective_view', 'activity_invite'];
+// 초대코드: 마음커플 genSessionCode 패턴 재사용(6자·혼동문자 제외, 사람이 입력)
+const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+function genInviteCode(): string {
+  return Array.from(crypto.getRandomValues(new Uint8Array(6))).map((b) => CODE_CHARS[b % CODE_CHARS.length]).join('');
+}
+function safeJson(s: string): unknown { try { return JSON.parse(s); } catch { return s; } }
+// T1/T2 안전 플래그가 최근(30일)에 있으면 공유 차단
+async function hasRecentSafety(db: D1Database, relationId: number): Promise<boolean> {
+  const row = await db.prepare("SELECT 1 AS ok FROM relation_safety WHERE relation_id = ? AND created_at > datetime('now','-30 days') LIMIT 1").bind(relationId).first<{ ok: number }>();
+  return !!row;
+}
+
+// POST /api/relation/invite — 배우자 초대 코드 발급(관계에 user_b 연결용)
+translate.post('/relation/invite', async (c) => {
+  try {
+    const uid = c.get('uid');
+    const { relationId } = await c.req.json<{ relationId: number }>();
+    if (!(await assertRelationOwner(c.env.DB, relationId, uid))) return c.json({ error: '이 관계에 접근 권한이 없어요.' }, 403);
+    const code = genInviteCode();
+    await c.env.KV.put(`bubu_invite:${code}`, String(relationId), { expirationTtl: 7 * 86400 });
+    return c.json({ ok: true, inviteCode: code });
+  } catch (e) { console.error('invite error:', e); return c.json({ error: '초대 코드 발급에 실패했어요.' }, 500); }
+});
+
+// POST /api/relation/join — 배우자가 코드로 관계에 연결(user_b)
+translate.post('/relation/join', async (c) => {
+  try {
+    const uid = c.get('uid');
+    const { inviteCode } = await c.req.json<{ inviteCode: string }>();
+    const code = (inviteCode || '').trim().toUpperCase();
+    const ridStr = await c.env.KV.get(`bubu_invite:${code}`);
+    if (!ridStr) return c.json({ error: '만료되었거나 잘못된 코드예요.' }, 404);
+    const relationId = Number(ridStr);
+    const rel = await c.env.DB.prepare('SELECT user_a_id, user_b_id FROM couple_relations WHERE id = ?').bind(relationId).first<{ user_a_id: number; user_b_id: number | null }>();
+    if (!rel) return c.json({ error: '관계를 찾을 수 없어요.' }, 404);
+    if (rel.user_a_id === uid) return c.json({ error: '본인이 만든 초대예요.' }, 400);
+    if (rel.user_b_id != null && rel.user_b_id !== uid) return c.json({ error: '이미 다른 분과 연결된 관계예요.' }, 409);
+    if (rel.user_b_id == null) await c.env.DB.prepare('UPDATE couple_relations SET user_b_id = ? WHERE id = ?').bind(uid, relationId).run();
+    await c.env.KV.delete(`bubu_invite:${code}`);
+    return c.json({ ok: true, relationId });
+  } catch (e) { console.error('join error:', e); return c.json({ error: '연결에 실패했어요.' }, 500); }
+});
+
+// POST /api/share/send — 승인된 결과만 건별 공유 (T1/T2 안전 세션 차단)
+translate.post('/share/send', async (c) => {
+  try {
+    const uid = c.get('uid');
+    const { relationId, itemType, payload } = await c.req.json<{ relationId: number; itemType: string; payload: unknown }>();
+    if (!relationId || !SHARE_TYPES.includes(itemType) || payload == null) return c.json({ error: '필수 정보가 누락되었습니다.' }, 400);
+    if (!(await assertRelationOwner(c.env.DB, relationId, uid))) return c.json({ error: '이 관계에 접근 권한이 없어요.' }, 403);
+    // ADDENDUM 1.4-1: 안전 티어 감지된 relation은 공유 차단 (가해자에게 흔적 방지)
+    if (await hasRecentSafety(c.env.DB, relationId)) return c.json({ error: '지금은 안전을 위해 공유가 제한돼요.', blockedBySafety: true }, 403);
+    const id = Array.from(crypto.getRandomValues(new Uint8Array(9))).map((b) => b.toString(16).padStart(2, '0')).join('');
+    await c.env.DB.prepare('INSERT INTO shared_items (id, relation_id, sender_id, item_type, payload) VALUES (?, ?, ?, ?, ?)')
+      .bind(id, relationId, uid, itemType, JSON.stringify(payload)).run();
+    const rel = await c.env.DB.prepare('SELECT user_b_id FROM couple_relations WHERE id = ?').bind(relationId).first<{ user_b_id: number | null }>();
+    return c.json({ ok: true, shareId: id, linked: !!(rel && rel.user_b_id != null) });
+  } catch (e) { console.error('share send error:', e); return c.json({ error: '공유에 실패했어요.' }, 500); }
+});
+
+// GET /api/share/inbox?relationId= — 내가 받은 공유(배우자가 보낸 것). viewed 처리
+translate.get('/share/inbox', async (c) => {
+  try {
+    const uid = c.get('uid');
+    const relationId = Number(c.req.query('relationId'));
+    if (!relationId) return c.json({ error: 'relationId가 필요합니다.' }, 400);
+    if (!(await assertRelationOwner(c.env.DB, relationId, uid))) return c.json({ error: '이 관계에 접근 권한이 없어요.' }, 403);
+    const { results } = await c.env.DB.prepare("SELECT id, item_type, payload, status, created_at FROM shared_items WHERE relation_id = ? AND sender_id != ? ORDER BY created_at DESC LIMIT 50").bind(relationId, uid).all();
+    // peek=1(뱃지 카운트용)이면 읽음 처리하지 않음 — 실제 열람 시에만 viewed
+    if (c.req.query('peek') !== '1') {
+      await c.env.DB.prepare("UPDATE shared_items SET status = 'viewed', viewed_at = datetime('now') WHERE relation_id = ? AND sender_id != ? AND status = 'sent'").bind(relationId, uid).run();
+    }
+    return c.json({ ok: true, items: (results || []).map((r: Record<string, unknown>) => ({ ...r, payload: safeJson(r.payload as string) })) });
+  } catch (e) { console.error('inbox error:', e); return c.json({ error: '수신함을 불러오지 못했어요.' }, 500); }
+});
+
+// POST /api/share/respond — 활동 제안 수락
+translate.post('/share/respond', async (c) => {
+  try {
+    const { shareId, action } = await c.req.json<{ shareId: string; action: string }>();
+    if (action !== 'accepted' || !shareId) return c.json({ error: '잘못된 요청입니다.' }, 400);
+    await c.env.DB.prepare("UPDATE shared_items SET status = 'accepted' WHERE id = ?").bind(shareId).run();
+    return c.json({ ok: true });
+  } catch (e) { console.error('respond error:', e); return c.json({ error: '처리에 실패했어요.' }, 500); }
 });
 
 export default translate;
