@@ -1184,60 +1184,60 @@ function buildAnalysisPrompt(req: AnalyzeRequest): string {
   const r          = req.responses
 
   const sysKo = isBiblical
-    ? '당신은 기독교 상담사입니다. 성경 말씀과 따뜻한 신앙적 공감으로 내담자의 마음을 살핍니다. 진단적 표현은 절대 사용하지 마세요.'
-    : '당신은 마음풀의 심리 안내자입니다. 판단 없이 내담자의 마음을 관찰하고, 상담사가 활용할 수 있는 따뜻한 통찰을 제공합니다. 임상적·진단적 표현은 절대 사용하지 마세요.'
-  const sysEn = 'You are a compassionate psychological guide. Observe without judgment and provide warm insights. Never use clinical diagnostic language.'
+    ? '당신은 마음풀의 기독교 상담 안내자입니다. 검사를 받은 본인에게 직접 이야기하듯, 성경 말씀과 따뜻한 신앙적 공감으로 마음을 비춰 드립니다. "당신"을 주어로 존댓말로 쓰고(제3자·상담사 시점 금지), 진단적 표현은 절대 사용하지 마세요.'
+    : '당신은 마음풀의 심리 안내자입니다. 검사를 받은 본인에게 직접 이야기하듯, 판단 없이 따뜻하게 결과를 비춰 드립니다. "당신"을 주어로 존댓말로 쓰고(제3자·상담사 시점 금지), 임상적·진단적 표현은 절대 사용하지 마세요.'
+  const sysEn = 'You are a compassionate psychological guide for Maumful. Speak directly TO the person who took the test ("you"), warmly and without judgment. Never use clinical diagnostic language or third-person/counselor framing.'
   const ctx = lang === 'ko' ? sysKo : sysEn
 
   const psychFormat = `
-아래 4개 섹션만 작성해 주세요. 임상 진단명·병명은 절대 사용하지 마세요.
+아래 4개 섹션만, 검사를 받은 당신에게 직접 이야기하듯 작성해 주세요. 임상 진단명·병명은 절대 사용하지 마세요.
 
-[현재 상태 요약]
-판단 없이 관찰로만 1~2문장. "~처럼 보입니다", "~경향이 나타납니다" 같은 표현 사용.
+[지금의 마음]
+판단 없이 당신의 지금 상태를 1~2문장. "~하신 것 같아요", "~한 마음이 느껴져요" 처럼 부드럽게.
 
-[눈에 띄는 응답]
-점수가 높거나 주목할 응답 2~3가지를 간결하게 나열하고, 마지막에 "이 부분을 좀 더 여쭤보시면 좋을 것 같습니다" 한 문장 추가.
+[눈에 띄는 부분]
+주목할 응답 2~3가지를 짚어 드리고, 마지막에 "이 부분은 스스로 조금 더 들여다보면 좋아요" 같은 한 문장.
 
-[상담 시 참고 포인트]
-- 대화 시작 질문: 마음을 열 수 있는 열린 질문 2개 (예시 형식으로 작성)
-- 주의 깊게 살펴볼 부분: 놓치기 쉬운 신호나 맥락 1~2가지
+[스스로에게 건네보세요]
+- 자문 질문: 스스로에게 던져볼 만한 열린 질문 2개
+- 살펴볼 부분: 놓치기 쉬운 내 마음의 신호 1~2가지
 
-[일상 제안]
-부담 없이 실천 가능한 작은 것 1~2가지. 치료나 약물 언급 금지.`
+[오늘의 작은 실천]
+부담 없이 해볼 수 있는 작은 것 1~2가지. 치료나 약물 언급 금지.`
 
   const biblicalFormat = `
-아래 4개 섹션만 작성해 주세요. 따뜻하고 신앙적인 언어를 사용하세요.
+아래 4개 섹션만, 당신에게 직접 건네는 따뜻하고 신앙적인 언어로 작성해 주세요.
 
 [마음 살피기]
-공감적으로 마음 상태 1~2문장. 판단 없이 내담자의 감정을 반영.
+당신의 마음 상태를 공감적으로 1~2문장. 판단 없이 감정을 비춰 드리기.
 
 [말씀 묵상]
 - 연결 말씀: 구절 전문 (책명 장:절 형식)
-- 말씀 의미: 이 구절이 내담자 상황에 주는 위로 2~3문장
-- 상담 연결: 상담사가 자연스럽게 꺼낼 방법 한 문장
+- 말씀 의미: 이 말씀이 지금 당신에게 주는 위로 2~3문장
+- 삶으로: 이 말씀을 오늘 당신의 삶에 어떻게 품어볼지 한 문장
 
-[상담 나눔 포인트]
-- 대화 주제: 신앙과 연결된 열린 질문 2가지
-- 함께 기도할 방향: 기도 제목 1~2가지
+[스스로 묵상하기]
+- 묵상 질문: 스스로에게 던져볼 신앙적 열린 질문 2가지
+- 기도 제목: 스스로를 위해 올릴 기도 1~2가지
 
 [소망의 한마디]
-격려와 성경적 소망을 담은 한 문장.`
+당신에게 건네는 격려와 성경적 소망 한 문장.`
 
   const psychFormatEn = `
-Please write only these 4 sections. Never use clinical diagnoses or medical labels.
+Please write only these 4 sections, speaking directly to you (the person who took the test). Never use clinical diagnoses or medical labels.
 
-[Current State]
-1–2 observational sentences without judgment. Use phrases like "It appears that..." or "There seems to be a tendency toward..."
+[How You Are Now]
+1–2 gentle sentences about where you seem to be. Use "You may be feeling..." or "It seems you..."
 
-[Key Observations]
-2–3 noteworthy responses, listed briefly. End with: "These areas may be worth exploring further in your session."
+[What Stands Out]
+2–3 of your noteworthy responses, briefly. End with: "These are worth gently exploring on your own."
 
-[Session Guide]
-- Opening questions: 2 open-ended questions to invite the client to share (written as examples)
-- Points to watch: 1–2 subtle signals or contexts easy to overlook
+[Ask Yourself]
+- Reflective questions: 2 open questions to ask yourself
+- Watch for: 1–2 easily-missed signals in how you feel
 
-[Daily Suggestions]
-1–2 small, manageable practices for everyday life. No mention of treatment or medication.`
+[Small Steps for Today]
+1–2 small, manageable practices. No mention of treatment or medication.`
 
   const fmt = lang === 'en' ? psychFormatEn : (isBiblical ? biblicalFormat : psychFormat)
   const NL = '\n'
