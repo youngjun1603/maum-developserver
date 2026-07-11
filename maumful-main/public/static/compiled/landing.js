@@ -515,6 +515,9 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
       }
     },
     tl("\uBB34\uB8CC \uC2DC\uC791", "Get Started")
+  ))), /* @__PURE__ */ React.createElement("div", { style: { background: "#f4faf6", borderTop: "1px solid rgba(45,106,79,0.10)", padding: "7px 20px", textAlign: "center" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: "#2d6a4f", lineHeight: 1.6, fontStyle: "italic" } }, tl(
+    '\uC694\uD55C\uBCF5\uC74C 3:16 "\uD558\uB098\uB2D8\uC774 \uC138\uC0C1\uC744 \uC774\uCC98\uB7FC \uC0AC\uB791\uD558\uC0AC \uB3C5\uC0DD\uC790\uB97C \uC8FC\uC168\uC73C\uB2C8, \uC774\uB294 \uADF8\uB97C \uBBFF\uB294 \uC790\uB9C8\uB2E4 \uBA78\uB9DD\uD558\uC9C0 \uC54A\uACE0 \uC601\uC0DD\uC744 \uC5BB\uAC8C \uD558\uB824 \uD558\uC2EC\uC774\uB77C."',
+    'John 3:16 "For this is how God loved the world: He gave his one and only Son, so that everyone who believes in him will not perish but have eternal life."'
   ))));
 }
 function MfSnsHeroBtn({ tl }) {
