@@ -1423,8 +1423,15 @@ type IntegratedTest = { testType: string; score: number | null; level: string | 
 function summarizeIntegratedResult(testType: string, r: Record<string, unknown> | null): string {
   if (!r) return ''
   try {
-    if (testType === 'BIG5' && r.factors) return 'BIG5 ' + Object.entries(r.factors as Record<string, number>).map(([k, v]) => k + ' ' + v).join(', ')
-    if (testType === 'LOST' && r.typeCode) return '행동유형 ' + r.typeCode + (r.typeName ? '(' + r.typeName + ')' : '')
+    // BIG5: save-result가 calcBig5() 반환값(=factors 객체 그 자체)을 저장 → 최상위 숫자 값이 곧 요인 점수
+    if (testType === 'BIG5') {
+      const fx = Object.entries(r).filter(([, v]) => typeof v === 'number')
+      if (fx.length) return 'BIG5 ' + fx.map(([k, v]) => k + ' ' + v).join(', ')
+    }
+    if (testType === 'LOST' && r.typeCode) {
+      const nm = (r.typeInfo as { name?: string } | undefined)?.name
+      return '행동유형 ' + r.typeCode + (nm ? '(' + nm + ')' : '')
+    }
     if (testType === 'DSI' && r.scales) return (r.total != null ? '총점 ' + r.total + ', ' : '') + Object.entries(r.scales as Record<string, number>).map(([k, v]) => k + ' ' + v).join(', ')
   } catch { /* 요약 실패 무시 */ }
   return ''
@@ -1519,6 +1526,8 @@ app.post('/api/ai-analyze/integrated', async (c) => {
   } catch { /* mood 요약 실패는 무시 */ }
 
   const { system, user } = buildIntegratedPrompt(tests, lang, counselingType, moodSummary)
+  // ⚠️ sonnet-4-6/haiku-4-5는 temperature 허용. 모델을 sonnet-5/opus-4.7+로 올릴 땐 temperature 제거 필수(안 그러면 400).
+  // system 배열의 cache_control은 현 프롬프트 길이(<2048토큰)에선 캐시 미적용(에러 아님) — 프롬프트가 커지면 자동 적용.
   const INTEGRATED_FALLBACKS = ['claude-sonnet-4-6', 'claude-haiku-4-5-20251001']
   let upstream!: Response
   for (const model of INTEGRATED_FALLBACKS) {
