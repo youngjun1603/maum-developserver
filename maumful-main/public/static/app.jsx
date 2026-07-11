@@ -343,6 +343,7 @@ function PsychologicalTestSystem() {
   const [integratedText, setIntegratedText]       = useState('');
   const [integratedLoading, setIntegratedLoading] = useState(false);
   const [integratedErr, setIntegratedErr]         = useState('');
+  const [integratedFeedback, setIntegratedFeedback] = useState('');
 
 
   // ── AI 채팅 상태 (기존 유지) ─────────────────────────────
@@ -4094,10 +4095,26 @@ function PsychologicalTestSystem() {
               )}
               {integratedErr && <div className="text-sm text-red-500 mt-2">{integratedErr}</div>}
               {integratedText && (
-                <div className="mt-1 bg-white rounded-xl p-4 border border-indigo-100 text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-                  {integratedText}
+                <div className="mt-1">
+                  <div className="bg-white rounded-xl p-4 border border-indigo-100 text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{integratedText}</div>
                   {!integratedLoading && (
-                    <button onClick={runIntegratedAnalysis} className="block mt-3 text-xs text-indigo-500 hover:text-indigo-700">🔄 {t("다시 생성", "Regenerate")}</button>
+                    <div className="mt-3">
+                      {/* ⑦⑨ 결과 기반 클릭형 액션 */}
+                      <div className="flex flex-wrap gap-2">
+                        <button onClick={() => setView('aiCounsel')} className="flex-1 min-w-[130px] py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition">💬 {t("이 결과로 AI 상담", "Discuss with AI")}</button>
+                        <button onClick={() => openMaumGame()} className="flex-1 min-w-[130px] py-2.5 rounded-xl bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs font-bold transition">🎮 {t("추천 힐링 게임", "Healing games")}</button>
+                      </div>
+                      <div className="flex items-center justify-between mt-3">
+                        <button onClick={runIntegratedAnalysis} className="text-xs text-indigo-500 hover:text-indigo-700">🔄 {t("다시 생성", "Regenerate")}</button>
+                        {integratedFeedback
+                          ? <span className="text-xs text-gray-400">{t("피드백 감사합니다 🙏", "Thanks for your feedback 🙏")}</span>
+                          : <span className="flex items-center gap-2 text-xs text-gray-400">
+                              {t("도움이 됐나요?", "Helpful?")}
+                              <button onClick={() => sendIntegratedFeedback('up')} className="text-base hover:scale-110 transition" title={t("도움됨","Helpful")}>👍</button>
+                              <button onClick={() => sendIntegratedFeedback('down')} className="text-base hover:scale-110 transition" title={t("아쉬움","Not helpful")}>👎</button>
+                            </span>}
+                      </div>
+                    </div>
                   )}
                 </div>
               )}
@@ -7460,6 +7477,18 @@ function PsychologicalTestSystem() {
     } finally {
       setIntegratedLoading(false);
     }
+  }
+
+  // ⑩ 통합해석 품질 피드백 (👍/👎) — 실패해도 UX 무영향
+  async function sendIntegratedFeedback(rating) {
+    setIntegratedFeedback(rating);
+    try {
+      await fetch('/api/ai-feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+        body: JSON.stringify({ feature: 'integrated', rating }),
+      });
+    } catch { /* 무시 */ }
   }
 
   // ── 마스터 전용 에러 로그 뷰어 ─────────────────────────

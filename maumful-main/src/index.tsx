@@ -1393,7 +1393,7 @@ app.post('/api/ai-analyze', async (c) => {
     upstream = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model, max_tokens: 1500, stream: true, messages: [{ role: 'user', content: prompt }] }),
+      body: JSON.stringify({ model, max_tokens: 1500, temperature: 0.3, stream: true, messages: [{ role: 'user', content: prompt }] }),
     })
     if (upstream.ok || (upstream.status !== 404 && upstream.status !== 403)) { analyzedModel = model; break }
     analyzedModel = model
@@ -1430,9 +1430,10 @@ function summarizeIntegratedResult(testType: string, r: Record<string, unknown> 
   return ''
 }
 
-function buildIntegratedPrompt(tests: IntegratedTest[], lang: string, counselingType: string): { system: string; user: string } {
+function buildIntegratedPrompt(tests: IntegratedTest[], lang: string, counselingType: string, moodSummary: string): { system: string; user: string } {
   const isBiblical = counselingType === 'biblical'
   const NL = '\n'
+  const moodLine = moodSummary ? (NL + (lang === 'en' ? 'Mood trend (AI counseling logs): ' : '기분 추이(AI 상담 기록): ') + moodSummary) : ''
   const testLines = tests.map((t) => {
     let line = '- ' + t.testType + ': 점수 ' + (t.score ?? 'N/A') + (t.level ? ' (' + t.level + ')' : '')
     if (t.prevScore != null && t.score != null) {
@@ -1448,7 +1449,7 @@ function buildIntegratedPrompt(tests: IntegratedTest[], lang: string, counseling
 
   if (lang === 'en') {
     const systemEn = 'You are a warm psychological guide for Maumful. Integrate MULTIPLE assessment results into ONE coherent picture of the person, finding connections across tests. Base every statement ONLY on the provided scores/levels; never infer missing data. Never use clinical diagnoses. If depression/anxiety scores are high or severe, gently include a line pointing to professional help. Write only these sections: [Integrated Profile] 2-3 sentences on the core cross-test pattern. [Connections] 2-3 ways the tests interact. [Strengths & Resources]. [Watch Areas]. [Change Over Time] (only if prior scores given). [Next Steps] specific items from — ' + assets + '. End with: "This is a reference for self-understanding and does not replace professional consultation."'
-    return { system: systemEn, user: 'Assessment results:' + NL + testLines }
+    return { system: systemEn, user: 'Assessment results:' + NL + testLines + moodLine }
   }
 
   const persona = isBiblical
@@ -1465,7 +1466,7 @@ function buildIntegratedPrompt(tests: IntegratedTest[], lang: string, counseling
     '[변화 흐름] 지난번 대비 점수 변화가 있으면 그 흐름을 1~2문장. (변화 데이터가 없으면 이 섹션 생략)' + NL +
     '[다음 단계 추천] 이 사람에게 맞는 것을 아래에서 구체적으로 2~3개. ' + assets + NL +
     '마지막 문장: "본 해석은 자기이해를 위한 참고 자료이며 전문가 상담을 대체하지 않습니다."'
-  return { system: systemKo, user: '검사 결과:' + NL + testLines }
+  return { system: systemKo, user: '검사 결과:' + NL + testLines + moodLine }
 }
 
 app.post('/api/ai-analyze/integrated', async (c) => {
@@ -1505,7 +1506,19 @@ app.post('/api/ai-analyze/integrated', async (c) => {
   }))
   if (tests.length < 2) return c.json({ error: '통합 해석은 서로 다른 검사 2개 이상을 완료하면 이용할 수 있어요.' }, 400)
 
-  const { system, user } = buildIntegratedPrompt(tests, lang, counselingType)
+  // ② 기분 추이(mood_logs) 요약 — 최근/이전 절반 평균 비교 (기록 3회 이상일 때만)
+  let moodSummary = ''
+  try {
+    const moodRes = await DB.prepare('SELECT mood_score FROM mood_logs WHERE user_id=? ORDER BY created_at DESC LIMIT 20').bind(userId).all<{ mood_score: number }>()
+    const scores = (moodRes.results ?? []).map((m) => m.mood_score)
+    if (scores.length >= 3) {
+      const half = Math.ceil(scores.length / 2)
+      const avg = (a: number[]) => Math.round(a.reduce((s, x) => s + x, 0) / a.length)
+      moodSummary = (lang === 'en' ? 'recent avg ' : '최근 평균 ') + avg(scores.slice(0, half)) + '/100' + (lang === 'en' ? ', earlier ' : ', 이전 ') + avg(scores.slice(half)) + '/100 (' + scores.length + (lang === 'en' ? ' logs)' : '회 기록)')
+    }
+  } catch { /* mood 요약 실패는 무시 */ }
+
+  const { system, user } = buildIntegratedPrompt(tests, lang, counselingType, moodSummary)
   const INTEGRATED_FALLBACKS = ['claude-sonnet-4-6', 'claude-haiku-4-5-20251001']
   let upstream!: Response
   for (const model of INTEGRATED_FALLBACKS) {
@@ -1537,6 +1550,21 @@ app.post('/api/ai-analyze/integrated', async (c) => {
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     },
   })
+})
+
+// ============================================================
+// ⑩ AI 해석 품질 피드백 (👍/👎) — 프롬프트 개선용. 실패해도 UX 무영향.
+// ============================================================
+app.post('/api/ai-feedback', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ error: '로그인이 필요합니다.' }, 401)
+  const b = await c.req.json().catch(() => ({})) as { feature?: string; rating?: string }
+  if (!b.feature || (b.rating !== 'up' && b.rating !== 'down')) return c.json({ error: '파라미터 부족' }, 400)
+  try {
+    await DB.prepare('INSERT INTO ai_feedback (user_id, feature, rating) VALUES (?, ?, ?)').bind(userId, String(b.feature).slice(0, 40), b.rating).run()
+  } catch (e) { console.error('[ai-feedback] insert error:', e); return c.json({ success: false }, 200) }
+  return c.json({ success: true })
 })
 
 // ============================================================
