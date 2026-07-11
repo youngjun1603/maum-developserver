@@ -1241,7 +1241,11 @@ Please write only these 4 sections, speaking directly to you (the person who too
 1–2 small, manageable practices. No mention of treatment or medication.`
 
   const fmt = lang === 'en' ? psychFormatEn : (isBiblical ? biblicalFormat : psychFormat)
-  return ctx + '\n' + fmt
+  // ⚠️ 프론트가 마크다운 미렌더(pre-wrap)라 ##·**·--- 기호가 그대로 노출됨 → 마크다운 금지 지시
+  const noMd = lang === 'en'
+    ? '\n\nFormatting: plain text only. Do NOT use any markdown (#, ##, **, ---, >, `). Write section titles exactly in [Title] bracket form as above.'
+    : '\n\n출력 형식(중요): 마크다운 기호(#, ##, **, ---, >, `)를 절대 쓰지 마세요. 섹션 제목은 위 [제목] 대괄호 형태 그대로, 본문은 일반 문장으로만 작성하세요.'
+  return ctx + '\n' + fmt + noMd
 }
 
 function buildAnalysisPrompt(req: AnalyzeRequest): string {
@@ -1473,7 +1477,7 @@ function buildIntegratedPrompt(tests: IntegratedTest[], lang: string, counseling
 
   if (lang === 'en') {
     const systemEn = 'You are a warm psychological guide for Maumful. Integrate MULTIPLE assessment results into ONE coherent picture of the person, finding connections across tests. Base every statement ONLY on the provided scores/levels; never infer missing data. Never use clinical diagnoses. If depression/anxiety scores are high or severe, gently include a line pointing to professional help. Write only these sections: [Integrated Profile] 2-3 sentences on the core cross-test pattern. [Connections] 2-3 ways the tests interact. [Strengths & Resources]. [Watch Areas]. [Change Over Time] (only if prior scores given). [Next Steps] specific items from — ' + assets + '. End with: "This is a reference for self-understanding and does not replace professional consultation."'
-    return { system: systemEn, user: 'Assessment results:' + NL + testLines + moodLine }
+    return { system: systemEn + '\nFormatting: plain text only, no markdown (#, ##, **, ---, >). Section titles in [Title] bracket form.', user: 'Assessment results:' + NL + testLines + moodLine }
   }
 
   const persona = isBiblical
@@ -1489,7 +1493,8 @@ function buildIntegratedPrompt(tests: IntegratedTest[], lang: string, counseling
     '[주의 깊게 볼 부분] 놓치기 쉬운 신호 1~2가지.' + NL +
     '[변화 흐름] 지난번 대비 점수 변화가 있으면 그 흐름을 1~2문장. (변화 데이터가 없으면 이 섹션 생략)' + NL +
     '[다음 단계 추천] 이 사람에게 맞는 것을 아래에서 구체적으로 2~3개. ' + assets + NL +
-    '마지막 문장: "본 해석은 자기이해를 위한 참고 자료이며 전문가 상담을 대체하지 않습니다."'
+    '마지막 문장: "본 해석은 자기이해를 위한 참고 자료이며 전문가 상담을 대체하지 않습니다."' + NL +
+    '출력 형식(중요): 마크다운 기호(#, ##, **, ---, >, `) 절대 금지. 섹션 제목은 [제목] 대괄호 형태 그대로, 본문은 일반 문장으로만.'
   return { system: systemKo, user: '검사 결과:' + NL + testLines + moodLine }
 }
 
