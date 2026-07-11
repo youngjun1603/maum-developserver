@@ -339,6 +339,10 @@ function PsychologicalTestSystem() {
   const [aiAnalysis, setAiAnalysis]             = useState({});
   const [aiLoading, setAiLoading]               = useState({});
   const [aiError, setAiError]                   = useState({});
+  // 🧩 통합 심층 해석 (여러 검사 종합) 전용 state — 기존 aiAnalysis와 분리
+  const [integratedText, setIntegratedText]       = useState('');
+  const [integratedLoading, setIntegratedLoading] = useState(false);
+  const [integratedErr, setIntegratedErr]         = useState('');
 
 
   // ── AI 채팅 상태 (기존 유지) ─────────────────────────────
@@ -4070,6 +4074,37 @@ function PsychologicalTestSystem() {
             })}
           </div>
 
+          {/* 🧩 통합 심층 해석 — 서로 다른 검사 2개 이상 완료 시 노출 */}
+          {new Set(testHistory.map(h => h.test_type)).size >= 2 && (
+            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-5 border-2 border-indigo-200">
+              <div className="flex items-start gap-3 mb-3">
+                <span className="text-3xl">🧩</span>
+                <div className="flex-1">
+                  <h3 className="font-bold text-gray-800 mb-1">{t("통합 심층 해석", "Integrated Deep Insight")}</h3>
+                  <p className="text-sm text-gray-500 leading-relaxed">{t("여러 검사를 한 사람의 관점으로 종합해, 검사 간 연결·강점·변화 흐름과 다음 단계를 AI가 짚어드려요.", "AI weaves your multiple assessments into one coherent picture — connections, strengths, changes, and next steps.")}</p>
+                </div>
+              </div>
+              {!integratedText && !integratedLoading && (
+                <button onClick={runIntegratedAnalysis} className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm transition">
+                  ✨ {t("통합 해석 생성하기", "Generate integrated insight")}
+                </button>
+              )}
+              {integratedLoading && !integratedText && (
+                <div className="text-center py-4 text-indigo-600 text-sm animate-pulse">{t("여러 검사를 종합하는 중…", "Synthesizing your assessments…")}</div>
+              )}
+              {integratedErr && <div className="text-sm text-red-500 mt-2">{integratedErr}</div>}
+              {integratedText && (
+                <div className="mt-1 bg-white rounded-xl p-4 border border-indigo-100 text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                  {integratedText}
+                  {!integratedLoading && (
+                    <button onClick={runIntegratedAnalysis} className="block mt-3 text-xs text-indigo-500 hover:text-indigo-700">🔄 {t("다시 생성", "Regenerate")}</button>
+                  )}
+                </div>
+              )}
+              <p className="text-[11px] text-gray-400 mt-2">{t("자기이해를 위한 참고 자료이며 의학적 진단이 아닙니다.", "For self-understanding only, not a medical diagnosis.")}</p>
+            </div>
+          )}
+
           {/* 최근 검사 이력 */}
           {testHistory.length > 0 && (
             <div>
@@ -7380,6 +7415,50 @@ function PsychologicalTestSystem() {
       setAiError(p => ({ ...p, [key]: e.message || "AI 분석 중 오류가 발생했습니다." }));
     } finally {
       setAiLoading(p => ({ ...p, [key]: false }));
+    }
+  }
+
+  // 🧩 통합 심층 해석 — 여러 검사를 종합 (/api/ai-analyze/integrated, 기존 runAiAnalysis와 별개)
+  async function runIntegratedAnalysis() {
+    if (isAiChatExhausted()) { setShowAiLimitModal(true); return; }
+    setIntegratedLoading(true); setIntegratedErr(''); setIntegratedText('');
+    try {
+      const res = await fetch('/api/ai-analyze/integrated', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+        body: JSON.stringify({ counselingType: counselingMode || 'psychological', lang }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        if (res.status === 401) throw new Error(t('로그인이 필요합니다.', 'Login required.'));
+        if (res.status === 429) throw new Error(t('요청이 너무 많습니다. 잠시 후 다시 시도해주세요.', 'Too many requests. Please try again shortly.'));
+        throw new Error(err.error || t('서버 오류가 발생했습니다.', 'A server error occurred.'));
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6).trim();
+          if (data === '[DONE]') break;
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+              setIntegratedText(p => p + parsed.delta.text);
+            }
+          } catch {}
+        }
+      }
+    } catch (e) {
+      setIntegratedErr(e.message || t('AI 분석 중 오류가 발생했습니다.', 'An error occurred during analysis.'));
+    } finally {
+      setIntegratedLoading(false);
     }
   }
 

@@ -429,6 +429,9 @@ function PsychologicalTestSystem() {
   const [aiAnalysis, setAiAnalysis] = useState({});
   const [aiLoading, setAiLoading] = useState({});
   const [aiError, setAiError] = useState({});
+  const [integratedText, setIntegratedText] = useState("");
+  const [integratedLoading, setIntegratedLoading] = useState(false);
+  const [integratedErr, setIntegratedErr] = useState("");
   const [chatOpen, setChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
@@ -3523,7 +3526,7 @@ Visit Maumful and take the same test again to compare your progress.`));
         /* @__PURE__ */ React.createElement("div", { className: "text-3xl sm:mb-2 shrink-0 mt-0.5" }, m.emoji),
         /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0 pr-14 sm:pr-0" }, /* @__PURE__ */ React.createElement("div", { className: "font-bold text-gray-800 text-sm" }, m.label), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 mt-0.5" }, m.desc), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mt-1.5 leading-relaxed" }, m.summary), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-300 mt-1.5 flex items-center gap-1" }, /* @__PURE__ */ React.createElement("span", null, "\u{1F4CB} ", m.questions, t("\uBB38\uD56D", "Q")), /* @__PURE__ */ React.createElement("span", null, "\xB7"), /* @__PURE__ */ React.createElement("span", null, "\u23F1 ", t("\uC57D", ""), " ", m.time)), /* @__PURE__ */ React.createElement("div", { className: "mt-2 text-xs text-green-600 font-semibold sm:opacity-0 sm:group-hover:opacity-100 transition" }, FREE_TESTS.includes(type) ? t("\uBC14\uB85C \uC2DC\uC791 \u2192", "Start now \u2192") : t("\uD06C\uB808\uB527\uC73C\uB85C \uC774\uC6A9 \u2192", "Use credits \u2192")))
       );
-    })), testHistory.length > 0 && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mb-3" }, /* @__PURE__ */ React.createElement("h3", { className: "font-bold text-gray-700" }, t("\uCD5C\uADFC \uAC80\uC0AC", "Recent Tests")), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("myPage"), className: "text-xs text-green-600 hover:text-green-800" }, t("\uC804\uCCB4 \uBCF4\uAE30 \u2192", "View all \u2192"))), /* @__PURE__ */ React.createElement("div", { className: "space-y-2" }, testHistory.slice(0, 5).map((h, i) => {
+    })), new Set(testHistory.map((h) => h.test_type)).size >= 2 && /* @__PURE__ */ React.createElement("div", { className: "bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-5 border-2 border-indigo-200" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-start gap-3 mb-3" }, /* @__PURE__ */ React.createElement("span", { className: "text-3xl" }, "\u{1F9E9}"), /* @__PURE__ */ React.createElement("div", { className: "flex-1" }, /* @__PURE__ */ React.createElement("h3", { className: "font-bold text-gray-800 mb-1" }, t("\uD1B5\uD569 \uC2EC\uCE35 \uD574\uC11D", "Integrated Deep Insight")), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-gray-500 leading-relaxed" }, t("\uC5EC\uB7EC \uAC80\uC0AC\uB97C \uD55C \uC0AC\uB78C\uC758 \uAD00\uC810\uC73C\uB85C \uC885\uD569\uD574, \uAC80\uC0AC \uAC04 \uC5F0\uACB0\xB7\uAC15\uC810\xB7\uBCC0\uD654 \uD750\uB984\uACFC \uB2E4\uC74C \uB2E8\uACC4\uB97C AI\uAC00 \uC9DA\uC5B4\uB4DC\uB824\uC694.", "AI weaves your multiple assessments into one coherent picture \u2014 connections, strengths, changes, and next steps.")))), !integratedText && !integratedLoading && /* @__PURE__ */ React.createElement("button", { onClick: runIntegratedAnalysis, className: "w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm transition" }, "\u2728 ", t("\uD1B5\uD569 \uD574\uC11D \uC0DD\uC131\uD558\uAE30", "Generate integrated insight")), integratedLoading && !integratedText && /* @__PURE__ */ React.createElement("div", { className: "text-center py-4 text-indigo-600 text-sm animate-pulse" }, t("\uC5EC\uB7EC \uAC80\uC0AC\uB97C \uC885\uD569\uD558\uB294 \uC911\u2026", "Synthesizing your assessments\u2026")), integratedErr && /* @__PURE__ */ React.createElement("div", { className: "text-sm text-red-500 mt-2" }, integratedErr), integratedText && /* @__PURE__ */ React.createElement("div", { className: "mt-1 bg-white rounded-xl p-4 border border-indigo-100 text-sm text-gray-700 leading-relaxed whitespace-pre-wrap" }, integratedText, !integratedLoading && /* @__PURE__ */ React.createElement("button", { onClick: runIntegratedAnalysis, className: "block mt-3 text-xs text-indigo-500 hover:text-indigo-700" }, "\u{1F504} ", t("\uB2E4\uC2DC \uC0DD\uC131", "Regenerate"))), /* @__PURE__ */ React.createElement("p", { className: "text-[11px] text-gray-400 mt-2" }, t("\uC790\uAE30\uC774\uD574\uB97C \uC704\uD55C \uCC38\uACE0 \uC790\uB8CC\uC774\uBA70 \uC758\uD559\uC801 \uC9C4\uB2E8\uC774 \uC544\uB2D9\uB2C8\uB2E4.", "For self-understanding only, not a medical diagnosis."))), testHistory.length > 0 && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mb-3" }, /* @__PURE__ */ React.createElement("h3", { className: "font-bold text-gray-700" }, t("\uCD5C\uADFC \uAC80\uC0AC", "Recent Tests")), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("myPage"), className: "text-xs text-green-600 hover:text-green-800" }, t("\uC804\uCCB4 \uBCF4\uAE30 \u2192", "View all \u2192"))), /* @__PURE__ */ React.createElement("div", { className: "space-y-2" }, testHistory.slice(0, 5).map((h, i) => {
       const prevSame = testHistory.slice(i + 1).find((p) => p.test_type === h.test_type);
       const daysSince = Math.floor((/* @__PURE__ */ new Date() - new Date(h.performed_at)) / (1e3 * 60 * 60 * 24));
       const testEmoji2 = { PHQ9: "\u{1F614}", GAD7: "\u{1F630}", DASS21: "\u{1F4CA}", BIG5: "\u{1F31F}", LOST: "\u{1F9ED}", SCT: "\u270D\uFE0F", DSI: "\u{1FA9E}", BURNOUT: "\u{1F525}", RIASEC: "\u{1F50D}", VALUES: "\u{1F48E}" };
@@ -6266,6 +6269,55 @@ AI \uBD84\uC11D \uAE30\uB2A5\uC774 \uC911\uB2E8\uB429\uB2C8\uB2E4.`)) return;
       setAiError((p) => ({ ...p, [key]: e.message || "AI \uBD84\uC11D \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4." }));
     } finally {
       setAiLoading((p) => ({ ...p, [key]: false }));
+    }
+  }
+  async function runIntegratedAnalysis() {
+    var _a2;
+    if (isAiChatExhausted()) {
+      setShowAiLimitModal(true);
+      return;
+    }
+    setIntegratedLoading(true);
+    setIntegratedErr("");
+    setIntegratedText("");
+    try {
+      const res = await fetch("/api/ai-analyze/integrated", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...api._authHeader() },
+        body: JSON.stringify({ counselingType: counselingMode || "psychological", lang })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        if (res.status === 401) throw new Error(t("\uB85C\uADF8\uC778\uC774 \uD544\uC694\uD569\uB2C8\uB2E4.", "Login required."));
+        if (res.status === 429) throw new Error(t("\uC694\uCCAD\uC774 \uB108\uBB34 \uB9CE\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.", "Too many requests. Please try again shortly."));
+        throw new Error(err.error || t("\uC11C\uBC84 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.", "A server error occurred."));
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop();
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const data = line.slice(6).trim();
+          if (data === "[DONE]") break;
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.type === "content_block_delta" && ((_a2 = parsed.delta) == null ? void 0 : _a2.text)) {
+              setIntegratedText((p) => p + parsed.delta.text);
+            }
+          } catch {
+          }
+        }
+      }
+    } catch (e) {
+      setIntegratedErr(e.message || t("AI \uBD84\uC11D \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.", "An error occurred during analysis."));
+    } finally {
+      setIntegratedLoading(false);
     }
   }
   function MasterDebugPanel() {

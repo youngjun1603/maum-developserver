@@ -1414,6 +1414,132 @@ app.post('/api/ai-analyze', async (c) => {
 })
 
 // ============================================================
+// ① 통합 심층 해석 — 여러 검사를 "한 사람"으로 종합 (기존 /api/ai-analyze와 완전 별개·추가)
+//   근거구속(④)·system+prompt caching(⑥)·실행연계 추천(⑦)·우울/불안 안전분기 반영.
+//   데이터는 이미 저장된 test_history 메타만 사용(검사 결과 서버 미저장 원칙 유지).
+// ============================================================
+type IntegratedTest = { testType: string; score: number | null; level: string | null; result: Record<string, unknown> | null; prevScore: number | null }
+
+function summarizeIntegratedResult(testType: string, r: Record<string, unknown> | null): string {
+  if (!r) return ''
+  try {
+    if (testType === 'BIG5' && r.factors) return 'BIG5 ' + Object.entries(r.factors as Record<string, number>).map(([k, v]) => k + ' ' + v).join(', ')
+    if (testType === 'LOST' && r.typeCode) return '행동유형 ' + r.typeCode + (r.typeName ? '(' + r.typeName + ')' : '')
+    if (testType === 'DSI' && r.scales) return (r.total != null ? '총점 ' + r.total + ', ' : '') + Object.entries(r.scales as Record<string, number>).map(([k, v]) => k + ' ' + v).join(', ')
+  } catch { /* 요약 실패 무시 */ }
+  return ''
+}
+
+function buildIntegratedPrompt(tests: IntegratedTest[], lang: string, counselingType: string): { system: string; user: string } {
+  const isBiblical = counselingType === 'biblical'
+  const NL = '\n'
+  const testLines = tests.map((t) => {
+    let line = '- ' + t.testType + ': 점수 ' + (t.score ?? 'N/A') + (t.level ? ' (' + t.level + ')' : '')
+    if (t.prevScore != null && t.score != null) {
+      const d = t.score - t.prevScore
+      line += ' [지난번 ' + t.prevScore + ' 대비 ' + (d > 0 ? '+' : '') + d + ']'
+    }
+    const sum = summarizeIntegratedResult(t.testType, t.result)
+    if (sum) line += ' | ' + sum
+    return line
+  }).join(NL)
+
+  const assets = '마음풀 자산: 치유게임(마음정원·감정날씨·감사일기·마음나무·번아웃회복·기분기록·집중·걱정상자), 후속검사(PHQ-9·GAD-7·DASS-21·BIG5·LOST·SDRI 자기분화·K-MBI 번아웃), CBT 8주 플랜(우울·불안·번아웃 이력 시), AI 상담(검사 결과 기반 대화)'
+
+  if (lang === 'en') {
+    const systemEn = 'You are a warm psychological guide for Maumful. Integrate MULTIPLE assessment results into ONE coherent picture of the person, finding connections across tests. Base every statement ONLY on the provided scores/levels; never infer missing data. Never use clinical diagnoses. If depression/anxiety scores are high or severe, gently include a line pointing to professional help. Write only these sections: [Integrated Profile] 2-3 sentences on the core cross-test pattern. [Connections] 2-3 ways the tests interact. [Strengths & Resources]. [Watch Areas]. [Change Over Time] (only if prior scores given). [Next Steps] specific items from — ' + assets + '. End with: "This is a reference for self-understanding and does not replace professional consultation."'
+    return { system: systemEn, user: 'Assessment results:' + NL + testLines }
+  }
+
+  const persona = isBiblical
+    ? '당신은 마음풀의 기독교 상담 안내자입니다. 따뜻한 신앙적 언어로, 진단적 표현 없이 살핍니다.'
+    : '당신은 마음풀의 심리 안내자입니다. 판단 없이 따뜻하게, 임상·진단적 표현 없이 안내합니다.'
+  const systemKo = persona + NL +
+    '여러 검사 결과를 "한 사람"으로 통합 해석하는 것이 당신의 핵심 역할입니다. 검사를 따로 보지 말고, 서로 어떻게 연결·상호작용하는지 찾아 하나의 그림으로 엮으세요.' + NL +
+    '규칙: (1) 제공된 점수·수준에 근거해서만 해석하고 없는 정보는 추측하지 마세요. (2) 진단명·병명 금지. (3) 우울(PHQ-9)·불안(GAD-7)이 높거나 심각 수준이면, 부드럽게 전문 도움과 긴급자원(자살예방 상담 109 · 정신건강 위기상담 1577-0199, 24시간)을 안내하는 문장을 자연스럽게 포함하세요.' + NL + NL +
+    '아래 섹션만 작성하세요:' + NL +
+    '[통합 프로파일] 여러 검사를 관통하는 핵심 패턴 2~3문장. "~처럼 보입니다" 어법.' + NL +
+    '[검사 간 연결] 검사들이 서로 어떻게 맞물리는지 2~3가지.' + NL +
+    '[강점과 자원] 결과에서 읽히는 강점 1~2가지.' + NL +
+    '[주의 깊게 볼 부분] 놓치기 쉬운 신호 1~2가지.' + NL +
+    '[변화 흐름] 지난번 대비 점수 변화가 있으면 그 흐름을 1~2문장. (변화 데이터가 없으면 이 섹션 생략)' + NL +
+    '[다음 단계 추천] 이 사람에게 맞는 것을 아래에서 구체적으로 2~3개. ' + assets + NL +
+    '마지막 문장: "본 해석은 자기이해를 위한 참고 자료이며 전문가 상담을 대체하지 않습니다."'
+  return { system: systemKo, user: '검사 결과:' + NL + testLines }
+}
+
+app.post('/api/ai-analyze/integrated', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ error: '로그인이 필요합니다.' }, 401)
+
+  const u = await DB.prepare('SELECT email FROM users WHERE id=?').bind(userId).first<{ email: string }>()
+  if (!isMasterAccount(u?.email)) {
+    const rl = await checkRateLimit(KV, `analyze-int:${userId}`, 5, 60)
+    if (!rl.allowed) return c.json({ error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' }, 429)
+  }
+
+  const apiKey = await getAnthropicKey(DB, c.env)
+  if (!apiKey) return c.json({ error: 'API 키 미설정' }, 500)
+
+  let body: { counselingType?: string; lang?: string }
+  try { body = await c.req.json() } catch { body = {} }
+  const lang = body.lang ?? 'ko'
+  const counselingType = body.counselingType ?? 'psychological'
+
+  // 검사별 최신+직전 결과 수집 (이미 저장된 test_history 메타만 — 서버 미저장 원칙 유지)
+  const rowsRes = await DB.prepare(
+    'SELECT test_type, score, level, result_json, performed_at FROM test_history WHERE user_id=? ORDER BY performed_at DESC LIMIT 60'
+  ).bind(userId).all<{ test_type: string; score: number | null; level: string | null; result_json: string | null }>()
+  const byType = new Map<string, Array<{ score: number | null; level: string | null; result_json: string | null }>>()
+  for (const r of (rowsRes.results ?? [])) {
+    const arr = byType.get(r.test_type) ?? []
+    arr.push(r); byType.set(r.test_type, arr)
+  }
+  const tests: IntegratedTest[] = [...byType.entries()].map(([testType, arr]) => ({
+    testType,
+    score: arr[0].score ?? null,
+    level: arr[0].level ?? null,
+    result: arr[0].result_json ? (() => { try { return JSON.parse(arr[0].result_json as string) } catch { return null } })() : null,
+    prevScore: arr[1]?.score ?? null,
+  }))
+  if (tests.length < 2) return c.json({ error: '통합 해석은 서로 다른 검사 2개 이상을 완료하면 이용할 수 있어요.' }, 400)
+
+  const { system, user } = buildIntegratedPrompt(tests, lang, counselingType)
+  const INTEGRATED_FALLBACKS = ['claude-sonnet-4-6', 'claude-haiku-4-5-20251001']
+  let upstream!: Response
+  for (const model of INTEGRATED_FALLBACKS) {
+    upstream = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model,
+        max_tokens: 1800,
+        temperature: 0.4,
+        stream: true,
+        system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
+        messages: [{ role: 'user', content: user }],
+      }),
+    })
+    if (upstream.ok || (upstream.status !== 404 && upstream.status !== 403)) break
+  }
+  if (!upstream.ok) {
+    const errBody = await upstream.text().catch(() => '')
+    console.error('[ai-analyze-integrated] error:', upstream.status, errBody.slice(0, 300))
+    return c.json({ error: 'AI 서비스 오류 (' + upstream.status + ')' }, 502)
+  }
+  return new Response(upstream.body, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  })
+})
+
+// ============================================================
 // AI 채팅 — 크레딧 차감 + 실패 시 환불
 // ============================================================
 // ============================================================
