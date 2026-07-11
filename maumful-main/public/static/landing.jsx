@@ -392,10 +392,7 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
       {/* 성경구절 띠 — 메뉴 하단 (요한복음 3:16) */}
       <div style={{ background: '#f4faf6', borderTop: '1px solid rgba(45,106,79,0.10)', padding: '7px 20px', textAlign: 'center' }}>
         <span style={{ fontSize: 13, color: '#2d6a4f', lineHeight: 1.6, fontStyle: 'italic' }}>
-          {tl(
-            '요한복음 3:16 "하나님이 세상을 이처럼 사랑하사 독생자를 주셨으니, 이는 그를 믿는 자마다 멸망하지 않고 영생을 얻게 하려 하심이라."',
-            'John 3:16 "For this is how God loved the world: He gave his one and only Son, so that everyone who believes in him will not perish but have eternal life."'
-          )}
+          John 3:16 "For this is how God loved the world: He gave his one and only Son, so that everyone who believes in him will not perish but have eternal life."
         </span>
       </div>
     </nav>
