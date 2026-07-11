@@ -4234,22 +4234,44 @@ function PsychologicalTestSystem() {
         const a = document.createElement('a'); a.href = u; a.download = `coupons_${batch}.csv`; a.click(); URL.revokeObjectURL(u);
       } catch {}
     };
-    const inp = "px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-400";
+    const inp = "w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-400";
+    const lbl = "block text-xs font-semibold text-gray-500 mb-1";
     return (
       <div className="bg-white rounded-2xl p-5 mb-5 border-2 border-purple-100">
         <div className="text-sm font-bold text-purple-700 mb-3">🎟️ 쿠폰 발행·관리</div>
         <div className="grid grid-cols-2 gap-2 mb-2">
-          <select value={mode} onChange={e => setMode(e.target.value)} className={inp}>
-            <option value="single">1회용 고유코드 N개</option>
-            <option value="campaign">공용 캠페인코드 1개</option>
-          </select>
-          <input type="number" value={value} onChange={e => setValue(e.target.value)} placeholder="지급 크레딧" className={inp} />
+          <div>
+            <label className={lbl}>쿠폰 유형</label>
+            <select value={mode} onChange={e => setMode(e.target.value)} className={inp}>
+              <option value="single">1회용 고유코드 N개</option>
+              <option value="campaign">공용 캠페인코드 1개</option>
+            </select>
+          </div>
+          <div>
+            <label className={lbl}>지급 크레딧 (등록 시 받는 크레딧)</label>
+            <input type="number" value={value} onChange={e => setValue(e.target.value)} placeholder="예: 50" className={inp} />
+          </div>
           {mode === 'single'
-            ? <input type="number" value={count} onChange={e => setCount(e.target.value)} placeholder="발행 개수" className={inp} />
-            : <input value={code} onChange={e => setCode(e.target.value.toUpperCase())} placeholder="코드(빈칸=자동)" className={inp} />}
-          {mode === 'campaign' && <input type="number" value={maxR} onChange={e => setMaxR(e.target.value)} placeholder="전체 한도(빈칸=무제한)" className={inp} />}
-          <input value={source} onChange={e => setSource(e.target.value)} placeholder="배포처/캠페인 라벨" className={inp} />
-          <input type="date" value={until} onChange={e => setUntil(e.target.value)} title="유효기간(종료)" className={inp} />
+            ? <div>
+                <label className={lbl}>발행 개수 (만들 코드 수)</label>
+                <input type="number" value={count} onChange={e => setCount(e.target.value)} placeholder="예: 10" className={inp} />
+              </div>
+            : <div>
+                <label className={lbl}>코드 (빈칸=자동 생성)</label>
+                <input value={code} onChange={e => setCode(e.target.value.toUpperCase())} placeholder="예: WELCOME2026" className={inp} />
+              </div>}
+          {mode === 'campaign' && <div>
+            <label className={lbl}>전체 한도 (빈칸=무제한)</label>
+            <input type="number" value={maxR} onChange={e => setMaxR(e.target.value)} placeholder="예: 100" className={inp} />
+          </div>}
+          <div>
+            <label className={lbl}>배포처/캠페인 라벨 (관리용 메모)</label>
+            <input value={source} onChange={e => setSource(e.target.value)} placeholder="예: 네이버블로그" className={inp} />
+          </div>
+          <div>
+            <label className={lbl}>유효기간 (종료일, 빈칸=무기한)</label>
+            <input type="date" value={until} onChange={e => setUntil(e.target.value)} className={inp} />
+          </div>
         </div>
         <div className="flex gap-2">
           <button onClick={create} disabled={busy} className="px-4 py-2 rounded-lg text-sm font-bold text-white bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300">{busy ? '발행 중...' : '발행'}</button>
