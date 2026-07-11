@@ -1770,6 +1770,7 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
             </p>
             <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
               <span>© 2026 마음서비스(마음풀). All rights reserved.</span>
+              <button onClick={() => setView('admin')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: 11, cursor: 'pointer', padding: 0, textDecoration: 'underline' }}>{tl('관리자', 'Admin')}</button>
             </div>
           </div>
         </div>
