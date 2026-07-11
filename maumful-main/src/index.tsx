@@ -1178,10 +1178,11 @@ app.post('/api/test/save-score', async (c) => {
 // ============================================================
 type AnalyzeRequest = { testType: string; counselingType: string; responses: Record<string, unknown>; category?: string; lang?: string }
 
-function buildAnalysisPrompt(req: AnalyzeRequest): string {
+// ⑥ AI 해석 시스템 프롬프트(페르소나+출력형식) — 안정적 프리픽스로 분리해 system 파라미터 + prompt caching 대상으로.
+//   (프롬프트가 커지면 캐시 자동 적용. 현재 길이<최소캐시토큰이면 무해한 미적용.)
+function buildAnalysisSystem(req: AnalyzeRequest): string {
   const lang       = req.lang ?? 'ko'
   const isBiblical = req.counselingType === 'biblical'
-  const r          = req.responses
 
   const sysKo = isBiblical
     ? '당신은 마음풀의 기독교 상담 안내자입니다. 검사를 받은 본인에게 직접 이야기하듯, 성경 말씀과 따뜻한 신앙적 공감으로 마음을 비춰 드립니다. "당신"을 주어로 존댓말로 쓰고(제3자·상담사 시점 금지), 진단적 표현은 절대 사용하지 마세요.'
@@ -1240,6 +1241,16 @@ Please write only these 4 sections, speaking directly to you (the person who too
 1–2 small, manageable practices. No mention of treatment or medication.`
 
   const fmt = lang === 'en' ? psychFormatEn : (isBiblical ? biblicalFormat : psychFormat)
+  return ctx + '\n' + fmt
+}
+
+function buildAnalysisPrompt(req: AnalyzeRequest): string {
+  const lang = req.lang ?? 'ko'
+  const r    = req.responses
+  // ⑥ 페르소나·출력형식은 buildAnalysisSystem으로 이전. 이 함수는 검사 데이터(user 메시지)만 반환.
+  //    아래 24개 브랜치는 무변경 — ctx/fmt를 빈 문자열로 두어 자연히 데이터만 남게 함.
+  const ctx = ''
+  const fmt = ''
   const NL = '\n'
 
   // PHQ-9
@@ -1383,6 +1394,7 @@ app.post('/api/ai-analyze', async (c) => {
   try { body = await c.req.json() } catch { return c.json({ error: '잘못된 요청' }, 400) }
 
   const prompt = buildAnalysisPrompt(body)
+  const systemPrompt = buildAnalysisSystem(body)
   const ANALYZE_FALLBACKS = [
     'claude-haiku-4-5-20251001',
     'claude-sonnet-4-6',
@@ -1393,7 +1405,11 @@ app.post('/api/ai-analyze', async (c) => {
     upstream = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model, max_tokens: 1500, temperature: 0.3, stream: true, messages: [{ role: 'user', content: prompt }] }),
+      body: JSON.stringify({
+        model, max_tokens: 1500, temperature: 0.3, stream: true,
+        system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
+        messages: [{ role: 'user', content: prompt }],
+      }),
     })
     if (upstream.ok || (upstream.status !== 404 && upstream.status !== 403)) { analyzedModel = model; break }
     analyzedModel = model
