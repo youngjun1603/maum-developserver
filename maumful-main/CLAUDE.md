@@ -106,6 +106,14 @@ npm run deploy:cts    # lightoflife-couple (wrangler.lightoflife.toml)
 - ⚠️ **프론트 헬퍼는 반드시 사용 컴포넌트(LandingPage) 스코프에 정의**. GlobalNav에 두면 `ReferenceError`로 랜딩 렌더 크래시(실발생·핫픽스). **배포 전 `node scripts/render_smoke.cjs public/static/compiled/landing.js`로 검증**(빌드/200은 런타임 ReferenceError 못 잡음). [[feedback_frontend_render_smoke]]
 - **카피**: 랜딩의 마음수달/곁은 "통역"(직역) 대신 **"마음을 읽어 전해요"** 톤. 단 **maumotter 앱 자체는 "통역"이 핵심 개념**이라 유지(별개 서비스). 푸터 연락처 050-6789-0845.
 
+### AI 해석 고도화 (검사 결과 해설, 2026-07 완료 · 메모리 `project_maumful_ai_interpretation`)
+- **엔드포인트**(모두 SSE·AI Gateway·인증필수): `/api/ai-analyze`(단일), `/api/ai-analyze/integrated`(통합 심층해석, 서로다른 검사 2개+), `/api/ai-feedback`(👍/👎, 테이블 `ai_feedback` migration 0023).
+- **모델**: 단일·통합 모두 **sonnet-4-6 우선**(haiku 폴백). 단일 temp 0.3·통합 temp 0.4. `buildAnalysisSystem`(페르소나+출력형식=`system`+`cache_control`) / `buildAnalysisPrompt`(검사 데이터=user)로 분리.
+- ⚠️ **AI 프롬프트는 마크다운 금지 필수**: 프론트 해석 렌더가 `whitespace-pre-wrap`(마크다운 미렌더)이라 `##`·`**`·`---`가 그대로 노출됨(실버그). 시스템 프롬프트에 "마크다운 금지 + 섹션 제목 `[제목]` 대괄호" 지시 유지.
+- ⚠️ **모델↔temperature 결합**: sonnet-4-6/haiku는 temperature 허용. **sonnet-5/opus-4.7+로 올리면 temperature 400** → 제거 필수. `system` 배열+`cache_control`은 beta 헤더 불요(GA), 시스템<2048토큰이면 캐시 미적용(무해).
+- **당사자 톤**: 해석은 상담사 대상이 아니라 **본인 대상("당신" 어법)**. **검사 결과 서버 미저장 원칙 유지**(통합해석은 `test_history` 저장 메타만 사용, BIG5 result_json=factors 객체 그자체).
+- 미착수: 통합해석 유료 상품화(토스 반영 후, 메모리 `project_maum_unified_payment`).
+
 ### AI 감정 추적 (Mood Logging)
 - AI 응답에 `[MOOD:N]` 태그(0~100) → `ChatBox` processStream done에서 추출·제거 후 `/api/chat/mood-log` POST
 - DB: `mood_logs(user_id, mood_score, test_type, created_at)` (migration 0020). 트렌드: `GET /api/chat/mood-trend?days=14`(최대 90)
