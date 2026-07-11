@@ -1395,9 +1395,10 @@ app.post('/api/ai-analyze', async (c) => {
 
   const prompt = buildAnalysisPrompt(body)
   const systemPrompt = buildAnalysisSystem(body)
+  // ③ 단일 해석 sonnet 우선(품질↑, 통합해석과 일치). haiku는 모델 불가 시 폴백. temperature 0.3은 sonnet-4-6 허용.
   const ANALYZE_FALLBACKS = [
-    'claude-haiku-4-5-20251001',
     'claude-sonnet-4-6',
+    'claude-haiku-4-5-20251001',
   ]
   let upstream!: Response
   let analyzedModel = ANALYZE_FALLBACKS[0]
