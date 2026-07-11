@@ -634,30 +634,40 @@ function TestResultBadge({ type, result, date }) {
     DSI:  { emoji: '🪞', label: tl('SDRI 자아분화검사', 'SDRI Differentiation Test'), color: '#5A8A7A',  pale: '#EAF3F0',   accentL: '#7ABAA8' },
   }[type] || { emoji: '📋', label: type, color: C.muted, pale: '#F5F5F5', accentL: C.muted };
 
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 10,
-      padding: '10px 14px', borderRadius: 12,
-      background: hasResult ? meta.pale : '#F5F5F5',
-      border: `1px solid ${hasResult ? meta.accentL + '44' : '#E0E0E0'}`,
-    }}>
+  const cardStyle = {
+    display: 'flex', alignItems: 'center', gap: 10,
+    padding: '10px 14px', borderRadius: 12,
+    background: hasResult ? meta.pale : '#FFFFFF',
+    border: `1px solid ${hasResult ? meta.accentL + '44' : meta.accentL + '66'}`,
+  };
+
+  const inner = (
+    <React.Fragment>
       <span style={{ fontSize: 22 }}>{meta.emoji}</span>
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: hasResult ? C.dark : C.muted }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: C.dark }}>
           {meta.label}
         </div>
-        <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>
-          {hasResult ? `✓ ${tl('완료', 'Done')} · ${fmtDate(date)}` : tl('아직 검사 결과 없음', 'No test result yet')}
+        <div style={{ fontSize: 11, color: hasResult ? C.muted : meta.color, fontWeight: hasResult ? 400 : 700, marginTop: 2 }}>
+          {hasResult ? `✓ ${tl('완료', 'Done')} · ${fmtDate(date)}` : tl('마음풀에서 검사하기 →', 'Take the test on Maumful →')}
         </div>
       </div>
-      {hasResult && (
-        <span style={{
-          fontSize: 10, fontWeight: 700, padding: '3px 8px',
-          borderRadius: 100, background: meta.color, color: 'white',
-        }}>{tl('완료', 'Done')}</span>
-      )}
-    </div>
+      {hasResult
+        ? <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 100, background: meta.color, color: 'white' }}>{tl('완료', 'Done')}</span>
+        : <span style={{ fontSize: 18, fontWeight: 700, color: meta.color }}>→</span>}
+    </React.Fragment>
   );
+
+  // 결과 없는 검사 → 클릭 시 마음풀로 이동해 해당 검사 바로 시작(?start=TYPE, 완료 후 마음커플 자동 복귀)
+  if (!hasResult) {
+    return (
+      <a href={`${MAUMFUL_URL}?start=${type}`} style={{ ...cardStyle, textDecoration: 'none', cursor: 'pointer' }}
+        title={tl('마음풀로 이동해 검사를 진행합니다', 'Go to Maumful to take this test')}>
+        {inner}
+      </a>
+    );
+  }
+  return <div style={cardStyle}>{inner}</div>;
 }
 
 // ── DailyQuestionCard ─────────────────────────────────────

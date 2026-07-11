@@ -709,22 +709,28 @@ function TestResultBadge({ type, result, date }) {
     LOST: { emoji: "\u2699\uFE0F", label: tl("LOST \uD589\uB3D9\uC720\uD615", "LOST Behavior Type"), color: C.lavender, pale: C.lavPale, accentL: C.lavL },
     DSI: { emoji: "\u{1FA9E}", label: tl("SDRI \uC790\uC544\uBD84\uD654\uAC80\uC0AC", "SDRI Differentiation Test"), color: "#5A8A7A", pale: "#EAF3F0", accentL: "#7ABAA8" }
   }[type] || { emoji: "\u{1F4CB}", label: type, color: C.muted, pale: "#F5F5F5", accentL: C.muted };
-  return /* @__PURE__ */ React.createElement("div", { style: {
+  const cardStyle = {
     display: "flex",
     alignItems: "center",
     gap: 10,
     padding: "10px 14px",
     borderRadius: 12,
-    background: hasResult ? meta.pale : "#F5F5F5",
-    border: `1px solid ${hasResult ? meta.accentL + "44" : "#E0E0E0"}`
-  } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 22 } }, meta.emoji), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: hasResult ? C.dark : C.muted } }, meta.label), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 2 } }, hasResult ? `\u2713 ${tl("\uC644\uB8CC", "Done")} \xB7 ${fmtDate(date)}` : tl("\uC544\uC9C1 \uAC80\uC0AC \uACB0\uACFC \uC5C6\uC74C", "No test result yet"))), hasResult && /* @__PURE__ */ React.createElement("span", { style: {
-    fontSize: 10,
-    fontWeight: 700,
-    padding: "3px 8px",
-    borderRadius: 100,
-    background: meta.color,
-    color: "white"
-  } }, tl("\uC644\uB8CC", "Done")));
+    background: hasResult ? meta.pale : "#FFFFFF",
+    border: `1px solid ${hasResult ? meta.accentL + "44" : meta.accentL + "66"}`
+  };
+  const inner = /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 22 } }, meta.emoji), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.dark } }, meta.label), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: hasResult ? C.muted : meta.color, fontWeight: hasResult ? 400 : 700, marginTop: 2 } }, hasResult ? `\u2713 ${tl("\uC644\uB8CC", "Done")} \xB7 ${fmtDate(date)}` : tl("\uB9C8\uC74C\uD480\uC5D0\uC11C \uAC80\uC0AC\uD558\uAE30 \u2192", "Take the test on Maumful \u2192"))), hasResult ? /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 100, background: meta.color, color: "white" } }, tl("\uC644\uB8CC", "Done")) : /* @__PURE__ */ React.createElement("span", { style: { fontSize: 18, fontWeight: 700, color: meta.color } }, "\u2192"));
+  if (!hasResult) {
+    return /* @__PURE__ */ React.createElement(
+      "a",
+      {
+        href: `${MAUMFUL_URL}?start=${type}`,
+        style: { ...cardStyle, textDecoration: "none", cursor: "pointer" },
+        title: tl("\uB9C8\uC74C\uD480\uB85C \uC774\uB3D9\uD574 \uAC80\uC0AC\uB97C \uC9C4\uD589\uD569\uB2C8\uB2E4", "Go to Maumful to take this test")
+      },
+      inner
+    );
+  }
+  return /* @__PURE__ */ React.createElement("div", { style: cardStyle }, inner);
 }
 function DailyQuestionCard() {
   const [offset, setOffset] = useState(0);
