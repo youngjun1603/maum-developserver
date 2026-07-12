@@ -112,6 +112,10 @@ npm run deploy:cts    # lightoflife-couple (wrangler.lightoflife.toml)
 - ⚠️ **AI 프롬프트는 마크다운 금지 필수**: 프론트 해석 렌더가 `whitespace-pre-wrap`(마크다운 미렌더)이라 `##`·`**`·`---`가 그대로 노출됨(실버그). 시스템 프롬프트에 "마크다운 금지 + 섹션 제목 `[제목]` 대괄호" 지시 유지.
 - ⚠️ **모델↔temperature 결합**: sonnet-4-6/haiku는 temperature 허용. **sonnet-5/opus-4.7+로 올리면 temperature 400** → 제거 필수. `system` 배열+`cache_control`은 beta 헤더 불요(GA), 시스템<2048토큰이면 캐시 미적용(무해).
 - **당사자 톤**: 해석은 상담사 대상이 아니라 **본인 대상("당신" 어법)**. **검사 결과 서버 미저장 원칙 유지**(통합해석은 `test_history` 저장 메타만 사용, BIG5 result_json=factors 객체 그자체).
+- **게임 행동 데이터 결합**(2026-07): `buildGameSummary(DB, userId)`(src/index.tsx) — 같은 `maumful-db`의 `game_session_logs`·`user_game_status` 30일 집계를 **통합해석 프롬프트**와 **`/api/test/report`**(리포트 §게임으로 본 나의 변화)에 주입. 게임 기록 0건이면 `null` → 프롬프트·화면 모두 기존과 동일.
+  - ⚠️ **max_tokens 여유 확보**: 데이터가 붙으면 출력이 길어져 통합해석이 1800에서 **면책 문장이 잘렸음** → 2400. 프롬프트에 데이터를 추가할 땐 `stop_reason=end_turn` 확인 필수.
+  - ⚠️ **외부 문자열은 위생 처리 후 프롬프트에 넣을 것**: 깨진 감정 라벨(U+FFFD)이 그대로 들어가자 AI가 *"제대로 전달되지 않아"* 라고 **사용자 출력에 언급**했다. 길이·깨진문자 필터 유지.
+- **검사→게임 개인화 처방**: `gamePrescription(testType, score)`(app.jsx) → 리포트 §다음 단계 카드 → `openMaumGame(key)` → `game.maumful.com/?t=…&game=<key>`. 게임 키를 추가하면 **maumgame `game_hub.jsx`의 딥링크 `valid` 배열에도 반드시 추가**(누락 시 조용히 무시됨 — worry가 실제로 그랬음).
 - 미착수: 통합해석 유료 상품화(토스 반영 후, 메모리 `project_maum_unified_payment`).
 
 ### AI 감정 추적 (Mood Logging)
