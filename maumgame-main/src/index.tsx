@@ -1187,22 +1187,72 @@ app.get('/api/game/ai-diary', async (c) => {
   }
 })
 
+// ── 주간 리포트 수신거부 (이메일 링크에서 바로 — 로그인 불필요, HMAC 서명으로 위조 방지) ──
+app.get('/unsubscribe', async (c) => {
+  const { DB } = c.env
+  const uid = Number(c.req.query('u'))
+  const sig = c.req.query('s') || ''
+  const page = (title: string, body: string) => c.html(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title></head>
+<body style="margin:0;background:#F5F0E8;font-family:'Apple SD Gothic Neo',sans-serif;">
+<div style="max-width:420px;margin:60px auto;background:white;border-radius:24px;padding:36px 28px;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+  <div style="font-size:44px;margin-bottom:12px;">🌿</div>
+  <div style="font-size:18px;font-weight:700;color:#3A4A3A;margin-bottom:10px;">${title}</div>
+  <div style="font-size:13px;color:#6A7A6A;line-height:1.8;">${body}</div>
+  <a href="https://game.maumful.com" style="display:block;margin-top:24px;padding:13px;background:linear-gradient(135deg,#4A7A5A,#6BA880);color:white;text-decoration:none;border-radius:14px;font-weight:700;font-size:14px;">마음게임으로 돌아가기</a>
+</div></body></html>`)
+
+  if (!uid || !sig || sig !== await signUnsub(c.env, uid)) {
+    return page('링크가 올바르지 않아요', '수신거부 링크가 만료되었거나 잘못되었습니다.<br>문의: support@maumful.com')
+  }
+  await DB.prepare(
+    `INSERT INTO game_email_prefs (user_id, optout, updated_at) VALUES (?, 1, CURRENT_TIMESTAMP)
+     ON CONFLICT(user_id) DO UPDATE SET optout=1, updated_at=CURRENT_TIMESTAMP`
+  ).bind(uid).run()
+  return page('수신거부가 완료됐어요', '앞으로 주간 리포트 메일을 보내지 않습니다.<br>서비스 이용에는 아무 영향이 없어요.')
+})
+
 // ── 주간 이메일 발송 헬퍼 ────────────────────────────────────
 async function sendWeeklySummaryEmail(
   env: Bindings,
   to: string,
   nickname: string,
-  stats: { playCount: number; expGained: number; topEmotion: string | null; levelName: string; streak: number }
+  stats: {
+    playCount: number; expGained: number; topEmotion: string | null; levelName: string; streak: number
+    maumful?: { label: string; desc: string; url: string }   // ⑤ 마음풀 연계 CTA
+    unsubUrl?: string                                        // 수신거부(법정 필수)
+  }
 ): Promise<void> {
   const key = env.RESEND_API_KEY
   if (!key) return
+  const html = buildWeeklyEmailHtml(nickname, stats)
 
+  await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from: '마음게임 <noreply@maumful.com>',
+      to: [to],
+      subject: `🌿 ${nickname}님, 지난 한 주 마음 정원 리포트가 도착했어요`,
+      html,
+    }),
+  }).catch(() => { /**/ })
+}
+
+// 이메일 본문 — 발송과 분리(레이아웃을 따로 렌더·검증할 수 있게)
+function buildWeeklyEmailHtml(
+  nickname: string,
+  stats: {
+    playCount: number; expGained: number; topEmotion: string | null; levelName: string; streak: number
+    maumful?: { label: string; desc: string; url: string }
+    unsubUrl?: string
+  }
+): string {
   const emojiMap: Record<string, string> = { happy:'😊', calm:'😌', tired:'😴', anxious:'😰', sad:'😢', angry:'😤' }
   const emojiLabel: Record<string, string> = { happy:'행복', calm:'평온', tired:'피곤', anxious:'불안', sad:'슬픔', angry:'화남' }
   const topEmoji = stats.topEmotion ? emojiMap[stats.topEmotion] || '💭' : ''
   const topLabel = stats.topEmotion ? emojiLabel[stats.topEmotion] || stats.topEmotion : ''
 
-  const html = `<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="ko">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#F5F0E8;font-family:'Apple SD Gothic Neo',sans-serif;">
@@ -1244,98 +1294,166 @@ async function sendWeeklySummaryEmail(
         style="display:block;text-align:center;padding:14px;background:linear-gradient(135deg,#4A7A5A,#6BA880);color:white;text-decoration:none;border-radius:14px;font-weight:700;font-size:15px;">
         오늘도 정원 가꾸러 가기 →
       </a>
+      ${stats.maumful ? `
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid #F0EAE0;">
+        <div style="font-size:12px;color:#6A7A6A;line-height:1.7;margin-bottom:10px;">${stats.maumful.desc}</div>
+        <a href="${stats.maumful.url}"
+          style="display:block;text-align:center;padding:12px;background:white;border:1.5px solid #4A7A5A;color:#4A7A5A;text-decoration:none;border-radius:14px;font-weight:700;font-size:13px;">
+          ${stats.maumful.label}
+        </a>
+      </div>` : ''}
     </div>
     <div style="padding:16px 24px;text-align:center;border-top:1px solid #F0EAE0;">
       <div style="font-size:11px;color:#A0A090;">마음풀 · game.maumful.com</div>
+      ${stats.unsubUrl ? `
+      <div style="font-size:11px;color:#B0B0A0;margin-top:6px;line-height:1.6;">
+        이 메일은 회원님의 마음게임 이용 내역 안내입니다.<br>
+        더 이상 받고 싶지 않으시면 <a href="${stats.unsubUrl}" style="color:#8A8A7A;">수신거부</a>를 눌러 주세요.
+      </div>` : ''}
     </div>
   </div>
 </div>
 </body></html>`
-
-  await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      from: '마음게임 <noreply@maumful.com>',
-      to: [to],
-      subject: `🌿 ${nickname}님, 지난 한 주 마음 정원 리포트가 도착했어요`,
-      html,
-    }),
-  }).catch(() => { /**/ })
 }
 
-// ── 번아웃 주간 리포트 자동 생성 + 주간 이메일 발송 (Cron) ──
+// ── 번아웃 주간 리포트 자동 생성 + 주간 이메일 발송 (Cron: 매주 월 03:00 UTC) ──
+// ⚠️ 수신거부(game_email_prefs.optout=1)한 사용자는 제외 — 정보통신망법상 수신거부 수단 제공 필수.
 async function handleScheduled(env: Bindings) {
   const { DB } = env
 
-  // 지난 7일간 활동한 사용자 (이메일 인증 완료자만)
+  // 활동 사용자 + 집계(플레이 수·실제 획득 경험치)를 한 번의 쿼리로. (기존: 사용자마다 세션 재조회 = N+1)
   const activeUsers = await DB.prepare(`
-    SELECT DISTINCT gsl.user_id, u.email, u.nickname, ugs.total_exp, ugs.garden_level, ugs.streak_days
+    SELECT gsl.user_id, u.email, u.nickname, ugs.garden_level, ugs.streak_days,
+           COUNT(*) AS plays, COALESCE(SUM(gsl.exp_gained), 0) AS exp_sum
     FROM game_session_logs gsl
     JOIN users u ON gsl.user_id = u.id
     LEFT JOIN user_game_status ugs ON gsl.user_id = ugs.user_id
+    LEFT JOIN game_email_prefs p   ON gsl.user_id = p.user_id
     WHERE gsl.created_at >= date('now', '-7 days')
       AND u.is_email_verified = 1
-  `).all<{ user_id: number; email: string; nickname: string | null; total_exp: number; garden_level: number; streak_days: number }>()
+      AND COALESCE(p.optout, 0) = 0
+    GROUP BY gsl.user_id
+  `).all<{ user_id: number; email: string; nickname: string | null; garden_level: number | null; streak_days: number | null; plays: number; exp_sum: number }>()
+  const users = activeUsers.results ?? []
+  if (users.length === 0) { console.log('[Cron] 주간 리포트 대상 없음'); return }
 
-  const now = new Date(Date.now() + 9 * 3600 * 1000)
-  const dayOfWeek = now.getUTCDay() === 0 ? 6 : now.getUTCDay() - 1
-  const weekStart = new Date(now)
-  weekStart.setUTCDate(now.getUTCDate() - dayOfWeek)
-  const weekStartStr = weekStart.toISOString().slice(0, 10)
+  // 7일치 세션 metadata를 한 번에 읽어 사용자별로 그룹핑
+  const sessRes = await DB.prepare(`
+    SELECT user_id, game_id, metadata FROM game_session_logs
+    WHERE created_at >= date('now', '-7 days')
+  `).all<{ user_id: number; game_id: string; metadata: string | null }>()
+  const sessByUser = new Map<number, { gameId: string; meta: Record<string, unknown> }[]>()
+  for (const s of (sessRes.results ?? [])) {
+    let meta: Record<string, unknown> = {}
+    try { meta = s.metadata ? JSON.parse(s.metadata) as Record<string, unknown> : {} } catch { /* 손상된 metadata 무시 */ }
+    const arr = sessByUser.get(s.user_id) ?? []
+    arr.push({ gameId: s.game_id, meta })
+    sessByUser.set(s.user_id, arr)
+  }
+
+  // 최근 30일 검사 이력 — 있으면 "내 리포트 보기", 없으면 감정 기반 검사 추천(마음풀 연계)
+  const testedRes = await DB.prepare(`
+    SELECT DISTINCT user_id FROM test_history WHERE performed_at >= date('now', '-30 days')
+  `).all<{ user_id: number }>()
+  const testedRecently = new Set((testedRes.results ?? []).map((r) => r.user_id))
+
+  // 지난주 avg_energy — 번아웃 변화율(burnout_delta) 계산용 (기존: 항상 '0%' 하드코딩)
+  const weekStartStr = kstWeekStartStr(0)
+  const prevWeekStr  = kstWeekStartStr(-7)
+  const prevRes = await DB.prepare('SELECT user_id, avg_energy FROM weekly_reports WHERE week_start=?')
+    .bind(prevWeekStr).all<{ user_id: number; avg_energy: number }>()
+  const prevEnergy = new Map((prevRes.results ?? []).map((r) => [r.user_id, r.avg_energy]))
 
   const levelNames: Record<number, string> = { 1:'씨앗', 2:'새싹', 3:'꽃봉오리', 4:'꽃피움', 5:'만개', 6:'정원사' }
 
-  for (const u of activeUsers.results) {
-    // 지난 7일 세션 통계
-    const sessions = await DB.prepare(`
-      SELECT game_id, score, metadata FROM game_session_logs
-      WHERE user_id=? AND created_at >= date('now', '-7 days')
-    `).bind(u.user_id).all<{ game_id: string; score: number; metadata: string | null }>()
+  // 사용자별 처리 — 5명씩 동시 실행(순차 await는 사용자가 늘면 cron 타임아웃)
+  const CHUNK = 5
+  for (let i = 0; i < users.length; i += CHUNK) {
+    await Promise.all(users.slice(i, i + CHUNK).map(async (u) => {
+      const sessions = sessByUser.get(u.user_id) ?? []
 
-    let totalExp = 0, missionCount = 0
-    const emotionCounts: Record<string, number> = {}
-
-    for (const s of sessions.results) {
-      totalExp += s.score || 0
-      try {
-        const meta = s.metadata ? JSON.parse(s.metadata) : {}
-        if (s.game_id === 'burnout') {
-          if (typeof meta.completedMissions === 'number') missionCount += meta.completedMissions
-          // 번아웃 주간 리포트 데이터도 수집
-          let totalEnergy = 0, energyCount = 0
-          if (typeof meta.energy === 'number') { totalEnergy += meta.energy; energyCount++ }
-          const avgEnergy = energyCount > 0 ? Math.round(totalEnergy / energyCount) : 50
-          await DB.prepare('DELETE FROM weekly_reports WHERE user_id=? AND week_start=?')
-            .bind(u.user_id, weekStartStr).run()
-          await DB.prepare(
-            'INSERT INTO weekly_reports (user_id, avg_energy, completed_missions, burnout_delta, week_start) VALUES (?,?,?,?,?)'
-          ).bind(u.user_id, avgEnergy, missionCount, '0%', weekStartStr).run().catch(() => { /**/ })
+      // 번아웃: 주간 에너지 평균·미션 합계 (기존 버그 — 세션마다 평균이 리셋되고 DELETE/INSERT가 반복됐음)
+      const energies: number[] = []
+      let missionCount = 0
+      const emotionCounts: Record<string, number> = {}
+      for (const s of sessions) {
+        if (s.gameId === 'burnout') {
+          if (typeof s.meta.completedMissions === 'number') missionCount += s.meta.completedMissions
+          if (typeof s.meta.energy === 'number') energies.push(s.meta.energy)
         }
-        if (s.game_id === 'mood' && meta.emotion) {
-          const e = meta.emotion as string
+        if (s.gameId === 'mood' && typeof s.meta.emotion === 'string') {
+          const e = s.meta.emotion
           emotionCounts[e] = (emotionCounts[e] || 0) + 1
         }
-      } catch { /**/ }
-    }
+      }
 
-    const topEmotion = Object.keys(emotionCounts).sort((a, b) => emotionCounts[b] - emotionCounts[a])[0] || null
-    const levelName = levelNames[u.garden_level || 1] || '씨앗'
-    const nickname = u.nickname || u.email.split('@')[0]
+      if (energies.length > 0) {
+        const avgEnergy = Math.round(energies.reduce((a, b) => a + b, 0) / energies.length)
+        const prev = prevEnergy.get(u.user_id)
+        const delta = (prev && prev > 0)
+          ? `${avgEnergy >= prev ? '+' : ''}${Math.round(((avgEnergy - prev) / prev) * 100)}%`
+          : '0%'
+        // 주 1회만 기록 (재실행 대비 멱등)
+        await DB.prepare('DELETE FROM weekly_reports WHERE user_id=? AND week_start=?').bind(u.user_id, weekStartStr).run()
+        await DB.prepare(
+          'INSERT INTO weekly_reports (user_id, avg_energy, completed_missions, burnout_delta, week_start) VALUES (?,?,?,?,?)'
+        ).bind(u.user_id, avgEnergy, missionCount, delta, weekStartStr).run().catch(() => { /* 기록 실패는 메일 발송을 막지 않음 */ })
+      }
 
-    // 주간 이메일 발송 (Resend)
-    await sendWeeklySummaryEmail(env, u.email, nickname, {
-      playCount: sessions.results.length,
-      expGained: Math.round(totalExp / 10), // EXP 단위로 환산
-      topEmotion,
-      levelName,
-      streak: u.streak_days || 0,
-    })
+      const topEmotion = Object.keys(emotionCounts).sort((a, b) => emotionCounts[b] - emotionCounts[a])[0] || null
+      const nickname = u.nickname || u.email.split('@')[0]
 
-    console.log(`[Cron] 주간 이메일 발송: ${u.email} (${sessions.results.length}회 플레이)`)
+      await sendWeeklySummaryEmail(env, u.email, nickname, {
+        playCount: u.plays,
+        expGained: u.exp_sum,                       // 기존: score 합계를 10으로 나눈 가짜 값
+        topEmotion,
+        levelName: levelNames[u.garden_level || 1] || '씨앗',
+        streak: u.streak_days || 0,
+        maumful: buildMaumfulCta(u.user_id, topEmotion, sessions.some((s) => s.gameId === 'burnout'), testedRecently.has(u.user_id)),
+        unsubUrl: await buildUnsubUrl(env, u.user_id),
+      })
+    }))
   }
 
-  console.log(`[Cron] 총 ${activeUsers.results.length}명에게 주간 리포트 발송 완료`)
+  console.log(`[Cron] 총 ${users.length}명에게 주간 리포트 발송 완료`)
+}
+
+// KST 기준 이번 주(월요일) 시작일. offsetDays로 지난 주도 구한다.
+function kstWeekStartStr(offsetDays: number): string {
+  const now = new Date(Date.now() + 9 * 3600 * 1000)
+  const dow = now.getUTCDay() === 0 ? 6 : now.getUTCDay() - 1   // 월=0
+  const d = new Date(now)
+  d.setUTCDate(now.getUTCDate() - dow + offsetDays)
+  return d.toISOString().slice(0, 10)
+}
+
+// ⑤ 마음풀 연계 — 게임 신호로 마음풀 검사·리포트를 잇는다(?go= 딥링크).
+function buildMaumfulCta(_userId: number, topEmotion: string | null, playedBurnout: boolean, testedRecently: boolean): { label: string; desc: string; url: string } {
+  const MF = 'https://maumful.com'
+  if (testedRecently) {
+    return { label: '내 검사 리포트 보기 →', desc: '이번 주 실천 기록이 검사 리포트의 "게임으로 본 나의 변화"에 반영됐어요.', url: `${MF}/?go=history` }
+  }
+  const rec = playedBurnout
+    ? { test: 'BURNOUT', name: 'K-MBI+ 번아웃 검사', why: '번아웃 회복을 자주 찾으셨어요. 지금 소진이 어느 정도인지 점검해 볼까요?' }
+    : topEmotion === 'anxious'
+      ? { test: 'GAD7', name: 'GAD-7 불안 자가점검', why: '이번 주 불안을 가장 많이 기록하셨어요. 2분이면 지금 상태를 확인할 수 있어요.' }
+      : (topEmotion === 'sad' || topEmotion === 'tired')
+        ? { test: 'PHQ9', name: 'PHQ-9 우울 자가점검', why: '무거운 감정이 자주 올라온 한 주였어요. 2분이면 지금 상태를 확인할 수 있어요.' }
+        : { test: 'PHQ9', name: 'PHQ-9 우울 자가점검', why: '게임 기록에 더해, 지금 마음 상태도 한 번 점검해 보세요. 2분이면 충분해요.' }
+  return { label: `${rec.name} 하러 가기 →`, desc: rec.why, url: `${MF}/?go=test:${rec.test}` }
+}
+
+// 수신거부 링크 — HMAC 서명(JWT_SECRET)으로 위조 방지. 서명 불가 시 링크 생략 대신 설정 안내로 폴백.
+async function buildUnsubUrl(env: Bindings, userId: number): Promise<string> {
+  const sig = await signUnsub(env, userId)
+  return `https://game.maumful.com/unsubscribe?u=${userId}&s=${sig}`
+}
+
+async function signUnsub(env: Bindings, userId: number): Promise<string> {
+  const secret = env.JWT_SECRET || ''
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+  const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`unsub:${userId}`))
+  return [...new Uint8Array(mac)].map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 32)
 }
 
 export default {
