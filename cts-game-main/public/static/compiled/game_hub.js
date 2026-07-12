@@ -217,7 +217,7 @@ function GameCard({ game, onPlay, enterDelay = 0 }) {
       marginBottom: 4,
       color: game.creditCost > 0 ? "#D4954A" : "#6B21A8"
     } }, game.creditCost > 0 ? t(`\u{1F33F} ${game.creditCost} \uD06C\uB808\uB527`, `\u{1F33F} ${game.creditCost} cr`) : t("\uBB34\uB8CC", "Free")),
-    game.requiredTests.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.dusty, marginBottom: 12 } }, game.requiredTests.map((rt) => TEST_META_HUB[rt]?.label || rt).join(" \xB7 "), " ", t("\uC5F0\uB3D9", "linked")),
+    game.linkedTests?.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.dusty, marginBottom: 12 } }, game.requiredTests.map((rt) => TEST_META_HUB[rt]?.label || rt).join(" \xB7 "), " ", t("\uC5F0\uB3D9", "linked")),
     game.modules?.length > 0 && !comingSoon && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 5, marginBottom: 14 } }, game.modules.map((m) => /* @__PURE__ */ React.createElement("div", { key: m.id, style: { display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: C.muted } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14 } }, m.emoji), /* @__PURE__ */ React.createElement("span", null, m.name)))),
     /* @__PURE__ */ React.createElement(
       "button",

@@ -399,7 +399,7 @@ function GameCard({ game, onPlay, enterDelay = 0 }) {
       </div>
 
       {/* 필요 검사 */}
-      {game.requiredTests.length > 0 && (
+      {(game.linkedTests?.length > 0) && (
         <div style={{ fontSize:11, color:C.dusty, marginBottom:12 }}>
           {game.requiredTests.map(rt => TEST_META_HUB[rt]?.label || rt).join(' · ')} {t('연동', 'linked')}
         </div>
