@@ -1118,7 +1118,8 @@ app.post('/api/test/start', async (c) => {
   // 마스터 계정 또는 무료 검사: 크레딧 차감 없이 바로 처리
   const userRow = await DB.prepare('SELECT email, credits FROM users WHERE id=?').bind(userId).first<{ email: string; credits: number }>()
   if (FREE_TESTS_SERVER.includes(testType) || isMasterAccount(userRow?.email)) {
-    DB.prepare('INSERT INTO test_history (user_id,test_type,lang,credits_spent) VALUES (?,?,?,?)')
+    // await 필수 — 미대기 시 직후 save-score/save-result가 행을 못 찾아 점수·결과가 유실될 수 있음(리포트 의존)
+    await DB.prepare('INSERT INTO test_history (user_id,test_type,lang,credits_spent) VALUES (?,?,?,?)')
       .bind(userId, testType, lang, 0).run().catch(() => {})
     return c.json({ success: true, data: { testType, creditsSpent: 0, balance: userRow?.credits ?? 0, isFree: true } })
   }
@@ -1136,7 +1137,8 @@ app.post('/api/test/start', async (c) => {
       needsCharge: true,
     }, 402)
   }
-  DB.prepare('INSERT INTO test_history (user_id,test_type,lang,credits_spent) VALUES (?,?,?,?)')
+  // await 필수 — 위와 동일(행 미커밋 시 점수·결과 유실)
+  await DB.prepare('INSERT INTO test_history (user_id,test_type,lang,credits_spent) VALUES (?,?,?,?)')
     .bind(userId, testType, lang, COST).run().catch(() => {})
 
   return c.json({ success: true, data: { testType, creditsSpent: COST, balance: result.balance, isFree: false } })
@@ -1147,8 +1149,12 @@ app.get('/api/test/history', async (c) => {
   const userId = await getAuthUserId(c.req.raw, KV)
   if (!userId) return c.json({ success: false, error: '로그인이 필요합니다.' }, 401)
 
+  // id·리포트 보유 플래그 추가(리포트 화면 진입용). 기존 소비자는 추가 필드를 무시하므로 무영향.
   const h = await DB.prepare(
-    'SELECT test_type,lang,credits_spent,performed_at,score,level FROM test_history WHERE user_id=? ORDER BY performed_at DESC LIMIT 50'
+    `SELECT id, test_type, lang, credits_spent, performed_at, score, level,
+            CASE WHEN result_json IS NOT NULL THEN 1 ELSE 0 END AS has_result,
+            CASE WHEN ai_analysis IS NOT NULL THEN 1 ELSE 0 END AS has_analysis
+     FROM test_history WHERE user_id=? ORDER BY performed_at DESC LIMIT 50`
   ).bind(userId).all()
   return c.json({ success: true, data: h.results })
 })
@@ -1171,6 +1177,57 @@ app.post('/api/test/save-score', async (c) => {
   ).bind(score, level ?? null, userId, test_type).run()
 
   return c.json({ success: true })
+})
+
+// ── POST /api/test/save-analysis ──────────────────────────
+// 생성된 AI 해석을 최근 검사행에 저장 → 리포트에서 재열람(재생성 비용 0·내용 동일)
+app.post('/api/test/save-analysis', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false, error: '로그인이 필요합니다.' }, 401)
+
+  const { test_type, ai_analysis } = await c.req.json().catch(() => ({})) as { test_type?: string; ai_analysis?: string }
+  if (!test_type || !ai_analysis) return c.json({ success: false, error: '파라미터 부족' }, 400)
+
+  await DB.prepare(
+    `UPDATE test_history SET ai_analysis=?
+     WHERE id=(SELECT id FROM test_history WHERE user_id=? AND test_type=? ORDER BY performed_at DESC LIMIT 1)`
+  ).bind(String(ai_analysis).slice(0, 8000), userId, test_type).run()
+
+  return c.json({ success: true })
+})
+
+// ── GET /api/test/report?id= ──────────────────────────────
+// 내 검사 리포트(본인 소유 행만). 점수·수준·상세결과·AI해석 + 직전 회차(변화 흐름)
+app.get('/api/test/report', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false, error: '로그인이 필요합니다.' }, 401)
+
+  const id = Number(c.req.query('id'))
+  if (!id) return c.json({ success: false, error: 'id가 필요합니다.' }, 400)
+
+  const row = await DB.prepare(
+    'SELECT id, test_type, lang, score, level, result_json, ai_analysis, performed_at FROM test_history WHERE id=? AND user_id=?'
+  ).bind(id, userId).first<{ id: number; test_type: string; lang: string; score: number | null; level: string | null; result_json: string | null; ai_analysis: string | null; performed_at: string }>()
+  if (!row) return c.json({ success: false, error: '리포트를 찾을 수 없어요.' }, 404)
+
+  const prev = await DB.prepare(
+    'SELECT score, performed_at FROM test_history WHERE user_id=? AND test_type=? AND performed_at < ? AND score IS NOT NULL ORDER BY performed_at DESC LIMIT 1'
+  ).bind(userId, row.test_type, row.performed_at).first<{ score: number; performed_at: string }>()
+
+  let result: unknown = null
+  try { result = row.result_json ? JSON.parse(row.result_json) : null } catch { /* 파싱 실패는 null */ }
+
+  return c.json({
+    success: true,
+    data: {
+      id: row.id, test_type: row.test_type, lang: row.lang,
+      score: row.score, level: row.level, result,
+      ai_analysis: row.ai_analysis, performed_at: row.performed_at,
+      prev: prev ? { score: prev.score, performed_at: prev.performed_at } : null,
+    },
+  })
 })
 
 // ============================================================
@@ -1675,7 +1732,8 @@ app.post('/api/test/save-result', async (c) => {
     test_type?: string; result_json?: Record<string, unknown>
   }
   if (!test_type || !result_json) return c.json({ error: '파라미터 부족' }, 400)
-  if (!['BIG5', 'LOST', 'DSI', 'RIASEC', 'VALUES'].includes(test_type)) return c.json({ error: '지원하지 않는 유형' }, 400)
+  // 리포트용 전 검사 저장(A안). BIG5/LOST/DSI는 마음커플·통합해석이 참조하는 기존 형태 유지 — 프론트가 그 3종 형태를 그대로 보냄.
+  if (!['BIG5', 'LOST', 'DSI', 'RIASEC', 'VALUES', 'PHQ9', 'GAD7', 'DASS21', 'BURNOUT', 'SCT'].includes(test_type)) return c.json({ error: '지원하지 않는 유형' }, 400)
 
   const resultStr = JSON.stringify(result_json)
   const upd = await DB.prepare(

@@ -433,6 +433,10 @@ function PsychologicalTestSystem() {
   const [integratedLoading, setIntegratedLoading] = useState(false);
   const [integratedErr, setIntegratedErr] = useState("");
   const [integratedFeedback, setIntegratedFeedback] = useState("");
+  const [reportId, setReportId] = useState(null);
+  const [report, setReport] = useState(null);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportErr, setReportErr] = useState("");
   const [chatOpen, setChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
@@ -1361,6 +1365,23 @@ function PsychologicalTestSystem() {
     }, 6e4);
     return () => clearInterval(intervalId);
   }, []);
+  useEffect(() => {
+    if (view !== "testReport" || !reportId) return;
+    (async () => {
+      setReportLoading(true);
+      setReportErr("");
+      setReport(null);
+      try {
+        const r = await api.get(`/api/test/report?id=${reportId}`);
+        if (r.success) setReport(r.data);
+        else setReportErr(r.error || t("\uB9AC\uD3EC\uD2B8\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC5B4\uC694.", "Failed to load report."));
+      } catch {
+        setReportErr(t("\uB9AC\uD3EC\uD2B8\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC5B4\uC694.", "Failed to load report."));
+      } finally {
+        setReportLoading(false);
+      }
+    })();
+  }, [view, reportId]);
   useEffect(() => {
     if (!isLoggedIn) return;
     const saveMap = {
@@ -3222,6 +3243,17 @@ Visit Maumful and take the same test again to compare your progress.`));
     },
     t("\uBE44\uBC00\uBC88\uD638 \uBCC0\uACBD", "Change Password")
   )));
+  if (isLoggedIn && view === "testReport") {
+    const RP_LABEL = { PHQ9: t("PHQ-9 \uC6B0\uC6B8 \uC790\uAC00\uC810\uAC80", "PHQ-9 Depression"), GAD7: t("GAD-7 \uBD88\uC548 \uC790\uAC00\uC810\uAC80", "GAD-7 Anxiety"), DASS21: t("DASS-21 \uC6B0\uC6B8\xB7\uBD88\uC548\xB7\uC2A4\uD2B8\uB808\uC2A4", "DASS-21"), BIG5: t("Big5 \uC131\uACA9\uAC80\uC0AC", "Big Five"), LOST: t("LOST \uD589\uB3D9\uC720\uD615", "LOST"), SCT: t("SRCI \uC790\uAE30\uBC18\uC751 \uC644\uC131", "SRCI"), DSI: t("SDRI \uC790\uAE30\uBD84\uD654", "SDRI"), BURNOUT: t("K-MBI+ \uBC88\uC544\uC6C3", "K-MBI+ Burnout"), RIASEC: t("Holland RIASEC \uC9C1\uC5C5\uD765\uBBF8", "Holland RIASEC"), VALUES: t("\uC9C1\uC5C5\uAC00\uCE58\uAD00", "Work Values") };
+    const RP_EMOJI = { PHQ9: "\u{1F614}", GAD7: "\u{1F630}", DASS21: "\u{1F4CA}", BIG5: "\u{1F31F}", LOST: "\u{1F9ED}", SCT: "\u270D\uFE0F", DSI: "\u{1FA9E}", BURNOUT: "\u{1F525}", RIASEC: "\u{1F50D}", VALUES: "\u{1F48E}" };
+    const d = report;
+    const detail = d && d.result ? summarizeReportResult(d.test_type, d.result) : "";
+    const diff = d && d.prev && d.score != null && d.prev.score != null ? d.score - d.prev.score : null;
+    return /* @__PURE__ */ React.createElement("div", { className: "min-h-screen bg-gradient-to-br from-slate-50 to-green-50 print:bg-white" }, /* @__PURE__ */ React.createElement("style", null, `@media print { .no-print{display:none !important;} body{background:#fff !important;} @page{margin:14mm;} }`), /* @__PURE__ */ React.createElement("header", { className: "bg-white border-b border-gray-100 sticky top-0 z-10 no-print" }, /* @__PURE__ */ React.createElement("div", { className: "max-w-2xl mx-auto px-4 py-3 flex items-center justify-between" }, /* @__PURE__ */ React.createElement("button", { onClick: () => {
+      setView("myPage");
+      setMyPageTab("history");
+    }, className: "text-gray-500 hover:text-gray-700 text-sm" }, "\u2190 ", t("\uAC80\uC0AC \uC774\uB825", "History")), /* @__PURE__ */ React.createElement("span", { className: "font-bold text-gray-800 text-sm" }, "\u{1F4C4} ", t("\uB0B4 \uAC80\uC0AC \uB9AC\uD3EC\uD2B8", "My Report")), /* @__PURE__ */ React.createElement("button", { onClick: () => window.print(), className: "text-xs font-bold bg-emerald-600 text-white px-3 py-1.5 rounded-lg hover:bg-emerald-700 transition" }, "\u{1F5A8} ", t("\uC778\uC1C4 / PDF", "Print / PDF")))), /* @__PURE__ */ React.createElement("main", { className: "max-w-2xl mx-auto px-4 py-6" }, reportLoading && /* @__PURE__ */ React.createElement("div", { className: "text-center text-gray-400 py-16 text-sm" }, t("\uB9AC\uD3EC\uD2B8\uB97C \uBD88\uB7EC\uC624\uB294 \uC911\u2026", "Loading report\u2026")), reportErr && /* @__PURE__ */ React.createElement("div", { className: "bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-600" }, reportErr), d && /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-gray-100 shadow-sm p-6 print:shadow-none print:border-0 print:rounded-none" }, /* @__PURE__ */ React.createElement("div", { className: "border-b-2 border-emerald-600 pb-4 mb-6" }, /* @__PURE__ */ React.createElement("div", { className: "text-xs font-bold text-emerald-700 mb-1" }, "\u2728 ", t("AI \uC2EC\uB9AC\uBD84\uC11D \uB9AC\uD3EC\uD2B8", "AI Insight Report")), /* @__PURE__ */ React.createElement("h1", { className: "text-2xl font-bold text-gray-800" }, RP_EMOJI[d.test_type] || "\u{1F4CB}", " ", RP_LABEL[d.test_type] || d.test_type), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-400 mt-1" }, "\u{1F4C5} ", new Date(d.performed_at).toLocaleDateString("ko-KR"), " \xB7 \uB9C8\uC74C\uD480 (maumful.com)")), /* @__PURE__ */ React.createElement("section", { className: "mb-6" }, /* @__PURE__ */ React.createElement("h2", { className: "text-sm font-bold text-emerald-700 mb-3" }, "\u258C 1. ", t("\uD55C\uB208\uC5D0 \uBCF4\uAE30", "At a Glance")), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 flex-wrap mb-3" }, d.score != null && /* @__PURE__ */ React.createElement("span", { className: "text-3xl font-bold text-gray-800" }, d.score, /* @__PURE__ */ React.createElement("span", { className: "text-base text-gray-400 ml-0.5" }, t("\uC810", ""))), d.level && /* @__PURE__ */ React.createElement("span", { className: "text-sm font-semibold bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full border border-emerald-100" }, d.level), diff != null && diff !== 0 && /* @__PURE__ */ React.createElement("span", { className: `text-xs px-2 py-1 rounded-full border ${diff > 0 ? "bg-orange-50 text-orange-600 border-orange-100" : "bg-blue-50 text-blue-600 border-blue-100"}` }, t("\uC9C0\uB09C \uAC80\uC0AC \uB300\uBE44", "vs last"), " ", diff > 0 ? "+" : "", diff)), detail && /* @__PURE__ */ React.createElement("pre", { className: "bg-gray-50 rounded-xl p-3 text-xs text-gray-600 whitespace-pre-wrap font-sans leading-relaxed" }, detail)), /* @__PURE__ */ React.createElement("section", { className: "mb-6" }, /* @__PURE__ */ React.createElement("h2", { className: "text-sm font-bold text-emerald-700 mb-3" }, "\u258C 2. ", t("\uB098\uC758 \uD574\uC11D", "Your Insight")), d.ai_analysis ? /* @__PURE__ */ React.createElement("div", { className: "text-sm text-gray-700 leading-relaxed whitespace-pre-wrap" }, d.ai_analysis) : /* @__PURE__ */ React.createElement("div", { className: "bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800 leading-relaxed" }, t("\uC774 \uAC80\uC0AC\uB294 AI \uD574\uC11D\uC774 \uC800\uC7A5\uB418\uAE30 \uC804\uC5D0 \uC9C4\uD589\uB410\uC5B4\uC694. \uAC19\uC740 \uAC80\uC0AC\uB97C \uB2E4\uC2DC \uD558\uACE0 \uACB0\uACFC \uD654\uBA74\uC5D0\uC11C 'AI \uBD84\uC11D'\uC744 \uC2E4\uD589\uD558\uBA74 \uD574\uC11D\uC774 \uB9AC\uD3EC\uD2B8\uC5D0 \uD568\uAED8 \uC800\uC7A5\uB429\uB2C8\uB2E4.", "This test was taken before AI insights were saved. Retake it and run 'AI Analysis' on the result screen to save the insight to your report."))), d.prev && /* @__PURE__ */ React.createElement("section", { className: "mb-6" }, /* @__PURE__ */ React.createElement("h2", { className: "text-sm font-bold text-emerald-700 mb-3" }, "\u258C 3. ", t("\uBCC0\uD654 \uD750\uB984", "Change Over Time")), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-gray-700 leading-relaxed" }, t(`\uC9C0\uB09C \uAC80\uC0AC(${new Date(d.prev.performed_at).toLocaleDateString("ko-KR")}) ${d.prev.score}\uC810 \u2192 \uC774\uBC88 ${d.score}\uC810`, `Last (${new Date(d.prev.performed_at).toLocaleDateString("en-US")}): ${d.prev.score} \u2192 Now: ${d.score}`), diff != null && diff !== 0 && /* @__PURE__ */ React.createElement("span", { className: "ml-1 text-gray-500" }, "(", diff > 0 ? "+" : "", diff, ")"))), /* @__PURE__ */ React.createElement("section", { className: "mb-6 no-print" }, /* @__PURE__ */ React.createElement("h2", { className: "text-sm font-bold text-emerald-700 mb-3" }, "\u258C 4. ", t("\uB2E4\uC74C \uB2E8\uACC4", "Next Steps")), /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap gap-2" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setView("aiCounsel"), className: "flex-1 min-w-[130px] py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition" }, "\u{1F4AC} ", t("\uC774 \uACB0\uACFC\uB85C AI \uC0C1\uB2F4", "Discuss with AI")), /* @__PURE__ */ React.createElement("button", { onClick: () => openMaumGame(), className: "flex-1 min-w-[130px] py-2.5 rounded-xl bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50 text-xs font-bold transition" }, "\u{1F3AE} ", t("\uCD94\uCC9C \uD790\uB9C1 \uAC8C\uC784", "Healing games")), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("testsIntro"), className: "flex-1 min-w-[130px] py-2.5 rounded-xl bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50 text-xs font-bold transition" }, "\u2728 ", t("\uB2E4\uB978 \uAC80\uC0AC \uBC1B\uAE30", "More tests")))), /* @__PURE__ */ React.createElement("p", { className: "text-[11px] text-gray-400 border-t border-gray-100 pt-4 leading-relaxed" }, "\u{1F4CC} ", t("\uBCF8 \uB9AC\uD3EC\uD2B8\uB294 \uC790\uAE30\uC774\uD574\uB97C \uC704\uD55C \uCC38\uACE0 \uC790\uB8CC\uC774\uBA70, \uC758\uD559\uC801 \uC9C4\uB2E8\uC774\uB098 \uCE58\uB8CC\uB97C \uB300\uCCB4\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4. \uB9C8\uC74C\uC774 \uB9CE\uC774 \uD798\uB4DC\uC2E4 \uB550 \uC790\uC0B4\uC608\uBC29 \uC0C1\uB2F4\uC804\uD654 109 \xB7 \uC815\uC2E0\uAC74\uAC15 \uC704\uAE30\uC0C1\uB2F4 1577-0199 (24\uC2DC\uAC04)\uB97C \uC774\uC6A9\uD574 \uBCF4\uC138\uC694.", "This report is a reference for self-understanding only and does not replace medical diagnosis or treatment.")))));
+  }
   if (isLoggedIn && view === "memberDashboard") {
     const allTests = (regionConfig == null ? void 0 : regionConfig.availableTests) || ["PHQ9", "GAD7", "DASS21", "BIG5", "LOST", "SCT", "DSI", "BURNOUT", "RIASEC", "VALUES"];
     const testMeta = {
@@ -3870,7 +3902,21 @@ Visit Maumful and take the same test again to compare your progress.`));
   })(), /* @__PURE__ */ React.createElement("div", { className: "space-y-2" }, testHistory.map((h, i) => {
     const prevSame = testHistory.slice(i + 1).find((p) => p.test_type === h.test_type);
     const testEmoji2 = { PHQ9: "\u{1F614}", GAD7: "\u{1F630}", DASS21: "\u{1F4CA}", BIG5: "\u{1F31F}", LOST: "\u{1F9ED}", SCT: "\u270D\uFE0F", DSI: "\u{1FA9E}", BURNOUT: "\u{1F525}", RIASEC: "\u{1F50D}", VALUES: "\u{1F48E}" };
-    return /* @__PURE__ */ React.createElement("div", { key: i, className: "bg-white rounded-xl p-3 border border-gray-100" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("span", { className: "text-lg" }, testEmoji2[h.test_type] || "\u{1F4CB}"), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("span", { className: "font-semibold text-gray-700 text-sm" }, h.test_type), /* @__PURE__ */ React.createElement("span", { className: "text-xs text-gray-400 ml-2" }, new Date(h.performed_at).toLocaleDateString("ko-KR")))), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, h.score != null && /* @__PURE__ */ React.createElement("span", { className: "text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100" }, h.score, "\uC810"), h.level && /* @__PURE__ */ React.createElement("span", { className: "text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100" }, h.level), prevSame && /* @__PURE__ */ React.createElement("span", { className: "text-xs bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full border border-emerald-100" }, t("\uC7AC\uAC80\uC0AC", "Retest")))));
+    return /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        key: i,
+        onClick: () => {
+          if (h.id) {
+            setReportId(h.id);
+            setView("testReport");
+          }
+        },
+        title: t("\uB9AC\uD3EC\uD2B8 \uBCF4\uAE30", "View report"),
+        className: "bg-white rounded-xl p-3 border border-gray-100 hover:border-emerald-300 hover:bg-emerald-50/30 cursor-pointer transition"
+      },
+      /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("span", { className: "text-lg" }, testEmoji2[h.test_type] || "\u{1F4CB}"), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("span", { className: "font-semibold text-gray-700 text-sm" }, h.test_type), /* @__PURE__ */ React.createElement("span", { className: "text-xs text-gray-400 ml-2" }, new Date(h.performed_at).toLocaleDateString("ko-KR")))), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, h.score != null && /* @__PURE__ */ React.createElement("span", { className: "text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100" }, h.score, "\uC810"), h.level && /* @__PURE__ */ React.createElement("span", { className: "text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100" }, h.level), h.has_analysis ? /* @__PURE__ */ React.createElement("span", { className: "text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full border border-indigo-100" }, "\u{1F4C4} ", t("\uB9AC\uD3EC\uD2B8", "Report")) : prevSame ? /* @__PURE__ */ React.createElement("span", { className: "text-xs bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full border border-emerald-100" }, t("\uC7AC\uAC80\uC0AC", "Retest")) : null, /* @__PURE__ */ React.createElement("span", { className: "text-gray-300 text-sm" }, "\u203A")))
+    );
   }))), myPageTab === "referral" && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Msg, { msg: referralMsg }), referralLoading ? /* @__PURE__ */ React.createElement("div", { className: "text-center py-8 text-gray-400" }, t("\uB85C\uB529 \uC911...", "Loading...")) : referralData ? /* @__PURE__ */ React.createElement("div", { className: "space-y-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-gradient-to-r from-green-500 to-purple-600 rounded-2xl p-5 text-white" }, /* @__PURE__ */ React.createElement("p", { className: "text-xs opacity-75 mb-1" }, t("\uB0B4 \uCD08\uB300 \uCF54\uB4DC", "My Invite Code")), /* @__PURE__ */ React.createElement("div", { className: "text-3xl font-bold tracking-widest mb-3" }, referralData.code), /* @__PURE__ */ React.createElement(
     "button",
     {
@@ -6247,6 +6293,7 @@ AI \uBD84\uC11D \uAE30\uB2A5\uC774 \uC911\uB2E8\uB429\uB2C8\uB2E4.`)) return;
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
+      let full = "";
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -6260,16 +6307,52 @@ AI \uBD84\uC11D \uAE30\uB2A5\uC774 \uC911\uB2E8\uB429\uB2C8\uB2E4.`)) return;
           try {
             const parsed = JSON.parse(data);
             if (parsed.type === "content_block_delta" && ((_a2 = parsed.delta) == null ? void 0 : _a2.text)) {
+              full += parsed.delta.text;
               setAiAnalysis((p) => ({ ...p, [key]: (p[key] || "") + parsed.delta.text }));
             }
           } catch {
           }
         }
       }
+      if (full.trim()) saveReportData(testType, responses, full);
     } catch (e) {
       setAiError((p) => ({ ...p, [key]: e.message || "AI \uBD84\uC11D \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4." }));
     } finally {
       setAiLoading((p) => ({ ...p, [key]: false }));
+    }
+  }
+  async function saveReportData(testType, responses, analysisText) {
+    const hdr = { "Content-Type": "application/json", ...api._authHeader() };
+    try {
+      await fetch("/api/test/save-analysis", { method: "POST", headers: hdr, body: JSON.stringify({ test_type: testType, ai_analysis: analysisText }) });
+    } catch {
+    }
+    if (!["BIG5", "LOST", "DSI"].includes(testType)) {
+      try {
+        await fetch("/api/test/save-result", { method: "POST", headers: hdr, body: JSON.stringify({ test_type: testType, result_json: responses }) });
+      } catch {
+      }
+    }
+  }
+  function summarizeReportResult(testType, r) {
+    var _a2;
+    try {
+      if (!r) return "";
+      if (testType === "BIG5") return Object.entries(r).filter(([, v]) => typeof v === "number").map(([k, v]) => `${k}: ${v}/5`).join("\n");
+      if (testType === "LOST") return `\uC720\uD615: ${r.typeCode}${((_a2 = r.typeInfo) == null ? void 0 : _a2.name) ? ` (${r.typeInfo.name})` : ""}
+` + Object.entries(r.axisAvg || {}).map(([k, v]) => `${k}: ${Number(v).toFixed(2)}`).join("\n");
+      if (testType === "DSI") return `\uCD1D\uC810: ${r.total}
+` + Object.entries(r.scales || {}).map(([k, v]) => `${k}: ${v}`).join("\n");
+      if (testType === "DASS21") return ["depression", "anxiety", "stress"].map((k) => r[k] ? `${k}: ${r[k].score}\uC810 (${r[k].level})` : "").filter(Boolean).join("\n");
+      if (testType === "PHQ9" || testType === "GAD7") return (r.items || []).map((it, i) => `${i + 1}. ${it.question}: ${it.score}\uC810`).join("\n");
+      if (testType === "BURNOUT") return (r.domains || []).map((d) => `${d.name}: ${d.score}/${d.max} (${d.level})`).join("\n");
+      if (testType === "RIASEC") return `\uC6B0\uC138 \uC720\uD615: ${r.dominant_type}
+` + Object.entries(r.scores || {}).map(([k, v]) => `${k}: ${v}`).join("\n");
+      if (testType === "VALUES") return (r.top3 || []).map((v, i) => `${i + 1}\uC704 ${v.label}: ${v.score}\uC810`).join("\n");
+      if (testType === "SCT") return Object.entries(r.byScale || {}).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.length + "\uBB38\uD56D" : v}`).join("\n");
+      return "";
+    } catch {
+      return "";
     }
   }
   async function runIntegratedAnalysis() {

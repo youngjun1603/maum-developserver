@@ -344,6 +344,11 @@ function PsychologicalTestSystem() {
   const [integratedLoading, setIntegratedLoading] = useState(false);
   const [integratedErr, setIntegratedErr]         = useState('');
   const [integratedFeedback, setIntegratedFeedback] = useState('');
+  // 📄 내 검사 리포트 (검사 이력 → 클릭)
+  const [reportId, setReportId]           = useState(null);
+  const [report, setReport]               = useState(null);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportErr, setReportErr]         = useState('');
 
 
   // ── AI 채팅 상태 (기존 유지) ─────────────────────────────
@@ -1356,6 +1361,23 @@ function PsychologicalTestSystem() {
     
     return () => clearInterval(intervalId);
   }, []); // 한 번만 실행
+
+  // 📄 리포트 로드 (검사 이력 → 클릭)
+  useEffect(() => {
+    if (view !== 'testReport' || !reportId) return;
+    (async () => {
+      setReportLoading(true); setReportErr(''); setReport(null);
+      try {
+        const r = await api.get(`/api/test/report?id=${reportId}`);
+        if (r.success) setReport(r.data);
+        else setReportErr(r.error || t('리포트를 불러오지 못했어요.', 'Failed to load report.'));
+      } catch {
+        setReportErr(t('리포트를 불러오지 못했어요.', 'Failed to load report.'));
+      } finally {
+        setReportLoading(false);
+      }
+    })();
+  }, [view, reportId]);
 
   // 검사 결과 화면 진입 시 result_json 자동 저장 + 마음커플 복귀
   useEffect(() => {
@@ -3699,6 +3721,98 @@ function PsychologicalTestSystem() {
   // ============================================================
   // 뷰: 메인 대시보드 (검사 선택)
   // ============================================================
+  // ============================================================
+  // 📄 뷰: 내 검사 리포트 (검사 이력 클릭 → 열람 · 인쇄/PDF 저장)
+  // ============================================================
+  if (isLoggedIn && view === 'testReport') {
+    const RP_LABEL = { PHQ9:t('PHQ-9 우울 자가점검','PHQ-9 Depression'), GAD7:t('GAD-7 불안 자가점검','GAD-7 Anxiety'), DASS21:t('DASS-21 우울·불안·스트레스','DASS-21'), BIG5:t('Big5 성격검사','Big Five'), LOST:t('LOST 행동유형','LOST'), SCT:t('SRCI 자기반응 완성','SRCI'), DSI:t('SDRI 자기분화','SDRI'), BURNOUT:t('K-MBI+ 번아웃','K-MBI+ Burnout'), RIASEC:t('Holland RIASEC 직업흥미','Holland RIASEC'), VALUES:t('직업가치관','Work Values') };
+    const RP_EMOJI = { PHQ9:'😔', GAD7:'😰', DASS21:'📊', BIG5:'🌟', LOST:'🧭', SCT:'✍️', DSI:'🪞', BURNOUT:'🔥', RIASEC:'🔍', VALUES:'💎' };
+    const d = report;
+    const detail = d && d.result ? summarizeReportResult(d.test_type, d.result) : '';
+    const diff = (d && d.prev && d.score != null && d.prev.score != null) ? d.score - d.prev.score : null;
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-green-50 print:bg-white">
+        <style>{`@media print { .no-print{display:none !important;} body{background:#fff !important;} @page{margin:14mm;} }`}</style>
+
+        <header className="bg-white border-b border-gray-100 sticky top-0 z-10 no-print">
+          <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
+            <button onClick={() => { setView('myPage'); setMyPageTab('history'); }} className="text-gray-500 hover:text-gray-700 text-sm">← {t("검사 이력","History")}</button>
+            <span className="font-bold text-gray-800 text-sm">📄 {t("내 검사 리포트","My Report")}</span>
+            <button onClick={() => window.print()} className="text-xs font-bold bg-emerald-600 text-white px-3 py-1.5 rounded-lg hover:bg-emerald-700 transition">🖨 {t("인쇄 / PDF","Print / PDF")}</button>
+          </div>
+        </header>
+
+        <main className="max-w-2xl mx-auto px-4 py-6">
+          {reportLoading && <div className="text-center text-gray-400 py-16 text-sm">{t("리포트를 불러오는 중…","Loading report…")}</div>}
+          {reportErr && <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-600">{reportErr}</div>}
+
+          {d && (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 print:shadow-none print:border-0 print:rounded-none">
+              {/* 표지 */}
+              <div className="border-b-2 border-emerald-600 pb-4 mb-6">
+                <div className="text-xs font-bold text-emerald-700 mb-1">✨ {t("AI 심리분석 리포트","AI Insight Report")}</div>
+                <h1 className="text-2xl font-bold text-gray-800">{RP_EMOJI[d.test_type] || '📋'} {RP_LABEL[d.test_type] || d.test_type}</h1>
+                <p className="text-xs text-gray-400 mt-1">📅 {new Date(d.performed_at).toLocaleDateString('ko-KR')} · 마음풀 (maumful.com)</p>
+              </div>
+
+              {/* 1. 한눈에 보기 */}
+              <section className="mb-6">
+                <h2 className="text-sm font-bold text-emerald-700 mb-3">▌ 1. {t("한눈에 보기","At a Glance")}</h2>
+                <div className="flex items-center gap-3 flex-wrap mb-3">
+                  {d.score != null && <span className="text-3xl font-bold text-gray-800">{d.score}<span className="text-base text-gray-400 ml-0.5">{t("점","")}</span></span>}
+                  {d.level && <span className="text-sm font-semibold bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full border border-emerald-100">{d.level}</span>}
+                  {diff != null && diff !== 0 && (
+                    <span className={`text-xs px-2 py-1 rounded-full border ${diff > 0 ? 'bg-orange-50 text-orange-600 border-orange-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
+                      {t("지난 검사 대비","vs last")} {diff > 0 ? '+' : ''}{diff}
+                    </span>
+                  )}
+                </div>
+                {detail && <pre className="bg-gray-50 rounded-xl p-3 text-xs text-gray-600 whitespace-pre-wrap font-sans leading-relaxed">{detail}</pre>}
+              </section>
+
+              {/* 2. 나의 해석 */}
+              <section className="mb-6">
+                <h2 className="text-sm font-bold text-emerald-700 mb-3">▌ 2. {t("나의 해석","Your Insight")}</h2>
+                {d.ai_analysis
+                  ? <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{d.ai_analysis}</div>
+                  : <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800 leading-relaxed">
+                      {t("이 검사는 AI 해석이 저장되기 전에 진행됐어요. 같은 검사를 다시 하고 결과 화면에서 'AI 분석'을 실행하면 해석이 리포트에 함께 저장됩니다.","This test was taken before AI insights were saved. Retake it and run 'AI Analysis' on the result screen to save the insight to your report.")}
+                    </div>}
+              </section>
+
+              {/* 3. 변화 흐름 */}
+              {d.prev && (
+                <section className="mb-6">
+                  <h2 className="text-sm font-bold text-emerald-700 mb-3">▌ 3. {t("변화 흐름","Change Over Time")}</h2>
+                  <p className="text-sm text-gray-700 leading-relaxed">
+                    {t(`지난 검사(${new Date(d.prev.performed_at).toLocaleDateString('ko-KR')}) ${d.prev.score}점 → 이번 ${d.score}점`, `Last (${new Date(d.prev.performed_at).toLocaleDateString('en-US')}): ${d.prev.score} → Now: ${d.score}`)}
+                    {diff != null && diff !== 0 && <span className="ml-1 text-gray-500">({diff > 0 ? '+' : ''}{diff})</span>}
+                  </p>
+                </section>
+              )}
+
+              {/* 4. 다음 단계 */}
+              <section className="mb-6 no-print">
+                <h2 className="text-sm font-bold text-emerald-700 mb-3">▌ 4. {t("다음 단계","Next Steps")}</h2>
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={() => setView('aiCounsel')} className="flex-1 min-w-[130px] py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition">💬 {t("이 결과로 AI 상담","Discuss with AI")}</button>
+                  <button onClick={() => openMaumGame()} className="flex-1 min-w-[130px] py-2.5 rounded-xl bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50 text-xs font-bold transition">🎮 {t("추천 힐링 게임","Healing games")}</button>
+                  <button onClick={() => setView('testsIntro')} className="flex-1 min-w-[130px] py-2.5 rounded-xl bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50 text-xs font-bold transition">✨ {t("다른 검사 받기","More tests")}</button>
+                </div>
+              </section>
+
+              {/* 면책 */}
+              <p className="text-[11px] text-gray-400 border-t border-gray-100 pt-4 leading-relaxed">
+                📌 {t("본 리포트는 자기이해를 위한 참고 자료이며, 의학적 진단이나 치료를 대체하지 않습니다. 마음이 많이 힘드실 땐 자살예방 상담전화 109 · 정신건강 위기상담 1577-0199 (24시간)를 이용해 보세요.","This report is a reference for self-understanding only and does not replace medical diagnosis or treatment.")}
+              </p>
+            </div>
+          )}
+        </main>
+      </div>
+    );
+  }
+
   if (isLoggedIn && view === 'memberDashboard') {
     const allTests = regionConfig?.availableTests || ['PHQ9','GAD7','DASS21','BIG5','LOST','SCT','DSI','BURNOUT','RIASEC','VALUES'];
     const testMeta = {
@@ -4710,7 +4824,10 @@ function PsychologicalTestSystem() {
                 const prevSame = testHistory.slice(i + 1).find(p => p.test_type === h.test_type);
                 const testEmoji2 = { PHQ9:'😔', GAD7:'😰', DASS21:'📊', BIG5:'🌟', LOST:'🧭', SCT:'✍️', DSI:'🪞', BURNOUT:'🔥', RIASEC:'🔍', VALUES:'💎' };
                 return (
-                  <div key={i} className="bg-white rounded-xl p-3 border border-gray-100">
+                  <div key={i}
+                    onClick={() => { if (h.id) { setReportId(h.id); setView('testReport'); } }}
+                    title={t("리포트 보기","View report")}
+                    className="bg-white rounded-xl p-3 border border-gray-100 hover:border-emerald-300 hover:bg-emerald-50/30 cursor-pointer transition">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="text-lg">{testEmoji2[h.test_type] || '📋'}</span>
@@ -4730,9 +4847,12 @@ function PsychologicalTestSystem() {
                             {h.level}
                           </span>
                         )}
-                        {prevSame && (
+                        {h.has_analysis ? (
+                          <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full border border-indigo-100">📄 {t("리포트","Report")}</span>
+                        ) : prevSame ? (
                           <span className="text-xs bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full border border-emerald-100">{t("재검사","Retest")}</span>
-                        )}
+                        ) : null}
+                        <span className="text-gray-300 text-sm">›</span>
                       </div>
                     </div>
                   </div>
@@ -7410,6 +7530,7 @@ function PsychologicalTestSystem() {
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
+      let full = "";
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -7423,16 +7544,49 @@ function PsychologicalTestSystem() {
           try {
             const parsed = JSON.parse(data);
             if (parsed.type === "content_block_delta" && parsed.delta?.text) {
+              full += parsed.delta.text;
               setAiAnalysis(p => ({ ...p, [key]: (p[key] || "") + parsed.delta.text }));
             }
           } catch {}
         }
       }
+      if (full.trim()) saveReportData(testType, responses, full);   // 📄 리포트용 저장(실패해도 UX 무영향)
     } catch (e) {
       setAiError(p => ({ ...p, [key]: e.message || "AI 분석 중 오류가 발생했습니다." }));
     } finally {
       setAiLoading(p => ({ ...p, [key]: false }));
     }
+  }
+
+  // 📄 리포트용 저장 — 생성된 AI 해석 + 검사 결과.
+  //    ⚠️ BIG5/LOST/DSI의 result_json은 마음커플·통합해석이 참조하는 기존 형태(진입 시 saveMap이 저장)라 덮어쓰지 않음.
+  async function saveReportData(testType, responses, analysisText) {
+    const hdr = { 'Content-Type': 'application/json', ...api._authHeader() };
+    try {
+      await fetch('/api/test/save-analysis', { method: 'POST', headers: hdr, body: JSON.stringify({ test_type: testType, ai_analysis: analysisText }) });
+    } catch { /* 무시 */ }
+    if (!['BIG5', 'LOST', 'DSI'].includes(testType)) {
+      try {
+        await fetch('/api/test/save-result', { method: 'POST', headers: hdr, body: JSON.stringify({ test_type: testType, result_json: responses }) });
+      } catch { /* 무시 */ }
+    }
+  }
+
+  // 📄 저장된 result_json → 리포트 상세 텍스트
+  function summarizeReportResult(testType, r) {
+    try {
+      if (!r) return '';
+      if (testType === 'BIG5')   return Object.entries(r).filter(([, v]) => typeof v === 'number').map(([k, v]) => `${k}: ${v}/5`).join('\n');
+      if (testType === 'LOST')   return `유형: ${r.typeCode}${r.typeInfo?.name ? ` (${r.typeInfo.name})` : ''}\n` + Object.entries(r.axisAvg || {}).map(([k, v]) => `${k}: ${Number(v).toFixed(2)}`).join('\n');
+      if (testType === 'DSI')    return `총점: ${r.total}\n` + Object.entries(r.scales || {}).map(([k, v]) => `${k}: ${v}`).join('\n');
+      if (testType === 'DASS21') return ['depression', 'anxiety', 'stress'].map(k => r[k] ? `${k}: ${r[k].score}점 (${r[k].level})` : '').filter(Boolean).join('\n');
+      if (testType === 'PHQ9' || testType === 'GAD7') return (r.items || []).map((it, i) => `${i + 1}. ${it.question}: ${it.score}점`).join('\n');
+      if (testType === 'BURNOUT') return (r.domains || []).map(d => `${d.name}: ${d.score}/${d.max} (${d.level})`).join('\n');
+      if (testType === 'RIASEC') return `우세 유형: ${r.dominant_type}\n` + Object.entries(r.scores || {}).map(([k, v]) => `${k}: ${v}`).join('\n');
+      if (testType === 'VALUES') return (r.top3 || []).map((v, i) => `${i + 1}위 ${v.label}: ${v.score}점`).join('\n');
+      if (testType === 'SCT')    return Object.entries(r.byScale || {}).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.length + '문항' : v}`).join('\n');
+      return '';
+    } catch { return ''; }
   }
 
   // 🧩 통합 심층 해석 — 여러 검사를 종합 (/api/ai-analyze/integrated, 기존 runAiAnalysis와 별개)
