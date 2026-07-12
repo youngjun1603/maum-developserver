@@ -546,7 +546,8 @@ function CBTModule({ onComplete, onBack, userTestScores = {} }) {
 
   const SEED_THOUGHTS = getSeedThoughts(userTestScores);
 
-  const [step, setStep]         = useState('intro');   // intro | input | transform | confirm | done
+  const [step, setStep]         = useState('intro');   // intro | input | transform | confirm | done | crisis
+  const [crisis, setCrisis]     = useState(null);      // ⚠️ 위기 신호 감지 시 안전 안내 데이터
   const [branches, setBranches] = useState([]);         // 완성된 가지들
   const [current, setCurrent]   = useState({ original:'', transformed:'', editing:false });
   const [inputText, setInputText] = useState('');
@@ -574,6 +575,13 @@ function CBTModule({ onComplete, onBack, userTestScores = {} }) {
     setAiLoading(true); setAiError('');
     try {
       const res = await GameEngine.transformSentence(text);
+      // ⚠️ 안전: 위기 신호가 감지되면 긍정 확언으로 변환하지 않고 안전 안내 화면으로 분기
+      if (res.success && res.data?.crisis) {
+        setCrisis(res.data);
+        setStep('crisis');
+        setAiLoading(false);
+        return;
+      }
       if (res.success) {
         setCurrent({ original: text, transformed: res.data.result, editing: false });
         setStep('transform');
@@ -619,6 +627,53 @@ function CBTModule({ onComplete, onBack, userTestScores = {} }) {
   // TreeSVG는 모듈 상단에 정의되어 있음
 
   // ── 완료 화면 ─────────────────────────────────────────────
+  // ⚠️ 안전 안내 — 위기 신호 감지 시 변환 대신 이 화면. 게임 요소(경험치·다음단계) 일절 노출하지 않음.
+  if (step === 'crisis' && crisis) {
+    return (
+      <div style={{
+        flex:1, display:'flex', flexDirection:'column', justifyContent:'center',
+        background:'linear-gradient(160deg, #FFF6F2, #FFEDE4)',
+        padding:24, animation:'fadeUp 0.5s ease',
+      }}>
+        <div style={{ textAlign:'center', marginBottom:20 }}>
+          <div style={{ fontSize:40, marginBottom:12 }}>🫂</div>
+          <h2 style={{ fontSize:20, fontWeight:700, color:'#8A3A1E', marginBottom:12, fontFamily:"'Noto Serif KR', serif" }}>
+            {t('잠시 멈출게요', "Let's pause here")}
+          </h2>
+          <p style={{ fontSize:14, color:'#7A4A38', lineHeight:1.9, whiteSpace:'pre-wrap' }}>
+            {crisis.message}
+          </p>
+        </div>
+
+        <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:18 }}>
+          {(crisis.resources || []).map((r, i) => (
+            <a key={i} href={`tel:${String(r.tel).replace(/-/g,'')}`}
+              style={{
+                display:'flex', alignItems:'center', justifyContent:'space-between',
+                background:'#fff', border:'1px solid #F0CDBB', borderRadius:14,
+                padding:'14px 16px', textDecoration:'none',
+              }}>
+              <span style={{ fontSize:14, fontWeight:700, color:'#8A3A1E' }}>{r.label}</span>
+              <span style={{ fontSize:15, fontWeight:800, color:'#C0552B' }}>📞 {r.tel}</span>
+            </a>
+          ))}
+        </div>
+
+        <p style={{ fontSize:12, color:'#A2705C', textAlign:'center', lineHeight:1.7, marginBottom:16 }}>
+          {t('24시간 언제든 연결됩니다. 지금 바로 이야기해도 괜찮아요.', 'Available 24/7. It is okay to reach out right now.')}
+        </p>
+
+        <button onClick={() => { setCrisis(null); setInputText(''); setStep('input'); }}
+          style={{
+            padding:'12px', borderRadius:12, border:'1px solid #E5C4B4',
+            background:'transparent', color:'#A2705C', fontSize:13, cursor:'pointer',
+          }}>
+          {t('돌아가기', 'Go back')}
+        </button>
+      </div>
+    );
+  }
+
   if (step === 'done') {
     return (
       <div style={{

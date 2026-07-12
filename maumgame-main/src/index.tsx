@@ -591,6 +591,26 @@ app.patch('/api/game/visual', async (c) => {
 
 // ── POST /api/game/ai-transform ────────────────────────────
 // SCT 부정 문장 → 긍정 확언 변환 (Claude API)
+// ⚠️ 안전 오버라이드 — CBT 생각변환은 사용자가 부정적 생각을 자유 입력하는 통로다.
+//    자해·자살 신호는 "긍정 확언으로 바꿀 생각"이 아니라 즉시 도움이 필요한 신호 → 변환 금지·긴급자원 안내.
+//    오탐 방지: 과장 표현('배고파 죽겠다', '피곤해 죽을 것 같다')은 제외하고 명시적 표현만 매칭.
+const CRISIS_PATTERNS: RegExp[] = [
+  /죽고\s*싶/, /죽어\s*버리/, /자살/, /자해/,
+  /사라지고\s*싶/, /없어지고\s*싶/, /사라져\s*버리고\s*싶/,
+  /살기\s*싫/, /살고\s*싶지\s*않/, /살\s*이유가?\s*없/,
+  /목숨을?\s*끊/, /생을\s*마감/, /목을\s*매/, /뛰어내리/, /손목을?\s*긋/, /유서/,
+  /kill\s*myself/i, /suicide/i, /want\s*to\s*die/i, /end\s*my\s*life/i, /self[-\s]?harm/i, /hurt\s*myself/i,
+]
+const CRISIS_PAYLOAD = {
+  crisis: true,
+  message: '지금 많이 힘드신 것 같아요. 이건 "긍정적으로 바꿔야 할 생각"이 아니라, 지금 바로 도움을 받아야 할 신호예요. 혼자 견디지 않으셔도 됩니다. 아래로 연락하면 24시간 이야기할 수 있어요.',
+  resources: [
+    { label: '자살예방 상담전화', tel: '109' },
+    { label: '정신건강 위기상담', tel: '1577-0199' },
+    { label: '청소년 상담', tel: '1388' },
+  ],
+}
+
 app.post('/api/game/ai-transform', async (c) => {
   const { DB } = c.env
   const userId = await getGameUserId(c.req.raw, c.env)
@@ -598,6 +618,12 @@ app.post('/api/game/ai-transform', async (c) => {
 
   const { text } = await c.req.json() as { text: string }
   if (!text || text.trim().length < 2) return c.json({ success: false, error: '텍스트 필요' }, 400)
+
+  // ① 1차 방어: 서버 키워드 사전차단 — AI 미호출·캐시 미저장
+  if (CRISIS_PATTERNS.some((re) => re.test(text))) {
+    console.warn('[ai-transform] 위기 신호 감지 — 변환 중단, 안전 안내 반환')
+    return c.json({ success: true, data: CRISIS_PAYLOAD })
+  }
 
   // 캐시 확인 (테이블 없어도 무시)
   try {
@@ -613,14 +639,19 @@ app.post('/api/game/ai-transform', async (c) => {
   try {
     const res = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-beta': 'prompt-caching-2024-07-31' },
+      // prompt caching은 현재 GA — 구식 beta 헤더 제거(불필요)
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 200,
         system: [
           {
             type: 'text',
-            text: `당신은 인지행동치료(CBT) 전문가입니다. 사용자의 부정적인 문장을 받으면, 인지적 왜곡이 교정된 건강하고 현실적인 자기 확언 문장 하나로 변환해 주세요. 너무 낙관적이지 않고 수용적이며 따뜻한 어조여야 합니다. 변환된 문장만 출력하세요.`,
+            // ② 2차 방어: 키워드가 놓친 위기 신호를 모델이 잡으면 변환 대신 [SAFETY]만 출력
+            text: `당신은 인지행동치료(CBT) 전문가입니다. 사용자의 부정적인 문장을 받으면, 인지적 왜곡이 교정된 건강하고 현실적인 자기 확언 문장 하나로 변환해 주세요. 너무 낙관적이지 않고 수용적이며 따뜻한 어조여야 합니다. 변환된 문장만 출력하세요.
+
+[안전 오버라이드 — 최우선]
+문장에 자해·자살·죽고 싶다·사라지고 싶다·삶을 끝내고 싶다는 신호가 조금이라도 있으면, 절대로 긍정 확언으로 변환하지 마세요. 그런 마음은 "고쳐야 할 생각"이 아니라 즉시 도움이 필요한 신호입니다. 이 경우 다른 어떤 말도 하지 말고 정확히 다음 한 단어만 출력하세요: [SAFETY]`,
             cache_control: { type: 'ephemeral' },
           },
         ],
@@ -637,6 +668,12 @@ app.post('/api/game/ai-transform', async (c) => {
     }
     const d = await res.json() as { content: { text: string }[] }
     const result = d.content?.[0]?.text?.trim() || ''
+
+    // ② 2차 방어 결과 처리 — 모델이 위기로 판단하면 변환 대신 안전 안내(캐시 저장 안 함)
+    if (result.includes('[SAFETY]')) {
+      console.warn('[ai-transform] 모델 안전 오버라이드 발동 — 안전 안내 반환')
+      return c.json({ success: true, data: CRISIS_PAYLOAD })
+    }
 
     // 캐시 저장 (테이블 없어도 무시)
     try {
