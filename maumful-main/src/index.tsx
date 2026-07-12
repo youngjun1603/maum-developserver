@@ -1219,6 +1219,9 @@ app.get('/api/test/report', async (c) => {
   let result: unknown = null
   try { result = row.result_json ? JSON.parse(row.result_json) : null } catch { /* 파싱 실패는 null */ }
 
+  // ② 마음게임 실천 기록(같은 DB) — 리포트 "게임으로 본 나의 변화" 섹션. 없으면 null.
+  const game = await buildGameSummary(DB, userId)
+
   return c.json({
     success: true,
     data: {
@@ -1226,6 +1229,7 @@ app.get('/api/test/report', async (c) => {
       score: row.score, level: row.level, result,
       ai_analysis: row.ai_analysis, performed_at: row.performed_at,
       prev: prev ? { score: prev.score, performed_at: prev.performed_at } : null,
+      game: game ? { totalSessions: game.totalSessions, streakDays: game.streakDays, level: game.level, byGame: game.byGame, mood: game.mood } : null,
     },
   })
 })
@@ -1498,6 +1502,87 @@ app.post('/api/ai-analyze', async (c) => {
 // ============================================================
 type IntegratedTest = { testType: string; score: number | null; level: string | null; result: Record<string, unknown> | null; prevScore: number | null }
 
+// ============================================================
+// ② 마음게임 행동 데이터 (같은 maumful-db 공유) — 검사=스냅샷, 게임=종단 행동
+//    통합해석 프롬프트 + 검사 리포트 양쪽에서 사용. 실패해도 null(무영향).
+// ============================================================
+const GAME_NAME: Record<string, string> = {
+  mood: '감정 수채화', garden: '마음의 정원', efmt: '감정꽃 찾기', gratitude: '별빛 감사일기',
+  tree: '내면의 나무', burnout: '번아웃 회복', focus: '마음 집중력', worry: '걱정상자',
+}
+
+type GameSummary = {
+  totalSessions: number; streakDays: number; level: number
+  byGame: { id: string; name: string; count: number }[]
+  mood: { count: number; recentAvg: number | null; prevAvg: number | null; topEmotions: string[] } | null
+  text: string
+}
+
+async function buildGameSummary(db: D1Database, userId: number): Promise<GameSummary | null> {
+  try {
+    const byGameRes = await db.prepare(
+      `SELECT game_id, COUNT(*) AS cnt FROM game_session_logs
+       WHERE user_id=? AND created_at > datetime('now','-30 days')
+       GROUP BY game_id ORDER BY cnt DESC`
+    ).bind(userId).all<{ game_id: string; cnt: number }>()
+    const byGame = (byGameRes.results ?? []).map((r) => ({ id: r.game_id, name: GAME_NAME[r.game_id] || r.game_id, count: r.cnt }))
+    const totalSessions = byGame.reduce((s, g) => s + g.count, 0)
+    if (totalSessions === 0) return null
+
+    const status = await db.prepare('SELECT garden_level, streak_days FROM user_game_status WHERE user_id=?')
+      .bind(userId).first<{ garden_level: number; streak_days: number }>()
+
+    // 감정 수채화 30일 기록 — 최근/이전 절반 강도 비교 + 자주 기록된 감정
+    let mood: GameSummary['mood'] = null
+    const moodRes = await db.prepare(
+      `SELECT metadata FROM game_session_logs
+       WHERE user_id=? AND game_id='mood' AND created_at > datetime('now','-30 days')
+       ORDER BY created_at DESC LIMIT 30`
+    ).bind(userId).all<{ metadata: string | null }>()
+    const moods = (moodRes.results ?? [])
+      .map((r) => { try { return r.metadata ? JSON.parse(r.metadata) as { emotion?: string; intensity?: number } : null } catch { return null } })
+      .filter((m): m is { emotion?: string; intensity?: number } => !!m)
+    if (moods.length > 0) {
+      const ints = moods.map((m) => Number(m.intensity)).filter((n) => Number.isFinite(n))
+      const half = Math.ceil(ints.length / 2)
+      const avg = (a: number[]) => (a.length ? Math.round((a.reduce((s, x) => s + x, 0) / a.length) * 10) / 10 : null)
+      // 감정 라벨 위생 처리 — 깨진 문자(U+FFFD)·과도한 길이는 제외. 손상된 값이 프롬프트/리포트에 새는 것 방지.
+      const cleanEmotion = (e?: string) => {
+        const s = (e ?? '').trim()
+        if (!s || s.length > 20 || s.includes('�')) return null
+        return s
+      }
+      const counts: Record<string, number> = {}
+      for (const m of moods) {
+        const e = cleanEmotion(m.emotion)
+        if (e) counts[e] = (counts[e] || 0) + 1
+      }
+      mood = {
+        count: moods.length,
+        recentAvg: avg(ints.slice(0, half)),
+        prevAvg: ints.length > 1 ? avg(ints.slice(half)) : null,
+        topEmotions: Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([e]) => e),
+      }
+    }
+
+    const lines = [
+      `최근 30일 게임 활동: ${byGame.map((g) => `${g.name} ${g.count}회`).join(', ')} (총 ${totalSessions}회)`,
+      `연속 실천 ${status?.streak_days ?? 0}일 · 정원 레벨 ${status?.garden_level ?? 1}`,
+    ]
+    if (mood) {
+      lines.push(`감정 기록 ${mood.count}회 — 최근 평균 강도 ${mood.recentAvg}${mood.prevAvg != null ? ` (이전 ${mood.prevAvg})` : ''}${mood.topEmotions.length ? `, 자주 기록된 감정: ${mood.topEmotions.join('·')}` : ''}`)
+    }
+
+    return {
+      totalSessions, streakDays: status?.streak_days ?? 0, level: status?.garden_level ?? 1,
+      byGame, mood, text: lines.join('\n'),
+    }
+  } catch (e) {
+    console.error('[buildGameSummary] error:', e)
+    return null   // 게임 데이터 실패는 해석·리포트에 영향 없음
+  }
+}
+
 function summarizeIntegratedResult(testType: string, r: Record<string, unknown> | null): string {
   if (!r) return ''
   try {
@@ -1515,10 +1600,12 @@ function summarizeIntegratedResult(testType: string, r: Record<string, unknown> 
   return ''
 }
 
-function buildIntegratedPrompt(tests: IntegratedTest[], lang: string, counselingType: string, moodSummary: string): { system: string; user: string } {
+function buildIntegratedPrompt(tests: IntegratedTest[], lang: string, counselingType: string, moodSummary: string, gameText = ''): { system: string; user: string } {
   const isBiblical = counselingType === 'biblical'
   const NL = '\n'
   const moodLine = moodSummary ? (NL + (lang === 'en' ? 'Mood trend (AI counseling logs): ' : '기분 추이(AI 상담 기록): ') + moodSummary) : ''
+  // ② 게임 행동 데이터 — 검사(스냅샷)와 달리 실제 실천 기록. 없으면 완전 생략(기존 동작 동일).
+  const gameLine = gameText ? (NL + (lang === 'en' ? 'Healing-game behavior (last 30 days):' : '치유게임 실천 기록(최근 30일):') + NL + gameText) : ''
   const testLines = tests.map((t) => {
     let line = '- ' + t.testType + ': 점수 ' + (t.score ?? 'N/A') + (t.level ? ' (' + t.level + ')' : '')
     if (t.prevScore != null && t.score != null) {
@@ -1534,7 +1621,8 @@ function buildIntegratedPrompt(tests: IntegratedTest[], lang: string, counseling
 
   if (lang === 'en') {
     const systemEn = 'You are a warm psychological guide for Maumful. Integrate MULTIPLE assessment results into ONE coherent picture of the person, finding connections across tests. Base every statement ONLY on the provided scores/levels; never infer missing data. Never use clinical diagnoses. If depression/anxiety scores are high or severe, gently include a line pointing to professional help. Write only these sections: [Integrated Profile] 2-3 sentences on the core cross-test pattern. [Connections] 2-3 ways the tests interact. [Strengths & Resources]. [Watch Areas]. [Change Over Time] (only if prior scores given). [Next Steps] specific items from — ' + assets + '. End with: "This is a reference for self-understanding and does not replace professional consultation."'
-    return { system: systemEn + '\nFormatting: plain text only, no markdown (#, ##, **, ---, >). Section titles in [Title] bracket form.', user: 'Assessment results:' + NL + testLines + moodLine }
+    const gameRuleEn = gameText ? ' If healing-game behavior data is given, weave it into [Change Over Time] as evidence of what the person actually practices, and make [Next Steps] build on the games they already play.' : ''
+    return { system: systemEn + gameRuleEn + '\nFormatting: plain text only, no markdown (#, ##, **, ---, >). Section titles in [Title] bracket form.', user: 'Assessment results:' + NL + testLines + moodLine + gameLine }
   }
 
   const persona = isBiblical
@@ -1551,8 +1639,11 @@ function buildIntegratedPrompt(tests: IntegratedTest[], lang: string, counseling
     '[변화 흐름] 지난번 대비 점수 변화가 있으면 그 흐름을 1~2문장. (변화 데이터가 없으면 이 섹션 생략)' + NL +
     '[다음 단계 추천] 이 사람에게 맞는 것을 아래에서 구체적으로 2~3개. ' + assets + NL +
     '마지막 문장: "본 해석은 자기이해를 위한 참고 자료이며 전문가 상담을 대체하지 않습니다."' + NL +
+    (gameText
+      ? '치유게임 실천 기록이 주어지면: 검사는 "그 시점의 나", 게임은 "실제로 해온 행동"입니다. [변화 흐름]에서 점수 변화와 실천 기록(빈도·연속일·감정 강도 추이)을 함께 엮고, [다음 단계 추천]은 이미 하고 있는 게임을 이어가는 방향으로 구체화하세요. 실천이 적으면 질책 대신 작게 시작할 방법을 제안하세요.' + NL
+      : '') +
     '출력 형식(중요): 마크다운 기호(#, ##, **, ---, >, `) 절대 금지. 섹션 제목은 [제목] 대괄호 형태 그대로, 본문은 일반 문장으로만.'
-  return { system: systemKo, user: '검사 결과:' + NL + testLines + moodLine }
+  return { system: systemKo, user: '검사 결과:' + NL + testLines + moodLine + gameLine }
 }
 
 app.post('/api/ai-analyze/integrated', async (c) => {
@@ -1604,7 +1695,10 @@ app.post('/api/ai-analyze/integrated', async (c) => {
     }
   } catch { /* mood 요약 실패는 무시 */ }
 
-  const { system, user } = buildIntegratedPrompt(tests, lang, counselingType, moodSummary)
+  // ② 마음게임 행동 데이터(같은 DB) — 없으면 null → 프롬프트에서 완전 생략
+  const game = await buildGameSummary(DB, userId)
+
+  const { system, user } = buildIntegratedPrompt(tests, lang, counselingType, moodSummary, game?.text ?? '')
   // ⚠️ sonnet-4-6/haiku-4-5는 temperature 허용. 모델을 sonnet-5/opus-4.7+로 올릴 땐 temperature 제거 필수(안 그러면 400).
   // system 배열의 cache_control은 현 프롬프트 길이(<2048토큰)에선 캐시 미적용(에러 아님) — 프롬프트가 커지면 자동 적용.
   const INTEGRATED_FALLBACKS = ['claude-sonnet-4-6', 'claude-haiku-4-5-20251001']
@@ -1615,7 +1709,8 @@ app.post('/api/ai-analyze/integrated', async (c) => {
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
         model,
-        max_tokens: 1800,
+        // 게임 행동 데이터가 붙으면서 출력이 길어져 1800에서 마지막 면책 문장이 잘림(E2E 확인) → 2400
+        max_tokens: 2400,
         temperature: 0.4,
         stream: true,
         system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],

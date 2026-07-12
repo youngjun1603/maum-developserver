@@ -3793,12 +3793,48 @@ function PsychologicalTestSystem() {
                 </section>
               )}
 
-              {/* 4. 다음 단계 */}
+              {/* 4. 게임으로 본 나의 변화 — 검사는 '그 시점의 나', 게임은 '실제로 해온 행동' */}
+              {d.game && (
+                <section className="mb-6">
+                  <h2 className="text-sm font-bold text-emerald-700 mb-3">▌ 4. {t("게임으로 본 나의 변화","Your Practice, in Games")}</h2>
+                  <div className="bg-emerald-50/60 border border-emerald-100 rounded-xl p-4">
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600 mb-2">
+                      <span>🎮 {t("최근 30일","Last 30 days")} <b className="text-gray-800">{d.game.totalSessions}{t("회","")}</b></span>
+                      <span>🔥 {t("연속 실천","Streak")} <b className="text-gray-800">{d.game.streakDays}{t("일","d")}</b></span>
+                      <span>🌱 {t("정원 레벨","Garden Lv")} <b className="text-gray-800">{d.game.level}</b></span>
+                    </div>
+                    <p className="text-xs text-gray-500 leading-relaxed">
+                      {d.game.byGame.slice(0, 4).map(g => `${g.name} ${g.count}${t("회","")}`).join(' · ')}
+                    </p>
+                    {d.game.mood && d.game.mood.recentAvg != null && (
+                      <p className="text-sm text-gray-700 leading-relaxed mt-3 pt-3 border-t border-emerald-100">
+                        {t(`감정 기록 ${d.game.mood.count}회 — 최근 평균 강도 ${d.game.mood.recentAvg}`, `${d.game.mood.count} mood logs — recent avg intensity ${d.game.mood.recentAvg}`)}
+                        {d.game.mood.prevAvg != null && t(` (이전 ${d.game.mood.prevAvg})`, ` (earlier ${d.game.mood.prevAvg})`)}
+                        {d.game.mood.topEmotions?.length > 0 && t(` · 자주 기록된 감정: ${d.game.mood.topEmotions.join('·')}`, ` · most logged: ${d.game.mood.topEmotions.join(', ')}`)}
+                      </p>
+                    )}
+                  </div>
+                </section>
+              )}
+
+              {/* 5. 다음 단계 — ③ 검사 결과에 맞춘 게임 처방(딥링크) */}
               <section className="mb-6 no-print">
-                <h2 className="text-sm font-bold text-emerald-700 mb-3">▌ 4. {t("다음 단계","Next Steps")}</h2>
+                <h2 className="text-sm font-bold text-emerald-700 mb-3">▌ {d.game ? '5' : '4'}. {t("다음 단계","Next Steps")}</h2>
+                <div className="space-y-2 mb-3">
+                  {gamePrescription(d.test_type, d.score).map(g => (
+                    <button key={g.key} onClick={() => openMaumGame(g.key)}
+                      className="w-full flex items-start gap-3 text-left p-3 rounded-xl bg-white border border-emerald-200 hover:bg-emerald-50 transition">
+                      <span className="text-xl leading-none mt-0.5">{g.emoji}</span>
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-xs font-bold text-emerald-800">{g.name}</span>
+                        <span className="block text-[11px] text-gray-500 leading-relaxed mt-0.5">{g.why}</span>
+                      </span>
+                      <span className="text-emerald-400 text-xs mt-1">→</span>
+                    </button>
+                  ))}
+                </div>
                 <div className="flex flex-wrap gap-2">
                   <button onClick={() => setView('aiCounsel')} className="flex-1 min-w-[130px] py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition">💬 {t("이 결과로 AI 상담","Discuss with AI")}</button>
-                  <button onClick={() => openMaumGame()} className="flex-1 min-w-[130px] py-2.5 rounded-xl bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50 text-xs font-bold transition">🎮 {t("추천 힐링 게임","Healing games")}</button>
                   <button onClick={() => setView('testsIntro')} className="flex-1 min-w-[130px] py-2.5 rounded-xl bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50 text-xs font-bold transition">✨ {t("다른 검사 받기","More tests")}</button>
                 </div>
               </section>
@@ -7588,6 +7624,49 @@ function PsychologicalTestSystem() {
       if (testType === 'SCT')    return Object.entries(r.byScale || {}).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.length + '문항' : v}`).join('\n');
       return '';
     } catch { return ''; }
+  }
+
+  // ③ 검사 → 마음게임 개인화 처방. 검사 결과에 맞는 치유게임을 딥링크(openMaumGame(key))로 연결.
+  //    game.maumful.com은 ?game=<key>를 받아 자동 진입 (garden·efmt·gratitude·tree·burnout·mood·focus·worry)
+  function gamePrescription(testType, score) {
+    const G = {
+      garden:    { emoji: '🌱', name: t('마음의 정원', 'Mind Garden') },
+      worry:     { emoji: '📦', name: t('걱정상자', 'Worry Box') },
+      mood:      { emoji: '🎨', name: t('감정 수채화', 'Mood Palette') },
+      burnout:   { emoji: '🔥', name: t('번아웃 회복', 'Burnout Recovery') },
+      tree:      { emoji: '🌳', name: t('내면의 나무', 'Inner Tree') },
+      gratitude: { emoji: '⭐', name: t('별빛 감사일기', 'Gratitude Diary') },
+      focus:     { emoji: '🎯', name: t('마음 집중력', 'Focus Trainer') },
+      efmt:      { emoji: '🌸', name: t('감정꽃 찾기', 'Emotion Bloom') },
+    };
+    const W = {
+      gardenCBT:   t('나를 힘들게 하는 생각을 알아차리고 다르게 바라보는 연습(CBT)이에요.', 'Practice noticing and reframing the thoughts that weigh on you (CBT).'),
+      worryBox:    t('머릿속을 맴도는 걱정을 밖에 꺼내 놓고 거리를 두는 연습이에요.', 'Put circling worries outside your head and step back from them.'),
+      moodTrack:   t('매일 기분을 기록하면 다음 리포트의 변화 흐름이 훨씬 정확해져요.', 'Logging your mood daily makes the next report’s change trend far more accurate.'),
+      burnoutRec:  t('소진된 에너지를 회복하는 짧은 루틴을 단계별로 따라가요.', 'Follow short step-by-step routines to restore drained energy.'),
+      treeRoot:    t('관계 속에서 흔들리지 않는 나만의 뿌리를 키우는 시간이에요.', 'Grow roots that keep you steady inside close relationships.'),
+      gratitudeRx: t('하루 한 가지 감사를 적는 것만으로 마음의 기본 온도가 올라가요.', 'One gratitude a day slowly raises your baseline warmth.'),
+      focusRx:     t('산만해진 주의를 지금 이 순간으로 데려오는 짧은 훈련이에요.', 'A short drill to bring scattered attention back to the present.'),
+      efmtRx:      t('내 감정에 정확한 이름을 붙이는 연습이에요.', 'Practice giving your feelings their precise names.'),
+    };
+    const RX = {
+      PHQ9:    [['garden', 'gardenCBT'], ['mood', 'moodTrack']],
+      GAD7:    [['worry', 'worryBox'], ['garden', 'gardenCBT']],
+      DASS21:  [['garden', 'gardenCBT'], ['worry', 'worryBox']],
+      BURNOUT: [['burnout', 'burnoutRec'], ['focus', 'focusRx']],
+      DSI:     [['tree', 'treeRoot'], ['efmt', 'efmtRx']],
+      SCT:     [['tree', 'treeRoot'], ['gratitude', 'gratitudeRx']],
+      BIG5:    [['gratitude', 'gratitudeRx'], ['mood', 'moodTrack']],
+      LOST:    [['efmt', 'efmtRx'], ['gratitude', 'gratitudeRx']],
+      RIASEC:  [['focus', 'focusRx'], ['gratitude', 'gratitudeRx']],
+      VALUES:  [['gratitude', 'gratitudeRx'], ['focus', 'focusRx']],
+    };
+    let list = RX[testType] || [['gratitude', 'gratitudeRx'], ['mood', 'moodTrack']];
+    // 우울·불안이 중등도 이상이면 매일 기분 기록을 함께 권함(변화 추적이 중요해지는 구간)
+    if ((testType === 'PHQ9' || testType === 'GAD7') && typeof score === 'number' && score >= 10 && !list.some(([k]) => k === 'mood')) {
+      list = [...list, ['mood', 'moodTrack']];
+    }
+    return list.map(([key, why]) => ({ key, ...G[key], why: W[why] }));
   }
 
   // 🧩 통합 심층 해석 — 여러 검사를 종합 (/api/ai-analyze/integrated, 기존 runAiAnalysis와 별개)
