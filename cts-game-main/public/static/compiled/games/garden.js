@@ -504,6 +504,7 @@ function CBTModule({ onComplete, onBack, userTestScores = {} }) {
   const TOTAL_BRANCHES = 3;
   const SEED_THOUGHTS = getSeedThoughts(userTestScores);
   const [step, setStep] = useState("intro");
+  const [crisis, setCrisis] = useState(null);
   const [branches, setBranches] = useState([]);
   const [current, setCurrent] = useState({ original: "", transformed: "", editing: false });
   const [inputText, setInputText] = useState("");
@@ -532,7 +533,10 @@ function CBTModule({ onComplete, onBack, userTestScores = {} }) {
     setAiError("");
     try {
       const res = await GameEngine.transformSentence(text);
-      if (res.success) {
+      if (res.success && res.data?.crisis) {
+        setCrisis(res.data);
+        setStep("crisis");
+      } else if (res.success) {
         setCurrent({ original: text, transformed: res.data.result, editing: false });
         setStep("transform");
       } else {
@@ -573,6 +577,56 @@ function CBTModule({ onComplete, onBack, userTestScores = {} }) {
       onComplete?.({ score: Math.round(score), expGained: 0, leveledUp: false, newAchievements: [] });
     }
   };
+  if (step === "crisis" && crisis) {
+    return /* @__PURE__ */ React.createElement("div", { style: {
+      flex: 1,
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "center",
+      background: "linear-gradient(160deg, #FFF6F2, #FFEDE4)",
+      padding: 24,
+      animation: "fadeUp 0.5s ease"
+    } }, /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", marginBottom: 20 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 40, marginBottom: 12 } }, "\u{1FAC2}"), /* @__PURE__ */ React.createElement("h2", { style: { fontSize: 20, fontWeight: 700, color: "#8A3A1E", marginBottom: 12, fontFamily: "'Noto Serif KR', serif" } }, t("\uC7A0\uC2DC \uBA48\uCD9C\uAC8C\uC694", "Let's pause here")), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 14, color: "#7A4A38", lineHeight: 1.9, whiteSpace: "pre-wrap" } }, crisis.message)), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10, marginBottom: 18 } }, (crisis.resources || []).map((r, i) => /* @__PURE__ */ React.createElement(
+      "a",
+      {
+        key: i,
+        href: `tel:${String(r.tel).replace(/-/g, "")}`,
+        style: {
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          background: "#fff",
+          border: "1px solid #F0CDBB",
+          borderRadius: 14,
+          padding: "14px 16px",
+          textDecoration: "none"
+        }
+      },
+      /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, fontWeight: 700, color: "#8A3A1E" } }, r.label),
+      /* @__PURE__ */ React.createElement("span", { style: { fontSize: 15, fontWeight: 800, color: "#C0552B" } }, "\u{1F4DE} ", r.tel)
+    ))), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: "#A2705C", textAlign: "center", lineHeight: 1.7, marginBottom: 16 } }, t("24\uC2DC\uAC04 \uC5B8\uC81C\uB4E0 \uC5F0\uACB0\uB429\uB2C8\uB2E4. \uC9C0\uAE08 \uBC14\uB85C \uC774\uC57C\uAE30\uD574\uB3C4 \uAD1C\uCC2E\uC544\uC694.", "Available 24/7. It is okay to reach out right now.")), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        onClick: () => {
+          setCrisis(null);
+          setInputText("");
+          setStep("input");
+        },
+        style: {
+          padding: "12px",
+          borderRadius: 12,
+          border: "1px solid #E5C4B4",
+          background: "transparent",
+          color: "#8A3A1E",
+          fontSize: 13,
+          fontWeight: 600,
+          cursor: "pointer",
+          fontFamily: "'Noto Sans KR', sans-serif"
+        }
+      },
+      t("\uB3CC\uC544\uAC00\uAE30", "Go back")
+    ));
+  }
   if (step === "done") {
     return /* @__PURE__ */ React.createElement("div", { style: {
       flex: 1,

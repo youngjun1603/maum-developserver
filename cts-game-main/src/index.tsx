@@ -240,7 +240,7 @@ app.get('/api/game/me', async (c) => {
   const levelInfo = getLevelInfo(status?.total_exp || 0)
 
   // 마스터 계정: 모든 게임 해금 + 모든 검사 완료 처리
-  const allGames = ['garden', 'mood', 'efmt', 'gratitude', 'tree', 'burnout']
+  const allGames = ['garden', 'mood', 'efmt', 'gratitude', 'tree', 'burnout', 'focus', 'worry']   // focus·worry 누락 수정
   const allTests = ['PHQ9', 'GAD7', 'DASS21', 'BIG5', 'LOST', 'SCT', 'DSI', 'BURNOUT']
   const master   = isMasterAccount(user.email)
 
@@ -583,13 +583,42 @@ app.patch('/api/game/visual', async (c) => {
 
 // ── POST /api/game/ai-transform ────────────────────────────
 // SCT 부정 문장 → 긍정 확언 변환 (Claude API)
+// ⚠️ 안전 오버라이드 — CBT 생각변환은 사용자가 부정적 생각을 자유 입력하는 통로다.
+//    자해·자살 신호는 "긍정 확언으로 바꿀 생각"이 아니라 즉시 도움이 필요한 신호 → 변환 금지·긴급자원 안내.
+//    오탐 방지: 과장 표현('배고파 죽겠다')은 제외하고 명시적 표현만 매칭.
+const CRISIS_PATTERNS: RegExp[] = [
+  /죽고\s*싶/, /죽어\s*버리/, /자살/, /자해/,
+  /사라지고\s*싶/, /없어지고\s*싶/, /사라져\s*버리고\s*싶/,
+  /살기\s*싫/, /살고\s*싶지\s*않/, /살\s*이유가?\s*없/,
+  /목숨을?\s*끊/, /생을\s*마감/, /목을\s*매/, /뛰어내리/, /손목을?\s*긋/, /유서/,
+  /kill\s*myself/i, /suicide/i, /want\s*to\s*die/i, /end\s*my\s*life/i, /self[-\s]?harm/i, /hurt\s*myself/i,
+]
+const CRISIS_PAYLOAD = {
+  crisis: true,
+  message: '지금 많이 힘드신 것 같아요. 이건 "긍정적으로 바꿔야 할 생각"이 아니라, 지금 바로 도움을 받아야 할 신호예요. 혼자 견디지 않으셔도 됩니다. 아래로 연락하면 24시간 이야기할 수 있어요.',
+  resources: [
+    { label: '자살예방 상담전화', tel: '109' },
+    { label: '정신건강 위기상담', tel: '1577-0199' },
+    { label: '청소년 상담', tel: '1388' },
+  ],
+}
+
 app.post('/api/game/ai-transform', async (c) => {
   const { DB } = c.env
   const userId = await getGameUserId(c.req.raw, c.env)
   if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
 
-  const { text } = await c.req.json() as { text: string }
-  if (!text || text.trim().length < 2) return c.json({ success: false, error: '텍스트 필요' }, 400)
+  const { text: rawText } = await c.req.json() as { text: string }
+  if (!rawText || rawText.trim().length < 2) return c.json({ success: false, error: '텍스트 필요' }, 400)
+
+  // ⚠️ 자모 분리(NFD) 한글은 완성형 정규식과 매칭되지 않아 1차 방어가 통째로 우회된다(마음풀에서 E2E로 확인).
+  const text = rawText.normalize('NFC')
+
+  // ① 1차 방어: 서버 키워드 사전차단 — AI 미호출·캐시 미저장
+  if (CRISIS_PATTERNS.some((re) => re.test(text))) {
+    console.warn('[ai-transform] 위기 신호 감지 — 변환 중단, 안전 안내 반환')
+    return c.json({ success: true, data: CRISIS_PAYLOAD })
+  }
 
   // 캐시 확인 (테이블 없어도 무시)
   try {
@@ -609,7 +638,11 @@ app.post('/api/game/ai-transform', async (c) => {
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 200,
-        system: `당신은 인지행동치료(CBT) 전문가입니다. 사용자의 부정적인 문장을 받으면, 인지적 왜곡이 교정된 건강하고 현실적인 자기 확언 문장 하나로 변환해 주세요. 너무 낙관적이지 않고 수용적이며 따뜻한 어조여야 합니다. 변환된 문장만 출력하세요.`,
+        // ② 2차 방어: 키워드가 놓친 위기 신호를 모델이 잡으면 변환 대신 [SAFETY]만 출력
+        system: `당신은 인지행동치료(CBT) 전문가입니다. 사용자의 부정적인 문장을 받으면, 인지적 왜곡이 교정된 건강하고 현실적인 자기 확언 문장 하나로 변환해 주세요. 너무 낙관적이지 않고 수용적이며 따뜻한 어조여야 합니다. 변환된 문장만 출력하세요.
+
+[안전 오버라이드 — 최우선]
+문장에 자해·자살·죽고 싶다·사라지고 싶다·삶을 끝내고 싶다는 신호가 조금이라도 있으면, 절대로 긍정 확언으로 변환하지 마세요. 그런 마음은 "고쳐야 할 생각"이 아니라 즉시 도움이 필요한 신호입니다. 이 경우 다른 어떤 말도 하지 말고 정확히 다음 한 단어만 출력하세요: [SAFETY]`,
         messages: [{ role: 'user', content: `다음 문장을 긍정적인 자기 확언으로 바꿔주세요: "${text.trim()}"` }],
       }),
     })
@@ -623,6 +656,12 @@ app.post('/api/game/ai-transform', async (c) => {
     }
     const d = await res.json() as { content: { text: string }[] }
     const result = d.content?.[0]?.text?.trim() || ''
+
+    // ② 2차 방어 결과 처리 — 모델이 위기로 판단하면 변환 대신 안전 안내(캐시 저장 안 함)
+    if (result.includes('[SAFETY]')) {
+      console.warn('[ai-transform] 모델 안전 오버라이드 발동 — 안전 안내 반환')
+      return c.json({ success: true, data: CRISIS_PAYLOAD })
+    }
 
     // 캐시 저장 (테이블 없어도 무시)
     try {
@@ -1134,12 +1173,38 @@ app.get('/api/game/ai-diary', async (c) => {
   }
 })
 
+// ── 주간 리포트 수신거부 (이메일 링크에서 바로 — 로그인 불필요, HMAC 서명으로 위조 방지) ──
+app.get('/unsubscribe', async (c) => {
+  const { DB } = c.env
+  const uid = Number(c.req.query('u'))
+  const sig = c.req.query('s') || ''
+  const page = (title: string, body: string) => c.html(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title></head>
+<body style="margin:0;background:#F5F0E8;font-family:'Apple SD Gothic Neo',sans-serif;">
+<div style="max-width:420px;margin:60px auto;background:white;border-radius:24px;padding:36px 28px;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+  <div style="font-size:44px;margin-bottom:12px;">🌿</div>
+  <div style="font-size:18px;font-weight:700;color:#3A4A3A;margin-bottom:10px;">${title}</div>
+  <div style="font-size:13px;color:#6A7A6A;line-height:1.8;">${body}</div>
+</div></body></html>`)
+
+  if (!uid || !sig || sig !== await ctsSignUnsub(c.env, uid)) {
+    return page('링크가 올바르지 않아요', '수신거부 링크가 만료되었거나 잘못되었습니다.')
+  }
+  await DB.prepare(
+    `INSERT INTO game_email_prefs (user_id, optout, updated_at) VALUES (?, 1, CURRENT_TIMESTAMP)
+     ON CONFLICT(user_id) DO UPDATE SET optout=1, updated_at=CURRENT_TIMESTAMP`
+  ).bind(uid).run()
+  return page('수신거부가 완료됐어요', '앞으로 주간 리포트 메일을 보내지 않습니다.<br>서비스 이용에는 아무 영향이 없어요.')
+})
+
 // ── 주간 이메일 발송 헬퍼 ────────────────────────────────────
 async function sendWeeklySummaryEmail(
   env: Bindings,
   to: string,
   nickname: string,
-  stats: { playCount: number; expGained: number; topEmotion: string | null; levelName: string; streak: number }
+  stats: {
+    playCount: number; expGained: number; topEmotion: string | null; levelName: string; streak: number
+    unsubUrl?: string   // 수신거부(법정 필수)
+  }
 ): Promise<void> {
   const key = env.RESEND_API_KEY
   if (!key) return
@@ -1194,6 +1259,11 @@ async function sendWeeklySummaryEmail(
     </div>
     <div style="padding:16px 24px;text-align:center;border-top:1px solid #F0EAE0;">
       <div style="font-size:11px;color:#A0A090;">마음풀 · game.maumful.com</div>
+      ${stats.unsubUrl ? `
+      <div style="font-size:11px;color:#B0B0A0;margin-top:6px;line-height:1.6;">
+        이 메일은 회원님의 게임 이용 내역 안내입니다.<br>
+        더 이상 받고 싶지 않으시면 <a href="${stats.unsubUrl}" style="color:#8A8A7A;">수신거부</a>를 눌러 주세요.
+      </div>` : ''}
     </div>
   </div>
 </div>
@@ -1212,77 +1282,121 @@ async function sendWeeklySummaryEmail(
 }
 
 // ── 번아웃 주간 리포트 자동 생성 + 주간 이메일 발송 (Cron) ──
+// ⚠️ 현재 cron은 wrangler.toml에서 비활성(무료 플랜 cron 5개 제한). 활성화 시 아래가 그대로 돈다.
+// ⚠️ 수신거부(game_email_prefs.optout) 사용자는 제외 — 정보통신망법상 수신거부 수단 제공 필수.
 async function handleScheduled(env: Bindings) {
   const { DB } = env
 
-  // 지난 7일간 활동한 사용자 (이메일 인증 완료자만)
+  // 활동 사용자 + 집계(플레이 수·실제 획득 경험치)를 한 번의 쿼리로. (이전: 사용자마다 세션 재조회 = N+1)
   const activeUsers = await DB.prepare(`
-    SELECT DISTINCT gsl.user_id, u.email, u.nickname, ugs.total_exp, ugs.garden_level, ugs.streak_days
+    SELECT gsl.user_id, u.email, u.nickname, ugs.garden_level, ugs.streak_days,
+           COUNT(*) AS plays, COALESCE(SUM(gsl.exp_gained), 0) AS exp_sum
     FROM game_session_logs gsl
     JOIN users u ON gsl.user_id = u.id
     LEFT JOIN user_game_status ugs ON gsl.user_id = ugs.user_id
+    LEFT JOIN game_email_prefs p   ON gsl.user_id = p.user_id
     WHERE gsl.created_at >= date('now', '-7 days')
       AND u.is_email_verified = 1
-  `).all<{ user_id: number; email: string; nickname: string | null; total_exp: number; garden_level: number; streak_days: number }>()
+      AND COALESCE(p.optout, 0) = 0
+    GROUP BY gsl.user_id
+  `).all<{ user_id: number; email: string; nickname: string | null; garden_level: number | null; streak_days: number | null; plays: number; exp_sum: number }>()
+  const users = activeUsers.results ?? []
+  if (users.length === 0) { console.log('[Cron] 주간 리포트 대상 없음'); return }
 
-  const now = new Date(Date.now() + 9 * 3600 * 1000)
-  const dayOfWeek = now.getUTCDay() === 0 ? 6 : now.getUTCDay() - 1
-  const weekStart = new Date(now)
-  weekStart.setUTCDate(now.getUTCDate() - dayOfWeek)
-  const weekStartStr = weekStart.toISOString().slice(0, 10)
+  // 7일치 세션 metadata를 한 번에 읽어 사용자별로 그룹핑
+  const sessRes = await DB.prepare(`
+    SELECT user_id, game_id, metadata FROM game_session_logs
+    WHERE created_at >= date('now', '-7 days')
+  `).all<{ user_id: number; game_id: string; metadata: string | null }>()
+  const sessByUser = new Map<number, { gameId: string; meta: Record<string, unknown> }[]>()
+  for (const s of (sessRes.results ?? [])) {
+    let meta: Record<string, unknown> = {}
+    try { meta = s.metadata ? JSON.parse(s.metadata) as Record<string, unknown> : {} } catch { /* 손상된 metadata 무시 */ }
+    const arr = sessByUser.get(s.user_id) ?? []
+    arr.push({ gameId: s.game_id, meta })
+    sessByUser.set(s.user_id, arr)
+  }
+
+  // 지난주 avg_energy — 번아웃 변화율 계산용 (이전: 항상 '0%' 하드코딩)
+  const weekStartStr = ctsKstWeekStartStr(0)
+  const prevWeekStr  = ctsKstWeekStartStr(-7)
+  const prevRes = await DB.prepare('SELECT user_id, avg_energy FROM weekly_reports WHERE week_start=?')
+    .bind(prevWeekStr).all<{ user_id: number; avg_energy: number }>()
+  const prevEnergy = new Map((prevRes.results ?? []).map((r) => [r.user_id, r.avg_energy]))
 
   const levelNames: Record<number, string> = { 1:'씨앗', 2:'새싹', 3:'꽃봉오리', 4:'꽃피움', 5:'만개', 6:'정원사' }
 
-  for (const u of activeUsers.results) {
-    // 지난 7일 세션 통계
-    const sessions = await DB.prepare(`
-      SELECT game_id, score, metadata FROM game_session_logs
-      WHERE user_id=? AND created_at >= date('now', '-7 days')
-    `).bind(u.user_id).all<{ game_id: string; score: number; metadata: string | null }>()
+  // 5명씩 동시 실행 (순차 await는 사용자가 늘면 cron 타임아웃)
+  const CHUNK = 5
+  for (let i = 0; i < users.length; i += CHUNK) {
+    await Promise.all(users.slice(i, i + CHUNK).map(async (u) => {
+      const sessions = sessByUser.get(u.user_id) ?? []
 
-    let totalExp = 0, missionCount = 0
-    const emotionCounts: Record<string, number> = {}
-
-    for (const s of sessions.results) {
-      totalExp += s.score || 0
-      try {
-        const meta = s.metadata ? JSON.parse(s.metadata) : {}
-        if (s.game_id === 'burnout') {
-          if (typeof meta.completedMissions === 'number') missionCount += meta.completedMissions
-          // 번아웃 주간 리포트 데이터도 수집
-          let totalEnergy = 0, energyCount = 0
-          if (typeof meta.energy === 'number') { totalEnergy += meta.energy; energyCount++ }
-          const avgEnergy = energyCount > 0 ? Math.round(totalEnergy / energyCount) : 50
-          await DB.prepare('DELETE FROM weekly_reports WHERE user_id=? AND week_start=?')
-            .bind(u.user_id, weekStartStr).run()
-          await DB.prepare(
-            'INSERT INTO weekly_reports (user_id, avg_energy, completed_missions, burnout_delta, week_start) VALUES (?,?,?,?,?)'
-          ).bind(u.user_id, avgEnergy, missionCount, '0%', weekStartStr).run().catch(() => { /**/ })
+      // 번아웃: 주간 에너지 평균·미션 합계 (이전 버그 — 세션마다 평균이 리셋되고 DELETE/INSERT가 반복됐음)
+      const energies: number[] = []
+      let missionCount = 0
+      const emotionCounts: Record<string, number> = {}
+      for (const s of sessions) {
+        if (s.gameId === 'burnout') {
+          if (typeof s.meta.completedMissions === 'number') missionCount += s.meta.completedMissions
+          if (typeof s.meta.energy === 'number') energies.push(s.meta.energy)
         }
-        if (s.game_id === 'mood' && meta.emotion) {
-          const e = meta.emotion as string
+        if (s.gameId === 'mood' && typeof s.meta.emotion === 'string') {
+          const e = s.meta.emotion
           emotionCounts[e] = (emotionCounts[e] || 0) + 1
         }
-      } catch { /**/ }
-    }
+      }
 
-    const topEmotion = Object.keys(emotionCounts).sort((a, b) => emotionCounts[b] - emotionCounts[a])[0] || null
-    const levelName = levelNames[u.garden_level || 1] || '씨앗'
-    const nickname = u.nickname || u.email.split('@')[0]
+      if (energies.length > 0) {
+        const avgEnergy = Math.round(energies.reduce((a, b) => a + b, 0) / energies.length)
+        const prev = prevEnergy.get(u.user_id)
+        const delta = (prev && prev > 0)
+          ? `${avgEnergy >= prev ? '+' : ''}${Math.round(((avgEnergy - prev) / prev) * 100)}%`
+          : '0%'
+        await DB.prepare('DELETE FROM weekly_reports WHERE user_id=? AND week_start=?').bind(u.user_id, weekStartStr).run()
+        await DB.prepare(
+          'INSERT INTO weekly_reports (user_id, avg_energy, completed_missions, burnout_delta, week_start) VALUES (?,?,?,?,?)'
+        ).bind(u.user_id, avgEnergy, missionCount, delta, weekStartStr).run().catch(() => { /* 기록 실패가 메일을 막지 않는다 */ })
+      }
 
-    // 주간 이메일 발송 (Resend)
-    await sendWeeklySummaryEmail(env, u.email, nickname, {
-      playCount: sessions.results.length,
-      expGained: Math.round(totalExp / 10), // EXP 단위로 환산
-      topEmotion,
-      levelName,
-      streak: u.streak_days || 0,
-    })
+      const topEmotion = Object.keys(emotionCounts).sort((a, b) => emotionCounts[b] - emotionCounts[a])[0] || null
+      const nickname = u.nickname || u.email.split('@')[0]
 
-    console.log(`[Cron] 주간 이메일 발송: ${u.email} (${sessions.results.length}회 플레이)`)
+      await sendWeeklySummaryEmail(env, u.email, nickname, {
+        playCount: u.plays,
+        expGained: u.exp_sum,                       // 이전: score 합계를 10으로 나눈 가짜 값
+        topEmotion,
+        levelName: levelNames[u.garden_level || 1] || '씨앗',
+        streak: u.streak_days || 0,
+        unsubUrl: await ctsBuildUnsubUrl(env, u.user_id),
+      })
+    }))
   }
 
-  console.log(`[Cron] 총 ${activeUsers.results.length}명에게 주간 리포트 발송 완료`)
+  console.log(`[Cron] 총 ${users.length}명에게 주간 리포트 발송 완료`)
+}
+
+// KST 기준 이번 주(월요일) 시작일. offsetDays로 지난 주도 구한다.
+function ctsKstWeekStartStr(offsetDays: number): string {
+  const now = new Date(Date.now() + 9 * 3600 * 1000)
+  const dow = now.getUTCDay() === 0 ? 6 : now.getUTCDay() - 1   // 월=0
+  const d = new Date(now)
+  d.setUTCDate(now.getUTCDate() - dow + offsetDays)
+  return d.toISOString().slice(0, 10)
+}
+
+// 수신거부 링크 — HMAC 서명(JWT_SECRET)으로 위조 방지
+async function ctsBuildUnsubUrl(env: Bindings, userId: number): Promise<string> {
+  const sig = await ctsSignUnsub(env, userId)
+  return `${env.SERVICE_URL ?? 'https://lightoflife-game.limyj007.workers.dev'}/unsubscribe?u=${userId}&s=${sig}`
+}
+
+async function ctsSignUnsub(env: Bindings, userId: number): Promise<string> {
+  // ⚠️ CTS는 JWT 시크릿을 KV에 두고 env는 폴백이다(getGameUserId와 동일한 순서). env만 보면 빈 키로 서명돼 위조 가능.
+  const secret = (env.KV ? await (env.KV as KVNamespace).get('JWT_SECRET') : null) ?? env.JWT_SECRET ?? 'dev_secret_change_in_production'
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+  const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`unsub:${userId}`))
+  return [...new Uint8Array(mac)].map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 32)
 }
 
 export default {
