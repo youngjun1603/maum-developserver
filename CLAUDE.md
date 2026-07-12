@@ -11,14 +11,15 @@
 | `maumgame-main/` | 마음풀 게임 (game.maumful.com) | `maumful-main/CLAUDE.md` |
 | `package/maumcouple/` | 마음커플 (couple.maumful.com) | `maumful-main/CLAUDE.md` |
 | `maumbubu/` | 마음부부 (부부 대화 통역, bubu.maumful.com) *신규* | `maumbubu/CLAUDE.md` (마음커플 패턴 공유) |
-| `cts-maum-main/` | CTS 메인 (jesusmaum.com) *submodule* | `cts-maum-main/CLAUDE.md` (+ 공통은 maumful-main) |
-| `cts-game-main/` | CTS 게임 | `cts-maum-main/CLAUDE.md` (+ maumful-main) |
+| `cts-maum-main/` | CTS 메인 (jesusmaum.com) — **별도 레포** `lightoflife-cts` | `cts-maum-main/CLAUDE.md` (+ 공통은 maumful-main) |
+| `cts-game-main/` | CTS 게임 (`lightoflife-game`) — ⚠️ **이 레포 안에 있음** | `cts-maum-main/CLAUDE.md` (+ maumful-main) |
 | `maumotter/` | 마음수달 (아이 정서 통역) *신규* | `maumotter/CLAUDE.md` + `_shared/` |
 | `maumgyeot/` | 마음곁 (반려동물 통역) *신규* | `maumgyeot/CLAUDE.md` + `_shared/` |
 | `_shared/` | 마음 시리즈 공유규약(인증·JWT·브랜드) | `_shared/maum-shared-spec.md` |
 | `_assets/` | 이미지·디자인·문서 자산 | — |
 
 - **마음풀·CTS는 트윈**(~90% 동일). 공통 개발규칙은 `maumful-main/CLAUDE.md`에 두고 CTS는 차이점만 관리.
+- ⚠️ **CTS 전달 시 누락 주의**: CTS는 워커 2개(`lightoflife` + `lightoflife-game`)인데 **본체는 별도 레포(`lightoflife-cts`), 게임은 이 레포 안**에 있다. `lightoflife-cts`만 넘기면 **CTS 게임이 통째로 빠진다** → `cts-game-main/` 폴더를 함께 export할 것. 범위·인프라·시크릿·체크리스트는 **`cts-maum-main/HANDOVER.md`**. (레포 통합 여부는 미결정)
 - **마음 시리즈(수달·곁)는 별개 스택**(React CDN·no-build·GitHub 웹UI 배포) — 마음풀/CTS 규칙을 끌어오지 말 것.
 
 ## 공통 기술 스택

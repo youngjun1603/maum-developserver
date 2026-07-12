@@ -8,9 +8,13 @@ type Bindings = {
   JWT_SECRET?:      string
   ANTHROPIC_API_KEY?: string
   RESEND_API_KEY?:  string
+  RESEND_FROM_EMAIL?: string   // 발신자 주소 — 미설정 시 CTS 워커 도메인 사용(마음풀 도메인 금지)
   MAUMFUL_URL?:      string
   SERVICE_URL?:     string
 }
+
+// CTS 자체 URL — 이메일 CTA·수신거부 링크에 사용. 마음풀(game.maumful.com)을 가리키면 안 된다.
+const CTS_GAME_URL = 'https://lightoflife-game.limyj007.workers.dev'
 
 type GameUser = {
   id: number; email: string; nickname: string | null
@@ -1250,13 +1254,13 @@ async function sendWeeklySummaryEmail(
           이번 주도 마음을 가꿔줘서 고마워요. 작은 실천이 정원을 점점 풍성하게 만들고 있어요 🌸
         </div>
       </div>
-      <a href="https://game.maumful.com"
+      <a href="${env.SERVICE_URL ?? CTS_GAME_URL}"
         style="display:block;text-align:center;padding:14px;background:linear-gradient(135deg,#4A7A5A,#6BA880);color:white;text-decoration:none;border-radius:14px;font-weight:700;font-size:15px;">
         오늘도 정원 가꾸러 가기 →
       </a>
     </div>
     <div style="padding:16px 24px;text-align:center;border-top:1px solid #F0EAE0;">
-      <div style="font-size:11px;color:#A0A090;">마음풀 · game.maumful.com</div>
+      <div style="font-size:11px;color:#A0A090;">예수님마음 · jesusmaum.com</div>
       ${stats.unsubUrl ? `
       <div style="font-size:11px;color:#B0B0A0;margin-top:6px;line-height:1.6;">
         이 메일은 회원님의 게임 이용 내역 안내입니다.<br>
@@ -1271,7 +1275,8 @@ async function sendWeeklySummaryEmail(
     method: 'POST',
     headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      from: '마음게임 <noreply@maumful.com>',
+      // ⚠️ 마음풀 도메인(noreply@maumful.com)을 쓰면 안 된다 — CTS는 자체 발신 주소를 쓴다.
+      from: env.RESEND_FROM_EMAIL || '예수님마음 게임 <noreply@lightoflife.limyj007.workers.dev>',
       to: [to],
       subject: `🌿 ${nickname}님, 지난 한 주 마음 정원 리포트가 도착했어요`,
       html,
