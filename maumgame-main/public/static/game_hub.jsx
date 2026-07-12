@@ -398,10 +398,10 @@ function GameCard({ game, onPlay, enterDelay = 0 }) {
         {game.creditCost > 0 ? `🌿 ${game.creditCost} ${t('크레딧', 'Credits')}` : t('무료', 'Free')}
       </div>
 
-      {/* 필요 검사 */}
-      {game.requiredTests.length > 0 && (
+      {/* 연동 검사 — 잠금 조건이 아니라 "이 검사 결과와 맞물린다"는 표시 */}
+      {(game.linkedTests?.length > 0) && (
         <div style={{ fontSize:11, color:C.dusty, marginBottom:12 }}>
-          {game.requiredTests.map(t => TEST_META_HUB[t]?.label || t).join(' · ')} {t('연동', 'linked')}
+          {game.linkedTests.map(t => TEST_META_HUB[t]?.label || t).join(' · ')} {t('연동', 'linked')}
         </div>
       )}
 

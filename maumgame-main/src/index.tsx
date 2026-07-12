@@ -83,6 +83,10 @@ const app = new Hono<{ Bindings: Bindings }>()
 // 정적 파일은 Cloudflare Assets가 자동 처리 ([assets] 설정)
 app.use('/api/*', cors())
 
+// 전체 게임 ID — public/static/game_registry.jsx의 GAME_REGISTRY와 반드시 일치시킬 것.
+// 2026-07 해금 정책: 레벨·검사 게이팅 폐지(전 게임 Lv.1) → 해금 목록은 항상 전체.
+const ALL_GAME_IDS = ['mood', 'garden', 'efmt', 'gratitude', 'tree', 'focus', 'burnout', 'worry']
+
 // ── HTML 서빙 ──────────────────────────────────────────────
 const HTML = (v: string) => `<!DOCTYPE html>
 <html lang="ko">
@@ -248,7 +252,7 @@ app.get('/api/game/me', async (c) => {
   const levelInfo = getLevelInfo(status?.total_exp || 0)
 
   // 마스터 계정: 모든 게임 해금 + 모든 검사 완료 처리
-  const allGames = ['garden', 'mood', 'efmt', 'gratitude', 'tree', 'burnout']
+  const allGames = ALL_GAME_IDS   // (이전엔 focus·worry가 빠져 있었음)
   const allTests = ['PHQ9', 'GAD7', 'DASS21', 'BIG5', 'LOST', 'SCT', 'DSI', 'BURNOUT']
   const master   = isMasterAccount(user.email)
 
@@ -261,7 +265,8 @@ app.get('/api/game/me', async (c) => {
         streak_recover: status?.streak_recover || 0,
         levelInfo: master ? { ...getLevelInfo(9999), currentExp: 9999 } : levelInfo,
         garden_level: master ? 6 : (status?.garden_level || 1),
-        unlockedGames: master ? allGames : JSON.parse(status?.unlocked_games || '["garden"]'),
+        // 해금 게이팅 폐지(2026-07) → DB의 unlocked_games 컬럼은 레거시. 항상 전체 목록을 응답한다.
+        unlockedGames: ALL_GAME_IDS,
       },
       recentSessions: sessions.results,
       completedTests: master ? allTests : (tests.results as { test_type: string }[]).map(r => r.test_type),
@@ -354,16 +359,9 @@ app.post('/api/game/session', async (c) => {
     newStreak = diffDays <= 1 ? (oldStatus.streak_days || 0) + 1 : 1
   }
 
-  // 레벨별 해금 게임 목록 (game_registry의 unlockLevel 기준)
-  const UNLOCK_MAP: Record<number, string[]> = {
-    1: ['garden', 'mood', 'worry'],
-    2: ['garden', 'mood', 'worry', 'efmt', 'gratitude', 'burnout'],
-    3: ['garden', 'mood', 'worry', 'efmt', 'gratitude', 'burnout', 'focus'],
-    4: ['garden', 'mood', 'worry', 'efmt', 'gratitude', 'burnout', 'focus', 'tree'],
-    5: ['garden', 'mood', 'worry', 'efmt', 'gratitude', 'burnout', 'focus', 'tree'],
-    6: ['garden', 'mood', 'worry', 'efmt', 'gratitude', 'burnout', 'focus', 'tree'],
-  }
-  const unlockedGames = JSON.stringify(UNLOCK_MAP[newLevel.level] || ['garden'])
+  // 해금 목록 — game_registry의 해금 정책과 반드시 일치시킬 것(이중 관리 지점).
+  // 2026-07: 전 게임 Lv.1 해금(레벨·검사 게이팅 폐지) → 레벨 무관 전체 목록.
+  const unlockedGames = JSON.stringify(ALL_GAME_IDS)
 
   // 마일스톤 도달 시 스트릭 복구권 +1 지급 (최대 3개)
   const STREAK_MILESTONES = [7, 14, 21, 30, 60, 90]

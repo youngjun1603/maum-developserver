@@ -11,6 +11,8 @@ const GAME_REGISTRY = [
     ),
     tags: [t("\uAC10\uC815\uC778\uC2DD", "Emotion Awareness"), t("\uB9C8\uC74C\uCC59\uAE40", "Mindfulness"), t("\uC2B5\uAD00", "Habit")],
     requiredTests: [],
+    // 잠금 없음(해금 정책 참조)
+    linkedTests: [],
     suggestedFor: t(
       "\uAC10\uC815\uC744 \uAE30\uB85D\uD558\uACE0 \uC2F6\uC740 \uBD84, \uB0B4 \uB9C8\uC74C \uC0C1\uD0DC\uB97C \uD30C\uC545\uD558\uACE0 \uC2F6\uC740 \uBD84",
       "Those who want to track their emotions and understand their mental state"
@@ -36,6 +38,8 @@ const GAME_REGISTRY = [
     ),
     tags: [t("\uC774\uC644", "Relaxation"), t("\uC778\uC9C0\uAD50\uC815", "Cognitive Reframing"), t("\uD638\uD761", "Breathing")],
     requiredTests: [],
+    // 잠금 없음(해금 정책 참조)
+    linkedTests: ["PHQ9"],
     suggestedFor: t(
       "\uC6B0\uC6B8\xB7\uBD88\uC548 \uC810\uC218\uAC00 \uB192\uC740 \uBD84, \uC2A4\uD2B8\uB808\uC2A4 \uD574\uC18C\uAC00 \uD544\uC694\uD55C \uBD84",
       "Those with high depression/anxiety scores or in need of stress relief"
@@ -60,13 +64,15 @@ const GAME_REGISTRY = [
       "Quickly find the smiling flower among flowers with various expressions. Difficulty adjusts based on your PHQ-9 score."
     ),
     tags: [t("\uAC10\uC815\uC778\uC2DD", "Emotion Awareness"), t("\uC9D1\uC911\uB825", "Focus"), t("\uC778\uC9C0\uD6C8\uB828", "Cognitive Training")],
-    requiredTests: ["PHQ9"],
+    requiredTests: [],
+    // 잠금 없음(해금 정책 참조)
+    linkedTests: ["PHQ9"],
     suggestedFor: t(
       "\uAC10\uC815 \uC778\uC2DD\uC774 \uC5B4\uB824\uC6B4 \uBD84, \uC9D1\uC911\uB825 \uD5A5\uC0C1\uC774 \uD544\uC694\uD55C \uBD84",
       "Those who struggle with emotion recognition or want to improve focus"
     ),
     creditCost: 0,
-    unlockLevel: 2,
+    unlockLevel: 1,
     isAvailable: true,
     modules: [
       { id: "efmt_easy", name: t("\uAE30\uCD08 \uAC10\uC815 \uC778\uC2DD", "Basic Emotion Recognition"), emoji: "\u{1F33C}", desc: t("4x4 \uADF8\uB9AC\uB4DC\uC5D0\uC11C \uC6C3\uB294 \uAF43 \uCC3E\uAE30", "Find the smiling flower in a 4\xD74 grid") },
@@ -86,12 +92,14 @@ const GAME_REGISTRY = [
     ),
     tags: [t("\uAC10\uC0AC", "Gratitude"), t("\uB9C8\uC74C\uCC59\uAE40", "Mindfulness"), t("\uAE0D\uC815\uC2EC\uB9AC", "Positive Psychology")],
     requiredTests: [],
+    // 잠금 없음(해금 정책 참조)
+    linkedTests: [],
     suggestedFor: t(
       "\uB9E4\uC77C \uAE0D\uC815\uC801\uC778 \uC2B5\uAD00\uC744 \uB9CC\uB4E4\uACE0 \uC2F6\uC740 \uBD84, \uBC88\uC544\uC6C3 \uD68C\uBCF5 \uC911\uC778 \uBD84",
       "Those who want to build positive daily habits or are recovering from burnout"
     ),
     creditCost: 0,
-    unlockLevel: 2,
+    unlockLevel: 1,
     isAvailable: true,
     modules: [
       { id: "gratitude_write", name: t("\uAC10\uC0AC \uC4F0\uAE30", "Write Gratitude"), emoji: "\u270D\uFE0F", desc: t("3\uAC00\uC9C0 \uAC10\uC0AC \uC9C8\uBB38\uC5D0 \uB2F5\uD558\uAE30", "Answer 3 gratitude questions") }
@@ -109,13 +117,15 @@ const GAME_REGISTRY = [
       "Linked to DSI differentiation results. An ACT-based mindfulness game that grows your self through 3 stages: Roots, Trunk, and Branches."
     ),
     tags: [t("\uC790\uC544\uC131\uC7A5", "Self Growth"), t("\uB9C8\uC74C\uCC59\uAE40", "Mindfulness"), "ACT"],
-    requiredTests: ["DSI"],
+    requiredTests: [],
+    // 잠금 없음(해금 정책 참조)
+    linkedTests: ["DSI"],
     suggestedFor: t(
       "\uC790\uC544\uBD84\uD654 \uC810\uC218\uAC00 \uB0AE\uC740 \uBD84, \uAD00\uACC4\uC5D0\uC11C \uC790\uC2E0\uC744 \uC783\uB294 \uBD84",
       "Those with low differentiation scores or who lose themselves in relationships"
     ),
     creditCost: 0,
-    unlockLevel: 4,
+    unlockLevel: 1,
     isAvailable: true,
     modules: [
       { id: "roots", name: t("\uBFCC\uB9AC \u2014 \uD604\uC7AC \uC21C\uAC04", "Roots \u2014 Present Moment"), emoji: "\u{1F331}", desc: t("\uC9C0\uAE08 \uC774 \uC21C\uAC04\uC5D0 \uB2FF\uAE30", "Connect to the present moment") },
@@ -136,12 +146,14 @@ const GAME_REGISTRY = [
     ),
     tags: [t("\uC9D1\uC911\uB825", "Focus"), t("\uC778\uC9C0\uD6C8\uB828", "Cognitive Training"), t("\uB9C8\uC74C\uCC59\uAE40", "Mindfulness")],
     requiredTests: [],
+    // 잠금 없음(해금 정책 참조)
+    linkedTests: ["BURNOUT"],
     suggestedFor: t(
       "\uC9D1\uC911\uB825\uC774 \uB5A8\uC5B4\uC9C4 \uB290\uB08C\uC774 \uB4DC\uB294 \uBD84, \uB9C8\uC74C\uC774 \uBD84\uC0B0\uB418\uC5B4 \uC788\uB294 \uBD84",
       "Those feeling scattered or struggling to concentrate"
     ),
     creditCost: 0,
-    unlockLevel: 3,
+    unlockLevel: 1,
     isAvailable: true,
     modules: [
       { id: "focus_training", name: t("\uC9D1\uC911\uB825 \uD6C8\uB828", "Focus Training"), emoji: "\u{1F522}", desc: t("\uC22B\uC790 \uAE30\uC5B5 + \uD328\uD134 \uAE30\uC5B5 5\uB77C\uC6B4\uB4DC", "Number memory + pattern memory, 5 rounds") }
@@ -159,13 +171,15 @@ const GAME_REGISTRY = [
       "Tailored recovery missions based on your burnout score. As you complete missions, your recovery city grows and your energy is restored."
     ),
     tags: [t("\uBC88\uC544\uC6C3\uD68C\uBCF5", "Burnout Recovery"), t("\uB8E8\uD2F4", "Routine"), t("\uBBF8\uC158", "Mission")],
-    requiredTests: ["BURNOUT"],
+    requiredTests: [],
+    // 잠금 없음(해금 정책 참조)
+    linkedTests: ["BURNOUT"],
     suggestedFor: t(
       "\uBC88\uC544\uC6C3 \uC810\uC218\uAC00 \uB192\uC740 \uBD84, \uC9C0\uCE58\uACE0 \uBB34\uAE30\uB825\uD568\uC744 \uB290\uB07C\uB294 \uBD84",
       "Those with high burnout scores or feeling exhausted and unmotivated"
     ),
     creditCost: 0,
-    unlockLevel: 2,
+    unlockLevel: 1,
     isAvailable: true,
     modules: [
       { id: "missions", name: t("\uD68C\uBCF5 \uBBF8\uC158", "Recovery Missions"), emoji: "\u{1F3AF}", desc: t("\uBC88\uC544\uC6C3 \uC810\uC218 \uAE30\uBC18 \uB9DE\uCDA4 \uD68C\uBCF5 \uBBF8\uC158", "Personalized recovery missions based on burnout score") },
@@ -186,6 +200,8 @@ const GAME_REGISTRY = [
     ),
     tags: [t("\uC774\uC644", "Relaxation"), t("\uC2A4\uD2B8\uB808\uC2A4\uD574\uC18C", "Stress Relief"), "ACT", t("\uB9C8\uC74C\uCC59\uAE40", "Mindfulness")],
     requiredTests: [],
+    // 잠금 없음(해금 정책 참조)
+    linkedTests: ["GAD7"],
     suggestedFor: t(
       "\uAC71\uC815\uC774 \uB9CE\uC740 \uBD84, \uB9C8\uC74C\uC774 \uBB34\uAC70\uC6B4 \uBD84, \uC2A4\uD2B8\uB808\uC2A4\uB97C \uB0B4\uB824\uB193\uACE0 \uC2F6\uC740 \uBD84",
       "Those who worry a lot, feel weighed down, or want to release stress"
@@ -210,7 +226,7 @@ function getPlayableGames(completedTests = [], gardenLevel = 1) {
 function getTestGameMap() {
   const map = {};
   GAME_REGISTRY.forEach((g) => {
-    g.requiredTests.forEach((t2) => {
+    (g.linkedTests || []).forEach((t2) => {
       if (!map[t2]) map[t2] = [];
       map[t2].push(g.id);
     });

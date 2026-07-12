@@ -13,15 +13,22 @@
   tagline:       string,       // 한 줄 소개
   description:   string,       // 상세 설명
   tags:          string[],     // ['이완','인지교정','감정인식']
-  requiredTests: string[],     // 필수 검사 (없으면 항상 해금)
+  requiredTests: string[],     // 플레이 차단 조건. 현재 전 게임 [] — 아래 "해금 정책" 참조
+  linkedTests:   string[],     // 표시·연동용(잠그지 않음). 카드의 "PHQ-9 연동" 배지 + 검사↔게임 매핑
   suggestedFor:  string,       // 추천 대상 설명
   creditCost:    number,       // 0 = 무료
-  unlockLevel:   number,       // 필요 정원 레벨
+  unlockLevel:   number,       // 필요 정원 레벨 (현재 전 게임 1)
   isAvailable:   boolean,      // false = "준비 중"
   Component:     Function|null // 실제 React 컴포넌트 (해당 jsx 로드 후 채워짐)
 }
 */
 
+// ── 해금 정책 (2026-07 변경) ─────────────────────────────────
+// 이전: 레벨(최대 Lv.4)과 검사 완료를 요구 → 신규 사용자에게 8종 중 3종만 보였고,
+//       마음풀 검사 리포트가 처방하는 게임(번아웃·집중·나무·감정꽃)이 정작 잠겨 있었다.
+// 현재: 전 게임 Lv.1·검사 조건 없음. 레벨·EXP는 정원 성장/배지/스트릭 등 성취 표시로만 쓴다.
+//       검사와의 연결은 linkedTests(표시·추천용)로 유지한다.
+// ⚠️ unlockLevel을 다시 올릴 땐 서버 UNLOCK_MAP(src/index.tsx)도 함께 고칠 것 — 이중 관리 지점.
 const GAME_REGISTRY = [
 
   // ── 감정 수채화 (0호 — Lv.1 기본 제공) ─────────────────
@@ -33,7 +40,8 @@ const GAME_REGISTRY = [
     description:   t('매일 하루 한 번, 지금의 감정을 기록해보세요. 감정을 알아차리는 것이 치유의 시작입니다. 30일간의 감정 흐름을 수채화로 확인해요.',
                      'Record how you feel once a day. Noticing your emotions is the first step to healing. View 30 days of emotional flow as a watercolor.'),
     tags:          [t('감정인식', 'Emotion Awareness'), t('마음챙김', 'Mindfulness'), t('습관', 'Habit')],
-    requiredTests: [],
+    requiredTests: [],                    // 잠금 없음(해금 정책 참조)
+    linkedTests:   [],
     suggestedFor:  t('감정을 기록하고 싶은 분, 내 마음 상태를 파악하고 싶은 분',
                      'Those who want to track their emotions and understand their mental state'),
     creditCost:    0,
@@ -55,7 +63,8 @@ const GAME_REGISTRY = [
     description:   t('PHQ-9·SCT 검사 결과를 바탕으로 나만의 정원을 가꾸세요. 호흡 훈련과 인지 교정을 통해 안개 낀 정원이 점차 맑아집니다.',
                      'Cultivate your own garden based on PHQ-9·SCT results. Through breathing exercises and cognitive reframing, your foggy garden gradually clears.'),
     tags:          [t('이완', 'Relaxation'), t('인지교정', 'Cognitive Reframing'), t('호흡', 'Breathing')],
-    requiredTests: [],
+    requiredTests: [],                    // 잠금 없음(해금 정책 참조)
+    linkedTests:   ['PHQ9'],
     suggestedFor:  t('우울·불안 점수가 높은 분, 스트레스 해소가 필요한 분',
                      'Those with high depression/anxiety scores or in need of stress relief'),
     creditCost:    0,
@@ -77,11 +86,12 @@ const GAME_REGISTRY = [
     description:   t('다양한 표정의 꽃 중에서 웃는 꽃을 빠르게 찾아내는 감정 인지 훈련. PHQ-9 점수에 따라 난이도가 조절됩니다.',
                      'Quickly find the smiling flower among flowers with various expressions. Difficulty adjusts based on your PHQ-9 score.'),
     tags:          [t('감정인식', 'Emotion Awareness'), t('집중력', 'Focus'), t('인지훈련', 'Cognitive Training')],
-    requiredTests: ['PHQ9'],
+    requiredTests: [],                    // 잠금 없음(해금 정책 참조)
+    linkedTests:   ['PHQ9'],
     suggestedFor:  t('감정 인식이 어려운 분, 집중력 향상이 필요한 분',
                      'Those who struggle with emotion recognition or want to improve focus'),
     creditCost:    0,
-    unlockLevel:   2,
+    unlockLevel:   1,
     isAvailable:   true,
     modules: [
       { id:'efmt_easy',   name: t('기초 감정 인식', 'Basic Emotion Recognition'), emoji:'🌼', desc: t('4x4 그리드에서 웃는 꽃 찾기', 'Find the smiling flower in a 4×4 grid') },
@@ -99,11 +109,12 @@ const GAME_REGISTRY = [
     description:   t('매일 3가지 감사 질문에 답하며 밤하늘에 별을 밝히는 마음챙김 게임. 긍정심리학 기반의 일상 루틴 빌더.',
                      'Answer 3 gratitude questions each day to light stars in the night sky. A daily routine builder grounded in positive psychology.'),
     tags:          [t('감사', 'Gratitude'), t('마음챙김', 'Mindfulness'), t('긍정심리', 'Positive Psychology')],
-    requiredTests: [],
+    requiredTests: [],                    // 잠금 없음(해금 정책 참조)
+    linkedTests:   [],
     suggestedFor:  t('매일 긍정적인 습관을 만들고 싶은 분, 번아웃 회복 중인 분',
                      'Those who want to build positive daily habits or are recovering from burnout'),
     creditCost:    0,
-    unlockLevel:   2,
+    unlockLevel:   1,
     isAvailable:   true,
     modules: [
       { id:'gratitude_write', name: t('감사 쓰기', 'Write Gratitude'), emoji:'✍️', desc: t('3가지 감사 질문에 답하기', 'Answer 3 gratitude questions') },
@@ -120,11 +131,12 @@ const GAME_REGISTRY = [
     description:   t('DSI 자아분화 검사 결과와 연동. ACT 기반 3단계(뿌리·줄기·가지)로 자아를 단단하게 성장시키는 마음챙김 게임.',
                      'Linked to DSI differentiation results. An ACT-based mindfulness game that grows your self through 3 stages: Roots, Trunk, and Branches.'),
     tags:          [t('자아성장', 'Self Growth'), t('마음챙김', 'Mindfulness'), 'ACT'],
-    requiredTests: ['DSI'],
+    requiredTests: [],                    // 잠금 없음(해금 정책 참조)
+    linkedTests:   ['DSI'],
     suggestedFor:  t('자아분화 점수가 낮은 분, 관계에서 자신을 잃는 분',
                      'Those with low differentiation scores or who lose themselves in relationships'),
     creditCost:    0,
-    unlockLevel:   4,
+    unlockLevel:   1,
     isAvailable:   true,
     modules: [
       { id:'roots',    name: t('뿌리 — 현재 순간', 'Roots — Present Moment'), emoji:'🌱', desc: t('지금 이 순간에 닿기', 'Connect to the present moment') },
@@ -143,11 +155,12 @@ const GAME_REGISTRY = [
     description:   t('숫자 기억과 그리드 패턴 훈련을 통해 지금 이 순간에 집중하는 마음챙김 인지 훈련. GAD-7/PHQ-9 점수에 따라 난이도가 조절됩니다.',
                      'A mindfulness cognitive training to focus on the present moment through number memory and grid pattern exercises. Difficulty adjusts to your GAD-7/PHQ-9 scores.'),
     tags:          [t('집중력', 'Focus'), t('인지훈련', 'Cognitive Training'), t('마음챙김', 'Mindfulness')],
-    requiredTests: [],
+    requiredTests: [],                    // 잠금 없음(해금 정책 참조)
+    linkedTests:   ['BURNOUT'],
     suggestedFor:  t('집중력이 떨어진 느낌이 드는 분, 마음이 분산되어 있는 분',
                      'Those feeling scattered or struggling to concentrate'),
     creditCost:    0,
-    unlockLevel:   3,
+    unlockLevel:   1,
     isAvailable:   true,
     modules: [
       { id:'focus_training', name: t('집중력 훈련', 'Focus Training'), emoji:'🔢', desc: t('숫자 기억 + 패턴 기억 5라운드', 'Number memory + pattern memory, 5 rounds') },
@@ -164,11 +177,12 @@ const GAME_REGISTRY = [
     description:   t('번아웃 검사 점수에 따라 맞춤 회복 미션을 제공합니다. 미션을 완료할수록 당신의 회복 도시가 성장하고 에너지가 차오릅니다.',
                      'Tailored recovery missions based on your burnout score. As you complete missions, your recovery city grows and your energy is restored.'),
     tags:          [t('번아웃회복', 'Burnout Recovery'), t('루틴', 'Routine'), t('미션', 'Mission')],
-    requiredTests: ['BURNOUT'],
+    requiredTests: [],                    // 잠금 없음(해금 정책 참조)
+    linkedTests:   ['BURNOUT'],
     suggestedFor:  t('번아웃 점수가 높은 분, 지치고 무기력함을 느끼는 분',
                      'Those with high burnout scores or feeling exhausted and unmotivated'),
     creditCost:    0,
-    unlockLevel:   2,
+    unlockLevel:   1,
     isAvailable:   true,
     modules: [
       { id: 'missions',      name: t('회복 미션',   'Recovery Missions'), emoji: '🎯', desc: t('번아웃 점수 기반 맞춤 회복 미션', 'Personalized recovery missions based on burnout score') },
@@ -187,7 +201,8 @@ const GAME_REGISTRY = [
     description:   t('수용전념(ACT) 원리에서 착안한 마음 내려놓기 연습. 지금 마음을 무겁게 하는 걱정들을 풍선에 담고 하나씩 터뜨리며 내려놓아 보세요. 걱정은 생각일 뿐이에요.',
                      'A letting-go exercise inspired by ACT (acceptance & commitment) principles. Place your worries into bubbles and pop them one by one. Worry is just a thought.'),
     tags:          [t('이완', 'Relaxation'), t('스트레스해소', 'Stress Relief'), 'ACT', t('마음챙김', 'Mindfulness')],
-    requiredTests: [],
+    requiredTests: [],                    // 잠금 없음(해금 정책 참조)
+    linkedTests:   ['GAD7'],
     suggestedFor:  t('걱정이 많은 분, 마음이 무거운 분, 스트레스를 내려놓고 싶은 분',
                      'Those who worry a lot, feel weighed down, or want to release stress'),
     creditCost:    0,
@@ -215,11 +230,11 @@ function getPlayableGames(completedTests = [], gardenLevel = 1) {
   }));
 }
 
-// 검사와 게임 연결 매핑
+// 검사와 게임 연결 매핑 — 잠금(requiredTests)이 아니라 표시·추천용 linkedTests 기준
 function getTestGameMap() {
   const map = {};
   GAME_REGISTRY.forEach(g => {
-    g.requiredTests.forEach(t => {
+    (g.linkedTests || []).forEach(t => {
       if (!map[t]) map[t] = [];
       map[t].push(g.id);
     });
