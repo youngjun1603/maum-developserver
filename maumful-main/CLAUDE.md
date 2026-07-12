@@ -137,6 +137,12 @@ npm run deploy:cts    # lightoflife-couple (wrangler.lightoflife.toml)
 
 ---
 
+## 마음게임 주간 리포트 메일 (Cron: 매주 월 03:00 UTC · `maumgame-main/src/index.tsx` `handleScheduled`)
+- 지난 7일 활동자에게 활동 요약 + **마음풀 CTA**(최근 30일 검사 있으면 `?go=history`, 없으면 게임 신호로 검사 추천 `?go=test:PHQ9`) 발송.
+- ⚠️ **수신거부 필수**(정보통신망법). `game_email_prefs.optout`(migration 0006, opt-out 방식) → cron이 제외. `GET /unsubscribe?u=&s=`(HMAC 서명, 로그인 불필요). **메일 발송 기능을 만들 땐 수신거부 링크를 반드시 포함**할 것.
+- ⚠️ **D1 마이그레이션 적용 여부를 반드시 확인**: `weekly_reports`(0002)·`user_test_scores`(0003)가 원격 DB에 **적용된 적이 없었고**, 코드가 D1_ERROR를 `try/catch`로 삼켜 몇 달간 조용히 실패했다. 새 테이블을 쓰는 코드는 `SELECT name FROM sqlite_master`로 실재를 확인하고, 스키마 에러를 빈 catch로 삼키지 말 것.
+- 마음풀 딥링크: `?go=history` / `?go=test:<TESTTYPE>` (마음커플 전용 `?start=`와 별개 — `?start=`는 "커플로 복귀" 배지를 띄운다).
+
 ## 마음게임 번역 ✅ 완료
 - 패턴: `t(ko, en)` — `GAME_LANG === 'en' ? en : ko`
 - `GAME_LANG`: `game_engine.jsx`에서 `URLSearchParams(location.search).get('lang') || 'ko'`
