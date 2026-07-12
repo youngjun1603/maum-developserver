@@ -1572,6 +1572,34 @@ function PsychologicalTestSystem() {
         return;
       }
 
+      // ── 마음풀 내부 딥링크 (?go=) — 마음게임 주간 리포트 이메일 등에서 진입 ──
+      //    ?go=history      → 마이페이지 검사 이력(리포트 목록)
+      //    ?go=test:PHQ9    → 해당 검사 시작
+      //    ?start=(마음커플 전용, 복귀 버튼 표시)와 분리 — 복귀 배지가 잘못 뜨지 않도록.
+      const goParam = urlParams.get('go');
+      if (goParam) {
+        window.history.replaceState({}, '', '/');
+        const [goKind, goArg] = goParam.split(':');
+        let goView = null;
+        if (goKind === 'history') {
+          goView = 'myPage';
+        } else if (goKind === 'test' && goArg) {
+          const k = goArg.toUpperCase();
+          if (['PHQ9','GAD7','DASS21','BIG5','LOST','SCT','DSI','BURNOUT','RIASEC','VALUES'].includes(k)) goView = 'startTest:' + k;
+        }
+        if (goView) {
+          if (goKind === 'history') setMyPageTab('history');
+          if (isAuthenticated) {
+            setView(goView);
+          } else {
+            sessionStorage.setItem('post_login_view', goView);
+            setView('memberLogin');
+          }
+          setInitializing(false);
+          return;
+        }
+      }
+
       // 로그인 복원 후 기본 화면
       if (isAuthenticated) setView('memberDashboard');
 

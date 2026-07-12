@@ -1570,6 +1570,29 @@ function PsychologicalTestSystem() {
         setInitializing(false);
         return;
       }
+      const goParam = urlParams.get("go");
+      if (goParam) {
+        window.history.replaceState({}, "", "/");
+        const [goKind, goArg] = goParam.split(":");
+        let goView = null;
+        if (goKind === "history") {
+          goView = "myPage";
+        } else if (goKind === "test" && goArg) {
+          const k = goArg.toUpperCase();
+          if (["PHQ9", "GAD7", "DASS21", "BIG5", "LOST", "SCT", "DSI", "BURNOUT", "RIASEC", "VALUES"].includes(k)) goView = "startTest:" + k;
+        }
+        if (goView) {
+          if (goKind === "history") setMyPageTab("history");
+          if (isAuthenticated) {
+            setView(goView);
+          } else {
+            sessionStorage.setItem("post_login_view", goView);
+            setView("memberLogin");
+          }
+          setInitializing(false);
+          return;
+        }
+      }
       if (isAuthenticated) setView("memberDashboard");
       if (paymentStatus === "success") {
         window.history.replaceState({}, "", "/");
