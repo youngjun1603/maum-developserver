@@ -263,6 +263,12 @@ const GameEngine = (() => {
     return res.json();
   }
 
+  // ── ⑥ 게임 신호 기반 검사 제안 (신호 약하면 suggestion=null) ──
+  async function getTestSuggestion() {
+    const res = await fetch(`/api/game/test-suggestion${GAME_LANG === 'en' ? '?lang=en' : ''}`, { headers: authHeader() });
+    return res.json();
+  }
+
   // ── 인증 헤더 포함 범용 fetch ────────────────────────────
   async function apiFetch(path, init = {}) {
     return fetch(path, { ...init, headers: { ...authHeader(), ...(init.headers || {}) } });
@@ -272,7 +278,7 @@ const GameEngine = (() => {
     getMe, saveSession, transformSentence, updateVisual,
     getCredits, spendCredit, saveScore,
     getLeaderboard, getDailyTip, getMoodHistory, getEmotionReport, getGameStats, getBurnoutHistory,
-    getRecentSessions, getSessionFeedback,
+    getRecentSessions, getSessionFeedback, getTestSuggestion,
     recoverStreak, getCampaign, claimCampaign, apiFetch,
     getLevelInfo, getGardenTheme, getAchievementInfo,
     formatDuration, formatRelativeTime,

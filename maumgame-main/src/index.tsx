@@ -616,8 +616,12 @@ app.post('/api/game/ai-transform', async (c) => {
   const userId = await getGameUserId(c.req.raw, c.env)
   if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
 
-  const { text } = await c.req.json() as { text: string }
-  if (!text || text.trim().length < 2) return c.json({ success: false, error: '텍스트 필요' }, 400)
+  const { text: rawText } = await c.req.json() as { text: string }
+  if (!rawText || rawText.trim().length < 2) return c.json({ success: false, error: '텍스트 필요' }, 400)
+
+  // ⚠️ 자모 분리(NFD) 한글은 완성형 정규식과 매칭되지 않아 ①이 통째로 우회된다(E2E로 확인).
+  //    macOS 복붙 등에서 실제로 들어오는 형태 → 위기 판정 전에 반드시 NFC로 정규화한다.
+  const text = rawText.normalize('NFC')
 
   // ① 1차 방어: 서버 키워드 사전차단 — AI 미호출·캐시 미저장
   if (CRISIS_PATTERNS.some((re) => re.test(text))) {
@@ -637,27 +641,35 @@ app.post('/api/game/ai-transform', async (c) => {
   if (!apiKey) return c.json({ success: false, error: 'ANTHROPIC_API_KEY 미설정 — Cloudflare 환경변수 등록 필요' }, 500)
 
   try {
-    const res = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
-      method: 'POST',
-      // prompt caching은 현재 GA — 구식 beta 헤더 제거(불필요)
-      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 200,
-        system: [
-          {
-            type: 'text',
-            // ② 2차 방어: 키워드가 놓친 위기 신호를 모델이 잡으면 변환 대신 [SAFETY]만 출력
-            text: `당신은 인지행동치료(CBT) 전문가입니다. 사용자의 부정적인 문장을 받으면, 인지적 왜곡이 교정된 건강하고 현실적인 자기 확언 문장 하나로 변환해 주세요. 너무 낙관적이지 않고 수용적이며 따뜻한 어조여야 합니다. 변환된 문장만 출력하세요.
+    // ④ 모델 티어 상향 — 생각 변환은 사용자가 직접 읽는 핵심 문장이라 sonnet 우선(haiku 폴백).
+    //   ⚠️ sonnet-4-6/haiku-4-5는 temperature 허용. sonnet-5/opus-4.7+로 올릴 땐 temperature 제거 필수(400).
+    const TRANSFORM_FALLBACKS = ['claude-sonnet-4-6', 'claude-haiku-4-5-20251001']
+    let res!: Response
+    for (const model of TRANSFORM_FALLBACKS) {
+      res = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
+        method: 'POST',
+        // prompt caching은 현재 GA — 구식 beta 헤더 제거(불필요)
+        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({
+          model,
+          max_tokens: 300,
+          temperature: 0.6,
+          system: [
+            {
+              type: 'text',
+              // ② 2차 방어: 키워드가 놓친 위기 신호를 모델이 잡으면 변환 대신 [SAFETY]만 출력
+              text: `당신은 인지행동치료(CBT) 전문가입니다. 사용자의 부정적인 문장을 받으면, 인지적 왜곡이 교정된 건강하고 현실적인 자기 확언 문장 하나로 변환해 주세요. 너무 낙관적이지 않고 수용적이며 따뜻한 어조여야 합니다. 변환된 문장만 출력하세요.
 
 [안전 오버라이드 — 최우선]
 문장에 자해·자살·죽고 싶다·사라지고 싶다·삶을 끝내고 싶다는 신호가 조금이라도 있으면, 절대로 긍정 확언으로 변환하지 마세요. 그런 마음은 "고쳐야 할 생각"이 아니라 즉시 도움이 필요한 신호입니다. 이 경우 다른 어떤 말도 하지 말고 정확히 다음 한 단어만 출력하세요: [SAFETY]`,
-            cache_control: { type: 'ephemeral' },
-          },
-        ],
-        messages: [{ role: 'user', content: `다음 문장을 긍정적인 자기 확언으로 바꿔주세요: "${text.trim()}"` }],
-      }),
-    })
+              cache_control: { type: 'ephemeral' },
+            },
+          ],
+          messages: [{ role: 'user', content: `다음 문장을 긍정적인 자기 확언으로 바꿔주세요: "${text.trim()}"` }],
+        }),
+      })
+      if (res.ok || (res.status !== 404 && res.status !== 403)) break   // 모델 미가용일 때만 폴백
+    }
     if (!res.ok) {
       const errBody = await res.text().catch(() => '')
       console.error('[ai-transform] Anthropic error:', res.status, errBody.slice(0, 200))
@@ -1409,7 +1421,7 @@ async function handleScheduled(env: Bindings) {
         topEmotion,
         levelName: levelNames[u.garden_level || 1] || '씨앗',
         streak: u.streak_days || 0,
-        maumful: buildMaumfulCta(u.user_id, topEmotion, sessions.some((s) => s.gameId === 'burnout'), testedRecently.has(u.user_id)),
+        maumful: buildMaumfulCta(signalsFromSessions(sessions), testedRecently.has(u.user_id)),
         unsubUrl: await buildUnsubUrl(env, u.user_id),
       })
     }))
@@ -1427,21 +1439,147 @@ function kstWeekStartStr(offsetDays: number): string {
   return d.toISOString().slice(0, 10)
 }
 
-// ⑤ 마음풀 연계 — 게임 신호로 마음풀 검사·리포트를 잇는다(?go= 딥링크).
-function buildMaumfulCta(_userId: number, topEmotion: string | null, playedBurnout: boolean, testedRecently: boolean): { label: string; desc: string; url: string } {
+// ============================================================
+// ⑥ 게임 → 검사 역루프
+//   게임 행동(감정 기록·번아웃 에너지)을 신호로 읽어 마음풀 검사를 제안한다.
+//   주간 메일(⑤)과 게임 내 카드가 같은 규칙을 쓰도록 여기 한 곳에서만 판단한다.
+// ============================================================
+type GameSignals = {
+  topEmotion: string | null
+  moodCount: number
+  negCount: number          // 부정 감정(불안·슬픔·피곤·화남) 기록 수
+  burnoutPlays: number
+  avgEnergy: number | null  // 번아웃 게임에서 스스로 매긴 에너지(0~100)
+}
+const NEGATIVE_EMOTIONS = ['anxious', 'sad', 'tired', 'angry']
+
+function signalsFromSessions(sessions: { gameId: string; meta: Record<string, unknown> }[]): GameSignals {
+  const emotionCounts: Record<string, number> = {}
+  const energies: number[] = []
+  let burnoutPlays = 0, moodCount = 0, negCount = 0
+  for (const s of sessions) {
+    if (s.gameId === 'mood' && typeof s.meta.emotion === 'string') {
+      const e = s.meta.emotion
+      emotionCounts[e] = (emotionCounts[e] || 0) + 1
+      moodCount++
+      if (NEGATIVE_EMOTIONS.includes(e)) negCount++
+    }
+    if (s.gameId === 'burnout') {
+      burnoutPlays++
+      if (typeof s.meta.energy === 'number') energies.push(s.meta.energy)
+    }
+  }
+  return {
+    topEmotion: Object.keys(emotionCounts).sort((a, b) => emotionCounts[b] - emotionCounts[a])[0] || null,
+    moodCount, negCount, burnoutPlays,
+    avgEnergy: energies.length ? Math.round(energies.reduce((a, b) => a + b, 0) / energies.length) : null,
+  }
+}
+
+type Bi = { ko: string; en: string }
+const TEST_META: Record<string, { name: Bi; time: Bi }> = {
+  PHQ9:    { name: { ko: 'PHQ-9 우울 자가점검', en: 'PHQ-9 Depression Check' },        time: { ko: '2분', en: '2 min' } },
+  GAD7:    { name: { ko: 'GAD-7 불안 자가점검', en: 'GAD-7 Anxiety Check' },           time: { ko: '2분', en: '2 min' } },
+  DASS21:  { name: { ko: 'DASS-21 우울·불안·스트레스', en: 'DASS-21 Depression/Anxiety/Stress' }, time: { ko: '5분', en: '5 min' } },
+  BURNOUT: { name: { ko: 'K-MBI+ 번아웃 검사', en: 'K-MBI+ Burnout Check' },           time: { ko: '15분', en: '15 min' } },
+}
+
+// 신호가 뚜렷할 때만 제안한다(없으면 null — 게임 안에서 근거 없이 검사를 권하지 않는다).
+// excludeTests: 최근 30일 내 이미 받은 검사는 다시 권하지 않는다.
+function pickTestSuggestion(sig: GameSignals, excludeTests: Set<string> = new Set()): { test: string; name: Bi; why: Bi } | null {
+  const cands: { test: string; why: Bi }[] = []
+
+  if (sig.avgEnergy !== null && sig.avgEnergy < 40) {
+    cands.push({ test: 'BURNOUT', why: {
+      ko: `번아웃 회복에서 스스로 매긴 에너지가 평균 ${sig.avgEnergy}점이었어요. 소진이 어느 정도인지 점검해 볼까요?`,
+      en: `Your self-rated energy in Burnout Recovery averaged ${sig.avgEnergy}. Want to check how depleted you are?`,
+    } })
+  } else if (sig.burnoutPlays >= 3) {
+    cands.push({ test: 'BURNOUT', why: {
+      ko: '번아웃 회복을 자주 찾으셨어요. 지금 소진 정도를 한 번 확인해 보면 좋겠어요.',
+      en: 'You have been returning to Burnout Recovery often. It may help to measure where you stand.',
+    } })
+  }
+  if (sig.moodCount >= 5 && sig.negCount / sig.moodCount >= 0.6) {
+    cands.push({ test: 'DASS21', why: {
+      ko: `최근 감정 기록 ${sig.moodCount}회 중 ${sig.negCount}회가 무거운 감정이었어요. 우울·불안·스트레스를 한 번에 살펴볼까요?`,
+      en: `${sig.negCount} of your last ${sig.moodCount} mood logs were heavy. Want to look at depression, anxiety, and stress together?`,
+    } })
+  }
+  if (sig.moodCount >= 3 && sig.topEmotion === 'anxious') {
+    cands.push({ test: 'GAD7', why: {
+      ko: '불안을 가장 많이 기록하셨어요. 지금 불안 수준을 확인해 보면 도움이 돼요.',
+      en: 'Anxiety was your most logged feeling. Checking your anxiety level could help.',
+    } })
+  }
+  if (sig.moodCount >= 3 && (sig.topEmotion === 'sad' || sig.topEmotion === 'tired')) {
+    cands.push({ test: 'PHQ9', why: {
+      ko: '무거운 감정이 자주 올라왔어요. 지금 마음 상태를 2분이면 확인할 수 있어요.',
+      en: 'Heavy feelings came up often. Two minutes is enough to check where you are.',
+    } })
+  }
+
+  const pick = cands.find((c) => !excludeTests.has(c.test))
+  if (!pick) return null
+  return { test: pick.test, name: TEST_META[pick.test].name, why: pick.why }
+}
+
+// ⑤ 주간 메일 CTA — 검사 이력이 있으면 리포트로, 없으면 신호 기반 검사 제안(신호 없으면 기본 PHQ-9).
+function buildMaumfulCta(sig: GameSignals, testedRecently: boolean): { label: string; desc: string; url: string } {
   const MF = 'https://maumful.com'
   if (testedRecently) {
     return { label: '내 검사 리포트 보기 →', desc: '이번 주 실천 기록이 검사 리포트의 "게임으로 본 나의 변화"에 반영됐어요.', url: `${MF}/?go=history` }
   }
-  const rec = playedBurnout
-    ? { test: 'BURNOUT', name: 'K-MBI+ 번아웃 검사', why: '번아웃 회복을 자주 찾으셨어요. 지금 소진이 어느 정도인지 점검해 볼까요?' }
-    : topEmotion === 'anxious'
-      ? { test: 'GAD7', name: 'GAD-7 불안 자가점검', why: '이번 주 불안을 가장 많이 기록하셨어요. 2분이면 지금 상태를 확인할 수 있어요.' }
-      : (topEmotion === 'sad' || topEmotion === 'tired')
-        ? { test: 'PHQ9', name: 'PHQ-9 우울 자가점검', why: '무거운 감정이 자주 올라온 한 주였어요. 2분이면 지금 상태를 확인할 수 있어요.' }
-        : { test: 'PHQ9', name: 'PHQ-9 우울 자가점검', why: '게임 기록에 더해, 지금 마음 상태도 한 번 점검해 보세요. 2분이면 충분해요.' }
-  return { label: `${rec.name} 하러 가기 →`, desc: rec.why, url: `${MF}/?go=test:${rec.test}` }
+  const s = pickTestSuggestion(sig)
+  const name = s ? s.name.ko : TEST_META.PHQ9.name.ko
+  const why  = s ? s.why.ko  : '게임 기록에 더해, 지금 마음 상태도 한 번 점검해 보세요. 2분이면 충분해요.'
+  return { label: `${name} 하러 가기 →`, desc: why, url: `${MF}/?go=test:${s ? s.test : 'PHQ9'}` }
 }
+
+// ── GET /api/game/test-suggestion ─────────────────────────
+// ⑥ 게임 허브에서 보여줄 검사 제안. 신호가 약하면 suggestion=null(카드 미표시).
+app.get('/api/game/test-suggestion', async (c) => {
+  const { DB } = c.env
+  const userId = await getGameUserId(c.req.raw, c.env)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+
+  try {
+    const rows = await DB.prepare(
+      `SELECT game_id, metadata FROM game_session_logs
+       WHERE user_id=? AND created_at > datetime('now','-30 days')`
+    ).bind(userId).all<{ game_id: string; metadata: string | null }>()
+    const sessions = (rows.results ?? []).map((r) => {
+      let meta: Record<string, unknown> = {}
+      try { meta = r.metadata ? JSON.parse(r.metadata) as Record<string, unknown> : {} } catch { /* 손상된 metadata 무시 */ }
+      return { gameId: r.game_id, meta }
+    })
+
+    // 최근 30일 내 받은 검사는 다시 권하지 않는다 (같은 maumful-db)
+    const done = await DB.prepare(
+      `SELECT DISTINCT test_type FROM test_history WHERE user_id=? AND performed_at > datetime('now','-30 days')`
+    ).bind(userId).all<{ test_type: string }>()
+    const excludeTests = new Set((done.results ?? []).map((r) => r.test_type))
+
+    const s = pickTestSuggestion(signalsFromSessions(sessions), excludeTests)
+    if (!s) return c.json({ success: true, data: { suggestion: null } })
+    const lang = c.req.query('lang') === 'en' ? 'en' : 'ko'
+    return c.json({
+      success: true,
+      data: {
+        suggestion: {
+          test: s.test,
+          name: s.name[lang],
+          why: s.why[lang],
+          time: TEST_META[s.test].time[lang],
+          url: `https://maumful.com/?go=test:${s.test}${lang === 'en' ? '&lang=en' : ''}`,
+        },
+      },
+    })
+  } catch (e) {
+    console.error('[test-suggestion] error:', e)
+    return c.json({ success: true, data: { suggestion: null } })   // 실패해도 게임 화면에 영향 없음
+  }
+})
 
 // 수신거부 링크 — HMAC 서명(JWT_SECRET)으로 위조 방지. 서명 불가 시 링크 생략 대신 설정 안내로 폴백.
 async function buildUnsubUrl(env: Bindings, userId: number): Promise<string> {

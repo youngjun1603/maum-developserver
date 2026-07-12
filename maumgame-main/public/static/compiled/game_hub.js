@@ -1047,6 +1047,62 @@ const MOOD_EMOJI_MAP = {
   bored: "\u{1F611}"
 };
 const DAY_LABELS = GAME_LANG === "en" ? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] : ["\uC77C", "\uC6D4", "\uD654", "\uC218", "\uBAA9", "\uAE08", "\uD1A0"];
+function TestSuggestionCard() {
+  const [sug, setSug] = useState(null);
+  useEffect(() => {
+    GameEngine.getTestSuggestion().then((res) => {
+      const s = res?.data?.suggestion;
+      if (!s) return;
+      const until = Number(localStorage.getItem("test_sug_dismissed_" + s.test) || 0);
+      if (until > Date.now()) return;
+      setSug(s);
+    }).catch(() => {
+    });
+  }, []);
+  if (!sug) return null;
+  const dismiss = () => {
+    localStorage.setItem("test_sug_dismissed_" + sug.test, String(Date.now() + 7 * 864e5));
+    setSug(null);
+  };
+  return /* @__PURE__ */ React.createElement("div", { style: {
+    background: "linear-gradient(135deg, rgba(74,124,89,0.10), rgba(107,168,128,0.06))",
+    border: "1px solid rgba(74,124,89,0.22)",
+    borderRadius: 20,
+    padding: "18px 20px",
+    marginBottom: 24
+  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 12 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 20, lineHeight: 1 } }, "\u{1F33F}"), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: C.dark, marginBottom: 4 } }, t("\uB9C8\uC74C\uD480 \uAC80\uC0AC \uC81C\uC548", "A test that might help")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: C.muted, lineHeight: 1.7 } }, sug.why)), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: dismiss,
+      "aria-label": t("\uB2EB\uAE30", "Dismiss"),
+      style: { background: "none", border: "none", color: C.muted, fontSize: 16, cursor: "pointer", padding: 2, lineHeight: 1 }
+    },
+    "\xD7"
+  )), /* @__PURE__ */ React.createElement(
+    "a",
+    {
+      href: sug.url,
+      target: "_blank",
+      rel: "noopener noreferrer",
+      style: {
+        display: "block",
+        textAlign: "center",
+        padding: "12px",
+        background: C.sage,
+        color: "white",
+        borderRadius: 12,
+        fontSize: 13.5,
+        fontWeight: 700,
+        textDecoration: "none",
+        fontFamily: "'Noto Sans KR', sans-serif"
+      }
+    },
+    sug.name,
+    " \xB7 ",
+    sug.time,
+    " \u2192"
+  ));
+}
 function WeekMoodSummaryCard() {
   const [entries, setEntries] = useState(null);
   const [loaded, setLoaded] = useState(false);
@@ -1788,7 +1844,7 @@ function GameHubApp() {
     padding: "18px 20px",
     marginBottom: 24,
     border: "1px solid rgba(255,255,255,0.6)"
-  } }, /* @__PURE__ */ React.createElement(TestBadgeRow, { completedTests: completedTests || [] })), /* @__PURE__ */ React.createElement(BurnoutTrendSection, { userTestScores: data?.userTestScores }), /* @__PURE__ */ React.createElement(WeekMoodSummaryCard, null), /* @__PURE__ */ React.createElement(AIDiarySection, null), /* @__PURE__ */ React.createElement(EmotionWeeklyReport, null), /* @__PURE__ */ React.createElement(TodayRecommendCard, { hubData: data, onPlay: handlePlay }), /* @__PURE__ */ React.createElement(
+  } }, /* @__PURE__ */ React.createElement(TestBadgeRow, { completedTests: completedTests || [] })), /* @__PURE__ */ React.createElement(TestSuggestionCard, null), /* @__PURE__ */ React.createElement(BurnoutTrendSection, { userTestScores: data?.userTestScores }), /* @__PURE__ */ React.createElement(WeekMoodSummaryCard, null), /* @__PURE__ */ React.createElement(AIDiarySection, null), /* @__PURE__ */ React.createElement(EmotionWeeklyReport, null), /* @__PURE__ */ React.createElement(TodayRecommendCard, { hubData: data, onPlay: handlePlay }), /* @__PURE__ */ React.createElement(
     DailyQuestCard,
     {
       todaySessions: data?.todaySessions || [],

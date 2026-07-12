@@ -1635,6 +1635,61 @@ const DAY_LABELS = GAME_LANG === 'en'
   ? ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
   : ['일','월','화','수','목','금','토'];
 
+// ⑥ 게임 → 검사 역루프
+//   서버가 게임 신호(감정 기록·번아웃 에너지)를 읽어 검사를 제안한다. 신호가 약하면 suggestion=null → 카드 미표시.
+//   사용자가 닫으면 7일간 같은 검사는 다시 권하지 않는다(잔소리 방지).
+function TestSuggestionCard() {
+  const [sug, setSug] = useState(null);
+
+  useEffect(() => {
+    GameEngine.getTestSuggestion()
+      .then(res => {
+        const s = res?.data?.suggestion;
+        if (!s) return;
+        const until = Number(localStorage.getItem('test_sug_dismissed_' + s.test) || 0);
+        if (until > Date.now()) return;   // 최근에 닫음
+        setSug(s);
+      })
+      .catch(() => {});
+  }, []);
+
+  if (!sug) return null;
+
+  const dismiss = () => {
+    localStorage.setItem('test_sug_dismissed_' + sug.test, String(Date.now() + 7 * 86400000));
+    setSug(null);
+  };
+
+  return (
+    <div style={{
+      background:'linear-gradient(135deg, rgba(74,124,89,0.10), rgba(107,168,128,0.06))',
+      border:'1px solid rgba(74,124,89,0.22)', borderRadius:20,
+      padding:'18px 20px', marginBottom:24,
+    }}>
+      <div style={{ display:'flex', alignItems:'flex-start', gap:10, marginBottom:12 }}>
+        <span style={{ fontSize:20, lineHeight:1 }}>🌿</span>
+        <div style={{ flex:1, minWidth:0 }}>
+          <div style={{ fontSize:14, fontWeight:700, color:C.dark, marginBottom:4 }}>
+            {t('마음풀 검사 제안', 'A test that might help')}
+          </div>
+          <div style={{ fontSize:12.5, color:C.muted, lineHeight:1.7 }}>{sug.why}</div>
+        </div>
+        <button onClick={dismiss} aria-label={t('닫기', 'Dismiss')}
+          style={{ background:'none', border:'none', color:C.muted, fontSize:16, cursor:'pointer', padding:2, lineHeight:1 }}>×</button>
+      </div>
+      <a href={sug.url} target="_blank" rel="noopener noreferrer"
+        style={{
+          display:'block', textAlign:'center', padding:'12px',
+          background:C.sage, color:'white', borderRadius:12,
+          fontSize:13.5, fontWeight:700, textDecoration:'none',
+          fontFamily:"'Noto Sans KR', sans-serif",
+        }}>
+        {sug.name} · {sug.time} →
+      </a>
+    </div>
+  );
+}
+
 function WeekMoodSummaryCard() {
   const [entries, setEntries] = useState(null);
   const [loaded, setLoaded]   = useState(false);
@@ -2522,6 +2577,9 @@ function GameHubApp() {
         }}>
           <TestBadgeRow completedTests={completedTests || []} />
         </div>
+
+        {/* ── ⑥ 게임 신호 → 검사 제안 (신호 없으면 렌더 안 함) ── */}
+        <TestSuggestionCard />
 
         {/* ── 번아웃 트렌드 ── */}
         <BurnoutTrendSection userTestScores={data?.userTestScores} />

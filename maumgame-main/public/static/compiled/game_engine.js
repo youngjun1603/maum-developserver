@@ -201,6 +201,10 @@ const GameEngine = (() => {
     });
     return res.json();
   }
+  async function getTestSuggestion() {
+    const res = await fetch(`/api/game/test-suggestion${GAME_LANG === "en" ? "?lang=en" : ""}`, { headers: authHeader() });
+    return res.json();
+  }
   async function apiFetch(path, init = {}) {
     return fetch(path, { ...init, headers: { ...authHeader(), ...init.headers || {} } });
   }
@@ -220,6 +224,7 @@ const GameEngine = (() => {
     getBurnoutHistory,
     getRecentSessions,
     getSessionFeedback,
+    getTestSuggestion,
     recoverStreak,
     getCampaign,
     claimCampaign,
