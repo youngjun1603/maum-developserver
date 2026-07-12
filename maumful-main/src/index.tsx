@@ -1197,6 +1197,27 @@ app.post('/api/test/save-analysis', async (c) => {
   return c.json({ success: true })
 })
 
+// ── POST /api/loop-event ──────────────────────────────────
+// 검사↔게임 루프 계측. 집계 전용(개인정보 미저장), 실패해도 화면에 영향 없음.
+const LOOP_EVENTS = ['report_view', 'rx_click', 'suggestion_view', 'suggestion_click']
+app.post('/api/loop-event', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: true })   // 비로그인은 조용히 무시
+
+  let body: { event?: string; meta?: string }
+  try { body = await c.req.json() } catch { return c.json({ success: true }) }
+  if (!body.event || !LOOP_EVENTS.includes(body.event)) return c.json({ success: true })
+
+  try {
+    await DB.prepare('INSERT INTO loop_events (user_id, event, meta) VALUES (?,?,?)')
+      .bind(userId, body.event, (body.meta ?? '').slice(0, 40) || null).run()
+  } catch (e) {
+    console.error('[loop-event] insert failed:', e)   // 계측 실패가 기능을 막지 않는다
+  }
+  return c.json({ success: true })
+})
+
 // ── GET /api/test/report?id= ──────────────────────────────
 // 내 검사 리포트(본인 소유 행만). 점수·수준·상세결과·AI해석 + 직전 회차(변화 흐름)
 app.get('/api/test/report', async (c) => {
@@ -3531,6 +3552,58 @@ app.get('/api/admin/stats/tests', async (c) => {
     `).all()
 
     return c.json({ success: true, data: result.results })
+  } catch (e) {
+    return c.json({ success: false, error: (e as Error).message }, 500)
+  }
+})
+
+// GET /api/admin/loop-metrics?days=30 — 검사 ↔ 게임 루프 퍼널
+// "검사를 한 사람이 게임까지 가는가", "게임을 한 사람이 검사로 돌아오는가"를 본다.
+app.get('/api/admin/loop-metrics', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+
+  const days = Math.min(180, Math.max(7, Number(c.req.query('days') || 30)))
+  const since = `-${days} days`
+
+  try {
+    const [tested, reportViews, rxClicks, played, sugViews, sugClicks, rxByGame, sugByTest] = await DB.batch([
+      DB.prepare(`SELECT COUNT(DISTINCT user_id) AS c FROM test_history WHERE performed_at >= date('now', ?)`).bind(since),
+      DB.prepare(`SELECT COUNT(DISTINCT user_id) AS c FROM loop_events WHERE event='report_view' AND created_at >= date('now', ?)`).bind(since),
+      DB.prepare(`SELECT COUNT(DISTINCT user_id) AS c FROM loop_events WHERE event='rx_click' AND created_at >= date('now', ?)`).bind(since),
+      DB.prepare(`SELECT COUNT(DISTINCT user_id) AS c FROM game_session_logs WHERE created_at >= date('now', ?)`).bind(since),
+      DB.prepare(`SELECT COUNT(DISTINCT user_id) AS c FROM loop_events WHERE event='suggestion_view' AND created_at >= date('now', ?)`).bind(since),
+      DB.prepare(`SELECT COUNT(DISTINCT user_id) AS c FROM loop_events WHERE event='suggestion_click' AND created_at >= date('now', ?)`).bind(since),
+      DB.prepare(`SELECT meta, COUNT(*) AS c FROM loop_events WHERE event='rx_click' AND created_at >= date('now', ?) GROUP BY meta ORDER BY c DESC`).bind(since),
+      DB.prepare(`SELECT meta, COUNT(*) AS c FROM loop_events WHERE event='suggestion_click' AND created_at >= date('now', ?) GROUP BY meta ORDER BY c DESC`).bind(since),
+    ])
+
+    // 루프가 실제로 닫혔는가 — 제안을 누른 뒤 그 검사를 실제로 완료한 사람 수
+    const closed = await DB.prepare(`
+      SELECT COUNT(DISTINCT e.user_id) AS c
+      FROM loop_events e
+      JOIN test_history t
+        ON t.user_id = e.user_id AND t.test_type = e.meta AND t.performed_at > e.created_at
+      WHERE e.event='suggestion_click' AND e.created_at >= date('now', ?)
+    `).bind(since).first<{ c: number }>()
+
+    const n = (r: D1Result) => ((r.results?.[0] as { c: number } | undefined)?.c ?? 0)
+    return c.json({
+      success: true,
+      data: {
+        days,
+        forward: {   // ③ 검사 → 게임
+          tested: n(tested), reportView: n(reportViews), rxClick: n(rxClicks), played: n(played),
+          byGame: rxByGame.results ?? [],
+        },
+        reverse: {   // ⑥ 게임 → 검사
+          played: n(played), suggestionView: n(sugViews), suggestionClick: n(sugClicks),
+          testCompleted: closed?.c ?? 0,
+          byTest: sugByTest.results ?? [],
+        },
+      },
+    })
   } catch (e) {
     return c.json({ success: false, error: (e as Error).message }, 500)
   }

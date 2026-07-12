@@ -523,6 +523,7 @@ function PsychologicalTestSystem() {
   const [adminUsers, setAdminUsers] = useState({ users: [], pagination: {} });
   const [adminPayments, setAdminPayments] = useState({ payments: [], pagination: {} });
   const [adminTab, setAdminTab] = useState("overview");
+  const [adminLoop, setAdminLoop] = useState(null);
   const [adminSearch, setAdminSearch] = useState("");
   const [adminSecretInput, setAdminSecretInput] = useState("");
   const [adminAuthenticated, setAdminAuthenticated] = useState(false);
@@ -1374,8 +1375,10 @@ function PsychologicalTestSystem() {
       try {
         const res = await api._fetch(`/api/test/report?id=${reportId}`);
         const r = await res.json();
-        if (r.success) setReport(r.data);
-        else setReportErr(r.error || t("\uB9AC\uD3EC\uD2B8\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC5B4\uC694.", "Failed to load report."));
+        if (r.success) {
+          setReport(r.data);
+          logLoopEvent("report_view", r.data.test_type);
+        } else setReportErr(r.error || t("\uB9AC\uD3EC\uD2B8\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC5B4\uC694.", "Failed to load report."));
       } catch {
         setReportErr(t("\uB9AC\uD3EC\uD2B8\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC5B4\uC694.", "Failed to load report."));
       } finally {
@@ -2213,6 +2216,17 @@ function PsychologicalTestSystem() {
       if (stats.success) setAdminStats(stats.data);
       if (daily.success) setAdminDaily(daily.data);
       if (tests.success) setAdminTestStats(tests.data);
+    } catch (e) {
+      setAdminMsg({ type: "error", text: "\uB85C\uB4DC \uC2E4\uD328: " + e.message });
+    }
+    setAdminLoading(false);
+  }
+  async function loadAdminLoop() {
+    setAdminLoading(true);
+    try {
+      const r = await adminFetch("/api/admin/loop-metrics?days=30");
+      if (r.success) setAdminLoop(r.data);
+      else setAdminMsg({ type: "error", text: r.error || "\uB8E8\uD504 \uC9C0\uD45C \uB85C\uB4DC \uC2E4\uD328" });
     } catch (e) {
       setAdminMsg({ type: "error", text: "\uB85C\uB4DC \uC2E4\uD328: " + e.message });
     }
@@ -3280,7 +3294,10 @@ Visit Maumful and take the same test again to compare your progress.`));
       "button",
       {
         key: g.key,
-        onClick: () => openMaumGame(g.key),
+        onClick: () => {
+          logLoopEvent("rx_click", g.key);
+          openMaumGame(g.key);
+        },
         className: "w-full flex items-start gap-3 text-left p-3 rounded-xl bg-white border border-emerald-200 hover:bg-emerald-50 transition"
       },
       /* @__PURE__ */ React.createElement("span", { className: "text-xl leading-none mt-0.5" }, g.emoji),
@@ -6389,6 +6406,17 @@ AI \uBD84\uC11D \uAE30\uB2A5\uC774 \uC911\uB2E8\uB429\uB2C8\uB2E4.`)) return;
       return "";
     }
   }
+  function logLoopEvent(event, meta) {
+    try {
+      fetch("/api/loop-event", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...api._authHeader() },
+        body: JSON.stringify({ event, meta: meta || null })
+      }).catch(() => {
+      });
+    } catch {
+    }
+  }
   function gamePrescription(testType, score) {
     const G = {
       garden: { emoji: "\u{1F331}", name: t("\uB9C8\uC74C\uC758 \uC815\uC6D0", "Mind Garden") },
@@ -8513,7 +8541,7 @@ Tested on Maumful! https://maumful.com`), testLabel: t("LOST \uD589\uB3D9 \uC6B4
         adminLoading ? "\uD655\uC778 \uC911..." : "\uB85C\uADF8\uC778"
       ), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("memberDashboard"), className: "w-full text-sm text-gray-400 hover:text-gray-600 mt-3 text-center" }, "\u2190 \uB3CC\uC544\uAC00\uAE30")));
     }
-    return /* @__PURE__ */ React.createElement("div", { className: "min-h-screen bg-gray-50" }, /* @__PURE__ */ React.createElement("header", { className: "bg-white border-b border-gray-200 sticky top-0 z-10" }, /* @__PURE__ */ React.createElement("div", { className: "max-w-5xl mx-auto px-4 py-3 flex items-center justify-between" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3" }, /* @__PURE__ */ React.createElement("span", { className: "text-2xl" }, "\u{1F6E0}\uFE0F"), /* @__PURE__ */ React.createElement("span", { className: "font-bold text-gray-800" }, "\uB9C8\uC74C\uD480 \uAD00\uB9AC\uC790")), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, adminLoading && /* @__PURE__ */ React.createElement("div", { className: "w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" }), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("memberDashboard"), className: "text-sm text-gray-500 hover:text-gray-700 px-3 py-1.5 bg-gray-100 rounded-lg" }, "\u2190 \uB300\uC2DC\uBCF4\uB4DC")))), /* @__PURE__ */ React.createElement("main", { className: "max-w-5xl mx-auto px-4 py-6" }, adminMsg.text && /* @__PURE__ */ React.createElement("div", { className: `mb-4 px-4 py-3 rounded-xl text-sm font-medium ${adminMsg.type === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}` }, adminMsg.text, /* @__PURE__ */ React.createElement("button", { onClick: () => setAdminMsg({ type: "", text: "" }), className: "ml-3 opacity-60 hover:opacity-100" }, "\u2715")), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mb-6 flex-wrap" }, [["overview", "\u{1F4CA} \uAC1C\uC694"], ["users", "\u{1F465} \uC0AC\uC6A9\uC790"], ["payments", "\u{1F4B3} \uACB0\uC81C"], ["tests", "\u{1F4CB} \uAC80\uC0AC"], ["coupons", "\u{1F39F}\uFE0F \uCFE0\uD3F0"]].map(([tab, label]) => /* @__PURE__ */ React.createElement(
+    return /* @__PURE__ */ React.createElement("div", { className: "min-h-screen bg-gray-50" }, /* @__PURE__ */ React.createElement("header", { className: "bg-white border-b border-gray-200 sticky top-0 z-10" }, /* @__PURE__ */ React.createElement("div", { className: "max-w-5xl mx-auto px-4 py-3 flex items-center justify-between" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3" }, /* @__PURE__ */ React.createElement("span", { className: "text-2xl" }, "\u{1F6E0}\uFE0F"), /* @__PURE__ */ React.createElement("span", { className: "font-bold text-gray-800" }, "\uB9C8\uC74C\uD480 \uAD00\uB9AC\uC790")), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, adminLoading && /* @__PURE__ */ React.createElement("div", { className: "w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" }), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("memberDashboard"), className: "text-sm text-gray-500 hover:text-gray-700 px-3 py-1.5 bg-gray-100 rounded-lg" }, "\u2190 \uB300\uC2DC\uBCF4\uB4DC")))), /* @__PURE__ */ React.createElement("main", { className: "max-w-5xl mx-auto px-4 py-6" }, adminMsg.text && /* @__PURE__ */ React.createElement("div", { className: `mb-4 px-4 py-3 rounded-xl text-sm font-medium ${adminMsg.type === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}` }, adminMsg.text, /* @__PURE__ */ React.createElement("button", { onClick: () => setAdminMsg({ type: "", text: "" }), className: "ml-3 opacity-60 hover:opacity-100" }, "\u2715")), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mb-6 flex-wrap" }, [["overview", "\u{1F4CA} \uAC1C\uC694"], ["users", "\u{1F465} \uC0AC\uC6A9\uC790"], ["payments", "\u{1F4B3} \uACB0\uC81C"], ["tests", "\u{1F4CB} \uAC80\uC0AC"], ["coupons", "\u{1F39F}\uFE0F \uCFE0\uD3F0"], ["loop", "\u{1F501} \uB8E8\uD504"]].map(([tab, label]) => /* @__PURE__ */ React.createElement(
       "button",
       {
         key: tab,
@@ -8522,11 +8550,22 @@ Tested on Maumful! https://maumful.com`), testLabel: t("LOST \uD589\uB3D9 \uC6B4
           if (tab === "overview") loadAdminOverview();
           else if (tab === "users") loadAdminUsers();
           else if (tab === "payments") loadAdminPayments();
+          else if (tab === "loop") loadAdminLoop();
         },
         className: S.tabBtn(adminTab === tab)
       },
       label
-    ))), adminTab === "coupons" && /* @__PURE__ */ React.createElement(MasterCouponPanel, null), adminTab === "overview" && adminStats && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" }, [
+    ))), adminTab === "coupons" && /* @__PURE__ */ React.createElement(MasterCouponPanel, null), adminTab === "loop" && /* @__PURE__ */ React.createElement("div", { className: "space-y-6" }, !adminLoop && /* @__PURE__ */ React.createElement("div", { className: "text-sm text-gray-400 py-8 text-center" }, "\uBD88\uB7EC\uC624\uB294 \uC911\u2026"), adminLoop && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-500" }, "\uCD5C\uADFC ", adminLoop.days, "\uC77C \xB7 \uAC01 \uB2E8\uACC4\uB294 ", /* @__PURE__ */ React.createElement("b", null, "\uC0AC\uB78C \uC218(\uC911\uBCF5 \uC81C\uAC70)"), "\uC785\uB2C8\uB2E4."), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-gray-100 p-5" }, /* @__PURE__ */ React.createElement("h3", { className: "text-sm font-bold text-emerald-700 mb-4" }, "\u2462 \uAC80\uC0AC \u2192 \uAC8C\uC784 (\uC815\uBC29\uD5A5)"), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-4 gap-3" }, [
+      ["\uAC80\uC0AC \uC644\uB8CC", adminLoop.forward.tested],
+      ["\uB9AC\uD3EC\uD2B8 \uC5F4\uB78C", adminLoop.forward.reportView],
+      ["\uAC8C\uC784 \uCC98\uBC29 \uD074\uB9AD", adminLoop.forward.rxClick],
+      ["\uAC8C\uC784 \uD50C\uB808\uC774", adminLoop.forward.played]
+    ].map(([label, val], i, arr) => /* @__PURE__ */ React.createElement("div", { key: label, className: "text-center" }, /* @__PURE__ */ React.createElement("div", { className: "text-2xl font-bold text-gray-800" }, val), /* @__PURE__ */ React.createElement("div", { className: "text-[11px] text-gray-500 mt-1" }, label), i > 0 && arr[i - 1][1] > 0 && /* @__PURE__ */ React.createElement("div", { className: "text-[10px] text-emerald-600 mt-0.5" }, Math.round(val / arr[i - 1][1] * 100), "%")))), adminLoop.forward.byGame.length > 0 && /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-500 mt-4 pt-3 border-t border-gray-100" }, "\uCC98\uBC29 \uD074\uB9AD: ", adminLoop.forward.byGame.map((g) => `${g.meta} ${g.c}\uD68C`).join(" \xB7 "))), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-gray-100 p-5" }, /* @__PURE__ */ React.createElement("h3", { className: "text-sm font-bold text-emerald-700 mb-4" }, "\u2465 \uAC8C\uC784 \u2192 \uAC80\uC0AC (\uC5ED\uBC29\uD5A5)"), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-4 gap-3" }, [
+      ["\uAC8C\uC784 \uD50C\uB808\uC774", adminLoop.reverse.played],
+      ["\uAC80\uC0AC \uC81C\uC548 \uB178\uCD9C", adminLoop.reverse.suggestionView],
+      ["\uC81C\uC548 \uD074\uB9AD", adminLoop.reverse.suggestionClick],
+      ["\uC2E4\uC81C \uAC80\uC0AC \uC644\uB8CC", adminLoop.reverse.testCompleted]
+    ].map(([label, val], i, arr) => /* @__PURE__ */ React.createElement("div", { key: label, className: "text-center" }, /* @__PURE__ */ React.createElement("div", { className: "text-2xl font-bold text-gray-800" }, val), /* @__PURE__ */ React.createElement("div", { className: "text-[11px] text-gray-500 mt-1" }, label), i > 0 && arr[i - 1][1] > 0 && /* @__PURE__ */ React.createElement("div", { className: "text-[10px] text-emerald-600 mt-0.5" }, Math.round(val / arr[i - 1][1] * 100), "%")))), adminLoop.reverse.byTest.length > 0 && /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-500 mt-4 pt-3 border-t border-gray-100" }, "\uC81C\uC548 \uD074\uB9AD: ", adminLoop.reverse.byTest.map((t2) => `${t2.meta} ${t2.c}\uD68C`).join(" \xB7 ")), /* @__PURE__ */ React.createElement("p", { className: "text-[11px] text-gray-400 mt-3 leading-relaxed" }, "\u2018\uC2E4\uC81C \uAC80\uC0AC \uC644\uB8CC\u2019\uB294 \uC81C\uC548\uC744 \uB204\uB978 \uB4A4 \uADF8 \uAC80\uC0AC\uB97C \uB05D\uB0B8 \uC0AC\uB78C \uC218\uC785\uB2C8\uB2E4. \uC774 \uC22B\uC790\uAC00 \uB8E8\uD504\uAC00 \uB2EB\uD614\uB294\uC9C0\uB97C \uBCF4\uC5EC\uC90D\uB2C8\uB2E4.")))), adminTab === "overview" && adminStats && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" }, [
       { label: "\uCD1D \uAC00\uC785\uC790", val: (_c = (_b = adminStats.users) == null ? void 0 : _b.total) == null ? void 0 : _c.toLocaleString(), sub: `\uC624\uB298 +${(_d = adminStats.users) == null ? void 0 : _d.today}`, color: "text-indigo-600" },
       { label: "\uC774\uBC88\uB2EC \uB9E4\uCD9C", val: `\u20A9${(_f = (_e = adminStats.revenue) == null ? void 0 : _e.monthly) == null ? void 0 : _f.toLocaleString()}`, sub: `\uACB0\uC81C ${(_g = adminStats.payments) == null ? void 0 : _g.monthly}\uAC74`, color: "text-emerald-600" },
       { label: "\uCD1D \uAC80\uC0AC \uC218", val: (_i = (_h = adminStats.tests) == null ? void 0 : _h.total) == null ? void 0 : _i.toLocaleString(), sub: `\uC624\uB298 ${(_j = adminStats.tests) == null ? void 0 : _j.today}\uAC74`, color: "text-orange-600" },

@@ -433,7 +433,8 @@ function PsychologicalTestSystem() {
   const [adminTestStats, setAdminTestStats] = useState([]);
   const [adminUsers, setAdminUsers]       = useState({ users: [], pagination: {} });
   const [adminPayments, setAdminPayments] = useState({ payments: [], pagination: {} });
-  const [adminTab, setAdminTab]           = useState('overview');  // overview|users|payments|tests
+  const [adminTab, setAdminTab]           = useState('overview');  // overview|users|payments|tests|coupons|loop
+  const [adminLoop, setAdminLoop]         = useState(null);        // 검사↔게임 루프 퍼널
   const [adminSearch, setAdminSearch]     = useState('');
   const [adminSecretInput, setAdminSecretInput] = useState('');
   const [adminAuthenticated, setAdminAuthenticated] = useState(false);
@@ -1370,7 +1371,7 @@ function PsychologicalTestSystem() {
       try {
         const res = await api._fetch(`/api/test/report?id=${reportId}`);   // ⚠️ api.get은 존재하지 않음 — _fetch는 Response 반환
         const r = await res.json();
-        if (r.success) setReport(r.data);
+        if (r.success) { setReport(r.data); logLoopEvent('report_view', r.data.test_type); }
         else setReportErr(r.error || t('리포트를 불러오지 못했어요.', 'Failed to load report.'));
       } catch {
         setReportErr(t('리포트를 불러오지 못했어요.', 'Failed to load report.'));
@@ -2213,6 +2214,17 @@ function PsychologicalTestSystem() {
       if (stats.success)  setAdminStats(stats.data);
       if (daily.success)  setAdminDaily(daily.data);
       if (tests.success)  setAdminTestStats(tests.data);
+    } catch(e) { setAdminMsg({ type:'error', text:'로드 실패: '+e.message }); }
+    setAdminLoading(false);
+  }
+
+  // 검사 ↔ 게임 루프 퍼널 (③ 정방향 / ⑥ 역방향)
+  async function loadAdminLoop() {
+    setAdminLoading(true);
+    try {
+      const r = await adminFetch('/api/admin/loop-metrics?days=30');
+      if (r.success) setAdminLoop(r.data);
+      else setAdminMsg({ type:'error', text: r.error || '루프 지표 로드 실패' });
     } catch(e) { setAdminMsg({ type:'error', text:'로드 실패: '+e.message }); }
     setAdminLoading(false);
   }
@@ -3850,7 +3862,7 @@ function PsychologicalTestSystem() {
                 <h2 className="text-sm font-bold text-emerald-700 mb-3">▌ {d.game ? '5' : '4'}. {t("다음 단계","Next Steps")}</h2>
                 <div className="space-y-2 mb-3">
                   {gamePrescription(d.test_type, d.score).map(g => (
-                    <button key={g.key} onClick={() => openMaumGame(g.key)}
+                    <button key={g.key} onClick={() => { logLoopEvent('rx_click', g.key); openMaumGame(g.key); }}
                       className="w-full flex items-start gap-3 text-left p-3 rounded-xl bg-white border border-emerald-200 hover:bg-emerald-50 transition">
                       <span className="text-xl leading-none mt-0.5">{g.emoji}</span>
                       <span className="flex-1 min-w-0">
@@ -7654,6 +7666,17 @@ function PsychologicalTestSystem() {
     } catch { return ''; }
   }
 
+  // 검사↔게임 루프 계측 — 집계 전용. 실패해도 화면 동작에 영향 없음(fire-and-forget).
+  function logLoopEvent(event, meta) {
+    try {
+      fetch('/api/loop-event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+        body: JSON.stringify({ event, meta: meta || null }),
+      }).catch(() => {});
+    } catch { /* 계측 실패 무시 */ }
+  }
+
   // ③ 검사 → 마음게임 개인화 처방. 검사 결과에 맞는 치유게임을 딥링크(openMaumGame(key))로 연결.
   //    game.maumful.com은 ?game=<key>를 받아 자동 진입 (garden·efmt·gratitude·tree·burnout·mood·focus·worry)
   function gamePrescription(testType, score) {
@@ -11208,13 +11231,77 @@ function PsychologicalTestSystem() {
             </div>
           )}
           <div className="flex gap-2 mb-6 flex-wrap">
-            {[['overview','📊 개요'],['users','👥 사용자'],['payments','💳 결제'],['tests','📋 검사'],['coupons','🎟️ 쿠폰']].map(([tab, label]) => (
-              <button key={tab} onClick={() => { setAdminTab(tab); if(tab==='overview') loadAdminOverview(); else if(tab==='users') loadAdminUsers(); else if(tab==='payments') loadAdminPayments(); }}
+            {[['overview','📊 개요'],['users','👥 사용자'],['payments','💳 결제'],['tests','📋 검사'],['coupons','🎟️ 쿠폰'],['loop','🔁 루프']].map(([tab, label]) => (
+              <button key={tab} onClick={() => { setAdminTab(tab); if(tab==='overview') loadAdminOverview(); else if(tab==='users') loadAdminUsers(); else if(tab==='payments') loadAdminPayments(); else if(tab==='loop') loadAdminLoop(); }}
                 className={S.tabBtn(adminTab===tab)}>{label}</button>
             ))}
           </div>
 
           {adminTab === 'coupons' && <MasterCouponPanel />}
+
+          {adminTab === 'loop' && (
+            <div className="space-y-6">
+              {!adminLoop && <div className="text-sm text-gray-400 py-8 text-center">불러오는 중…</div>}
+              {adminLoop && (
+                <>
+                  <p className="text-xs text-gray-500">최근 {adminLoop.days}일 · 각 단계는 <b>사람 수(중복 제거)</b>입니다.</p>
+
+                  <div className="bg-white rounded-2xl border border-gray-100 p-5">
+                    <h3 className="text-sm font-bold text-emerald-700 mb-4">③ 검사 → 게임 (정방향)</h3>
+                    <div className="grid grid-cols-4 gap-3">
+                      {[
+                        ['검사 완료', adminLoop.forward.tested],
+                        ['리포트 열람', adminLoop.forward.reportView],
+                        ['게임 처방 클릭', adminLoop.forward.rxClick],
+                        ['게임 플레이', adminLoop.forward.played],
+                      ].map(([label, val], i, arr) => (
+                        <div key={label} className="text-center">
+                          <div className="text-2xl font-bold text-gray-800">{val}</div>
+                          <div className="text-[11px] text-gray-500 mt-1">{label}</div>
+                          {i > 0 && arr[i-1][1] > 0 && (
+                            <div className="text-[10px] text-emerald-600 mt-0.5">{Math.round(val / arr[i-1][1] * 100)}%</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    {adminLoop.forward.byGame.length > 0 && (
+                      <p className="text-xs text-gray-500 mt-4 pt-3 border-t border-gray-100">
+                        처방 클릭: {adminLoop.forward.byGame.map(g => `${g.meta} ${g.c}회`).join(' · ')}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="bg-white rounded-2xl border border-gray-100 p-5">
+                    <h3 className="text-sm font-bold text-emerald-700 mb-4">⑥ 게임 → 검사 (역방향)</h3>
+                    <div className="grid grid-cols-4 gap-3">
+                      {[
+                        ['게임 플레이', adminLoop.reverse.played],
+                        ['검사 제안 노출', adminLoop.reverse.suggestionView],
+                        ['제안 클릭', adminLoop.reverse.suggestionClick],
+                        ['실제 검사 완료', adminLoop.reverse.testCompleted],
+                      ].map(([label, val], i, arr) => (
+                        <div key={label} className="text-center">
+                          <div className="text-2xl font-bold text-gray-800">{val}</div>
+                          <div className="text-[11px] text-gray-500 mt-1">{label}</div>
+                          {i > 0 && arr[i-1][1] > 0 && (
+                            <div className="text-[10px] text-emerald-600 mt-0.5">{Math.round(val / arr[i-1][1] * 100)}%</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    {adminLoop.reverse.byTest.length > 0 && (
+                      <p className="text-xs text-gray-500 mt-4 pt-3 border-t border-gray-100">
+                        제안 클릭: {adminLoop.reverse.byTest.map(t => `${t.meta} ${t.c}회`).join(' · ')}
+                      </p>
+                    )}
+                    <p className="text-[11px] text-gray-400 mt-3 leading-relaxed">
+                      ‘실제 검사 완료’는 제안을 누른 뒤 그 검사를 끝낸 사람 수입니다. 이 숫자가 루프가 닫혔는지를 보여줍니다.
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
 
           {adminTab === 'overview' && adminStats && (
             <div>
