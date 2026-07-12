@@ -1649,6 +1649,7 @@ function TestSuggestionCard() {
         const until = Number(localStorage.getItem('test_sug_dismissed_' + s.test) || 0);
         if (until > Date.now()) return;   // 최근에 닫음
         setSug(s);
+        GameEngine.logLoopEvent('suggestion_view', s.test);   // 실제로 보인 것만 노출로 집계
       })
       .catch(() => {});
   }, []);
@@ -1678,6 +1679,7 @@ function TestSuggestionCard() {
           style={{ background:'none', border:'none', color:C.muted, fontSize:16, cursor:'pointer', padding:2, lineHeight:1 }}>×</button>
       </div>
       <a href={sug.url} target="_blank" rel="noopener noreferrer"
+        onClick={() => GameEngine.logLoopEvent('suggestion_click', sug.test)}
         style={{
           display:'block', textAlign:'center', padding:'12px',
           background:C.sage, color:'white', borderRadius:12,

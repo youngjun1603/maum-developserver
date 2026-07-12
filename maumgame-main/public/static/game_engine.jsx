@@ -269,6 +269,17 @@ const GameEngine = (() => {
     return res.json();
   }
 
+  // ── 루프 계측(집계 전용) — 실패해도 화면에 영향 없음 ─────
+  function logLoopEvent(event, meta) {
+    try {
+      fetch('/api/game/loop-event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
+        body: JSON.stringify({ event, meta: meta || null }),
+      }).catch(() => {});
+    } catch { /* 무시 */ }
+  }
+
   // ── 인증 헤더 포함 범용 fetch ────────────────────────────
   async function apiFetch(path, init = {}) {
     return fetch(path, { ...init, headers: { ...authHeader(), ...(init.headers || {}) } });
@@ -278,7 +289,7 @@ const GameEngine = (() => {
     getMe, saveSession, transformSentence, updateVisual,
     getCredits, spendCredit, saveScore,
     getLeaderboard, getDailyTip, getMoodHistory, getEmotionReport, getGameStats, getBurnoutHistory,
-    getRecentSessions, getSessionFeedback, getTestSuggestion,
+    getRecentSessions, getSessionFeedback, getTestSuggestion, logLoopEvent,
     recoverStreak, getCampaign, claimCampaign, apiFetch,
     getLevelInfo, getGardenTheme, getAchievementInfo,
     formatDuration, formatRelativeTime,

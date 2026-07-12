@@ -1534,6 +1534,26 @@ function buildMaumfulCta(sig: GameSignals, testedRecently: boolean): { label: st
   return { label: `${name} 하러 가기 →`, desc: why, url: `${MF}/?go=test:${s ? s.test : 'PHQ9'}` }
 }
 
+// ── POST /api/game/loop-event ─────────────────────────────
+// ⑥ 역루프 계측 — 마음풀과 같은 maumful-db의 loop_events에 기록(집계 전용).
+app.post('/api/game/loop-event', async (c) => {
+  const { DB } = c.env
+  const userId = await getGameUserId(c.req.raw, c.env)
+  if (!userId) return c.json({ success: true })
+
+  let body: { event?: string; meta?: string }
+  try { body = await c.req.json() } catch { return c.json({ success: true }) }
+  if (body.event !== 'suggestion_view' && body.event !== 'suggestion_click') return c.json({ success: true })
+
+  try {
+    await DB.prepare('INSERT INTO loop_events (user_id, event, meta) VALUES (?,?,?)')
+      .bind(userId, body.event, (body.meta ?? '').slice(0, 40) || null).run()
+  } catch (e) {
+    console.error('[game loop-event] insert failed:', e)   // 계측 실패가 기능을 막지 않는다
+  }
+  return c.json({ success: true })
+})
+
 // ── GET /api/game/test-suggestion ─────────────────────────
 // ⑥ 게임 허브에서 보여줄 검사 제안. 신호가 약하면 suggestion=null(카드 미표시).
 app.get('/api/game/test-suggestion', async (c) => {

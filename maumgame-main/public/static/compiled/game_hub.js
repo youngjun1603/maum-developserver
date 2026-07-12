@@ -1056,6 +1056,7 @@ function TestSuggestionCard() {
       const until = Number(localStorage.getItem("test_sug_dismissed_" + s.test) || 0);
       if (until > Date.now()) return;
       setSug(s);
+      GameEngine.logLoopEvent("suggestion_view", s.test);
     }).catch(() => {
     });
   }, []);
@@ -1084,6 +1085,7 @@ function TestSuggestionCard() {
       href: sug.url,
       target: "_blank",
       rel: "noopener noreferrer",
+      onClick: () => GameEngine.logLoopEvent("suggestion_click", sug.test),
       style: {
         display: "block",
         textAlign: "center",

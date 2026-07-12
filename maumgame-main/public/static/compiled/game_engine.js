@@ -205,6 +205,17 @@ const GameEngine = (() => {
     const res = await fetch(`/api/game/test-suggestion${GAME_LANG === "en" ? "?lang=en" : ""}`, { headers: authHeader() });
     return res.json();
   }
+  function logLoopEvent(event, meta) {
+    try {
+      fetch("/api/game/loop-event", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeader() },
+        body: JSON.stringify({ event, meta: meta || null })
+      }).catch(() => {
+      });
+    } catch {
+    }
+  }
   async function apiFetch(path, init = {}) {
     return fetch(path, { ...init, headers: { ...authHeader(), ...init.headers || {} } });
   }
@@ -225,6 +236,7 @@ const GameEngine = (() => {
     getRecentSessions,
     getSessionFeedback,
     getTestSuggestion,
+    logLoopEvent,
     recoverStreak,
     getCampaign,
     claimCampaign,
