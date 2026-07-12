@@ -137,6 +137,12 @@ npm run deploy:cts    # lightoflife-couple (wrangler.lightoflife.toml)
 
 ---
 
+## 마음게임 ↔ 마음풀 상호 연결 (양방향 루프)
+- **검사 → 게임**: 마음풀 리포트 §다음 단계의 `gamePrescription` → `openMaumGame(key)`.
+- **게임 → 검사**: `GET /api/game/test-suggestion` — 30일 게임 신호(감정 기록·번아웃 에너지)로 검사 제안. 허브 `TestSuggestionCard`(닫으면 7일 재제안 안 함) + 주간 메일 CTA가 **`pickTestSuggestion` 한 함수**를 공유(규칙 분기 금지). 신호 약하면 `null` → 카드 미표시.
+- 게임 AI 모델: **CBT 생각 변환만 sonnet-4-6 우선**(haiku 폴백). 데일리 팁·AI 일기·세션 피드백 등은 haiku 유지(짧고 가벼움).
+- ⚠️ **위기 감지 키워드는 NFC 정규화 후 판정**: 자모 분리(NFD) 한글은 완성형 정규식에 매칭되지 않아 1차 방어가 통째로 우회된다(실제 확인). `text.normalize('NFC')` 필수. 한글 키워드 매칭을 새로 짤 때 항상 적용할 것.
+
 ## 마음게임 주간 리포트 메일 (Cron: 매주 월 03:00 UTC · `maumgame-main/src/index.tsx` `handleScheduled`)
 - 지난 7일 활동자에게 활동 요약 + **마음풀 CTA**(최근 30일 검사 있으면 `?go=history`, 없으면 게임 신호로 검사 추천 `?go=test:PHQ9`) 발송.
 - ⚠️ **수신거부 필수**(정보통신망법). `game_email_prefs.optout`(migration 0006, opt-out 방식) → cron이 제외. `GET /unsubscribe?u=&s=`(HMAC 서명, 로그인 불필요). **메일 발송 기능을 만들 땐 수신거부 링크를 반드시 포함**할 것.
