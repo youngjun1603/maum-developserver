@@ -138,6 +138,9 @@ npm run deploy:cts    # lightoflife-couple (wrangler.lightoflife.toml)
 ---
 
 ## 마음게임 ↔ 마음풀 상호 연결 (양방향 루프)
+- **해금 정책(2026-07)**: 게임 **전 종목 Lv.1·검사 조건 없음**. 이전엔 레벨(최대 Lv.4)+검사를 요구해 신규 사용자에게 8종 중 3종만 보였고, 리포트가 처방하는 게임이 정작 잠겨 있었다. 레벨·EXP는 정원 성장/배지/스트릭 표시로만 쓴다. ⚠️ 해금을 다시 걸 땐 `game_registry.jsx`와 서버 `ALL_GAME_IDS`(src/index.tsx)를 **함께** 고칠 것(이중 관리 지점). 검사↔게임 연결 표시는 `linkedTests`(잠그지 않음).
+- **루프 계측**: `loop_events`(migration 0024) — `report_view`·`rx_click`(마음풀) / `suggestion_view`·`suggestion_click`(게임). 어드민 **🔁 루프 탭**(`GET /api/admin/loop-metrics`)에서 정방향·역방향 퍼널을 사람 수로 본다. '실제 검사 완료' = 제안 클릭 후 그 검사를 끝낸 사람(루프가 닫혔는지). 계측은 fire-and-forget — 실패해도 기능에 영향 없음.
+- **마음커플 "우리의 정원"**(`GET /api/couple/garden`): 두 사람의 게임 실천 **횟수만** 합산. ⚠️ 파트너의 감정 기록 내용(emotion·intensity·note)은 **서버가 조회조차 하지 않는다**. 감정 내용 공유는 명시적 동의·철회 UX 없이는 하지 않는다.
 - **검사 → 게임**: 마음풀 리포트 §다음 단계의 `gamePrescription` → `openMaumGame(key)`.
 - **게임 → 검사**: `GET /api/game/test-suggestion` — 30일 게임 신호(감정 기록·번아웃 에너지)로 검사 제안. 허브 `TestSuggestionCard`(닫으면 7일 재제안 안 함) + 주간 메일 CTA가 **`pickTestSuggestion` 한 함수**를 공유(규칙 분기 금지). 신호 약하면 `null` → 카드 미표시.
 - 게임 AI 모델: **CBT 생각 변환만 sonnet-4-6 우선**(haiku 폴백). 데일리 팁·AI 일기·세션 피드백 등은 haiku 유지(짧고 가벼움).
