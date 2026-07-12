@@ -732,6 +732,52 @@ function TestResultBadge({ type, result, date }) {
   }
   return /* @__PURE__ */ React.createElement("div", { style: cardStyle }, inner);
 }
+function CoupleGardenCard() {
+  const [g, setG] = useState(null);
+  useEffect(() => {
+    api.get("/api/couple/garden").then((res) => {
+      if (res.success && res.data?.partner) setG(res.data);
+    }).catch(() => {
+    });
+  }, []);
+  if (!g) return null;
+  const pct = Math.min(100, Math.round(g.week / g.weeklyGoal * 100));
+  return /* @__PURE__ */ React.createElement("div", { style: {
+    background: "white",
+    borderRadius: 20,
+    padding: "18px 20px",
+    marginBottom: 16,
+    border: `1px solid ${C.rose}22`,
+    boxShadow: "0 2px 12px rgba(0,0,0,0.04)"
+  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.dark } }, "\u{1F33F} ", tl("\uC6B0\uB9AC\uC758 \uC815\uC6D0", "Our Garden")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, tl("\uCD5C\uADFC 30\uC77C", "Last 30 days"))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, marginBottom: 14 } }, [
+    [tl("\uB098", "Me"), g.mine],
+    [tl(`${g.partnerName}\uB2D8`, g.partnerName), g.theirs],
+    [tl("\uD568\uAED8", "Together"), g.total]
+  ].map(([label, val]) => /* @__PURE__ */ React.createElement("div", { key: label, style: { flex: 1, textAlign: "center", background: `${C.rose}0D`, borderRadius: 14, padding: "12px 6px" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: C.dark } }, val), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10.5, color: C.muted, marginTop: 2 } }, label)))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: C.muted, marginBottom: 6 } }, g.goalMet ? tl(`\uC774\uBC88 \uC8FC \uBAA9\uD45C \uB2EC\uC131! \uB458\uC774 ${g.week}\uD68C \uC2E4\uCC9C\uD588\uC5B4\uC694 \u{1F389}`, `Weekly goal reached \u2014 ${g.week} sessions together \u{1F389}`) : tl(`\uC774\uBC88 \uC8FC \uD568\uAED8 ${g.week}/${g.weeklyGoal}\uD68C`, `${g.week}/${g.weeklyGoal} together this week`)), /* @__PURE__ */ React.createElement("div", { style: { height: 7, borderRadius: 100, background: `${C.rose}1A`, overflow: "hidden", marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { width: `${pct}%`, height: "100%", background: `linear-gradient(90deg, ${C.rose}, ${C.roseL})`, transition: "width .4s" } })), /* @__PURE__ */ React.createElement(
+    "a",
+    {
+      href: "https://game.maumful.com",
+      target: "_blank",
+      rel: "noopener noreferrer",
+      style: {
+        display: "block",
+        textAlign: "center",
+        padding: "11px",
+        background: C.rose,
+        color: "white",
+        borderRadius: 12,
+        fontSize: 12.5,
+        fontWeight: 700,
+        textDecoration: "none",
+        fontFamily: "'Noto Sans KR',sans-serif"
+      }
+    },
+    tl("\uB9C8\uC74C\uAC8C\uC784 \uD558\uB7EC \uAC00\uAE30 \u2192", "Play Maum Games \u2192")
+  ), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 10, color: C.muted, marginTop: 8, lineHeight: 1.6, textAlign: "center" } }, tl(
+    "\uC2E4\uCC9C \uD69F\uC218\uB9CC \uD568\uAED8 \uBD05\uB2C8\uB2E4. \uC11C\uB85C\uC758 \uAC10\uC815 \uAE30\uB85D \uB0B4\uC6A9\uC740 \uACF5\uC720\uB418\uC9C0 \uC54A\uC544\uC694.",
+    "Only practice counts are shared \u2014 never the content of each other\u2019s mood logs."
+  )));
+}
 function DailyQuestionCard() {
   const [offset, setOffset] = useState(0);
   const [copied, setCopied] = useState(false);
@@ -3069,7 +3115,7 @@ function CoupleHubApp() {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between"
-  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 18 } }, SERVICE_ICON), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 15, fontWeight: 700, color: C.dark, fontFamily: "'Noto Serif KR', serif" } }, SERVICE_NAME)), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: C.rose, background: C.rosePale, padding: "4px 12px", borderRadius: 100, border: `1px solid ${C.roseL}44` } }, "\u2726 ", user?.credits ?? 0), /* @__PURE__ */ React.createElement("button", { onClick: toggleCoupleLang, title: "Language", style: { fontSize: 12, fontWeight: 700, color: C.muted, cursor: "pointer", padding: "4px 10px", borderRadius: 8, border: "1px solid rgba(0,0,0,0.08)", background: "rgba(255,255,255,0.6)" } }, COUPLE_LANG === "en" ? "\uD55C" : "EN"), /* @__PURE__ */ React.createElement("a", { href: MAUMFUL_URL, style: { fontSize: 12, color: C.muted, textDecoration: "none", padding: "4px 10px", borderRadius: 8, border: "1px solid rgba(0,0,0,0.08)", background: "rgba(255,255,255,0.6)" } }, BACK_LABEL))), /* @__PURE__ */ React.createElement("div", { style: { maxWidth: 640, margin: "0 auto", padding: "20px 16px 100px" } }, tab === "home" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { borderRadius: 20, padding: "18px 20px", marginBottom: 16, background: `linear-gradient(135deg, ${C.rose}, ${C.roseL})`, color: "white", boxShadow: `0 8px 24px ${C.rose}44` } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, opacity: 0.85, marginBottom: 2 } }, tl(`\uC548\uB155\uD558\uC138\uC694, ${displayName(user)}\uB2D8 \u{1F44B}`, `Hello, ${displayName(user)} \u{1F44B}`)), dDay ? /* @__PURE__ */ React.createElement("div", { style: { fontSize: 28, fontWeight: 800, letterSpacing: -1 } }, "D+", dDay.toLocaleString()) : /* @__PURE__ */ React.createElement("div", { style: { fontSize: 16, fontWeight: 700, marginTop: 4 } }, tl("\uCC98\uC74C \uB9CC\uB09C \uB0A0\uC744 \uAE30\uB85D\uD574\uBCF4\uC138\uC694", "Record your first meeting date")), dDay && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, opacity: 0.8, marginTop: 2 } }, tl("\uD568\uAED8\uD55C \uB0A0\uB4E4 \u{1F495}", "Days together \u{1F495}"))), !dDay && /* @__PURE__ */ React.createElement("button", { onClick: () => setView("anniversary"), style: { background: "rgba(255,255,255,0.25)", border: "none", borderRadius: 10, padding: "8px 14px", color: "white", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Noto Sans KR',sans-serif" } }, tl("\uAE30\uB85D\uD558\uAE30 \u2192", "Set date \u2192")))), /* @__PURE__ */ React.createElement(DailyQuestionCard, null), /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 20 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 12 } }, tl("\uC624\uB298 \uBC14\uB85C \uC368\uBCF4\uC138\uC694", "Try these today")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 12, overflowX: "auto", paddingBottom: 8, paddingLeft: 2, paddingRight: 2, scrollbarWidth: "none" } }, [
+  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 18 } }, SERVICE_ICON), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 15, fontWeight: 700, color: C.dark, fontFamily: "'Noto Serif KR', serif" } }, SERVICE_NAME)), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: C.rose, background: C.rosePale, padding: "4px 12px", borderRadius: 100, border: `1px solid ${C.roseL}44` } }, "\u2726 ", user?.credits ?? 0), /* @__PURE__ */ React.createElement("button", { onClick: toggleCoupleLang, title: "Language", style: { fontSize: 12, fontWeight: 700, color: C.muted, cursor: "pointer", padding: "4px 10px", borderRadius: 8, border: "1px solid rgba(0,0,0,0.08)", background: "rgba(255,255,255,0.6)" } }, COUPLE_LANG === "en" ? "\uD55C" : "EN"), /* @__PURE__ */ React.createElement("a", { href: MAUMFUL_URL, style: { fontSize: 12, color: C.muted, textDecoration: "none", padding: "4px 10px", borderRadius: 8, border: "1px solid rgba(0,0,0,0.08)", background: "rgba(255,255,255,0.6)" } }, BACK_LABEL))), /* @__PURE__ */ React.createElement("div", { style: { maxWidth: 640, margin: "0 auto", padding: "20px 16px 100px" } }, tab === "home" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { borderRadius: 20, padding: "18px 20px", marginBottom: 16, background: `linear-gradient(135deg, ${C.rose}, ${C.roseL})`, color: "white", boxShadow: `0 8px 24px ${C.rose}44` } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, opacity: 0.85, marginBottom: 2 } }, tl(`\uC548\uB155\uD558\uC138\uC694, ${displayName(user)}\uB2D8 \u{1F44B}`, `Hello, ${displayName(user)} \u{1F44B}`)), dDay ? /* @__PURE__ */ React.createElement("div", { style: { fontSize: 28, fontWeight: 800, letterSpacing: -1 } }, "D+", dDay.toLocaleString()) : /* @__PURE__ */ React.createElement("div", { style: { fontSize: 16, fontWeight: 700, marginTop: 4 } }, tl("\uCC98\uC74C \uB9CC\uB09C \uB0A0\uC744 \uAE30\uB85D\uD574\uBCF4\uC138\uC694", "Record your first meeting date")), dDay && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, opacity: 0.8, marginTop: 2 } }, tl("\uD568\uAED8\uD55C \uB0A0\uB4E4 \u{1F495}", "Days together \u{1F495}"))), !dDay && /* @__PURE__ */ React.createElement("button", { onClick: () => setView("anniversary"), style: { background: "rgba(255,255,255,0.25)", border: "none", borderRadius: 10, padding: "8px 14px", color: "white", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Noto Sans KR',sans-serif" } }, tl("\uAE30\uB85D\uD558\uAE30 \u2192", "Set date \u2192")))), /* @__PURE__ */ React.createElement(DailyQuestionCard, null), /* @__PURE__ */ React.createElement(CoupleGardenCard, null), /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 20 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 12 } }, tl("\uC624\uB298 \uBC14\uB85C \uC368\uBCF4\uC138\uC694", "Try these today")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 12, overflowX: "auto", paddingBottom: 8, paddingLeft: 2, paddingRight: 2, scrollbarWidth: "none" } }, [
     { icon: "\u{1F4AC}", label: tl("\uAC10\uC815 \uBC88\uC5ED\uAE30", "Emotion Translator"), desc: tl("\uB9D0 \uB4A4\uC758 \uC9C4\uC2EC", "Hidden feelings"), cost: "1cr", view: "emotionTranslate", from: "#FFAFCC", to: "#FFD6E7" },
     { icon: "\u{1F54A}\uFE0F", label: tl("\uC2F8\uC6C0 \uC911\uC7AC", "Fight Mediator"), desc: tl("\uC911\uB9BD\uC801 \uC911\uC7AC", "Neutral mediation"), cost: "2cr", view: "fightMediate", from: "#BDB2FF", to: "#D8CFFF" },
     { icon: "\u{1F91D}", label: tl("AI \uCF54\uCE58", "AI Coach"), desc: tl("\uAD00\uACC4 \uC870\uC5B8", "Relationship tips"), cost: null, view: "coach", from: "#FFD6A5", to: "#FFE9CC" },

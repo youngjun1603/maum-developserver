@@ -671,6 +671,70 @@ function TestResultBadge({ type, result, date }) {
 }
 
 // ── DailyQuestionCard ─────────────────────────────────────
+// ⑧ 우리의 정원 — 두 사람의 마음게임 실천을 함께 본다.
+// ⚠️ 파트너의 감정 기록 "내용"은 서버가 아예 반환하지 않는다. 여기서 보이는 건 실천 횟수뿐.
+// 파트너가 없거나 조회 실패면 아무것도 렌더하지 않는다(허브에 영향 없음).
+function CoupleGardenCard() {
+  const [g, setG] = useState(null);
+
+  useEffect(() => {
+    api.get('/api/couple/garden')
+      .then(res => { if (res.success && res.data?.partner) setG(res.data); })
+      .catch(() => {});
+  }, []);
+
+  if (!g) return null;
+
+  const pct = Math.min(100, Math.round((g.week / g.weeklyGoal) * 100));
+
+  return (
+    <div style={{
+      background: 'white', borderRadius: 20, padding: '18px 20px', marginBottom: 16,
+      border: `1px solid ${C.rose}22`, boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: C.dark }}>🌿 {tl('우리의 정원', 'Our Garden')}</div>
+        <div style={{ fontSize: 11, color: C.muted }}>{tl('최근 30일', 'Last 30 days')}</div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
+        {[
+          [tl('나', 'Me'), g.mine],
+          [tl(`${g.partnerName}님`, g.partnerName), g.theirs],
+          [tl('함께', 'Together'), g.total],
+        ].map(([label, val]) => (
+          <div key={label} style={{ flex: 1, textAlign: 'center', background: `${C.rose}0D`, borderRadius: 14, padding: '12px 6px' }}>
+            <div style={{ fontSize: 20, fontWeight: 800, color: C.dark }}>{val}</div>
+            <div style={{ fontSize: 10.5, color: C.muted, marginTop: 2 }}>{label}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 6 }}>
+        {g.goalMet
+          ? tl(`이번 주 목표 달성! 둘이 ${g.week}회 실천했어요 🎉`, `Weekly goal reached — ${g.week} sessions together 🎉`)
+          : tl(`이번 주 함께 ${g.week}/${g.weeklyGoal}회`, `${g.week}/${g.weeklyGoal} together this week`)}
+      </div>
+      <div style={{ height: 7, borderRadius: 100, background: `${C.rose}1A`, overflow: 'hidden', marginBottom: 14 }}>
+        <div style={{ width: `${pct}%`, height: '100%', background: `linear-gradient(90deg, ${C.rose}, ${C.roseL})`, transition: 'width .4s' }} />
+      </div>
+
+      <a href="https://game.maumful.com" target="_blank" rel="noopener noreferrer"
+        style={{
+          display: 'block', textAlign: 'center', padding: '11px',
+          background: C.rose, color: 'white', borderRadius: 12,
+          fontSize: 12.5, fontWeight: 700, textDecoration: 'none', fontFamily: "'Noto Sans KR',sans-serif",
+        }}>
+        {tl('마음게임 하러 가기 →', 'Play Maum Games →')}
+      </a>
+      <p style={{ fontSize: 10, color: C.muted, marginTop: 8, lineHeight: 1.6, textAlign: 'center' }}>
+        {tl('실천 횟수만 함께 봅니다. 서로의 감정 기록 내용은 공유되지 않아요.',
+            'Only practice counts are shared — never the content of each other’s mood logs.')}
+      </p>
+    </div>
+  );
+}
+
 function DailyQuestionCard() {
   const [offset, setOffset] = useState(0);
   const [copied, setCopied] = useState(false);
@@ -3649,6 +3713,9 @@ useEffect(() => {
 
           {/* 오늘의 질문 — 메인 콘텐츠 */}
           <DailyQuestionCard />
+
+          {/* ⑧ 우리의 정원 — 파트너 있을 때만 렌더 */}
+          <CoupleGardenCard />
 
           {/* 빠른 도구 — 가로 스크롤 카드 */}
           <div style={{ marginBottom: 20 }}>

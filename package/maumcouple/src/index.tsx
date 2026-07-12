@@ -859,6 +859,60 @@ app.post('/api/couple/coach', async (c) => {
   })
 })
 
+// ── GET /api/couple/garden ────────────────────────────────
+// ⑧ "우리의 정원" — 두 사람의 마음게임 실천을 함께 본다.
+// ⚠️ 프라이버시: 파트너의 감정 기록 내용(감정·강도·메모)은 절대 반환하지 않는다. 실천 "횟수"만 합산한다.
+//    파트너는 별도 페어링 없이 couple_sessions(둘 다 참여한 최근 세션)에서 도출한다.
+const COUPLE_GARDEN_WEEKLY_GOAL = 7   // 이번 주 둘이 합쳐 7회
+
+app.get('/api/couple/garden', async (c) => {
+  const { DB } = c.env
+  const userId = await getCoupleUserId(c.req.raw, c.env)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
+
+  try {
+    // 파트너 도출 — 둘 다 존재하는 가장 최근 세션(만료 무관: 관계는 세션보다 오래간다)
+    const link = await DB.prepare(
+      `SELECT host_user_id, guest_user_id FROM couple_sessions
+       WHERE (host_user_id=? OR guest_user_id=?) AND host_user_id IS NOT NULL AND guest_user_id IS NOT NULL
+       ORDER BY created_at DESC LIMIT 1`
+    ).bind(userId, userId).first<{ host_user_id: number; guest_user_id: number }>()
+    if (!link) return c.json({ success: true, data: { partner: false } })
+
+    const partnerId = link.host_user_id === userId ? link.guest_user_id : link.host_user_id
+    if (!partnerId || partnerId === userId) return c.json({ success: true, data: { partner: false } })
+
+    const partner = await DB.prepare('SELECT nickname, email FROM users WHERE id=?')
+      .bind(partnerId).first<{ nickname: string | null; email: string }>()
+
+    // 실천 횟수만 — 감정 내용(metadata)은 조회조차 하지 않는다
+    const counts = await DB.batch([
+      DB.prepare(`SELECT COUNT(*) AS c FROM game_session_logs WHERE user_id=? AND created_at > datetime('now','-30 days')`).bind(userId),
+      DB.prepare(`SELECT COUNT(*) AS c FROM game_session_logs WHERE user_id=? AND created_at > datetime('now','-30 days')`).bind(partnerId),
+      DB.prepare(`SELECT COUNT(*) AS c FROM game_session_logs WHERE user_id IN (?,?) AND created_at > datetime('now','-7 days')`).bind(userId, partnerId),
+    ])
+    const n = (i: number) => ((counts[i].results?.[0] as { c: number } | undefined)?.c ?? 0)
+    const week = n(2)
+
+    return c.json({
+      success: true,
+      data: {
+        partner: true,
+        partnerName: partner?.nickname || (partner?.email ? partner.email.split('@')[0] : '파트너'),
+        mine: n(0),
+        theirs: n(1),
+        total: n(0) + n(1),
+        week,
+        weeklyGoal: COUPLE_GARDEN_WEEKLY_GOAL,
+        goalMet: week >= COUPLE_GARDEN_WEEKLY_GOAL,
+      },
+    })
+  } catch (e) {
+    console.error('[couple/garden] error:', e)
+    return c.json({ success: true, data: { partner: false } })   // 실패해도 허브에 영향 없음
+  }
+})
+
 // ── GET /api/couple/checkins ──────────────────────────────
 // 관계 성장 체크인 기록 조회 (최근 6개)
 app.get('/api/couple/checkins', async (c) => {
