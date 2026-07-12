@@ -1372,7 +1372,8 @@ function PsychologicalTestSystem() {
       setReportErr("");
       setReport(null);
       try {
-        const r = await api.get(`/api/test/report?id=${reportId}`);
+        const res = await api._fetch(`/api/test/report?id=${reportId}`);
+        const r = await res.json();
         if (r.success) setReport(r.data);
         else setReportErr(r.error || t("\uB9AC\uD3EC\uD2B8\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC5B4\uC694.", "Failed to load report."));
       } catch {
@@ -6425,8 +6426,9 @@ AI \uBD84\uC11D \uAE30\uB2A5\uC774 \uC911\uB2E8\uB429\uB2C8\uB2E4.`)) return;
     const loadServer = async () => {
       setLoading(true);
       try {
-        const res = await api.get("/api/debug/client-errors");
-        setServerLogs(res.errors || []);
+        const res = await api._fetch("/api/debug/client-errors");
+        const d = await res.json();
+        setServerLogs(d.errors || []);
       } catch {
         setServerLogs([]);
       } finally {

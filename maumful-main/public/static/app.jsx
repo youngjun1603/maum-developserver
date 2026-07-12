@@ -1368,7 +1368,8 @@ function PsychologicalTestSystem() {
     (async () => {
       setReportLoading(true); setReportErr(''); setReport(null);
       try {
-        const r = await api.get(`/api/test/report?id=${reportId}`);
+        const res = await api._fetch(`/api/test/report?id=${reportId}`);   // ⚠️ api.get은 존재하지 않음 — _fetch는 Response 반환
+        const r = await res.json();
         if (r.success) setReport(r.data);
         else setReportErr(r.error || t('리포트를 불러오지 못했어요.', 'Failed to load report.'));
       } catch {
@@ -7656,7 +7657,7 @@ function PsychologicalTestSystem() {
     const loadLocal = () => setLogs([...(window.__ERR_LOG || [])]);
     const loadServer = async () => {
       setLoading(true);
-      try { const res = await api.get('/api/debug/client-errors'); setServerLogs(res.errors || []); }
+      try { const res = await api._fetch('/api/debug/client-errors'); const d = await res.json(); setServerLogs(d.errors || []); }  // api.get 미존재 버그 수정
       catch { setServerLogs([]); }
       finally { setLoading(false); }
     };
