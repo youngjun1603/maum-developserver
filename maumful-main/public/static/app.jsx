@@ -6408,24 +6408,28 @@ function PsychologicalTestSystem() {
     }, [chatMessages, voiceMode]);
     React.useEffect(() => () => { voiceModeRef.current = false; try { voiceRecRef.current && voiceRecRef.current.stop(); } catch {} try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch {} }, []);
 
+    // 스트리밍 중 화면 떨림 방지:
+    //  - scrollIntoView(smooth)는 내부 컨테이너뿐 아니라 '창(window)'까지 움직여 페이지가 흔들린다 → 쓰지 않는다.
+    //  - 토큰마다 동기 스크롤하면 진행 중인 애니메이션과 충돌해 진동한다 → requestAnimationFrame으로 프레임당 1회만.
+    //  - 컨테이너 내부만, 즉시(behavior 없음) 스크롤한다. 사용자가 위로 올려둔 상태면 방해하지 않는다.
+    const scrollRafRef = React.useRef(0);
     React.useEffect(() => {
       const container = chatContainerRef.current;
       if (!container) return;
-      const { scrollTop, scrollHeight, clientHeight } = container;
-      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
       const isNewMessage = chatMessages.length !== prevMsgCountRef.current;
       prevMsgCountRef.current = chatMessages.length;
-      if (isNewMessage) {
-        // 새 메시지 추가 시: 컨테이너 내부 + 뷰포트 모두 스크롤
-        container.scrollTop = container.scrollHeight;
-        setTimeout(() => {
-          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }, 50);
-      } else if (isNearBottom) {
-        // 스트리밍 토큰 업데이트 시: 사용자가 위로 스크롤 중이 아닐 때만
-        container.scrollTop = container.scrollHeight;
-      }
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 120;
+      // 새 메시지는 무조건 하단으로, 스트리밍 토큰은 하단 근처일 때만 따라간다.
+      if (!isNewMessage && !isNearBottom) return;
+      if (scrollRafRef.current) return;   // 이미 이번 프레임 예약됨 → 중복 스크롤 방지
+      scrollRafRef.current = requestAnimationFrame(() => {
+        scrollRafRef.current = 0;
+        const el = chatContainerRef.current;
+        if (el) el.scrollTop = el.scrollHeight;   // 컨테이너 내부만, 즉시 — 창은 건드리지 않는다
+      });
     }, [chatMessages]);
+    React.useEffect(() => () => { if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current); }, []);
 
     return (
       <div className="mt-6 rounded-xl overflow-hidden border border-gray-200">

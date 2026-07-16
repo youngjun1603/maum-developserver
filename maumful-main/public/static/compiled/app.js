@@ -5287,23 +5287,25 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
       } catch {
       }
     }, []);
+    const scrollRafRef = React.useRef(0);
     React.useEffect(() => {
       const container = chatContainerRef.current;
       if (!container) return;
-      const { scrollTop, scrollHeight, clientHeight } = container;
-      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
       const isNewMessage = chatMessages.length !== prevMsgCountRef.current;
       prevMsgCountRef.current = chatMessages.length;
-      if (isNewMessage) {
-        container.scrollTop = container.scrollHeight;
-        setTimeout(() => {
-          var _a2;
-          (_a2 = messagesEndRef.current) == null ? void 0 : _a2.scrollIntoView({ behavior: "smooth", block: "nearest" });
-        }, 50);
-      } else if (isNearBottom) {
-        container.scrollTop = container.scrollHeight;
-      }
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 120;
+      if (!isNewMessage && !isNearBottom) return;
+      if (scrollRafRef.current) return;
+      scrollRafRef.current = requestAnimationFrame(() => {
+        scrollRafRef.current = 0;
+        const el = chatContainerRef.current;
+        if (el) el.scrollTop = el.scrollHeight;
+      });
     }, [chatMessages]);
+    React.useEffect(() => () => {
+      if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current);
+    }, []);
     return /* @__PURE__ */ React.createElement("div", { className: "mt-6 rounded-xl overflow-hidden border border-gray-200" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between px-4 py-2.5 bg-gray-50 border-b border-gray-200" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("span", { className: "text-base" }, "\u{1F4AC}"), /* @__PURE__ */ React.createElement("span", { className: "font-bold text-sm text-gray-800" }, t("AI \uC0C1\uB2F4 \uB300\uD654", "AI Counseling")), hasMemory && /* @__PURE__ */ React.createElement("span", { className: "bg-indigo-50 text-indigo-600 text-xs px-2 py-0.5 rounded-full font-bold flex items-center gap-1" }, t("\u{1F4DD} \uC774\uC804 \uB300\uD654 \uAE30\uC5B5 \uC911", "\u{1F4DD} Memory active"), /* @__PURE__ */ React.createElement("button", { onClick: clearMemory, className: "ml-1 text-indigo-300 hover:text-indigo-500", title: t("\uAE30\uC5B5 \uCD08\uAE30\uD654", "Clear memory") }, "\u2715")), chatMessages.length > 0 && /* @__PURE__ */ React.createElement("span", { className: "bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full font-bold" }, t(`${chatMessages.filter((m) => m.role === "user").length}\uD68C \uB300\uD654`, `${chatMessages.filter((m) => m.role === "user").length} chats`))), /* @__PURE__ */ React.createElement("span", { className: "text-xs text-gray-400" }, isLoggedIn && credits > 0 ? t(`\uC624\uB298 ${aiChatUsed}\uD68C \uC0AC\uC6A9 (\uBB34\uC81C\uD55C)`, `Today: ${aiChatUsed} used (unlimited)`) : t(`\uC624\uB298 ${aiChatUsed}/${AI_LIMIT_FREE}\uD68C \uC0AC\uC6A9`, `Today: ${aiChatUsed}/${AI_LIMIT_FREE} used`))), /* @__PURE__ */ React.createElement("div", { className: "bg-white" }, /* @__PURE__ */ React.createElement("p", { className: "px-4 pt-2 pb-1 text-xs text-gray-400" }, t("\u26A0\uFE0F AI \uC0C1\uB2F4\uC740 \uCC38\uACE0\uC6A9\uC774\uBA70 \uC758\uD559\uC801 \uC9C4\uB2E8\uC744 \uB300\uCCB4\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4", "\u26A0\uFE0F AI counseling is for reference only and does not replace medical diagnosis.")), chatMessages.length === 0 && /* @__PURE__ */ React.createElement("div", { className: "p-4 border-b border-gray-100" }, /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-500 mb-2 font-semibold" }, "\u{1F4A1} ", t("\uC790\uC8FC \uBB3B\uB294 \uC9C8\uBB38", "Common questions")), /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap gap-2" }, (initialPrompts || []).map((prompt, i) => /* @__PURE__ */ React.createElement(
       "button",
       {
