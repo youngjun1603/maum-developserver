@@ -45,6 +45,20 @@ const api = {
     return res;
   },
 
+  // accessToken 만료 임박(또는 만료) 시 미리 갱신 — SSE 스트리밍처럼 _fetch(401 재시도)를 못 쓰는
+  // 직접 fetch 호출부에서 전송 직전에 부른다. 갱신 실패해도 기존 토큰으로 진행(막지 않음).
+  // 만료 판단: JWT exp를 디코드해 60초 이내면 갱신. 디코드 실패 시 안전하게 갱신 시도.
+  async ensureToken() {
+    const t = tokenStore.getAccess();
+    if (!t) return;
+    let needsRefresh = true;
+    try {
+      const payload = JSON.parse(atob(t.split('.')[1]));
+      if (payload.exp) needsRefresh = (payload.exp - 60) <= Math.floor(Date.now() / 1000);
+    } catch { needsRefresh = true; }
+    if (needsRefresh) await this.refreshToken();
+  },
+
   // 토큰 갱신
   async refreshToken() {
     const refresh = tokenStore.getRefresh();
@@ -2433,6 +2447,7 @@ function PsychologicalTestSystem() {
     setChatMessages(prev => [...prev, { role: 'assistant', content: '', id: assistantId, streaming: true }]);
 
     try {
+      await api.ensureToken();   // ⚠️ 만료 토큰이면 서버가 게스트로 강등→429. 전송 전 갱신.
       const history = [...chatMessages.filter(m => m.content && m.content.trim() && !m.streaming), userMsg].map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content.trim() }));
       const res     = await fetch('/api/ai-chat', {
         method:  'POST',
@@ -6135,6 +6150,7 @@ function PsychologicalTestSystem() {
     setChatMessages(prev => [...prev, { role: 'assistant', content: '', id: assistantId, streaming: true }]);
 
     try {
+      await api.ensureToken();   // ⚠️ 만료 토큰이면 서버가 게스트로 강등→429. 전송 전 갱신.
       const history = [...chatMessages.filter(m => m.content && m.content.trim() && !m.streaming), userMsg].map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content.trim() }));
       const res = await fetch('/api/ai-chat', {
         method: 'POST',
@@ -6260,7 +6276,9 @@ function PsychologicalTestSystem() {
     // 이전 대화 기억 여부 확인
     React.useEffect(() => {
       if (!isLoggedIn) return;
-      fetch('/api/ai-chat/memory', { headers: api._authHeader() })
+      // ⚠️ 직접 fetch라 _fetch의 401 자동 refresh를 안 탄다 → 만료 토큰이면 401. 전송 전 토큰 보장.
+      api.ensureToken()
+        .then(() => fetch('/api/ai-chat/memory', { headers: api._authHeader() }))
         .then(r => r.json())
         .then(d => {
           if (d.success && d.memories) {
@@ -6271,6 +6289,7 @@ function PsychologicalTestSystem() {
     }, [testType]);
 
     async function clearMemory() {
+      await api.ensureToken();   // 만료 토큰이면 401 → 삭제 실패. 전송 전 갱신.
       await fetch('/api/ai-chat/memory', { method: 'DELETE', headers: api._authHeader() });
       setHasMemory(false);
     }
@@ -6456,14 +6475,15 @@ function PsychologicalTestSystem() {
                         const assistantId = Date.now() + 1;
                         setChatMessages(prev => [...prev, { role: 'assistant', content: '', id: assistantId, streaming: true }]);
                         
-                        fetch('/api/ai-chat', {
+                        // ⚠️ 만료 토큰이면 서버가 게스트로 강등→429. 전송 전 토큰 갱신 후 요청.
+                        api.ensureToken().then(() => fetch('/api/ai-chat', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json', ...api._authHeader() },
                           body: JSON.stringify({
                             messages: [...chatMessages.filter(m => m.content && m.content.trim() && !m.streaming), userMsg].map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content.trim() })),
                             testContext: { testType, counselingType, summary, lang }
                           })
-                        })
+                        }))
                         .then(async res => {
                           if (!res.ok) {
                             const errD = await res.json().catch(() => ({}));
@@ -6626,14 +6646,15 @@ function PsychologicalTestSystem() {
                         const assistantId = Date.now() + 1;
                         setChatMessages(prev => [...prev, { role: 'assistant', content: '', id: assistantId, streaming: true }]);
                         
-                        fetch('/api/ai-chat', {
+                        // ⚠️ 만료 토큰이면 서버가 게스트로 강등→429. 전송 전 토큰 갱신 후 요청.
+                        api.ensureToken().then(() => fetch('/api/ai-chat', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json', ...api._authHeader() },
                           body: JSON.stringify({
                             messages: [...chatMessages.filter(m => m.content && m.content.trim() && !m.streaming), userMsg].map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content.trim() })),
                             testContext: { testType, counselingType, summary, lang }
                           })
-                        })
+                        }))
                         .then(async res => {
                           if (!res.ok) {
                             const errD = await res.json().catch(() => ({}));
@@ -6740,14 +6761,15 @@ function PsychologicalTestSystem() {
                         const assistantId = Date.now() + 1;
                         setChatMessages(prev => [...prev, { role: 'assistant', content: '', id: assistantId, streaming: true }]);
                         
-                        fetch('/api/ai-chat', {
+                        // ⚠️ 만료 토큰이면 서버가 게스트로 강등→429. 전송 전 토큰 갱신 후 요청.
+                        api.ensureToken().then(() => fetch('/api/ai-chat', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json', ...api._authHeader() },
                           body: JSON.stringify({
                             messages: [...chatMessages.filter(m => m.content && m.content.trim() && !m.streaming), userMsg].map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content.trim() })),
                             testContext: { testType, counselingType, summary, lang }
                           })
-                        })
+                        }))
                         .then(async res => {
                           if (!res.ok) {
                             const errD = await res.json().catch(() => ({}));
