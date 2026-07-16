@@ -353,6 +353,8 @@ function PsychologicalTestSystem() {
   const [aiAnalysis, setAiAnalysis]             = useState({});
   const [aiLoading, setAiLoading]               = useState({});
   const [aiError, setAiError]                   = useState({});
+  const [followupQs, setFollowupQs]             = useState({});  // C: 검사별 후속 질문(해석에서 파싱) → ChatBox 칩
+  const [analysisFeedback, setAnalysisFeedback] = useState({});  // A: 단일 해석 👍/👎 기록(검사별)
   // 🧩 통합 심층 해석 (여러 검사 종합) 전용 state — 기존 aiAnalysis와 분리
   const [integratedText, setIntegratedText]       = useState('');
   const [integratedLoading, setIntegratedLoading] = useState(false);
@@ -449,6 +451,7 @@ function PsychologicalTestSystem() {
   const [adminPayments, setAdminPayments] = useState({ payments: [], pagination: {} });
   const [adminTab, setAdminTab]           = useState('overview');  // overview|users|payments|tests|coupons|loop
   const [adminLoop, setAdminLoop]         = useState(null);        // 검사↔게임 루프 퍼널
+  const [adminFb, setAdminFb]             = useState(null);        // AI 해석 피드백 집계
   const [adminSearch, setAdminSearch]     = useState('');
   const [adminSecretInput, setAdminSecretInput] = useState('');
   const [adminAuthenticated, setAdminAuthenticated] = useState(false);
@@ -2239,6 +2242,17 @@ function PsychologicalTestSystem() {
       const r = await adminFetch('/api/admin/loop-metrics?days=30');
       if (r.success) setAdminLoop(r.data);
       else setAdminMsg({ type:'error', text: r.error || '루프 지표 로드 실패' });
+    } catch(e) { setAdminMsg({ type:'error', text:'로드 실패: '+e.message }); }
+    setAdminLoading(false);
+  }
+
+  // A(a1): AI 해석 피드백 집계
+  async function loadAdminFb() {
+    setAdminLoading(true);
+    try {
+      const r = await adminFetch('/api/admin/feedback-metrics?days=30');
+      if (r.success) setAdminFb(r.data);
+      else setAdminMsg({ type:'error', text: r.error || '피드백 지표 로드 실패' });
     } catch(e) { setAdminMsg({ type:'error', text:'로드 실패: '+e.message }); }
     setAdminLoading(false);
   }
@@ -6254,6 +6268,8 @@ function PsychologicalTestSystem() {
   }
 
   function ChatBox({ testType, initialPrompts }) {
+    // C: 이 검사 해석에서 나온 후속 질문을 빠른질문 앞에 병합(개인화). 없으면 기존 그대로.
+    const quickPrompts = [...(followupQs[testType] || []), ...(initialPrompts || [])];
     const messagesEndRef = React.useRef(null);
     const chatContainerRef = React.useRef(null);
     const inputRef = React.useRef(null);
@@ -6463,9 +6479,9 @@ function PsychologicalTestSystem() {
             {/* 빠른 질문 버튼 */}
             {chatMessages.length === 0 && (
               <div className="p-4 border-b border-gray-100">
-                <p className="text-xs text-gray-500 mb-2 font-semibold">💡 {t('자주 묻는 질문','Common questions')}</p>
+                <p className="text-xs text-gray-500 mb-2 font-semibold">{(followupQs[testType] || []).length ? `🔎 ${t('내 결과로 이어서 물어보기','Ask about your result')}` : `💡 ${t('자주 묻는 질문','Common questions')}`}</p>
                 <div className="flex flex-wrap gap-2">
-                  {(initialPrompts || []).map((prompt, i) => (
+                  {quickPrompts.map((prompt, i) => (
                     <button
                       key={i}
                       onClick={() => { 
@@ -7802,6 +7818,30 @@ function PsychologicalTestSystem() {
     } catch { /* 무시 */ }
   }
 
+  // A: AI 해석 피드백 전송(공통) — feature 예: 'analyze:PHQ9'. reason은 down일 때만 선택. 실패해도 UX 무영향.
+  async function sendAiFeedback(feature, rating, reason) {
+    try {
+      await fetch('/api/ai-feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...api._authHeader() },
+        body: JSON.stringify({ feature, rating, reason: reason || undefined }),
+      });
+    } catch { /* 무시 */ }
+  }
+
+  // C: 해석 텍스트에서 [이어서 물어보기]/[Ask Next] 섹션의 질문(- 로 시작)을 파싱.
+  //    반환: { body: 그 섹션을 제외한 본문, questions: [...] }
+  function parseFollowups(text) {
+    if (!text) return { body: '', questions: [] };
+    const m = text.split(/\n?\s*\[(?:이어서 물어보기|Ask Next)\]\s*/);
+    if (m.length < 2) return { body: text, questions: [] };
+    const questions = m[1].split('\n')
+      .map(l => l.replace(/^\s*[-·•]\s*/, '').trim())
+      .filter(l => l.length > 0 && !/^\[/.test(l))
+      .slice(0, 3);
+    return { body: m[0].trimEnd(), questions };
+  }
+
   // ── 마스터 전용 에러 로그 뷰어 ─────────────────────────
   function MasterDebugPanel() {
     const [open, setOpen] = React.useState(false);
@@ -8573,6 +8613,15 @@ function PsychologicalTestSystem() {
     const loading = aiLoading[aiKey] || false;
     const error = aiError[aiKey] || "";
     const done = !loading && text.length > 0;
+    // C: 후속질문 섹션은 본문에서 떼어내 칩으로. (스트리밍 중에도 raw 섹션 미노출)
+    const { body: displayText, questions: followups } = parseFollowups(text);
+    // 완료 시 한 번만 후속질문을 공유 state에 저장 → 아래 ChatBox가 칩으로 렌더
+    React.useEffect(() => {
+      if (done && followups.length && (followupQs[aiKey] || []).join('|') !== followups.join('|')) {
+        setFollowupQs(p => ({ ...p, [aiKey]: followups }));
+      }
+    }, [done, text]);
+    const fb = analysisFeedback[aiKey];  // undefined | 'up' | 'down'
 
     // B2C: 크레딧 기반 제한 (크레딧 없으면 무료 플랜)
     const isFree = !isLoggedIn || credits <= 0;
@@ -8632,7 +8681,7 @@ function PsychologicalTestSystem() {
               <span className="text-xs text-violet-600 font-semibold">{t("AI가 실시간으로 분석 중...","AI is analyzing...")}</span>
             </div>
             {text && (
-              <p className="text-sm text-violet-800 whitespace-pre-wrap leading-relaxed">{text}<span className="inline-block w-1 h-4 bg-violet-500 animate-pulse ml-0.5 align-middle"></span></p>
+              <p className="text-sm text-violet-800 whitespace-pre-wrap leading-relaxed">{displayText}<span className="inline-block w-1 h-4 bg-violet-500 animate-pulse ml-0.5 align-middle"></span></p>
             )}
           </div>
         )}
@@ -8648,7 +8697,32 @@ function PsychologicalTestSystem() {
                 {t("다시 분석","Re-analyze")}
               </button>
             </div>
-            <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{text}</p>
+            <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{displayText}</p>
+
+            {/* A: 해석 품질 피드백 (👍/👎 + 👎 사유) — 검사별 feature */}
+            <div className="mt-3 pt-2.5 border-t border-violet-100">
+              {!fb ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400">{t("이 해석이 도움이 됐나요?","Was this helpful?")}</span>
+                  <button onClick={() => { setAnalysisFeedback(p => ({ ...p, [aiKey]: 'up' })); sendAiFeedback(`analyze:${aiKey}`, 'up'); }}
+                    className="text-sm hover:scale-110 transition" title={t("도움됨","Helpful")}>👍</button>
+                  <button onClick={() => setAnalysisFeedback(p => ({ ...p, [aiKey]: 'down' }))}
+                    className="text-sm hover:scale-110 transition" title={t("아쉬움","Not helpful")}>👎</button>
+                </div>
+              ) : fb === 'up' ? (
+                <span className="text-xs text-green-600">{t("의견 고마워요 🙂","Thanks for your feedback 🙂")}</span>
+              ) : fb === 'done' ? (
+                <span className="text-xs text-gray-400">{t("의견이 반영에 도움이 돼요. 고마워요.","Thanks — this helps us improve.")}</span>
+              ) : (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-xs text-gray-400 mr-1">{t("어떤 점이 아쉬웠나요?","What was off?")}</span>
+                  {[['generic',t('너무 일반적','Too generic')],['mismatch',t('내 결과와 안 맞음','Doesn’t fit me')],['long',t('너무 길다','Too long')],['other',t('기타','Other')]].map(([r,label]) => (
+                    <button key={r} onClick={() => { sendAiFeedback(`analyze:${aiKey}`, 'down', r); setAnalysisFeedback(p => ({ ...p, [aiKey]: 'done' })); }}
+                      className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-gray-200 text-gray-500 hover:border-violet-300 hover:text-violet-600 transition">{label}</button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -11257,8 +11331,8 @@ function PsychologicalTestSystem() {
             </div>
           )}
           <div className="flex gap-2 mb-6 flex-wrap">
-            {[['overview','📊 개요'],['users','👥 사용자'],['payments','💳 결제'],['tests','📋 검사'],['coupons','🎟️ 쿠폰'],['loop','🔁 루프']].map(([tab, label]) => (
-              <button key={tab} onClick={() => { setAdminTab(tab); if(tab==='overview') loadAdminOverview(); else if(tab==='users') loadAdminUsers(); else if(tab==='payments') loadAdminPayments(); else if(tab==='loop') loadAdminLoop(); }}
+            {[['overview','📊 개요'],['users','👥 사용자'],['payments','💳 결제'],['tests','📋 검사'],['coupons','🎟️ 쿠폰'],['loop','🔁 루프'],['feedback','🙂 해석 피드백']].map(([tab, label]) => (
+              <button key={tab} onClick={() => { setAdminTab(tab); if(tab==='overview') loadAdminOverview(); else if(tab==='users') loadAdminUsers(); else if(tab==='payments') loadAdminPayments(); else if(tab==='loop') loadAdminLoop(); else if(tab==='feedback') loadAdminFb(); }}
                 className={S.tabBtn(adminTab===tab)}>{label}</button>
             ))}
           </div>
@@ -11323,6 +11397,52 @@ function PsychologicalTestSystem() {
                     <p className="text-[11px] text-gray-400 mt-3 leading-relaxed">
                       ‘실제 검사 완료’는 제안을 누른 뒤 그 검사를 끝낸 사람 수입니다. 이 숫자가 루프가 닫혔는지를 보여줍니다.
                     </p>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {adminTab === 'feedback' && (
+            <div className="space-y-6">
+              {!adminFb && <div className="text-sm text-gray-400 py-8 text-center">불러오는 중…</div>}
+              {adminFb && (
+                <>
+                  <p className="text-xs text-gray-500">최근 {adminFb.days}일 · AI 해석 👍/👎 (검사별 feature)</p>
+                  <div className="bg-white rounded-2xl border border-gray-100 p-5">
+                    <h3 className="text-sm font-bold text-emerald-700 mb-4">기능별 만족도</h3>
+                    {adminFb.byFeature.length === 0 ? (
+                      <p className="text-sm text-gray-400">아직 수집된 피드백이 없어요.</p>
+                    ) : (
+                      <div className="space-y-2.5">
+                        {adminFb.byFeature.map(f => {
+                          const pct = f.total > 0 ? Math.round(f.up / f.total * 100) : 0;
+                          return (
+                            <div key={f.feature} className="flex items-center gap-3">
+                              <span className="text-xs font-mono text-gray-600 w-32 shrink-0 truncate">{f.feature}</span>
+                              <div className="flex-1 h-2.5 rounded-full bg-gray-100 overflow-hidden">
+                                <div className="h-full bg-emerald-400" style={{ width: `${pct}%` }}></div>
+                              </div>
+                              <span className="text-xs text-gray-500 w-28 text-right tabular-nums">👍{f.up} · 👎{f.down} ({pct}%)</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  <div className="bg-white rounded-2xl border border-gray-100 p-5">
+                    <h3 className="text-sm font-bold text-emerald-700 mb-4">👎 아쉬운 이유</h3>
+                    {adminFb.downReasons.length === 0 ? (
+                      <p className="text-sm text-gray-400">아직 없어요.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {adminFb.downReasons.map(r => {
+                          const label = { generic:'너무 일반적', mismatch:'내 결과와 안 맞음', long:'너무 길다', other:'기타' }[r.reason] || r.reason;
+                          return <span key={r.reason} className="text-xs px-3 py-1.5 rounded-full bg-red-50 text-red-600 border border-red-100">{label} <b className="tabular-nums">{r.c}</b></span>;
+                        })}
+                      </div>
+                    )}
+                    <p className="text-[11px] text-gray-400 mt-3 leading-relaxed">👎가 많은 기능·사유를 보고 프롬프트를 개선하세요. (예: ‘너무 길다’가 많으면 섹션 압축)</p>
                   </div>
                 </>
               )}

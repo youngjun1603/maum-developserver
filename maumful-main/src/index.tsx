@@ -1273,23 +1273,26 @@ function buildAnalysisSystem(req: AnalyzeRequest): string {
   const ctx = lang === 'ko' ? sysKo : sysEn
 
   const psychFormat = `
-아래 4개 섹션만, 검사를 받은 당신에게 직접 이야기하듯 작성해 주세요. 임상 진단명·병명은 절대 사용하지 마세요.
+아래 5개 섹션을 순서대로, 검사를 받은 당신에게 직접 이야기하듯 작성해 주세요. 임상 진단명·병명은 절대 사용하지 마세요.
 
 [지금의 마음]
 판단 없이 당신의 지금 상태를 1~2문장. "~하신 것 같아요", "~한 마음이 느껴져요" 처럼 부드럽게.
 
 [눈에 띄는 부분]
-주목할 응답 2~3가지를 짚어 드리고, 마지막에 "이 부분은 스스로 조금 더 들여다보면 좋아요" 같은 한 문장.
+주목할 응답 2~3가지를 짚어 드리되, 어떤 문항(또는 어떤 응답)이 그렇게 보이게 했는지 근거를 함께 밝혀 주세요. (예: "수면 문항과 흥미 문항에 높게 답하신 점이…") 마지막에 "이 부분은 스스로 조금 더 들여다보면 좋아요" 같은 한 문장.
 
 [스스로에게 건네보세요]
 - 자문 질문: 스스로에게 던져볼 만한 열린 질문 2개
 - 살펴볼 부분: 놓치기 쉬운 내 마음의 신호 1~2가지
 
 [오늘의 작은 실천]
-부담 없이 해볼 수 있는 작은 것 1~2가지. 치료나 약물 언급 금지.`
+부담 없이 해볼 수 있는 작은 것 1~2가지. 치료나 약물 언급 금지.
+
+[이어서 물어보기]
+이 결과에 대해 AI 상담에서 더 나눠볼 만한 질문 2~3개를, 당신이 상담사에게 직접 건네듯 한 문장씩. 각 줄은 반드시 "- "(하이픈+공백)으로 시작하고, 다른 설명 없이 질문만.`
 
   const biblicalFormat = `
-아래 4개 섹션만, 당신에게 직접 건네는 따뜻하고 신앙적인 언어로 작성해 주세요.
+아래 5개 섹션을 순서대로, 당신에게 직접 건네는 따뜻하고 신앙적인 언어로 작성해 주세요.
 
 [마음 살피기]
 당신의 마음 상태를 공감적으로 1~2문장. 판단 없이 감정을 비춰 드리기.
@@ -1304,23 +1307,29 @@ function buildAnalysisSystem(req: AnalyzeRequest): string {
 - 기도 제목: 스스로를 위해 올릴 기도 1~2가지
 
 [소망의 한마디]
-당신에게 건네는 격려와 성경적 소망 한 문장.`
+당신에게 건네는 격려와 성경적 소망 한 문장.
+
+[이어서 물어보기]
+이 결과에 대해 AI 상담에서 더 나눠볼 만한 질문 2~3개를, 당신이 상담자에게 직접 건네듯 한 문장씩. 각 줄은 반드시 "- "(하이픈+공백)으로 시작하고, 다른 설명 없이 질문만.`
 
   const psychFormatEn = `
-Please write only these 4 sections, speaking directly to you (the person who took the test). Never use clinical diagnoses or medical labels.
+Please write these 5 sections in order, speaking directly to you (the person who took the test). Never use clinical diagnoses or medical labels.
 
 [How You Are Now]
 1–2 gentle sentences about where you seem to be. Use "You may be feeling..." or "It seems you..."
 
 [What Stands Out]
-2–3 of your noteworthy responses, briefly. End with: "These are worth gently exploring on your own."
+2–3 of your noteworthy responses, briefly — and say which items or answers led you to see it this way. End with: "These are worth gently exploring on your own."
 
 [Ask Yourself]
 - Reflective questions: 2 open questions to ask yourself
 - Watch for: 1–2 easily-missed signals in how you feel
 
 [Small Steps for Today]
-1–2 small, manageable practices. No mention of treatment or medication.`
+1–2 small, manageable practices. No mention of treatment or medication.
+
+[Ask Next]
+2–3 questions worth bringing to AI counseling about this result, each phrased as if you were asking a counselor directly. Each line MUST start with "- " (hyphen + space), question only, no other text.`
 
   const fmt = lang === 'en' ? psychFormatEn : (isBiblical ? biblicalFormat : psychFormat)
   // ⚠️ 프론트가 마크다운 미렌더(pre-wrap)라 ##·**·--- 기호가 그대로 노출됨 → 마크다운 금지 지시
@@ -1763,12 +1772,41 @@ app.post('/api/ai-feedback', async (c) => {
   const { DB, KV } = c.env
   const userId = await getAuthUserId(c.req.raw, KV)
   if (!userId) return c.json({ error: '로그인이 필요합니다.' }, 401)
-  const b = await c.req.json().catch(() => ({})) as { feature?: string; rating?: string }
+  const b = await c.req.json().catch(() => ({})) as { feature?: string; rating?: string; reason?: string }
   if (!b.feature || (b.rating !== 'up' && b.rating !== 'down')) return c.json({ error: '파라미터 부족' }, 400)
+  // A(a2): 👎 사유(선택). down일 때만 저장, 화이트리스트 밖은 무시. (기존 up/down 흐름 그대로)
+  const REASONS = ['generic', 'mismatch', 'long', 'other']
+  const reason = (b.rating === 'down' && b.reason && REASONS.includes(b.reason)) ? b.reason : null
   try {
-    await DB.prepare('INSERT INTO ai_feedback (user_id, feature, rating) VALUES (?, ?, ?)').bind(userId, String(b.feature).slice(0, 40), b.rating).run()
+    await DB.prepare('INSERT INTO ai_feedback (user_id, feature, rating, reason) VALUES (?, ?, ?, ?)')
+      .bind(userId, String(b.feature).slice(0, 40), b.rating, reason).run()
   } catch (e) { console.error('[ai-feedback] insert error:', e); return c.json({ success: false }, 200) }
   return c.json({ success: true })
+})
+
+// A(a1): 어드민 — AI 해석 피드백 집계 (기능별 👍/👎 비율 + 👎 사유 분포)
+app.get('/api/admin/feedback-metrics', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+  const days = Math.min(180, Math.max(7, Number(c.req.query('days') || 30)))
+  const since = `-${days} days`
+  try {
+    const [byFeature, reasons] = await DB.batch([
+      DB.prepare(`SELECT feature,
+                    SUM(CASE WHEN rating='up' THEN 1 ELSE 0 END) AS up,
+                    SUM(CASE WHEN rating='down' THEN 1 ELSE 0 END) AS down,
+                    COUNT(*) AS total
+                  FROM ai_feedback WHERE created_at >= date('now', ?)
+                  GROUP BY feature ORDER BY total DESC`).bind(since),
+      DB.prepare(`SELECT COALESCE(reason,'(미기재)') AS reason, COUNT(*) AS c
+                  FROM ai_feedback WHERE rating='down' AND created_at >= date('now', ?)
+                  GROUP BY reason ORDER BY c DESC`).bind(since),
+    ])
+    return c.json({ success: true, data: { days, byFeature: byFeature.results ?? [], downReasons: reasons.results ?? [] } })
+  } catch (e) {
+    return c.json({ success: false, error: (e as Error).message }, 500)
+  }
 })
 
 // ============================================================

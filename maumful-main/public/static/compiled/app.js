@@ -444,6 +444,8 @@ function PsychologicalTestSystem() {
   const [aiAnalysis, setAiAnalysis] = useState({});
   const [aiLoading, setAiLoading] = useState({});
   const [aiError, setAiError] = useState({});
+  const [followupQs, setFollowupQs] = useState({});
+  const [analysisFeedback, setAnalysisFeedback] = useState({});
   const [integratedText, setIntegratedText] = useState("");
   const [integratedLoading, setIntegratedLoading] = useState(false);
   const [integratedErr, setIntegratedErr] = useState("");
@@ -539,6 +541,7 @@ function PsychologicalTestSystem() {
   const [adminPayments, setAdminPayments] = useState({ payments: [], pagination: {} });
   const [adminTab, setAdminTab] = useState("overview");
   const [adminLoop, setAdminLoop] = useState(null);
+  const [adminFb, setAdminFb] = useState(null);
   const [adminSearch, setAdminSearch] = useState("");
   const [adminSecretInput, setAdminSecretInput] = useState("");
   const [adminAuthenticated, setAdminAuthenticated] = useState(false);
@@ -2242,6 +2245,17 @@ function PsychologicalTestSystem() {
       const r = await adminFetch("/api/admin/loop-metrics?days=30");
       if (r.success) setAdminLoop(r.data);
       else setAdminMsg({ type: "error", text: r.error || "\uB8E8\uD504 \uC9C0\uD45C \uB85C\uB4DC \uC2E4\uD328" });
+    } catch (e) {
+      setAdminMsg({ type: "error", text: "\uB85C\uB4DC \uC2E4\uD328: " + e.message });
+    }
+    setAdminLoading(false);
+  }
+  async function loadAdminFb() {
+    setAdminLoading(true);
+    try {
+      const r = await adminFetch("/api/admin/feedback-metrics?days=30");
+      if (r.success) setAdminFb(r.data);
+      else setAdminMsg({ type: "error", text: r.error || "\uD53C\uB4DC\uBC31 \uC9C0\uD45C \uB85C\uB4DC \uC2E4\uD328" });
     } catch (e) {
       setAdminMsg({ type: "error", text: "\uB85C\uB4DC \uC2E4\uD328: " + e.message });
     }
@@ -5083,6 +5097,7 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
     });
   }
   function ChatBox({ testType, initialPrompts }) {
+    const quickPrompts = [...followupQs[testType] || [], ...initialPrompts || []];
     const messagesEndRef = React.useRef(null);
     const chatContainerRef = React.useRef(null);
     const inputRef = React.useRef(null);
@@ -5306,7 +5321,7 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
     React.useEffect(() => () => {
       if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current);
     }, []);
-    return /* @__PURE__ */ React.createElement("div", { className: "mt-6 rounded-xl overflow-hidden border border-gray-200" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between px-4 py-2.5 bg-gray-50 border-b border-gray-200" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("span", { className: "text-base" }, "\u{1F4AC}"), /* @__PURE__ */ React.createElement("span", { className: "font-bold text-sm text-gray-800" }, t("AI \uC0C1\uB2F4 \uB300\uD654", "AI Counseling")), hasMemory && /* @__PURE__ */ React.createElement("span", { className: "bg-indigo-50 text-indigo-600 text-xs px-2 py-0.5 rounded-full font-bold flex items-center gap-1" }, t("\u{1F4DD} \uC774\uC804 \uB300\uD654 \uAE30\uC5B5 \uC911", "\u{1F4DD} Memory active"), /* @__PURE__ */ React.createElement("button", { onClick: clearMemory, className: "ml-1 text-indigo-300 hover:text-indigo-500", title: t("\uAE30\uC5B5 \uCD08\uAE30\uD654", "Clear memory") }, "\u2715")), chatMessages.length > 0 && /* @__PURE__ */ React.createElement("span", { className: "bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full font-bold" }, t(`${chatMessages.filter((m) => m.role === "user").length}\uD68C \uB300\uD654`, `${chatMessages.filter((m) => m.role === "user").length} chats`))), /* @__PURE__ */ React.createElement("span", { className: "text-xs text-gray-400" }, isLoggedIn && credits > 0 ? t(`\uC624\uB298 ${aiChatUsed}\uD68C \uC0AC\uC6A9 (\uBB34\uC81C\uD55C)`, `Today: ${aiChatUsed} used (unlimited)`) : t(`\uC624\uB298 ${aiChatUsed}/${AI_LIMIT_FREE}\uD68C \uC0AC\uC6A9`, `Today: ${aiChatUsed}/${AI_LIMIT_FREE} used`))), /* @__PURE__ */ React.createElement("div", { className: "bg-white" }, /* @__PURE__ */ React.createElement("p", { className: "px-4 pt-2 pb-1 text-xs text-gray-400" }, t("\u26A0\uFE0F AI \uC0C1\uB2F4\uC740 \uCC38\uACE0\uC6A9\uC774\uBA70 \uC758\uD559\uC801 \uC9C4\uB2E8\uC744 \uB300\uCCB4\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4", "\u26A0\uFE0F AI counseling is for reference only and does not replace medical diagnosis.")), chatMessages.length === 0 && /* @__PURE__ */ React.createElement("div", { className: "p-4 border-b border-gray-100" }, /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-500 mb-2 font-semibold" }, "\u{1F4A1} ", t("\uC790\uC8FC \uBB3B\uB294 \uC9C8\uBB38", "Common questions")), /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap gap-2" }, (initialPrompts || []).map((prompt, i) => /* @__PURE__ */ React.createElement(
+    return /* @__PURE__ */ React.createElement("div", { className: "mt-6 rounded-xl overflow-hidden border border-gray-200" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between px-4 py-2.5 bg-gray-50 border-b border-gray-200" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("span", { className: "text-base" }, "\u{1F4AC}"), /* @__PURE__ */ React.createElement("span", { className: "font-bold text-sm text-gray-800" }, t("AI \uC0C1\uB2F4 \uB300\uD654", "AI Counseling")), hasMemory && /* @__PURE__ */ React.createElement("span", { className: "bg-indigo-50 text-indigo-600 text-xs px-2 py-0.5 rounded-full font-bold flex items-center gap-1" }, t("\u{1F4DD} \uC774\uC804 \uB300\uD654 \uAE30\uC5B5 \uC911", "\u{1F4DD} Memory active"), /* @__PURE__ */ React.createElement("button", { onClick: clearMemory, className: "ml-1 text-indigo-300 hover:text-indigo-500", title: t("\uAE30\uC5B5 \uCD08\uAE30\uD654", "Clear memory") }, "\u2715")), chatMessages.length > 0 && /* @__PURE__ */ React.createElement("span", { className: "bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full font-bold" }, t(`${chatMessages.filter((m) => m.role === "user").length}\uD68C \uB300\uD654`, `${chatMessages.filter((m) => m.role === "user").length} chats`))), /* @__PURE__ */ React.createElement("span", { className: "text-xs text-gray-400" }, isLoggedIn && credits > 0 ? t(`\uC624\uB298 ${aiChatUsed}\uD68C \uC0AC\uC6A9 (\uBB34\uC81C\uD55C)`, `Today: ${aiChatUsed} used (unlimited)`) : t(`\uC624\uB298 ${aiChatUsed}/${AI_LIMIT_FREE}\uD68C \uC0AC\uC6A9`, `Today: ${aiChatUsed}/${AI_LIMIT_FREE} used`))), /* @__PURE__ */ React.createElement("div", { className: "bg-white" }, /* @__PURE__ */ React.createElement("p", { className: "px-4 pt-2 pb-1 text-xs text-gray-400" }, t("\u26A0\uFE0F AI \uC0C1\uB2F4\uC740 \uCC38\uACE0\uC6A9\uC774\uBA70 \uC758\uD559\uC801 \uC9C4\uB2E8\uC744 \uB300\uCCB4\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4", "\u26A0\uFE0F AI counseling is for reference only and does not replace medical diagnosis.")), chatMessages.length === 0 && /* @__PURE__ */ React.createElement("div", { className: "p-4 border-b border-gray-100" }, /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-500 mb-2 font-semibold" }, (followupQs[testType] || []).length ? `\u{1F50E} ${t("\uB0B4 \uACB0\uACFC\uB85C \uC774\uC5B4\uC11C \uBB3C\uC5B4\uBCF4\uAE30", "Ask about your result")}` : `\u{1F4A1} ${t("\uC790\uC8FC \uBB3B\uB294 \uC9C8\uBB38", "Common questions")}`), /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap gap-2" }, quickPrompts.map((prompt, i) => /* @__PURE__ */ React.createElement(
       "button",
       {
         key: i,
@@ -6536,6 +6551,23 @@ AI \uBD84\uC11D \uAE30\uB2A5\uC774 \uC911\uB2E8\uB429\uB2C8\uB2E4.`)) return;
     } catch {
     }
   }
+  async function sendAiFeedback(feature, rating, reason) {
+    try {
+      await fetch("/api/ai-feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...api._authHeader() },
+        body: JSON.stringify({ feature, rating, reason: reason || void 0 })
+      });
+    } catch {
+    }
+  }
+  function parseFollowups(text) {
+    if (!text) return { body: "", questions: [] };
+    const m = text.split(/\n?\s*\[(?:이어서 물어보기|Ask Next)\]\s*/);
+    if (m.length < 2) return { body: text, questions: [] };
+    const questions = m[1].split("\n").map((l) => l.replace(/^\s*[-·•]\s*/, "").trim()).filter((l) => l.length > 0 && !/^\[/.test(l)).slice(0, 3);
+    return { body: m[0].trimEnd(), questions };
+  }
   function MasterDebugPanel() {
     const [open, setOpen] = React.useState(false);
     const [logs, setLogs] = React.useState([]);
@@ -7143,6 +7175,13 @@ AI \uBD84\uC11D \uAE30\uB2A5\uC774 \uC911\uB2E8\uB429\uB2C8\uB2E4.`)) return;
     const loading = aiLoading[aiKey] || false;
     const error = aiError[aiKey] || "";
     const done = !loading && text.length > 0;
+    const { body: displayText, questions: followups } = parseFollowups(text);
+    React.useEffect(() => {
+      if (done && followups.length && (followupQs[aiKey] || []).join("|") !== followups.join("|")) {
+        setFollowupQs((p) => ({ ...p, [aiKey]: followups }));
+      }
+    }, [done, text]);
+    const fb = analysisFeedback[aiKey];
     const isFree = !isLoggedIn || credits <= 0;
     const limit = isFree ? AI_LIMIT_FREE : null;
     const remainingFree = limit != null ? Math.max(0, limit - aiChatUsed) : Infinity;
@@ -7158,7 +7197,37 @@ AI \uBD84\uC11D \uAE30\uB2A5\uC774 \uC911\uB2E8\uB429\uB2C8\uB2E4.`)) return;
       },
       "\u2728 ",
       t("AI \uC2E4\uC2DC\uAC04 \uBD84\uC11D", "AI Live Analysis")
-    ), isFree && /* @__PURE__ */ React.createElement("span", { className: `text-xs px-2.5 py-1 rounded-full font-semibold ${remainingFree <= 1 ? "bg-red-100 text-red-700" : remainingFree <= 3 ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"}` }, t(`\uBB34\uB8CC ${remainingFree}\uD68C \uB0A8\uC74C`, `${remainingFree} free left`))), loading && /* @__PURE__ */ React.createElement("div", { className: "bg-violet-50 border border-violet-200 rounded-xl p-4" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 mb-2" }, /* @__PURE__ */ React.createElement("div", { className: "w-2 h-2 bg-violet-500 rounded-full animate-bounce", style: { animationDelay: "0ms" } }), /* @__PURE__ */ React.createElement("div", { className: "w-2 h-2 bg-violet-500 rounded-full animate-bounce", style: { animationDelay: "150ms" } }), /* @__PURE__ */ React.createElement("div", { className: "w-2 h-2 bg-violet-500 rounded-full animate-bounce", style: { animationDelay: "300ms" } }), /* @__PURE__ */ React.createElement("span", { className: "text-xs text-violet-600 font-semibold" }, t("AI\uAC00 \uC2E4\uC2DC\uAC04\uC73C\uB85C \uBD84\uC11D \uC911...", "AI is analyzing..."))), text && /* @__PURE__ */ React.createElement("p", { className: "text-sm text-violet-800 whitespace-pre-wrap leading-relaxed" }, text, /* @__PURE__ */ React.createElement("span", { className: "inline-block w-1 h-4 bg-violet-500 animate-pulse ml-0.5 align-middle" }))), done && /* @__PURE__ */ React.createElement("div", { className: "bg-gradient-to-br from-violet-50 to-green-50 border border-violet-200 rounded-xl p-4 shadow-sm" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mb-2" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-1.5" }, /* @__PURE__ */ React.createElement("span", { className: "text-base" }, "\u2728"), /* @__PURE__ */ React.createElement("p", { className: "text-xs font-bold text-violet-700" }, t("AI \uC2E4\uC2DC\uAC04 \uBD84\uC11D \uACB0\uACFC", "AI Live Analysis"))), /* @__PURE__ */ React.createElement("button", { onClick: () => setAiAnalysis((p) => ({ ...p, [aiKey]: "" })), className: "text-xs text-violet-400 hover:text-violet-600" }, t("\uB2E4\uC2DC \uBD84\uC11D", "Re-analyze"))), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-gray-700 whitespace-pre-wrap leading-relaxed" }, text)), error && error !== "UPGRADE_REQUIRED" && /* @__PURE__ */ React.createElement("div", { className: "bg-red-50 border border-red-200 rounded-xl p-4" }, /* @__PURE__ */ React.createElement("p", { className: "text-xs font-bold text-red-600 mb-1" }, "\u26A0\uFE0F ", t("\uC624\uB958", "Error")), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-red-700" }, error), /* @__PURE__ */ React.createElement("button", { onClick: onRun, className: "mt-2 text-xs text-red-600 underline hover:text-red-800" }, t("\uB2E4\uC2DC \uC2DC\uB3C4", "Retry"))));
+    ), isFree && /* @__PURE__ */ React.createElement("span", { className: `text-xs px-2.5 py-1 rounded-full font-semibold ${remainingFree <= 1 ? "bg-red-100 text-red-700" : remainingFree <= 3 ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"}` }, t(`\uBB34\uB8CC ${remainingFree}\uD68C \uB0A8\uC74C`, `${remainingFree} free left`))), loading && /* @__PURE__ */ React.createElement("div", { className: "bg-violet-50 border border-violet-200 rounded-xl p-4" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 mb-2" }, /* @__PURE__ */ React.createElement("div", { className: "w-2 h-2 bg-violet-500 rounded-full animate-bounce", style: { animationDelay: "0ms" } }), /* @__PURE__ */ React.createElement("div", { className: "w-2 h-2 bg-violet-500 rounded-full animate-bounce", style: { animationDelay: "150ms" } }), /* @__PURE__ */ React.createElement("div", { className: "w-2 h-2 bg-violet-500 rounded-full animate-bounce", style: { animationDelay: "300ms" } }), /* @__PURE__ */ React.createElement("span", { className: "text-xs text-violet-600 font-semibold" }, t("AI\uAC00 \uC2E4\uC2DC\uAC04\uC73C\uB85C \uBD84\uC11D \uC911...", "AI is analyzing..."))), text && /* @__PURE__ */ React.createElement("p", { className: "text-sm text-violet-800 whitespace-pre-wrap leading-relaxed" }, displayText, /* @__PURE__ */ React.createElement("span", { className: "inline-block w-1 h-4 bg-violet-500 animate-pulse ml-0.5 align-middle" }))), done && /* @__PURE__ */ React.createElement("div", { className: "bg-gradient-to-br from-violet-50 to-green-50 border border-violet-200 rounded-xl p-4 shadow-sm" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mb-2" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-1.5" }, /* @__PURE__ */ React.createElement("span", { className: "text-base" }, "\u2728"), /* @__PURE__ */ React.createElement("p", { className: "text-xs font-bold text-violet-700" }, t("AI \uC2E4\uC2DC\uAC04 \uBD84\uC11D \uACB0\uACFC", "AI Live Analysis"))), /* @__PURE__ */ React.createElement("button", { onClick: () => setAiAnalysis((p) => ({ ...p, [aiKey]: "" })), className: "text-xs text-violet-400 hover:text-violet-600" }, t("\uB2E4\uC2DC \uBD84\uC11D", "Re-analyze"))), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-gray-700 whitespace-pre-wrap leading-relaxed" }, displayText), /* @__PURE__ */ React.createElement("div", { className: "mt-3 pt-2.5 border-t border-violet-100" }, !fb ? /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("span", { className: "text-xs text-gray-400" }, t("\uC774 \uD574\uC11D\uC774 \uB3C4\uC6C0\uC774 \uB410\uB098\uC694?", "Was this helpful?")), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        onClick: () => {
+          setAnalysisFeedback((p) => ({ ...p, [aiKey]: "up" }));
+          sendAiFeedback(`analyze:${aiKey}`, "up");
+        },
+        className: "text-sm hover:scale-110 transition",
+        title: t("\uB3C4\uC6C0\uB428", "Helpful")
+      },
+      "\u{1F44D}"
+    ), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        onClick: () => setAnalysisFeedback((p) => ({ ...p, [aiKey]: "down" })),
+        className: "text-sm hover:scale-110 transition",
+        title: t("\uC544\uC26C\uC6C0", "Not helpful")
+      },
+      "\u{1F44E}"
+    )) : fb === "up" ? /* @__PURE__ */ React.createElement("span", { className: "text-xs text-green-600" }, t("\uC758\uACAC \uACE0\uB9C8\uC6CC\uC694 \u{1F642}", "Thanks for your feedback \u{1F642}")) : fb === "done" ? /* @__PURE__ */ React.createElement("span", { className: "text-xs text-gray-400" }, t("\uC758\uACAC\uC774 \uBC18\uC601\uC5D0 \uB3C4\uC6C0\uC774 \uB3FC\uC694. \uACE0\uB9C8\uC6CC\uC694.", "Thanks \u2014 this helps us improve.")) : /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap items-center gap-1.5" }, /* @__PURE__ */ React.createElement("span", { className: "text-xs text-gray-400 mr-1" }, t("\uC5B4\uB5A4 \uC810\uC774 \uC544\uC26C\uC6E0\uB098\uC694?", "What was off?")), [["generic", t("\uB108\uBB34 \uC77C\uBC18\uC801", "Too generic")], ["mismatch", t("\uB0B4 \uACB0\uACFC\uC640 \uC548 \uB9DE\uC74C", "Doesn\u2019t fit me")], ["long", t("\uB108\uBB34 \uAE38\uB2E4", "Too long")], ["other", t("\uAE30\uD0C0", "Other")]].map(([r, label]) => /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        key: r,
+        onClick: () => {
+          sendAiFeedback(`analyze:${aiKey}`, "down", r);
+          setAnalysisFeedback((p) => ({ ...p, [aiKey]: "done" }));
+        },
+        className: "text-[11px] px-2 py-0.5 rounded-full bg-white border border-gray-200 text-gray-500 hover:border-violet-300 hover:text-violet-600 transition"
+      },
+      label
+    ))))), error && error !== "UPGRADE_REQUIRED" && /* @__PURE__ */ React.createElement("div", { className: "bg-red-50 border border-red-200 rounded-xl p-4" }, /* @__PURE__ */ React.createElement("p", { className: "text-xs font-bold text-red-600 mb-1" }, "\u26A0\uFE0F ", t("\uC624\uB958", "Error")), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-red-700" }, error), /* @__PURE__ */ React.createElement("button", { onClick: onRun, className: "mt-2 text-xs text-red-600 underline hover:text-red-800" }, t("\uB2E4\uC2DC \uC2DC\uB3C4", "Retry"))));
   }
   function generateSctRecommendation(cat, nums) {
     const responses = nums.map((n) => {
@@ -8561,7 +8630,7 @@ Tested on Maumful! https://maumful.com`), testLabel: t("LOST \uD589\uB3D9 \uC6B4
         adminLoading ? "\uD655\uC778 \uC911..." : "\uB85C\uADF8\uC778"
       ), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("memberDashboard"), className: "w-full text-sm text-gray-400 hover:text-gray-600 mt-3 text-center" }, "\u2190 \uB3CC\uC544\uAC00\uAE30")));
     }
-    return /* @__PURE__ */ React.createElement("div", { className: "min-h-screen bg-gray-50" }, /* @__PURE__ */ React.createElement("header", { className: "bg-white border-b border-gray-200 sticky top-0 z-10" }, /* @__PURE__ */ React.createElement("div", { className: "max-w-5xl mx-auto px-4 py-3 flex items-center justify-between" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3" }, /* @__PURE__ */ React.createElement("span", { className: "text-2xl" }, "\u{1F6E0}\uFE0F"), /* @__PURE__ */ React.createElement("span", { className: "font-bold text-gray-800" }, "\uB9C8\uC74C\uD480 \uAD00\uB9AC\uC790")), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, adminLoading && /* @__PURE__ */ React.createElement("div", { className: "w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" }), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("memberDashboard"), className: "text-sm text-gray-500 hover:text-gray-700 px-3 py-1.5 bg-gray-100 rounded-lg" }, "\u2190 \uB300\uC2DC\uBCF4\uB4DC")))), /* @__PURE__ */ React.createElement("main", { className: "max-w-5xl mx-auto px-4 py-6" }, adminMsg.text && /* @__PURE__ */ React.createElement("div", { className: `mb-4 px-4 py-3 rounded-xl text-sm font-medium ${adminMsg.type === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}` }, adminMsg.text, /* @__PURE__ */ React.createElement("button", { onClick: () => setAdminMsg({ type: "", text: "" }), className: "ml-3 opacity-60 hover:opacity-100" }, "\u2715")), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mb-6 flex-wrap" }, [["overview", "\u{1F4CA} \uAC1C\uC694"], ["users", "\u{1F465} \uC0AC\uC6A9\uC790"], ["payments", "\u{1F4B3} \uACB0\uC81C"], ["tests", "\u{1F4CB} \uAC80\uC0AC"], ["coupons", "\u{1F39F}\uFE0F \uCFE0\uD3F0"], ["loop", "\u{1F501} \uB8E8\uD504"]].map(([tab, label]) => /* @__PURE__ */ React.createElement(
+    return /* @__PURE__ */ React.createElement("div", { className: "min-h-screen bg-gray-50" }, /* @__PURE__ */ React.createElement("header", { className: "bg-white border-b border-gray-200 sticky top-0 z-10" }, /* @__PURE__ */ React.createElement("div", { className: "max-w-5xl mx-auto px-4 py-3 flex items-center justify-between" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3" }, /* @__PURE__ */ React.createElement("span", { className: "text-2xl" }, "\u{1F6E0}\uFE0F"), /* @__PURE__ */ React.createElement("span", { className: "font-bold text-gray-800" }, "\uB9C8\uC74C\uD480 \uAD00\uB9AC\uC790")), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, adminLoading && /* @__PURE__ */ React.createElement("div", { className: "w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" }), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("memberDashboard"), className: "text-sm text-gray-500 hover:text-gray-700 px-3 py-1.5 bg-gray-100 rounded-lg" }, "\u2190 \uB300\uC2DC\uBCF4\uB4DC")))), /* @__PURE__ */ React.createElement("main", { className: "max-w-5xl mx-auto px-4 py-6" }, adminMsg.text && /* @__PURE__ */ React.createElement("div", { className: `mb-4 px-4 py-3 rounded-xl text-sm font-medium ${adminMsg.type === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}` }, adminMsg.text, /* @__PURE__ */ React.createElement("button", { onClick: () => setAdminMsg({ type: "", text: "" }), className: "ml-3 opacity-60 hover:opacity-100" }, "\u2715")), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mb-6 flex-wrap" }, [["overview", "\u{1F4CA} \uAC1C\uC694"], ["users", "\u{1F465} \uC0AC\uC6A9\uC790"], ["payments", "\u{1F4B3} \uACB0\uC81C"], ["tests", "\u{1F4CB} \uAC80\uC0AC"], ["coupons", "\u{1F39F}\uFE0F \uCFE0\uD3F0"], ["loop", "\u{1F501} \uB8E8\uD504"], ["feedback", "\u{1F642} \uD574\uC11D \uD53C\uB4DC\uBC31"]].map(([tab, label]) => /* @__PURE__ */ React.createElement(
       "button",
       {
         key: tab,
@@ -8571,6 +8640,7 @@ Tested on Maumful! https://maumful.com`), testLabel: t("LOST \uD589\uB3D9 \uC6B4
           else if (tab === "users") loadAdminUsers();
           else if (tab === "payments") loadAdminPayments();
           else if (tab === "loop") loadAdminLoop();
+          else if (tab === "feedback") loadAdminFb();
         },
         className: S.tabBtn(adminTab === tab)
       },
@@ -8585,7 +8655,13 @@ Tested on Maumful! https://maumful.com`), testLabel: t("LOST \uD589\uB3D9 \uC6B4
       ["\uAC80\uC0AC \uC81C\uC548 \uB178\uCD9C", adminLoop.reverse.suggestionView],
       ["\uC81C\uC548 \uD074\uB9AD", adminLoop.reverse.suggestionClick],
       ["\uC2E4\uC81C \uAC80\uC0AC \uC644\uB8CC", adminLoop.reverse.testCompleted]
-    ].map(([label, val], i, arr) => /* @__PURE__ */ React.createElement("div", { key: label, className: "text-center" }, /* @__PURE__ */ React.createElement("div", { className: "text-2xl font-bold text-gray-800" }, val), /* @__PURE__ */ React.createElement("div", { className: "text-[11px] text-gray-500 mt-1" }, label), i > 0 && arr[i - 1][1] > 0 && /* @__PURE__ */ React.createElement("div", { className: "text-[10px] text-emerald-600 mt-0.5" }, Math.round(val / arr[i - 1][1] * 100), "%")))), adminLoop.reverse.byTest.length > 0 && /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-500 mt-4 pt-3 border-t border-gray-100" }, "\uC81C\uC548 \uD074\uB9AD: ", adminLoop.reverse.byTest.map((t2) => `${t2.meta} ${t2.c}\uD68C`).join(" \xB7 ")), /* @__PURE__ */ React.createElement("p", { className: "text-[11px] text-gray-400 mt-3 leading-relaxed" }, "\u2018\uC2E4\uC81C \uAC80\uC0AC \uC644\uB8CC\u2019\uB294 \uC81C\uC548\uC744 \uB204\uB978 \uB4A4 \uADF8 \uAC80\uC0AC\uB97C \uB05D\uB0B8 \uC0AC\uB78C \uC218\uC785\uB2C8\uB2E4. \uC774 \uC22B\uC790\uAC00 \uB8E8\uD504\uAC00 \uB2EB\uD614\uB294\uC9C0\uB97C \uBCF4\uC5EC\uC90D\uB2C8\uB2E4.")))), adminTab === "overview" && adminStats && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" }, [
+    ].map(([label, val], i, arr) => /* @__PURE__ */ React.createElement("div", { key: label, className: "text-center" }, /* @__PURE__ */ React.createElement("div", { className: "text-2xl font-bold text-gray-800" }, val), /* @__PURE__ */ React.createElement("div", { className: "text-[11px] text-gray-500 mt-1" }, label), i > 0 && arr[i - 1][1] > 0 && /* @__PURE__ */ React.createElement("div", { className: "text-[10px] text-emerald-600 mt-0.5" }, Math.round(val / arr[i - 1][1] * 100), "%")))), adminLoop.reverse.byTest.length > 0 && /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-500 mt-4 pt-3 border-t border-gray-100" }, "\uC81C\uC548 \uD074\uB9AD: ", adminLoop.reverse.byTest.map((t2) => `${t2.meta} ${t2.c}\uD68C`).join(" \xB7 ")), /* @__PURE__ */ React.createElement("p", { className: "text-[11px] text-gray-400 mt-3 leading-relaxed" }, "\u2018\uC2E4\uC81C \uAC80\uC0AC \uC644\uB8CC\u2019\uB294 \uC81C\uC548\uC744 \uB204\uB978 \uB4A4 \uADF8 \uAC80\uC0AC\uB97C \uB05D\uB0B8 \uC0AC\uB78C \uC218\uC785\uB2C8\uB2E4. \uC774 \uC22B\uC790\uAC00 \uB8E8\uD504\uAC00 \uB2EB\uD614\uB294\uC9C0\uB97C \uBCF4\uC5EC\uC90D\uB2C8\uB2E4.")))), adminTab === "feedback" && /* @__PURE__ */ React.createElement("div", { className: "space-y-6" }, !adminFb && /* @__PURE__ */ React.createElement("div", { className: "text-sm text-gray-400 py-8 text-center" }, "\uBD88\uB7EC\uC624\uB294 \uC911\u2026"), adminFb && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-500" }, "\uCD5C\uADFC ", adminFb.days, "\uC77C \xB7 AI \uD574\uC11D \u{1F44D}/\u{1F44E} (\uAC80\uC0AC\uBCC4 feature)"), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-gray-100 p-5" }, /* @__PURE__ */ React.createElement("h3", { className: "text-sm font-bold text-emerald-700 mb-4" }, "\uAE30\uB2A5\uBCC4 \uB9CC\uC871\uB3C4"), adminFb.byFeature.length === 0 ? /* @__PURE__ */ React.createElement("p", { className: "text-sm text-gray-400" }, "\uC544\uC9C1 \uC218\uC9D1\uB41C \uD53C\uB4DC\uBC31\uC774 \uC5C6\uC5B4\uC694.") : /* @__PURE__ */ React.createElement("div", { className: "space-y-2.5" }, adminFb.byFeature.map((f) => {
+      const pct = f.total > 0 ? Math.round(f.up / f.total * 100) : 0;
+      return /* @__PURE__ */ React.createElement("div", { key: f.feature, className: "flex items-center gap-3" }, /* @__PURE__ */ React.createElement("span", { className: "text-xs font-mono text-gray-600 w-32 shrink-0 truncate" }, f.feature), /* @__PURE__ */ React.createElement("div", { className: "flex-1 h-2.5 rounded-full bg-gray-100 overflow-hidden" }, /* @__PURE__ */ React.createElement("div", { className: "h-full bg-emerald-400", style: { width: `${pct}%` } })), /* @__PURE__ */ React.createElement("span", { className: "text-xs text-gray-500 w-28 text-right tabular-nums" }, "\u{1F44D}", f.up, " \xB7 \u{1F44E}", f.down, " (", pct, "%)"));
+    }))), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-gray-100 p-5" }, /* @__PURE__ */ React.createElement("h3", { className: "text-sm font-bold text-emerald-700 mb-4" }, "\u{1F44E} \uC544\uC26C\uC6B4 \uC774\uC720"), adminFb.downReasons.length === 0 ? /* @__PURE__ */ React.createElement("p", { className: "text-sm text-gray-400" }, "\uC544\uC9C1 \uC5C6\uC5B4\uC694.") : /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap gap-2" }, adminFb.downReasons.map((r) => {
+      const label = { generic: "\uB108\uBB34 \uC77C\uBC18\uC801", mismatch: "\uB0B4 \uACB0\uACFC\uC640 \uC548 \uB9DE\uC74C", long: "\uB108\uBB34 \uAE38\uB2E4", other: "\uAE30\uD0C0" }[r.reason] || r.reason;
+      return /* @__PURE__ */ React.createElement("span", { key: r.reason, className: "text-xs px-3 py-1.5 rounded-full bg-red-50 text-red-600 border border-red-100" }, label, " ", /* @__PURE__ */ React.createElement("b", { className: "tabular-nums" }, r.c));
+    })), /* @__PURE__ */ React.createElement("p", { className: "text-[11px] text-gray-400 mt-3 leading-relaxed" }, "\u{1F44E}\uAC00 \uB9CE\uC740 \uAE30\uB2A5\xB7\uC0AC\uC720\uB97C \uBCF4\uACE0 \uD504\uB86C\uD504\uD2B8\uB97C \uAC1C\uC120\uD558\uC138\uC694. (\uC608: \u2018\uB108\uBB34 \uAE38\uB2E4\u2019\uAC00 \uB9CE\uC73C\uBA74 \uC139\uC158 \uC555\uCD95)")))), adminTab === "overview" && adminStats && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" }, [
       { label: "\uCD1D \uAC00\uC785\uC790", val: (_c = (_b = adminStats.users) == null ? void 0 : _b.total) == null ? void 0 : _c.toLocaleString(), sub: `\uC624\uB298 +${(_d = adminStats.users) == null ? void 0 : _d.today}`, color: "text-indigo-600" },
       { label: "\uC774\uBC88\uB2EC \uB9E4\uCD9C", val: `\u20A9${(_f = (_e = adminStats.revenue) == null ? void 0 : _e.monthly) == null ? void 0 : _f.toLocaleString()}`, sub: `\uACB0\uC81C ${(_g = adminStats.payments) == null ? void 0 : _g.monthly}\uAC74`, color: "text-emerald-600" },
       { label: "\uCD1D \uAC80\uC0AC \uC218", val: (_i = (_h = adminStats.tests) == null ? void 0 : _h.total) == null ? void 0 : _i.toLocaleString(), sub: `\uC624\uB298 ${(_j = adminStats.tests) == null ? void 0 : _j.today}\uAC74`, color: "text-orange-600" },
