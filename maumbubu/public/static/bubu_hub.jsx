@@ -232,7 +232,7 @@ function Home({ config, onMode, onCommunity, onMemory, onSettings, onMultimodal,
         <div style={{ fontSize: 26 }}>🎥</div>
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 800, fontSize: 15 }}>함께 분석 <span style={{ fontSize: 11, fontWeight: 700, color: '#fff', background: GREEN2, borderRadius: 10, padding: '1px 7px' }}>배우자 동의</span></div>
-          <div style={{ color: MUT, fontSize: 12.5, marginTop: 2 }}>동의 후 대화를 녹화·분석 (표정·어조, 원본은 기기 안에서만)</div>
+          <div style={{ color: MUT, fontSize: 12.5, marginTop: 2 }}>동의 후 대화를 녹화(영상) 또는 녹음(음성)으로 분석 (표정·어조, 원본은 기기 안에서만)</div>
         </div>
         <div style={{ color: MUT, fontSize: 20 }}>›</div>
       </div>
@@ -555,12 +555,13 @@ function Multimodal({ relationId, config, onBack }) {
   const [signals, setSignals] = useState(null);
   const [inputText, setInputText] = useState('');
   const [trResult, setTrResult] = useState(null);
+  const [useCamera, setUseCamera] = useState(true); // true=녹화(영상+표정+어조) · false=녹음(음성만+어조)
   const videoRef = useRef(null), streamRef = useRef(null), detRef = useRef(null), exprRef = useRef({});
   const audioCtxRef = useRef(null), volRef = useRef({ sum: 0, n: 0, spikes: 0 }), rafRef = useRef(null);
 
   const request = async () => {
     setBusy(true); setMsg('');
-    const r = await api('/consent/request', 'POST', { relationId, mediaType: 'video' });
+    const r = await api('/consent/request', 'POST', { relationId, mediaType: useCamera ? 'video' : 'audio' });
     setBusy(false);
     if (r.ok && r.consentCode) { setCode(r.consentCode); setPhase('request'); } else setMsg(r.error || '요청에 실패했어요.');
   };
@@ -582,19 +583,23 @@ function Multimodal({ relationId, config, onBack }) {
   const startCapture = async () => {
     setBusy(true); setMsg('');
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: true });
+      // 녹음 모드(useCamera=false)면 카메라를 켜지 않고 마이크만. 녹화 모드면 영상+마이크.
+      const stream = await navigator.mediaDevices.getUserMedia({ video: useCamera ? { facingMode: 'user' } : false, audio: true });
       streamRef.current = stream;
-      const fa = await loadFaceApi();
       exprRef.current = {}; volRef.current = { sum: 0, n: 0, spikes: 0 };
+      // 표정 분석용 face-api는 카메라 모드에서만 미리 로드(원본 순서 유지: 로드 후 화면 전환)
+      const fa = useCamera ? await loadFaceApi() : null;
       setPhase('capturing'); setBusy(false);
-      setTimeout(() => { const v = videoRef.current; if (v) { v.srcObject = stream; v.muted = true; v.playsInline = true; v.play().catch(() => {}); } }, 100);
-      detRef.current = setInterval(async () => {
-        const v = videoRef.current; if (!v || v.readyState < 2) return;
-        try {
-          const res = await fa.detectSingleFace(v, new fa.TinyFaceDetectorOptions()).withFaceExpressions();
-          if (res && res.expressions) { let top = '', mx = 0; for (const k in res.expressions) { if (res.expressions[k] > mx) { mx = res.expressions[k]; top = k; } } if (top && mx > 0.55) exprRef.current[top] = (exprRef.current[top] || 0) + 1; }
-        } catch {}
-      }, 1500);
+      if (useCamera) {
+        setTimeout(() => { const v = videoRef.current; if (v) { v.srcObject = stream; v.muted = true; v.playsInline = true; v.play().catch(() => {}); } }, 100);
+        detRef.current = setInterval(async () => {
+          const v = videoRef.current; if (!v || v.readyState < 2) return;
+          try {
+            const res = await fa.detectSingleFace(v, new fa.TinyFaceDetectorOptions()).withFaceExpressions();
+            if (res && res.expressions) { let top = '', mx = 0; for (const k in res.expressions) { if (res.expressions[k] > mx) { mx = res.expressions[k]; top = k; } } if (top && mx > 0.55) exprRef.current[top] = (exprRef.current[top] || 0) + 1; }
+          } catch {}
+        }, 1500);
+      }
       const ctx = new (window.AudioContext || window.webkitAudioContext)(); audioCtxRef.current = ctx;
       const an = ctx.createAnalyser(); an.fftSize = 512; ctx.createMediaStreamSource(stream).connect(an);
       const buf = new Uint8Array(an.fftSize);
@@ -630,9 +635,28 @@ function Multimodal({ relationId, config, onBack }) {
     <Shell title="🎥 함께 분석" onBack={() => { cleanup(); onBack(); }}>
       {phase === 'intro' && (<>
         <Card style={{ background: '#fef9ec', border: '1px solid #fde68a', color: '#78350f', fontSize: 13.5, lineHeight: 1.8, marginBottom: 14 }}>
-          <b>쌍방 동의가 있어야만</b> 녹화·분석이 시작돼요. 원본 영상·음성은 <b>기기 밖으로 나가지 않고</b>, 분석(표정·어조 요약)이 끝나면 <b>삭제</b>돼요. 언제든 철회할 수 있어요.
+          <b>쌍방 동의가 있어야만</b> 분석이 시작돼요. 원본 영상·음성은 <b>기기 밖으로 나가지 않고</b>, 분석(표정·어조 요약)이 끝나면 <b>삭제</b>돼요. 언제든 철회할 수 있어요.
         </Card>
-        <Btn onClick={request} disabled={busy}>내가 분석을 요청할게요 (코드 발급)</Btn>
+        {/* 녹화(영상+표정+어조) ↔ 녹음(음성만+어조) 선택 */}
+        <Card style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 13.5, fontWeight: 800, marginBottom: 10 }}>분석 방식을 선택하세요</div>
+          {[
+            { on: true, emoji: '🎥', label: '녹화 (영상)', desc: '표정 + 어조를 함께 분석' },
+            { on: false, emoji: '🎙️', label: '녹음 (음성만)', desc: '카메라 없이 어조만 분석 — 부담이 덜해요' },
+          ].map(opt => (
+            <div key={String(opt.on)} onClick={() => setUseCamera(opt.on)}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', marginBottom: 8, borderRadius: 12, cursor: 'pointer',
+                border: `1.5px solid ${useCamera === opt.on ? GREEN : LINE}`, background: useCamera === opt.on ? '#f6faf8' : '#fff' }}>
+              <span style={{ fontSize: 22 }}>{opt.emoji}</span>
+              <span style={{ flex: 1 }}>
+                <span style={{ display: 'block', fontSize: 14, fontWeight: 700 }}>{opt.label}</span>
+                <span style={{ display: 'block', fontSize: 12, color: MUT, marginTop: 2 }}>{opt.desc}</span>
+              </span>
+              <span style={{ color: useCamera === opt.on ? GREEN : LINE, fontWeight: 800 }}>{useCamera === opt.on ? '●' : '○'}</span>
+            </div>
+          ))}
+        </Card>
+        <Btn onClick={request} disabled={busy}>내가 {useCamera ? '녹화' : '녹음'} 분석을 요청할게요 (코드 발급)</Btn>
         <div style={{ height: 8 }} />
         <Btn kind="ghost" onClick={() => setPhase('accept')}>배우자에게 받은 코드로 동의하기</Btn>
         {msg && <div style={{ color: '#c0392b', fontSize: 13, marginTop: 10 }}>{msg}</div>}
@@ -641,8 +665,8 @@ function Multimodal({ relationId, config, onBack }) {
       {phase === 'request' && (<>
         <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>배우자에게 이 코드를 전달하세요</div>
         <Card style={{ textAlign: 'center', marginBottom: 12 }}><div style={{ fontSize: 30, fontWeight: 800, letterSpacing: 4, color: GREEN }}>{code}</div></Card>
-        <div style={{ fontSize: 13.5, color: MUT, lineHeight: 1.7, marginBottom: 14 }}>배우자 휴대폰에서 <b>마음부부 → 🎥 함께 분석 → "코드로 동의하기"</b>에 입력하고 동의하면, 아래 "녹화 시작"이 동작해요.</div>
-        <Btn onClick={startCapture} disabled={busy}>배우자가 동의했어요 · 녹화 시작</Btn>
+        <div style={{ fontSize: 13.5, color: MUT, lineHeight: 1.7, marginBottom: 14 }}>배우자 휴대폰에서 <b>마음부부 → 함께 분석 → "코드로 동의하기"</b>에 입력하고 동의하면, 아래 "{useCamera ? '녹화' : '녹음'} 시작"이 동작해요.</div>
+        <Btn onClick={startCapture} disabled={busy}>배우자가 동의했어요 · {useCamera ? '녹화' : '녹음'} 시작</Btn>
         <div style={{ height: 8 }} />
         <Btn kind="ghost" onClick={() => setPhase('intro')}>취소</Btn>
         {msg && <div style={{ color: '#c0392b', fontSize: 13, marginTop: 10 }}>{msg}</div>}
@@ -673,17 +697,23 @@ function Multimodal({ relationId, config, onBack }) {
       )}
 
       {phase === 'capturing' && (<>
-        <video ref={videoRef} style={{ width: '100%', borderRadius: 14, background: '#000', marginBottom: 12 }} />
+        {useCamera
+          ? <video ref={videoRef} style={{ width: '100%', borderRadius: 14, background: '#000', marginBottom: 12 }} />
+          : <Card style={{ textAlign: 'center', padding: '28px 16px', marginBottom: 12 }}>
+              <div style={{ fontSize: 40 }}>🎙️</div>
+              <div style={{ fontWeight: 800, fontSize: 15, marginTop: 8 }}>음성만 분석 중</div>
+              <div style={{ color: MUT, fontSize: 12.5, marginTop: 4 }}>카메라는 꺼져 있어요</div>
+            </Card>}
         <div style={{ textAlign: 'center', color: MUT, fontSize: 13, marginBottom: 12 }}>🔴 기기 안에서만 분석 중… (원본은 저장·전송되지 않아요)</div>
-        <Btn onClick={stopCapture}>녹화 종료 · 분석 보기</Btn>
+        <Btn onClick={stopCapture}>{useCamera ? '녹화' : '녹음'} 종료 · 분석 보기</Btn>
       </>)}
 
       {phase === 'result' && (<>
         <Card style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 12.5, fontWeight: 800, color: GREEN, marginBottom: 8 }}>온디바이스 분석 요약 (원본은 이미 삭제됨)</div>
           <div style={{ fontSize: 14, lineHeight: 1.8 }}>
-            {signals.visualCues ? <div>· {signals.visualCues}</div> : <div style={{ color: MUT }}>· 표정이 충분히 감지되지 않았어요</div>}
-            {signals.toneAnalysis ? <div>· {signals.toneAnalysis}</div> : null}
+            {useCamera && (signals.visualCues ? <div>· {signals.visualCues}</div> : <div style={{ color: MUT }}>· 표정이 충분히 감지되지 않았어요</div>)}
+            {signals.toneAnalysis ? <div>· {signals.toneAnalysis}</div> : <div style={{ color: MUT }}>· 어조가 충분히 감지되지 않았어요</div>}
           </div>
         </Card>
         <div style={{ fontSize: 13.5, marginBottom: 8 }}>방금 나눈 대화가 있으면 적어주세요 (선택).</div>

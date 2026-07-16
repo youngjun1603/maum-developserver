@@ -191,7 +191,7 @@ function Home({ config, onMode, onCommunity, onMemory, onSettings, onMultimodal,
   const depthLabel = ["\uD45C\uBA74", "\uC911\uAC04", "\uC2EC\uCE35"][(config.emotionDepth || 2) - 1];
   const theoLabel = ["\uD1B5\uD569\uD615", "\uADE0\uD615\uD615", "\uC131\uACBD\uD615"][(config.theologyLevel || 2) - 1];
   const toneLabel = config.pastoralTone === "direct" ? "\uC81C\uD55C\uC801 \uC9C1\uBA74\uD615" : "\uACBD\uCCAD\xB7\uC740\uD61C\uD615";
-  return /* @__PURE__ */ React.createElement(Shell, { right: /* @__PURE__ */ React.createElement("button", { onClick: () => setAsk(true), style: { background: "rgba(255,255,255,.18)", border: "none", color: "#fff", padding: "6px 10px", borderRadius: 9, cursor: "pointer", fontSize: 13 } }, "\u2699\uFE0F \uC124\uC815") }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, color: MUT, marginBottom: 4 } }, config.track === "christian" ? "\u271D\uFE0F \uAE30\uB3C5\uAD50 \uD2B8\uB799" : "\u{1F331} \uC2EC\uB9AC\uC0C1\uB2F4 \uD2B8\uB799"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 22, fontWeight: 800, marginBottom: 4 } }, "\uBB34\uC5C7\uC744 \uD1B5\uC5ED\uD574 \uB4DC\uB9B4\uAE4C\uC694?"), /* @__PURE__ */ React.createElement("div", { style: { color: MUT, fontSize: 13, marginBottom: 16 } }, '\uC0C1\uD669\uC5D0 \uB9DE\uB294 \uAC78 \uACE0\uB974\uC138\uC694. \uC544\uB798 "\uC774\uB7F4 \uB54C"\uB97C \uCC38\uACE0\uD558\uBA74 \uC26C\uC6CC\uC694.'), MODES.map((m) => /* @__PURE__ */ React.createElement("div", { key: m.key, onClick: () => onMode(m), style: { cursor: "pointer", border: `1px solid ${LINE}`, borderRadius: 16, padding: 16, marginBottom: 10, display: "flex", alignItems: "center", gap: 14, background: "#fff" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 30 } }, m.emoji), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 800, fontSize: 17 } }, m.title), /* @__PURE__ */ React.createElement("div", { style: { color: MUT, fontSize: 13, marginTop: 2 } }, m.desc), /* @__PURE__ */ React.createElement("div", { style: { color: GREEN, fontSize: 12, marginTop: 4 } }, "\uC774\uB7F4 \uB54C \xB7 ", m.ex)), /* @__PURE__ */ React.createElement("div", { style: { color: MUT, fontSize: 20 } }, "\u203A"))), /* @__PURE__ */ React.createElement("div", { onClick: onMultimodal, style: { cursor: "pointer", border: `1px dashed ${GREEN2}`, background: "#f4faf6", borderRadius: 16, padding: 14, marginTop: 8, display: "flex", alignItems: "center", gap: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 26 } }, "\u{1F3A5}"), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 800, fontSize: 15 } }, "\uD568\uAED8 \uBD84\uC11D ", /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, fontWeight: 700, color: "#fff", background: GREEN2, borderRadius: 10, padding: "1px 7px" } }, "\uBC30\uC6B0\uC790 \uB3D9\uC758")), /* @__PURE__ */ React.createElement("div", { style: { color: MUT, fontSize: 12.5, marginTop: 2 } }, "\uB3D9\uC758 \uD6C4 \uB300\uD654\uB97C \uB179\uD654\xB7\uBD84\uC11D (\uD45C\uC815\xB7\uC5B4\uC870, \uC6D0\uBCF8\uC740 \uAE30\uAE30 \uC548\uC5D0\uC11C\uB9CC)")), /* @__PURE__ */ React.createElement("div", { style: { color: MUT, fontSize: 20 } }, "\u203A")), /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: onInbox, style: { marginTop: 10, position: "relative" } }, "\u{1F4EC} \uC218\uC2E0\uD568 \xB7 \uBC30\uC6B0\uC790 \uC5F0\uACB0", inboxCount > 0 && /* @__PURE__ */ React.createElement("span", { style: { marginLeft: 6, fontSize: 11, fontWeight: 800, color: "#fff", background: GREEN2, borderRadius: 10, padding: "1px 7px" } }, inboxCount)), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 10 } }, /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: onMemory }, "\u{1F9E0} \uAD00\uACC4 \uAE30\uC5B5"), /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: onCommunity }, "\u{1F4AC} \uCEE4\uBBA4\uB2C8\uD2F0")), ask && /* @__PURE__ */ React.createElement(
+  return /* @__PURE__ */ React.createElement(Shell, { right: /* @__PURE__ */ React.createElement("button", { onClick: () => setAsk(true), style: { background: "rgba(255,255,255,.18)", border: "none", color: "#fff", padding: "6px 10px", borderRadius: 9, cursor: "pointer", fontSize: 13 } }, "\u2699\uFE0F \uC124\uC815") }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, color: MUT, marginBottom: 4 } }, config.track === "christian" ? "\u271D\uFE0F \uAE30\uB3C5\uAD50 \uD2B8\uB799" : "\u{1F331} \uC2EC\uB9AC\uC0C1\uB2F4 \uD2B8\uB799"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 22, fontWeight: 800, marginBottom: 4 } }, "\uBB34\uC5C7\uC744 \uD1B5\uC5ED\uD574 \uB4DC\uB9B4\uAE4C\uC694?"), /* @__PURE__ */ React.createElement("div", { style: { color: MUT, fontSize: 13, marginBottom: 16 } }, '\uC0C1\uD669\uC5D0 \uB9DE\uB294 \uAC78 \uACE0\uB974\uC138\uC694. \uC544\uB798 "\uC774\uB7F4 \uB54C"\uB97C \uCC38\uACE0\uD558\uBA74 \uC26C\uC6CC\uC694.'), MODES.map((m) => /* @__PURE__ */ React.createElement("div", { key: m.key, onClick: () => onMode(m), style: { cursor: "pointer", border: `1px solid ${LINE}`, borderRadius: 16, padding: 16, marginBottom: 10, display: "flex", alignItems: "center", gap: 14, background: "#fff" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 30 } }, m.emoji), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 800, fontSize: 17 } }, m.title), /* @__PURE__ */ React.createElement("div", { style: { color: MUT, fontSize: 13, marginTop: 2 } }, m.desc), /* @__PURE__ */ React.createElement("div", { style: { color: GREEN, fontSize: 12, marginTop: 4 } }, "\uC774\uB7F4 \uB54C \xB7 ", m.ex)), /* @__PURE__ */ React.createElement("div", { style: { color: MUT, fontSize: 20 } }, "\u203A"))), /* @__PURE__ */ React.createElement("div", { onClick: onMultimodal, style: { cursor: "pointer", border: `1px dashed ${GREEN2}`, background: "#f4faf6", borderRadius: 16, padding: 14, marginTop: 8, display: "flex", alignItems: "center", gap: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 26 } }, "\u{1F3A5}"), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 800, fontSize: 15 } }, "\uD568\uAED8 \uBD84\uC11D ", /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, fontWeight: 700, color: "#fff", background: GREEN2, borderRadius: 10, padding: "1px 7px" } }, "\uBC30\uC6B0\uC790 \uB3D9\uC758")), /* @__PURE__ */ React.createElement("div", { style: { color: MUT, fontSize: 12.5, marginTop: 2 } }, "\uB3D9\uC758 \uD6C4 \uB300\uD654\uB97C \uB179\uD654(\uC601\uC0C1) \uB610\uB294 \uB179\uC74C(\uC74C\uC131)\uC73C\uB85C \uBD84\uC11D (\uD45C\uC815\xB7\uC5B4\uC870, \uC6D0\uBCF8\uC740 \uAE30\uAE30 \uC548\uC5D0\uC11C\uB9CC)")), /* @__PURE__ */ React.createElement("div", { style: { color: MUT, fontSize: 20 } }, "\u203A")), /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: onInbox, style: { marginTop: 10, position: "relative" } }, "\u{1F4EC} \uC218\uC2E0\uD568 \xB7 \uBC30\uC6B0\uC790 \uC5F0\uACB0", inboxCount > 0 && /* @__PURE__ */ React.createElement("span", { style: { marginLeft: 6, fontSize: 11, fontWeight: 800, color: "#fff", background: GREEN2, borderRadius: 10, padding: "1px 7px" } }, inboxCount)), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 10 } }, /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: onMemory }, "\u{1F9E0} \uAD00\uACC4 \uAE30\uC5B5"), /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: onCommunity }, "\u{1F4AC} \uCEE4\uBBA4\uB2C8\uD2F0")), ask && /* @__PURE__ */ React.createElement(
     "div",
     {
       style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 },
@@ -368,12 +368,13 @@ function Multimodal({ relationId, config, onBack }) {
   const [signals, setSignals] = useState(null);
   const [inputText, setInputText] = useState("");
   const [trResult, setTrResult] = useState(null);
+  const [useCamera, setUseCamera] = useState(true);
   const videoRef = useRef(null), streamRef = useRef(null), detRef = useRef(null), exprRef = useRef({});
   const audioCtxRef = useRef(null), volRef = useRef({ sum: 0, n: 0, spikes: 0 }), rafRef = useRef(null);
   const request = async () => {
     setBusy(true);
     setMsg("");
-    const r = await api("/consent/request", "POST", { relationId, mediaType: "video" });
+    const r = await api("/consent/request", "POST", { relationId, mediaType: useCamera ? "video" : "audio" });
     setBusy(false);
     if (r.ok && r.consentCode) {
       setCode(r.consentCode);
@@ -414,41 +415,43 @@ function Multimodal({ relationId, config, onBack }) {
     setBusy(true);
     setMsg("");
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: useCamera ? { facingMode: "user" } : false, audio: true });
       streamRef.current = stream;
-      const fa = await loadFaceApi();
       exprRef.current = {};
       volRef.current = { sum: 0, n: 0, spikes: 0 };
+      const fa = useCamera ? await loadFaceApi() : null;
       setPhase("capturing");
       setBusy(false);
-      setTimeout(() => {
-        const v = videoRef.current;
-        if (v) {
-          v.srcObject = stream;
-          v.muted = true;
-          v.playsInline = true;
-          v.play().catch(() => {
-          });
-        }
-      }, 100);
-      detRef.current = setInterval(async () => {
-        const v = videoRef.current;
-        if (!v || v.readyState < 2) return;
-        try {
-          const res = await fa.detectSingleFace(v, new fa.TinyFaceDetectorOptions()).withFaceExpressions();
-          if (res && res.expressions) {
-            let top = "", mx = 0;
-            for (const k in res.expressions) {
-              if (res.expressions[k] > mx) {
-                mx = res.expressions[k];
-                top = k;
-              }
-            }
-            if (top && mx > 0.55) exprRef.current[top] = (exprRef.current[top] || 0) + 1;
+      if (useCamera) {
+        setTimeout(() => {
+          const v = videoRef.current;
+          if (v) {
+            v.srcObject = stream;
+            v.muted = true;
+            v.playsInline = true;
+            v.play().catch(() => {
+            });
           }
-        } catch {
-        }
-      }, 1500);
+        }, 100);
+        detRef.current = setInterval(async () => {
+          const v = videoRef.current;
+          if (!v || v.readyState < 2) return;
+          try {
+            const res = await fa.detectSingleFace(v, new fa.TinyFaceDetectorOptions()).withFaceExpressions();
+            if (res && res.expressions) {
+              let top = "", mx = 0;
+              for (const k in res.expressions) {
+                if (res.expressions[k] > mx) {
+                  mx = res.expressions[k];
+                  top = k;
+                }
+              }
+              if (top && mx > 0.55) exprRef.current[top] = (exprRef.current[top] || 0) + 1;
+            }
+          } catch {
+          }
+        }, 1500);
+      }
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       audioCtxRef.current = ctx;
       const an = ctx.createAnalyser();
@@ -513,7 +516,30 @@ function Multimodal({ relationId, config, onBack }) {
   return /* @__PURE__ */ React.createElement(Shell, { title: "\u{1F3A5} \uD568\uAED8 \uBD84\uC11D", onBack: () => {
     cleanup();
     onBack();
-  } }, phase === "intro" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Card, { style: { background: "#fef9ec", border: "1px solid #fde68a", color: "#78350f", fontSize: 13.5, lineHeight: 1.8, marginBottom: 14 } }, /* @__PURE__ */ React.createElement("b", null, "\uC30D\uBC29 \uB3D9\uC758\uAC00 \uC788\uC5B4\uC57C\uB9CC"), " \uB179\uD654\xB7\uBD84\uC11D\uC774 \uC2DC\uC791\uB3FC\uC694. \uC6D0\uBCF8 \uC601\uC0C1\xB7\uC74C\uC131\uC740 ", /* @__PURE__ */ React.createElement("b", null, "\uAE30\uAE30 \uBC16\uC73C\uB85C \uB098\uAC00\uC9C0 \uC54A\uACE0"), ", \uBD84\uC11D(\uD45C\uC815\xB7\uC5B4\uC870 \uC694\uC57D)\uC774 \uB05D\uB098\uBA74 ", /* @__PURE__ */ React.createElement("b", null, "\uC0AD\uC81C"), "\uB3FC\uC694. \uC5B8\uC81C\uB4E0 \uCCA0\uD68C\uD560 \uC218 \uC788\uC5B4\uC694."), /* @__PURE__ */ React.createElement(Btn, { onClick: request, disabled: busy }, "\uB0B4\uAC00 \uBD84\uC11D\uC744 \uC694\uCCAD\uD560\uAC8C\uC694 (\uCF54\uB4DC \uBC1C\uAE09)"), /* @__PURE__ */ React.createElement("div", { style: { height: 8 } }), /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: () => setPhase("accept") }, "\uBC30\uC6B0\uC790\uC5D0\uAC8C \uBC1B\uC740 \uCF54\uB4DC\uB85C \uB3D9\uC758\uD558\uAE30"), msg && /* @__PURE__ */ React.createElement("div", { style: { color: "#c0392b", fontSize: 13, marginTop: 10 } }, msg)), phase === "request" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 16, fontWeight: 800, marginBottom: 8 } }, "\uBC30\uC6B0\uC790\uC5D0\uAC8C \uC774 \uCF54\uB4DC\uB97C \uC804\uB2EC\uD558\uC138\uC694"), /* @__PURE__ */ React.createElement(Card, { style: { textAlign: "center", marginBottom: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 30, fontWeight: 800, letterSpacing: 4, color: GREEN } }, code)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13.5, color: MUT, lineHeight: 1.7, marginBottom: 14 } }, "\uBC30\uC6B0\uC790 \uD734\uB300\uD3F0\uC5D0\uC11C ", /* @__PURE__ */ React.createElement("b", null, '\uB9C8\uC74C\uBD80\uBD80 \u2192 \u{1F3A5} \uD568\uAED8 \uBD84\uC11D \u2192 "\uCF54\uB4DC\uB85C \uB3D9\uC758\uD558\uAE30"'), '\uC5D0 \uC785\uB825\uD558\uACE0 \uB3D9\uC758\uD558\uBA74, \uC544\uB798 "\uB179\uD654 \uC2DC\uC791"\uC774 \uB3D9\uC791\uD574\uC694.'), /* @__PURE__ */ React.createElement(Btn, { onClick: startCapture, disabled: busy }, "\uBC30\uC6B0\uC790\uAC00 \uB3D9\uC758\uD588\uC5B4\uC694 \xB7 \uB179\uD654 \uC2DC\uC791"), /* @__PURE__ */ React.createElement("div", { style: { height: 8 } }), /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: () => setPhase("intro") }, "\uCDE8\uC18C"), msg && /* @__PURE__ */ React.createElement("div", { style: { color: "#c0392b", fontSize: 13, marginTop: 10 } }, msg)), phase === "accept" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 16, fontWeight: 800, marginBottom: 10 } }, "\uBC30\uC6B0\uC790\uC5D0\uAC8C \uBC1B\uC740 \uCF54\uB4DC \uC785\uB825"), /* @__PURE__ */ React.createElement(
+  } }, phase === "intro" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Card, { style: { background: "#fef9ec", border: "1px solid #fde68a", color: "#78350f", fontSize: 13.5, lineHeight: 1.8, marginBottom: 14 } }, /* @__PURE__ */ React.createElement("b", null, "\uC30D\uBC29 \uB3D9\uC758\uAC00 \uC788\uC5B4\uC57C\uB9CC"), " \uBD84\uC11D\uC774 \uC2DC\uC791\uB3FC\uC694. \uC6D0\uBCF8 \uC601\uC0C1\xB7\uC74C\uC131\uC740 ", /* @__PURE__ */ React.createElement("b", null, "\uAE30\uAE30 \uBC16\uC73C\uB85C \uB098\uAC00\uC9C0 \uC54A\uACE0"), ", \uBD84\uC11D(\uD45C\uC815\xB7\uC5B4\uC870 \uC694\uC57D)\uC774 \uB05D\uB098\uBA74 ", /* @__PURE__ */ React.createElement("b", null, "\uC0AD\uC81C"), "\uB3FC\uC694. \uC5B8\uC81C\uB4E0 \uCCA0\uD68C\uD560 \uC218 \uC788\uC5B4\uC694."), /* @__PURE__ */ React.createElement(Card, { style: { marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13.5, fontWeight: 800, marginBottom: 10 } }, "\uBD84\uC11D \uBC29\uC2DD\uC744 \uC120\uD0DD\uD558\uC138\uC694"), [
+    { on: true, emoji: "\u{1F3A5}", label: "\uB179\uD654 (\uC601\uC0C1)", desc: "\uD45C\uC815 + \uC5B4\uC870\uB97C \uD568\uAED8 \uBD84\uC11D" },
+    { on: false, emoji: "\u{1F399}\uFE0F", label: "\uB179\uC74C (\uC74C\uC131\uB9CC)", desc: "\uCE74\uBA54\uB77C \uC5C6\uC774 \uC5B4\uC870\uB9CC \uBD84\uC11D \u2014 \uBD80\uB2F4\uC774 \uB35C\uD574\uC694" }
+  ].map((opt) => /* @__PURE__ */ React.createElement(
+    "div",
+    {
+      key: String(opt.on),
+      onClick: () => setUseCamera(opt.on),
+      style: {
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        padding: "10px 12px",
+        marginBottom: 8,
+        borderRadius: 12,
+        cursor: "pointer",
+        border: `1.5px solid ${useCamera === opt.on ? GREEN : LINE}`,
+        background: useCamera === opt.on ? "#f6faf8" : "#fff"
+      }
+    },
+    /* @__PURE__ */ React.createElement("span", { style: { fontSize: 22 } }, opt.emoji),
+    /* @__PURE__ */ React.createElement("span", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("span", { style: { display: "block", fontSize: 14, fontWeight: 700 } }, opt.label), /* @__PURE__ */ React.createElement("span", { style: { display: "block", fontSize: 12, color: MUT, marginTop: 2 } }, opt.desc)),
+    /* @__PURE__ */ React.createElement("span", { style: { color: useCamera === opt.on ? GREEN : LINE, fontWeight: 800 } }, useCamera === opt.on ? "\u25CF" : "\u25CB")
+  ))), /* @__PURE__ */ React.createElement(Btn, { onClick: request, disabled: busy }, "\uB0B4\uAC00 ", useCamera ? "\uB179\uD654" : "\uB179\uC74C", " \uBD84\uC11D\uC744 \uC694\uCCAD\uD560\uAC8C\uC694 (\uCF54\uB4DC \uBC1C\uAE09)"), /* @__PURE__ */ React.createElement("div", { style: { height: 8 } }), /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: () => setPhase("accept") }, "\uBC30\uC6B0\uC790\uC5D0\uAC8C \uBC1B\uC740 \uCF54\uB4DC\uB85C \uB3D9\uC758\uD558\uAE30"), msg && /* @__PURE__ */ React.createElement("div", { style: { color: "#c0392b", fontSize: 13, marginTop: 10 } }, msg)), phase === "request" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 16, fontWeight: 800, marginBottom: 8 } }, "\uBC30\uC6B0\uC790\uC5D0\uAC8C \uC774 \uCF54\uB4DC\uB97C \uC804\uB2EC\uD558\uC138\uC694"), /* @__PURE__ */ React.createElement(Card, { style: { textAlign: "center", marginBottom: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 30, fontWeight: 800, letterSpacing: 4, color: GREEN } }, code)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13.5, color: MUT, lineHeight: 1.7, marginBottom: 14 } }, "\uBC30\uC6B0\uC790 \uD734\uB300\uD3F0\uC5D0\uC11C ", /* @__PURE__ */ React.createElement("b", null, '\uB9C8\uC74C\uBD80\uBD80 \u2192 \uD568\uAED8 \uBD84\uC11D \u2192 "\uCF54\uB4DC\uB85C \uB3D9\uC758\uD558\uAE30"'), '\uC5D0 \uC785\uB825\uD558\uACE0 \uB3D9\uC758\uD558\uBA74, \uC544\uB798 "', useCamera ? "\uB179\uD654" : "\uB179\uC74C", ' \uC2DC\uC791"\uC774 \uB3D9\uC791\uD574\uC694.'), /* @__PURE__ */ React.createElement(Btn, { onClick: startCapture, disabled: busy }, "\uBC30\uC6B0\uC790\uAC00 \uB3D9\uC758\uD588\uC5B4\uC694 \xB7 ", useCamera ? "\uB179\uD654" : "\uB179\uC74C", " \uC2DC\uC791"), /* @__PURE__ */ React.createElement("div", { style: { height: 8 } }), /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: () => setPhase("intro") }, "\uCDE8\uC18C"), msg && /* @__PURE__ */ React.createElement("div", { style: { color: "#c0392b", fontSize: 13, marginTop: 10 } }, msg)), phase === "accept" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 16, fontWeight: 800, marginBottom: 10 } }, "\uBC30\uC6B0\uC790\uC5D0\uAC8C \uBC1B\uC740 \uCF54\uB4DC \uC785\uB825"), /* @__PURE__ */ React.createElement(
     "input",
     {
       value: inputCode,
@@ -524,7 +550,7 @@ function Multimodal({ relationId, config, onBack }) {
   ), /* @__PURE__ */ React.createElement(Card, { style: { background: "#f6faf8", fontSize: 12.5, color: MUT, lineHeight: 1.7, marginBottom: 12 } }, "\uB3D9\uC758\uD558\uBA74 \uC774 \uC138\uC158\uC5D0\uC11C ", /* @__PURE__ */ React.createElement("b", null, "\uB179\uD654\xB7\uC74C\uC131 \uBD84\uC11D"), "\uC774 \uAC00\uB2A5\uD574\uC838\uC694. \uC218\uC9D1\uC740 \uD45C\uC815\xB7\uC5B4\uC870\uC758 ", /* @__PURE__ */ React.createElement("b", null, "\uC694\uC57D"), "\uBFD0, \uC6D0\uBCF8\uC740 \uC800\uC7A5\xB7\uC804\uC1A1\uB418\uC9C0 \uC54A\uC544\uC694. \uC5B8\uC81C\uB4E0 \uCCA0\uD68C\uD560 \uC218 \uC788\uC5B4\uC694."), /* @__PURE__ */ React.createElement("label", { style: { display: "flex", alignItems: "center", gap: 8, fontSize: 14, marginBottom: 12, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: agreed, onChange: (e) => setAgreed(e.target.checked) }), " \uC704 \uB0B4\uC6A9\uC744 \uD655\uC778\uD588\uACE0 \uB3D9\uC758\uD569\uB2C8\uB2E4."), /* @__PURE__ */ React.createElement(Btn, { onClick: accept, disabled: busy || !agreed || !inputCode.trim() }, "\uB3D9\uC758\uD558\uACE0 \uC644\uB8CC"), /* @__PURE__ */ React.createElement("div", { style: { height: 8 } }), /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: () => setPhase("intro") }, "\uC774\uC804"), msg && /* @__PURE__ */ React.createElement("div", { style: { color: "#c0392b", fontSize: 13, marginTop: 10 } }, msg)), phase === "accepted" && /* @__PURE__ */ React.createElement(Card, { style: { textAlign: "center", marginTop: 20 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 34 } }, "\u2705"), /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 800, fontSize: 17, margin: "8px 0" } }, "\uB3D9\uC758 \uC644\uB8CC"), /* @__PURE__ */ React.createElement("div", { style: { color: MUT, fontSize: 14, lineHeight: 1.7 } }, "\uC694\uCCAD\uD558\uC2E0 \uBD84\uC774 \uB179\uD654\uB97C \uC2DC\uC791\uD560 \uC218 \uC788\uC5B4\uC694.", /* @__PURE__ */ React.createElement("br", null), "\uB9C8\uC74C\uC774 \uBC14\uB00C\uBA74 \uC5B8\uC81C\uB4E0 \uCCA0\uD68C\uD560 \uC218 \uC788\uC5B4\uC694."), /* @__PURE__ */ React.createElement("div", { style: { height: 14 } }), /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: async () => {
     await revoke(inputCode.trim().toUpperCase());
     onBack();
-  } }, "\uB3D9\uC758 \uCCA0\uD68C")), phase === "capturing" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("video", { ref: videoRef, style: { width: "100%", borderRadius: 14, background: "#000", marginBottom: 12 } }), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", color: MUT, fontSize: 13, marginBottom: 12 } }, "\u{1F534} \uAE30\uAE30 \uC548\uC5D0\uC11C\uB9CC \uBD84\uC11D \uC911\u2026 (\uC6D0\uBCF8\uC740 \uC800\uC7A5\xB7\uC804\uC1A1\uB418\uC9C0 \uC54A\uC544\uC694)"), /* @__PURE__ */ React.createElement(Btn, { onClick: stopCapture }, "\uB179\uD654 \uC885\uB8CC \xB7 \uBD84\uC11D \uBCF4\uAE30")), phase === "result" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Card, { style: { marginBottom: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, fontWeight: 800, color: GREEN, marginBottom: 8 } }, "\uC628\uB514\uBC14\uC774\uC2A4 \uBD84\uC11D \uC694\uC57D (\uC6D0\uBCF8\uC740 \uC774\uBBF8 \uC0AD\uC81C\uB428)"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, lineHeight: 1.8 } }, signals.visualCues ? /* @__PURE__ */ React.createElement("div", null, "\xB7 ", signals.visualCues) : /* @__PURE__ */ React.createElement("div", { style: { color: MUT } }, "\xB7 \uD45C\uC815\uC774 \uCDA9\uBD84\uD788 \uAC10\uC9C0\uB418\uC9C0 \uC54A\uC558\uC5B4\uC694"), signals.toneAnalysis ? /* @__PURE__ */ React.createElement("div", null, "\xB7 ", signals.toneAnalysis) : null)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13.5, marginBottom: 8 } }, "\uBC29\uAE08 \uB098\uB208 \uB300\uD654\uAC00 \uC788\uC73C\uBA74 \uC801\uC5B4\uC8FC\uC138\uC694 (\uC120\uD0DD)."), /* @__PURE__ */ React.createElement(
+  } }, "\uB3D9\uC758 \uCCA0\uD68C")), phase === "capturing" && /* @__PURE__ */ React.createElement(React.Fragment, null, useCamera ? /* @__PURE__ */ React.createElement("video", { ref: videoRef, style: { width: "100%", borderRadius: 14, background: "#000", marginBottom: 12 } }) : /* @__PURE__ */ React.createElement(Card, { style: { textAlign: "center", padding: "28px 16px", marginBottom: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 40 } }, "\u{1F399}\uFE0F"), /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 800, fontSize: 15, marginTop: 8 } }, "\uC74C\uC131\uB9CC \uBD84\uC11D \uC911"), /* @__PURE__ */ React.createElement("div", { style: { color: MUT, fontSize: 12.5, marginTop: 4 } }, "\uCE74\uBA54\uB77C\uB294 \uAEBC\uC838 \uC788\uC5B4\uC694")), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", color: MUT, fontSize: 13, marginBottom: 12 } }, "\u{1F534} \uAE30\uAE30 \uC548\uC5D0\uC11C\uB9CC \uBD84\uC11D \uC911\u2026 (\uC6D0\uBCF8\uC740 \uC800\uC7A5\xB7\uC804\uC1A1\uB418\uC9C0 \uC54A\uC544\uC694)"), /* @__PURE__ */ React.createElement(Btn, { onClick: stopCapture }, useCamera ? "\uB179\uD654" : "\uB179\uC74C", " \uC885\uB8CC \xB7 \uBD84\uC11D \uBCF4\uAE30")), phase === "result" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Card, { style: { marginBottom: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, fontWeight: 800, color: GREEN, marginBottom: 8 } }, "\uC628\uB514\uBC14\uC774\uC2A4 \uBD84\uC11D \uC694\uC57D (\uC6D0\uBCF8\uC740 \uC774\uBBF8 \uC0AD\uC81C\uB428)"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, lineHeight: 1.8 } }, useCamera && (signals.visualCues ? /* @__PURE__ */ React.createElement("div", null, "\xB7 ", signals.visualCues) : /* @__PURE__ */ React.createElement("div", { style: { color: MUT } }, "\xB7 \uD45C\uC815\uC774 \uCDA9\uBD84\uD788 \uAC10\uC9C0\uB418\uC9C0 \uC54A\uC558\uC5B4\uC694")), signals.toneAnalysis ? /* @__PURE__ */ React.createElement("div", null, "\xB7 ", signals.toneAnalysis) : /* @__PURE__ */ React.createElement("div", { style: { color: MUT } }, "\xB7 \uC5B4\uC870\uAC00 \uCDA9\uBD84\uD788 \uAC10\uC9C0\uB418\uC9C0 \uC54A\uC558\uC5B4\uC694"))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13.5, marginBottom: 8 } }, "\uBC29\uAE08 \uB098\uB208 \uB300\uD654\uAC00 \uC788\uC73C\uBA74 \uC801\uC5B4\uC8FC\uC138\uC694 (\uC120\uD0DD)."), /* @__PURE__ */ React.createElement(
     "textarea",
     {
       value: inputText,
