@@ -28,9 +28,17 @@ npx wrangler deploy                                 # 포그라운드 필수, li
 - esbuild가 한글을 `\uXXXX`로 이스케이프 → **컴파일본 grep은 한글 리터럴 대신 ASCII 마커**(함수명·`safety_tier` 등)로.
 - 배포는 [[feedback_cloudflare_account]] **limyj007 계정**·[[feedback_wrangler_deploy]] 포그라운드.
 
+## ⚠️ 관계 기억은 (relation_id, user_id) 복합키 (ADDENDUM 02 §1 — 절대 되돌리지 말 것)
+`relation_memory_v2`(migration 0003). **기억의 소유자 = 통역을 실행한 사용자.**
+- ⚠️ **`loadMemory`/`saveMemory`에서 userId를 빼면 배우자의 기억이 내 통역 프롬프트에 주입된다** — "수신 통역결과 공유 금지"를 데이터 층에서 위반. 공유 브리지로 배우자가 가입하는 순간부터 실제 발생하는 결함이었다(2026-07-17 수정).
+- **userId는 반드시 JWT(`c.get('uid')`)에서** 파생 — body로 받으면 타인 기억 조회 가능. `waitUntil` 클로저에서 쓸 땐 uid를 미리 캡처.
+- 구 `relation_memory` 테이블은 **보존**(삭제 금지). 코드는 v2만 바라본다.
+- 검증 기준: 같은 relation의 배우자가 `GET /api/memory` 하면 **`memory: null`**(내 기억 미노출).
+
 ## ⚠️ 안전 오버라이드 — 분리 보호 3단계 (절대 완화·축약 금지)
 `translation-prompts.ts` SAFETY_OVERRIDE는 **모든 통역 시스템 프롬프트에 상시 포함**.
-- **T1 즉시분리**(신체·성적학대·생명위협): 통역·회복활동 전면중단 + 긴급자원(112/1366/1388/1577-1389).
+- **T1 즉시분리**(신체·성적학대·생명위협): 통역·회복활동 전면중단 + 긴급자원(112/1366/1388/1577-1389/**109**).
+- **자해·자살 신호 → 자살예방 상담전화 109(24시간)** (ADDENDUM 02 §2). 프롬프트 3곳(기타 위기신호·T1 자원·safety 스키마 `resources`) + 프론트 2곳(온보딩 안전고지·커뮤니티 `crisis_support`). ⚠️ **안전 규칙은 마음부부↔파생앱(마음세대) 동일 반영** — 버전 분기 금지.
 - **T2 지속학대**(반복 정서학대·강압통제): 상대에 다가가는 활동 금지 → 자기보호만.
 - **T3 일반갈등**: 통상 통역 + 회복레이어.
 - 안전 발동(T1/T2) 시 **모드별 JSON 대신 안전 스키마**(`safety_tier·response·reframe·protect_actions·resources·door_open`) 출력 → 프론트 `SafetyScreen`으로 분기(공유·활동·커뮤니티 버튼 미노출·기관 tel:링크). `/translate`가 `relation_safety` 기록.

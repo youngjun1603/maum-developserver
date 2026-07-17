@@ -224,10 +224,13 @@ async function callClaude(
 // 유틸: 관계 기억 조회/저장
 // ----------------------------------------------------------------------------
 
-async function loadMemory(db: D1Database, relationId: number): Promise<RelationshipMemory | undefined> {
+// ⚠️ ADDENDUM 02 §1 — 관계 기억은 (relation_id, user_id) 복합키다.
+//    userId를 빼면 배우자의 기억이 내 통역 프롬프트에 주입된다("수신 통역 결과 공유 금지" 위반).
+//    userId는 반드시 JWT(c.get('uid'))에서 파생할 것 — body로 받으면 타인 기억을 조회할 수 있다.
+async function loadMemory(db: D1Database, relationId: number, userId: number): Promise<RelationshipMemory | undefined> {
   const row = await db
-    .prepare('SELECT * FROM relation_memory WHERE relation_id = ?')
-    .bind(relationId)
+    .prepare('SELECT * FROM relation_memory_v2 WHERE relation_id = ? AND user_id = ?')
+    .bind(relationId, userId)
     .first<Record<string, string>>();
   if (!row) return undefined;
 
@@ -244,13 +247,13 @@ async function loadMemory(db: D1Database, relationId: number): Promise<Relations
   };
 }
 
-async function saveMemory(db: D1Database, relationId: number, mem: RelationshipMemory): Promise<void> {
+async function saveMemory(db: D1Database, relationId: number, userId: number, mem: RelationshipMemory): Promise<void> {
   await db
     .prepare(
-      `INSERT INTO relation_memory
-        (relation_id, recurring_topics, psychology_profile, christian_profile, success_patterns, partner_perspective, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
-       ON CONFLICT(relation_id) DO UPDATE SET
+      `INSERT INTO relation_memory_v2
+        (relation_id, user_id, recurring_topics, psychology_profile, christian_profile, success_patterns, partner_perspective, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+       ON CONFLICT(relation_id, user_id) DO UPDATE SET
         recurring_topics = excluded.recurring_topics,
         psychology_profile = excluded.psychology_profile,
         christian_profile = excluded.christian_profile,
@@ -260,6 +263,7 @@ async function saveMemory(db: D1Database, relationId: number, mem: RelationshipM
     )
     .bind(
       relationId,
+      userId,
       JSON.stringify(mem.recurringTopics ?? []),
       mem.psychologyProfile ?? null,
       mem.christianProfile ?? null,
@@ -344,8 +348,8 @@ translate.post('/translate', async (c) => {
       multimodal = body.multimodal;
     }
 
-    // ── 관계 기억 로드 ──
-    const memory = await loadMemory(c.env.DB, body.relationId);
+    // ── 관계 기억 로드 (내 기억만 — ADDENDUM 02 §1) ──
+    const memory = await loadMemory(c.env.DB, body.relationId, uid);
 
     // ── 프롬프트 조립 ──
     const config: TranslationConfig = {
@@ -406,7 +410,7 @@ translate.post('/translate', async (c) => {
           });
           const memRaw = await callClaude(c.env.ANTHROPIC_API_KEY, memPrompt.system, memPrompt.userMessage, 800);
           const memParsed = parseTranslationResponse<RelationshipMemory>(memRaw);
-          if (memParsed) await saveMemory(c.env.DB, body.relationId, memParsed);
+          if (memParsed) await saveMemory(c.env.DB, body.relationId, uid, memParsed);
         } catch {
           // 기억 갱신 실패는 통역 성공에 영향 없음 — 조용히 스킵
         }
@@ -576,11 +580,13 @@ translate.post('/feedback', async (c) => {
     if (!body.relationId || !body.feedback?.activity || !body.feedback?.status) {
       return c.json({ error: 'relationId, feedback.activity, feedback.status는 필수입니다.' }, 400);
     }
-    if (!(await assertRelationOwner(c.env.DB, body.relationId, c.get('uid')))) {
+    // uid는 JWT에서. waitUntil 클로저에서도 쓰므로 여기서 캡처한다(ADDENDUM 02 §1).
+    const uid = c.get('uid');
+    if (!(await assertRelationOwner(c.env.DB, body.relationId, uid))) {
       return c.json({ error: '이 관계에 접근 권한이 없어요.' }, 403);
     }
 
-    const memory = await loadMemory(c.env.DB, body.relationId);
+    const memory = await loadMemory(c.env.DB, body.relationId, uid);
     const { system, userMessage } = buildFeedbackPrompt({
       track: body.track === 'christian' ? 'christian' : 'psychology',
       feedback: body.feedback,
@@ -606,12 +612,12 @@ translate.post('/feedback', async (c) => {
       c.executionCtx.waitUntil(
         (async () => {
           try {
-            const mem = (await loadMemory(c.env.DB, body.relationId)) ?? {};
+            const mem = (await loadMemory(c.env.DB, body.relationId, uid)) ?? {};
             const patterns = mem.successPatterns ?? [];
             if (body.feedback.reaction === 'positive' && parsed.memory_hint) {
               patterns.push(parsed.memory_hint);
             }
-            await saveMemory(c.env.DB, body.relationId, {
+            await saveMemory(c.env.DB, body.relationId, uid, {
               ...mem,
               successPatterns: patterns.slice(-10), // 최근 10개 유지
             });
@@ -720,11 +726,13 @@ translate.get('/community/posts', async (c) => {
 translate.get('/memory', async (c) => {
   const relationId = Number(c.req.query('relationId'));
   if (!relationId) return c.json({ error: 'relationId가 필요합니다.' }, 400);
-  if (!(await assertRelationOwner(c.env.DB, relationId, c.get('uid')))) {
+  const uid = c.get('uid');
+  if (!(await assertRelationOwner(c.env.DB, relationId, uid))) {
     return c.json({ error: '이 관계에 접근 권한이 없어요.' }, 403);
   }
 
-  const memory = await loadMemory(c.env.DB, relationId);
+  // 요청자 본인의 기억만 반환한다 — 배우자 기억 열람 금지(ADDENDUM 02 §1).
+  const memory = await loadMemory(c.env.DB, relationId, uid);
   return c.json({ ok: true, memory: memory ?? null });
 });
 

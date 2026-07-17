@@ -192,7 +192,7 @@ function Onboarding({ onDone }) {
         <Card style={{ background: '#fef9ec', border: '1px solid #fde68a', color: '#78350f', fontSize: 13.5, lineHeight: 1.8 }}>
           <b>안전이 우선입니다.</b><br />
           신체적 폭력·강압적 통제·위협이 있는 상황이라면, 이 서비스는 대화 기술의 문제로 다루지 않습니다.<br />
-          긴급 시 <b>112</b> · 여성긴급전화 <b>1366</b> · 청소년 <b>1388</b> · 노인보호 <b>1577-1389</b>.<br />
+          긴급 시 <b>112</b> · 여성긴급전화 <b>1366</b> · 청소년 <b>1388</b> · 노인보호 <b>1577-1389</b> · 자살예방 상담 <b>109</b>(24시간).<br />
           마음부부는 의료·상담을 대체하지 않는 <b>통역 도구</b>이며, 모든 통역은 단정이 아닌 <b>가설</b>로 제안됩니다.
         </Card>
         <div style={{ height: 14 }} />
@@ -503,7 +503,7 @@ function Community({ onBack }) {
             <div style={{ marginTop: 10, background: blocked.crisis_support ? '#fff4ee' : '#fef9ec', border: `1px solid ${blocked.crisis_support ? '#f5c6a5' : '#fde68a'}`, borderRadius: 10, padding: 12, fontSize: 13, lineHeight: 1.7, color: '#78350f' }}>
               {blocked.message}
               {blocked.suggested_fix && <div style={{ marginTop: 6, color: GREEN }}>수정 제안 · {blocked.suggested_fix}</div>}
-              {blocked.crisis_support && <div style={{ marginTop: 6 }}>긴급 시 112 · 1366 · 1388</div>}
+              {blocked.crisis_support && <div style={{ marginTop: 6 }}>자살예방 상담전화 <a href="tel:109" style={{ color: '#b45309', fontWeight: 700 }}>109</a>(24시간) · 긴급 시 112 · 1366 · 1388</div>}
             </div>
           )}
           <div style={{ height: 10 }} />
