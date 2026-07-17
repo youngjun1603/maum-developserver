@@ -659,6 +659,15 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
     }).catch(() => window.open(coupleBase, "_blank", "noopener noreferrer"));
   };
   const { useState: useS, useEffect: useE, useRef } = React;
+  const STORY_BAR_KEY = "story_bar_dismissed";
+  const [showStoryBar, setShowStoryBar] = useS(() => {
+    try {
+      const ts = Number(localStorage.getItem(STORY_BAR_KEY) || 0);
+      return !ts || Date.now() - ts > 30 * 24 * 60 * 60 * 1e3;
+    } catch {
+      return true;
+    }
+  });
   const [activeTestIdx, setActiveTestIdx] = useS(0);
   const [visibleSections, setVisibleSections] = useS({});
   const [slideIdx, setSlideIdx] = useS(0);
@@ -744,7 +753,56 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
     }
   ];
   const slide = SHOWCASE[slideIdx] || SHOWCASE[0];
-  return /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "'Noto Sans KR', sans-serif", color: "#1A1A1A", background: "#FAFAF8" } }, /* @__PURE__ */ React.createElement("section", { style: {
+  return /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "'Noto Sans KR', sans-serif", color: "#1A1A1A", background: "#FAFAF8" } }, showStoryBar && /* @__PURE__ */ React.createElement("div", { style: {
+    background: "linear-gradient(90deg, #1B4332 0%, #2D6A4F 100%)",
+    color: "white",
+    fontSize: 13,
+    position: "relative"
+  } }, /* @__PURE__ */ React.createElement(
+    "a",
+    {
+      href: "/story/",
+      style: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        padding: "9px 44px 9px 16px",
+        color: "white",
+        textDecoration: "none",
+        textAlign: "center"
+      }
+    },
+    /* @__PURE__ */ React.createElement("span", { "aria-hidden": "true" }, "\u{1F33F}"),
+    /* @__PURE__ */ React.createElement("span", { style: { opacity: 0.92 } }, tl("\uB9C8\uC74C\uD480\uC740 \uB2F9\uC2E0\uC774 \uC54C\uC9C0 \uBABB\uD558\uB294 \uB9C8\uC74C\uC744 \uC77D\uC5B4 \uC804\uD569\uB2C8\uB2E4", "Maumful reads the heart you didn't know you had")),
+    /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, whiteSpace: "nowrap", textDecoration: "underline", textUnderlineOffset: 3 } }, tl("\uC774\uC57C\uAE30 \uBCF4\uAE30 \u2192", "Our story \u2192"))
+  ), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: () => {
+        setShowStoryBar(false);
+        try {
+          localStorage.setItem(STORY_BAR_KEY, String(Date.now()));
+        } catch {
+        }
+      },
+      "aria-label": tl("\uBC30\uB108 \uB2EB\uAE30", "Dismiss banner"),
+      style: {
+        position: "absolute",
+        right: 10,
+        top: "50%",
+        transform: "translateY(-50%)",
+        background: "none",
+        border: "none",
+        color: "rgba(255,255,255,.65)",
+        fontSize: 16,
+        lineHeight: 1,
+        cursor: "pointer",
+        padding: 6
+      }
+    },
+    "\xD7"
+  )), /* @__PURE__ */ React.createElement("section", { style: {
     minHeight: "88vh",
     display: "flex",
     alignItems: "center",

@@ -15,7 +15,8 @@
 
 - DB: `maumful-db` (D1: f8046693)
 - 결제: 토스페이먼츠(KRW) + Stripe(USD), 크레딧 기반
-- 검사 12종: SCT, DSI, PHQ-9, GAD-7, DASS-21, BIG5, K-MBI+, LOST, SRCI, SDRI, RBC, SDI
+- 검사 **10종**: PHQ-9, GAD-7, DASS-21, BIG5, LOST, SRCI(=SCT), SDRI(=DSI), K-MBI+, Holland RIASEC, 직업가치관
+  - ⚠️ 과거 "12종(…SCT, SRCI, DSI, SDRI, RBC, SDI)"으로 적혀 있었으나 **오류**: SCT=SRCI·DSI=SDRI를 중복 계수했고 `RBC`·`SDI`는 **코드에 존재하지 않는다**. 실제 문항 배열 10개 기준(`phq9Q`·`gad7Q`·`dass21Q`·`big5Q`·`lostQ`·`sdriCompletionQ`·`sdriLikertQ`·`burnoutQ`·`RIASEC_Q`·`VALUES_Q`). 문항수·표기는 메모리 `project_maumful_tests`.
 - 게임 8종: garden, efmt, gratitude, tree, burnout, mood, focus, worry
 - 검사 문항수·표시 동기화·카드순서: 메모리 `project_maumful_tests` 참조
 

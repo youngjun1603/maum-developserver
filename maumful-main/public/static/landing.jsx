@@ -507,6 +507,16 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
       .catch(() => window.open(coupleBase, '_blank', 'noopener noreferrer'));
   };
   const { useState: useS, useEffect: useE, useRef } = React;
+  // 브랜드 스토리 배너 — 닫으면 30일간 미노출.
+  // ⚠️ useS 구조분해(위 줄) 뒤에 둘 것 — const는 호이스팅 안 됨(TDZ). 앞에 두면 ReferenceError로 랜딩이 통째로 크래시.
+  // ⚠️ 이 스코프(LandingPage)에 둘 것 — GlobalNav 등 다른 컴포넌트에 두면 같은 이유로 크래시(과거 실사고).
+  const STORY_BAR_KEY = 'story_bar_dismissed';
+  const [showStoryBar, setShowStoryBar] = useS(() => {
+    try {
+      const ts = Number(localStorage.getItem(STORY_BAR_KEY) || 0);
+      return !ts || (Date.now() - ts) > 30 * 24 * 60 * 60 * 1000;
+    } catch { return true; }
+  });
   const [activeTestIdx, setActiveTestIdx] = useS(0);
   const [visibleSections, setVisibleSections] = useS({});
   const [slideIdx, setSlideIdx] = useS(0);
@@ -577,6 +587,38 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
 
   return (
     <div style={{ fontFamily: "'Noto Sans KR', sans-serif", color: '#1A1A1A', background: '#FAFAF8' }}>
+
+      {/* ── ⓪ 브랜드 스토리 슬림 배너 ────────────────────
+          첫 방문 고객을 막지 않는 방식(모달·인터스티셜 아님). 궁금한 사람만 /story로.
+          닫으면 localStorage로 30일간 미노출. */}
+      {showStoryBar && (
+        <div style={{
+          background: 'linear-gradient(90deg, #1B4332 0%, #2D6A4F 100%)',
+          color: 'white', fontSize: 13, position: 'relative',
+        }}>
+          <a href="/story/"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              padding: '9px 44px 9px 16px', color: 'white', textDecoration: 'none', textAlign: 'center',
+            }}>
+            <span aria-hidden="true">🌿</span>
+            <span style={{ opacity: 0.92 }}>
+              {tl('마음풀은 당신이 알지 못하는 마음을 읽어 전합니다', "Maumful reads the heart you didn't know you had")}
+            </span>
+            <span style={{ fontWeight: 700, whiteSpace: 'nowrap', textDecoration: 'underline', textUnderlineOffset: 3 }}>
+              {tl('이야기 보기 →', 'Our story →')}
+            </span>
+          </a>
+          <button
+            onClick={() => { setShowStoryBar(false); try { localStorage.setItem(STORY_BAR_KEY, String(Date.now())); } catch {} }}
+            aria-label={tl('배너 닫기', 'Dismiss banner')}
+            style={{
+              position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+              background: 'none', border: 'none', color: 'rgba(255,255,255,.65)',
+              fontSize: 16, lineHeight: 1, cursor: 'pointer', padding: 6,
+            }}>×</button>
+        </div>
+      )}
 
       {/* ── ① HERO ─────────────────────────────────────── */}
       <section style={{
