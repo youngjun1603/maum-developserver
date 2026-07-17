@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>마음세대 — 부부 관계 통역</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { font-family: 'Malgun Gothic','Apple SD Gothic Neo',sans-serif; background: #eef6f1; color: #1a2b22;
+    -webkit-font-smoothing: antialiased; }
+  button { font-family: inherit; }
+  textarea { font-family: inherit; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+</style>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script>
+  // 진입 토큰(?t=) 처리 — React 마운트 전 필수
+  (function () {
+    var t = new URLSearchParams(window.location.search).get('t');
+    if (t) { localStorage.setItem('sedae_token', t); window.history.replaceState({}, '', '/'); }
+  })();
+</script>
+<script src="/static/compiled/sedae_hub.js?v=9"></script>
+</body>
+</html>

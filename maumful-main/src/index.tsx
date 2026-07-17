@@ -1861,6 +1861,22 @@ app.get('/api/bubu-token', async (c) => {
   return c.json({ success: true, bubuToken })
 })
 
+// ── 마음세대(부모-자녀 세대 통역) SSO 토큰 — 마음부부와 동일 패턴 ──
+// sedae.maumful.com 진입용. 워커가 공유 KV의 JWT_SECRET으로 검증한다.
+app.get('/api/sedae-token', async (c) => {
+  const { KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ error: '로그인이 필요합니다.' }, 401)
+
+  const secret = await getJwtSecret(KV)
+  const now    = Math.floor(Date.now() / 1000)
+  const sedaeToken = await signJwt(
+    { sub: userId, type: 'sedae', iat: now, exp: now + 7 * 86400 },
+    secret
+  )
+  return c.json({ success: true, sedaeToken })
+})
+
 // ── 마음 시리즈(마음수달 등) SSO 토큰 — 마음풀 계정으로 단일로그인 진입 ──
 // MAUM_SSO_SECRET(시크릿) 미설정 시 503 → 프론트는 일반 링크로 폴백(무영향).
 app.get('/api/maum-sso-token', async (c) => {
