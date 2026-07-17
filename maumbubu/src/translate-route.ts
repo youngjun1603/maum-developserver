@@ -125,6 +125,9 @@ CREATE TABLE IF NOT EXISTS couple_relations (
   created_at TEXT DEFAULT (datetime('now'))
 );
 
+-- ⚠️ 아래 relation_memory는 구 스키마다(보존만 — 코드는 더 이상 읽지 않는다).
+--    현재 코드가 쓰는 것은 relation_memory_v2 (migration 0003 / ADDENDUM 02 §1).
+--    relation_id 단일키면 배우자의 기억이 내 통역 프롬프트에 주입된다 → 반드시 (relation_id, user_id) 복합키.
 CREATE TABLE IF NOT EXISTS relation_memory (
   relation_id INTEGER PRIMARY KEY,
   recurring_topics TEXT,                    -- JSON 배열
@@ -133,6 +136,18 @@ CREATE TABLE IF NOT EXISTS relation_memory (
   success_patterns TEXT,                    -- JSON 배열
   partner_perspective TEXT,
   updated_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS relation_memory_v2 (
+  relation_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,                 -- 기억의 소유자 = 통역을 실행한 사용자
+  recurring_topics TEXT,                    -- JSON 배열
+  psychology_profile TEXT,
+  christian_profile TEXT,
+  success_patterns TEXT,                    -- JSON 배열
+  partner_perspective TEXT,
+  updated_at TEXT DEFAULT (datetime('now')),
+  PRIMARY KEY (relation_id, user_id)
 );
 
 CREATE TABLE IF NOT EXISTS consent_sessions (
