@@ -1094,6 +1094,9 @@ app.delete('/api/user/me', async (c) => {
       email='deleted_'||id||'@deleted.local',
       password_hash=NULL, social_provider=NULL, social_id=NULL,
       nickname='탈퇴 회원', email_verify_token=NULL,
+      -- ⚠️ 인증 플래그를 내린다. 안 내리면 탈퇴 회원이 계속 메일 발송 대상으로 남는다.
+      --    (마음게임 주간 리포트 cron 대상 조건이 is_email_verified=1 → 매주 deleted_*@deleted.local로 발송 시도)
+      is_email_verified=0,
       updated_at=CURRENT_TIMESTAMP
     WHERE id=?
   `).bind(userId).run()
