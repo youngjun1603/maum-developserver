@@ -54,6 +54,28 @@ const CREDIT_COST: Record<Mode, number> = { receive: 2, send: 2, mediate: 3, per
 // 청소년은 무료 전용(미성년자 계약 취소권 회피 + 기획 원칙) — 남용 방지 일일 한도만 둔다.
 const TEEN_DAILY_LIMIT = 10;
 
+// ★ 청소년 안전 신호 — **코드로 감지**한다 (감수 판정: "반복 표현 + 회피 신호 = T2")
+//   왜 코드인가: 프롬프트로만 두었더니 기독교 트랙에서 T2 발동이 2/5로 흔들렸다(실측).
+//   아이가 학대를 **신앙 고민의 형태**로 말하면("제가 신앙이 부족한 걸까요?") 트랙 모듈이
+//   그걸 신앙 상담 주제로 흡수해 T3로 답해버린다. 안전 가드는 확률이 아니라 **결정론**이어야 한다.
+//   → 감지되면 모델에게 "이건 T2다"라고 못박는다(판단을 맡기지 않는다).
+const TEEN_REPEAT = ['계속', '매일', '늘 ', '항상', '자꾸', '맨날', '노상', '툭하면', '수시로', '반복'];
+// ⚠️ 조사·어미 변형을 놓치지 않게 **정규식**으로. ("집에 있기 싫" vs "집에 있기**가** 싫" — 조사 하나에 빗나갔던 실수)
+const TEEN_AVOID_RE = [
+  /무서/,                       // 무서워요·무섭다
+  /집에\s*(있|가|들어가)\S*\s*싫/,  // 집에 있기(가) 싫 / 집에 가기 싫
+  /피하고\s*싶/,
+  /숨\S*\s*막/,                // 숨막혀요·숨이 막혀요
+  /도망/,
+  /나가고\s*싶/,
+  /(없어|사라)지고\s*싶/,
+  /죽고\s*싶/,
+];
+function detectTeenSafetySignal(input: string): boolean {
+  const t = (input || '').normalize('NFC');   // ⚠️ 자모 분리(NFD)는 완성형 매칭을 우회한다
+  return TEEN_REPEAT.some((k) => t.includes(k)) && TEEN_AVOID_RE.some((re) => re.test(t));
+}
+
 // [fix③] JWT 검증 (마음풀/마음커플과 동일 시크릿·crypto.subtle 방식)
 async function verifyJWT(token: string, secret: string): Promise<number | null> {
   try {
@@ -407,6 +429,8 @@ translate.post('/translate', async (c) => {
       relationContext: 'parent_child',
       userRole,
       ageTier,
+      // ★ 코드가 감지한 안전 신호 — 모델 판단에 맡기지 않는다(감수 판정)
+      forceTeenSafety: isTeen && detectTeenSafetySignal(body.input),
       counterpartContext: relMeta?.counterpart_context ?? undefined,
     };
     const { system, userMessage } = buildTranslationPrompt(config);
