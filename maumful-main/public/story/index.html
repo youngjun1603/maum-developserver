@@ -88,7 +88,10 @@
     border-bottom:1px solid var(--line);
   }
   .topbar .wrap{display:flex; align-items:center; justify-content:space-between; height:60px}
-  .brand{display:flex; align-items:center; gap:10px; font-weight:700; letter-spacing:-.01em}
+  .brand{display:flex; align-items:center; gap:10px; font-weight:700; letter-spacing:-.01em;
+    color:inherit; text-decoration:none; cursor:pointer; transition:opacity .15s ease}
+  .brand:hover{opacity:.72}
+  .brand:focus-visible{outline:2px solid var(--brand); outline-offset:4px; border-radius:6px}
   .brand .mark{width:26px; height:26px; flex:0 0 auto}
   .brand .word{font-family:var(--serif); font-size:1.16rem}
   .brand .word b{font-style:normal; font-weight:700}
@@ -237,14 +240,14 @@
 
 <header class="topbar">
   <div class="wrap">
-    <div class="brand">
+    <a class="brand" href="https://maumful.com" aria-label="마음풀 홈으로">
       <svg class="mark" viewBox="0 0 32 32" fill="none" aria-hidden="true">
         <path d="M16 29c0-7 0-11 0-14" stroke="var(--brand)" stroke-width="2.2" stroke-linecap="round"/>
         <path d="M16 17c-5 0-9-2.6-9-8 5 0 9 2.6 9 8Z" fill="var(--brand-soft)" stroke="var(--brand)" stroke-width="1.8" stroke-linejoin="round"/>
         <path d="M16 14c4 0 8-2.2 8-7-4.5 0-8 2.2-8 7Z" fill="var(--brand)" stroke="var(--brand)" stroke-width="1.6" stroke-linejoin="round"/>
       </svg>
       <span class="word"><b>마음풀</b> · maumful</span>
-    </div>
+    </a>
     <div class="top-actions">
       <span class="badge"><span class="lang-ko">브랜드 이야기</span><span class="lang-en">Our Story</span></span>
       <button id="langToggle" class="lang-btn" type="button" aria-label="Switch language / 언어 전환">EN</button>
