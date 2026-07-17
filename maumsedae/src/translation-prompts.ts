@@ -178,6 +178,24 @@ function relationContextModule(ctx: RelationContext, counterpartContext?: string
 - 부모 세대의 언어 코드를 고려한다: 사랑을 걱정·잔소리·돈으로 표현하는 세대, 감정 언어가 빈곤한 세대일 수 있음을 통역에 반영한다.${extra}`;
 }
 
+// ----------------------------------------------------------------------------
+// 청소년 모드 (DEV_01 §2.1) — 이 앱의 심장. 성인용 엔진을 나이만 바꿔 내주지 않는다.
+// ⚠️ 원칙이 하나 뒤집힌다: 성인 모드의 "통역 → 이해 → 관계 개선 활동"을 청소년에게 그대로 적용하면
+//    "부모의 마음을 네가 헤아려 네가 먼저 다가가라" = 피해자에게 회복의 짐을 지우는 것이 된다.
+// 프롬프트 조립에서 **최우선 순위**(프리앰블 직후)에 놓는다.
+// ----------------------------------------------------------------------------
+function teenModule(track: Track): string {
+  const christian = track === 'christian'
+    ? '\n- 기독교 트랙: 공경 렌즈에 보호 조항 명시 — "공경하라는 말씀은 학대를 견디라는 뜻이 아니야."'
+    : '';
+  return `## 청소년 사용자 원칙 (최우선)
+- 이 사용자는 청소년이다. 부모 갈등의 책임과 회복의 짐을 이 아이에게 지우지 않는다.
+- 자책 해소가 통역의 1순위다: 부모의 행동을 부모의 맥락(직장 불안·갱년기·부부문제)으로 돌려주어 "네 잘못이 아니야"를 근거와 함께 보여준다.
+- 활동 제안은 자기 돌봄형만: 감정 기록, 안전한 어른(담임·상담교사·친척)에게 말하기, 자기 진정. 부모에게 다가가는 활동은 사용자가 명시적으로 원할 때만, 낮은 위험의 것만.
+- 안전 민감도 상향: 다음 신호가 보이면 성인 기준보다 이르게 T2를 발동한다 — 반복적 체벌·물건 던짐, 폭언·비하("너 같은 건")의 반복, 방임(식사·의료·최소 돌봄 결핍), 과도한 통제(감금·소지품 수색·또래 관계 차단), 경제적 박탈. 자원은 청소년상담전화 1388, 학교 상담교사를 우선 안내하고, 자해·자살 신호에는 자살예방 상담전화 109를 안내한다.${christian}
+- 말투는 또래에게 건네듯 편안하게. 다만 아이 취급하거나 가르치려 들지 않는다.`;
+}
+
 // 심리상담 트랙 — 부모-자녀 확장: Bowen 자아분화 렌즈 (DEV_01 §1.3)
 function bowenLensModule(): string {
   return `
@@ -467,9 +485,12 @@ export function buildTranslationPrompt(config: TranslationConfig): BuiltPrompt {
     ? christianTrackModule(theologyLevel, pastoralTone) + (isPC ? honorSeparationLensModule() : '')
     : psychologyTrackModule(emotionDepth) + (isPC ? bowenLensModule() : '');
 
-  // 조립: 프리앰블 → 관계맥락 → 트랙(+렌즈) → 모드 → 기억 → 멀티모달 → 안전(마지막 = 최신 우선순위)
+  // 조립: 프리앰블 → [청소년 원칙] → 관계맥락 → 트랙(+렌즈) → 모드 → 기억 → 멀티모달 → 안전
+  // ⚠️ 청소년 원칙은 프리앰블 직후 최우선 — 아래 트랙·모드의 "관계 개선 활동" 지시보다 앞서서
+  //    "회복의 짐을 아이에게 지우지 않는다"를 먼저 세운다.
   const sections = [
     COMMON_PREAMBLE,
+    config.ageTier === 'teen' ? teenModule(track) : '',
     relationContextModule(config.relationContext, config.counterpartContext),
     trackModule,
     MODE_MODULES[mode],

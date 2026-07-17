@@ -51,6 +51,8 @@ const AI_GATEWAY = 'https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a6
 const MODEL = 'claude-sonnet-4-6';
 // [fix④] 통역 모드별 크레딧(마음풀 users.credits 차감). 피드백·커뮤니티는 무료(0)
 const CREDIT_COST: Record<Mode, number> = { receive: 2, send: 2, mediate: 3, perspective: 3 };
+// 청소년은 무료 전용(미성년자 계약 취소권 회피 + 기획 원칙) — 남용 방지 일일 한도만 둔다.
+const TEEN_DAILY_LIMIT = 10;
 
 // [fix③] JWT 검증 (마음풀/마음커플과 동일 시크릿·crypto.subtle 방식)
 async function verifyJWT(token: string, secret: string): Promise<number | null> {
@@ -81,6 +83,37 @@ translate.use('*', async (c, next) => {
   await next();
 });
 
+// ⚠️ 순서 중요: 청소년 차단이 미구현 게이트(NOT_YET)보다 **먼저** 돌아야 한다.
+//   NOT_YET이 먼저면 503이 teen 403을 가려, 아동 안전 가드가 검증되지 않은 채 남는다.
+//   3단계에서 NOT_YET 항목을 지우는 순간 teen 차단이 유일한 방어가 되므로, 지금 검증 가능해야 한다.
+//   의미상으로도 청소년에겐 "준비 중"(나중에 열림)이 아니라 "쓸 수 없음"이 맞다.
+// ⚠️ 청소년(teen) 기능 제한 — 코드 레벨 차단 (DEV_01 §2.1)
+//   프롬프트로만 막지 않는다. 아래는 teen 계정에서 **요청 자체가 불가능**해야 한다.
+//   - 멀티모달: 부모를 몰래 녹음하는 흐름을 시스템이 만들지 않는다 (동의 요청 생성 자체 불가)
+//   - 커뮤니티: 성인 방 노출 금지(그루밍 등 접촉 위험)
+//   - 공유 발신: 부모에게 통역 결과가 전달되는 경로 차단 (아이 안전 직결)
+//   - 결제: 민법상 미성년자 계약은 법정대리인 동의 없이 취소 가능 → 청소년은 무료 범위만
+const TEEN_BLOCKED: Record<string, string> = {
+  '/consent/request': '이 기능은 어른 계정에서만 쓸 수 있어요.',
+  '/consent/accept':  '이 기능은 어른 계정에서만 쓸 수 있어요.',
+  '/consent/revoke':  '이 기능은 어른 계정에서만 쓸 수 있어요.',
+  '/community/post':  '커뮤니티는 어른들이 이야기하는 공간이라 아직 열려 있지 않아요.',
+  '/community/posts': '커뮤니티는 어른들이 이야기하는 공간이라 아직 열려 있지 않아요.',
+  '/share/send':      '통역한 내용을 부모님께 보내는 기능은 쓸 수 없어요. 네 기록은 너만 볼 수 있어요.',
+  '/share/respond':   '이 기능은 어른 계정에서만 쓸 수 있어요.',
+  '/relation/invite': '부모님을 초대하는 기능은 쓸 수 없어요.',
+  '/relation/join':   '이 기능은 어른 계정에서만 쓸 수 있어요.',
+};
+translate.use('*', async (c, next) => {
+  const path = new URL(c.req.url).pathname.replace(/^\/api/, '');
+  const msg = TEEN_BLOCKED[path];
+  if (msg) {
+    const tier = await getAgeTier(c.env.KV, c.get('uid'));
+    if (tier === 'teen') return c.json({ error: msg, teenBlocked: true }, 403);
+  }
+  await next();
+});
+
 // ⚠️ 미구현 경로 게이트 (1단계 = 뼈대)
 //   마음부부에서 파생하면서 라우트는 따라왔지만, 이 앱의 테이블·설계가 아직 없는 것들이다.
 //   그냥 두면 없는 테이블을 조회해 **조용히 500**이 난다 → 여기서 명시적으로 막는다.
@@ -99,9 +132,6 @@ const NOT_YET: Record<string, { status: 403 | 503; msg: string }> = {
   '/share/respond':   { status: 503, msg: '공유는 준비 중이에요.' },
   '/relation/invite': { status: 503, msg: '상대 초대는 준비 중이에요.' },
   '/relation/join':   { status: 503, msg: '상대 초대는 준비 중이에요.' },
-  // 마음부부의 성인(19+) 게이트 — 마음세대는 만 14세부터 쓰는 앱이라 그대로 쓰면 안 된다.
-  // 2단계에서 연령 3층(teen/adult/senior) 산출로 교체한다.
-  '/age/verify':      { status: 503, msg: '연령 확인은 준비 중이에요.' },
 };
 translate.use('*', async (c, next) => {
   const path = new URL(c.req.url).pathname.replace(/^\/api/, '');
@@ -281,6 +311,10 @@ translate.post('/translate', async (c) => {
       theologyLevel?: 1 | 2 | 3;
       pastoralTone?: 'grace' | 'direct';
       userContext?: string;
+      /** 입력 출처 (DEV_01 §2.3) — 부모 사용자가 자녀 대화를 본 경우 구분 */
+      inputSource?: 'direct' | 'observed';
+      /** observed 신뢰 경계 안내를 보고도 계속 진행할 때 */
+      acknowledgeBoundary?: boolean;
       multimodal?: {
         consentSessionId: string;
         toneAnalysis?: string;
@@ -301,9 +335,43 @@ translate.post('/translate', async (c) => {
       return c.json({ error: '이 관계에 접근 권한이 없어요.' }, 403);
     }
 
-    // ── [fix④] 크레딧 비용 산정 (실제 차감은 게이트 통과 후 Claude 호출 직전) ──
+    // ── 연령등급 (생년월일에서 매번 재계산 — 만 19세 도달 시 자동 전환) ──
+    const ageTier = await getAgeTier(c.env.KV, uid);
+    if (!ageTier) return c.json({ error: '먼저 나이를 확인해 주세요.', needAgeCheck: true }, 403);
+
+    // ── 입력 출처 구분 (DEV_01 §2.3) — 부모 사용자가 자녀의 사적 대화를 본 경우 ──
+    // 'direct'(아이가 나에게 직접 한 말) → 통상 통역
+    // 'observed'(아이 카톡·일기 등을 본 것) → 통역 대신 **신뢰 경계 안내**를 우선한다.
+    //   사춘기 자녀가 "부모가 내 카톡을 봤고 그걸 AI로 분석했다"를 알게 되는 순간 신뢰가 더 무너진다.
+    //   ⚠️ 단, 자해·위험 신호가 관찰 내용에 있으면 안전이 우선 — 그 판단은 모델(SAFETY_OVERRIDE)에 맡기므로
+    //      여기서 기계적으로 막지 않고, 사용자가 "그래도 봐달라"고 하면 통역으로 넘어가게 한다.
+    if (body.inputSource === 'observed' && body.acknowledgeBoundary !== true) {
+      return c.json({
+        ok: true,
+        boundaryNotice: true,
+        result: {
+          message: '아이의 사적인 대화를 보게 되셨군요. 내용을 통역해 드리기 전에 — 아이가 이 사실을 알게 되면 신뢰가 크게 흔들릴 수 있어요. 지금 걱정되시는 것이 무엇인지 들려주시면, 아이에게 직접 다가가는 방법을 함께 찾아볼게요.',
+          safety_note: '다만 자해나 위험 신호가 보여서 걱정되신다면, 그때는 안전이 우선이에요. 아래에서 계속 진행하실 수 있어요.',
+        },
+      });
+    }
+
+    // ── 크레딧 비용 산정 (실제 차감은 게이트 통과 후 Claude 호출 직전) ──
     const spendMode: Mode = (['receive', 'send', 'mediate', 'perspective'] as Mode[]).includes(body.mode) ? body.mode : 'receive';
-    const cost = CREDIT_COST[spendMode] ?? 2;
+    // ⚠️ 청소년은 무료 전용 — 민법상 미성년자 계약은 법정대리인 동의 없이 취소 가능하므로
+    //    결제 경로를 아예 만들지 않는다. 기획 원칙("회복 책임을 아이에게 지우지 않는다")과도 맞다.
+    //    대신 남용 방지로 일일 한도만 둔다.
+    const isTeen = ageTier === 'teen';
+    const cost = isTeen ? 0 : (CREDIT_COST[spendMode] ?? 2);
+    if (isTeen) {
+      const today = new Date().toISOString().slice(0, 10);
+      const key = `sedae_teen_daily:${uid}:${today}`;
+      const used = Number((await c.env.KV.get(key)) ?? '0');
+      if (used >= TEEN_DAILY_LIMIT) {
+        return c.json({ error: '오늘은 여기까지 이야기 나눴어요. 내일 다시 만나요.', teenDailyLimit: true }, 429);
+      }
+      c.executionCtx.waitUntil(c.env.KV.put(key, String(used + 1), { expirationTtl: 86400 }));
+    }
 
     // ── 멀티모달: MVP 제외 (SPEC 6장 — 동의 게이트 재설계 필요) ──
     // 마음부부의 코드 동의 게이트는 쌍방이 앱을 쓴다는 전제인데, 70~80대 노부모가 코드로
@@ -342,6 +410,7 @@ translate.post('/translate', async (c) => {
       multimodal,
       relationContext: 'parent_child',
       userRole,
+      ageTier,
       counterpartContext: relMeta?.counterpart_context ?? undefined,
     };
     const { system, userMessage } = buildTranslationPrompt(config);
@@ -788,24 +857,58 @@ translate.patch('/relation', async (c) => {
 });
 
 // ----------------------------------------------------------------------------
-// POST /api/age/verify — 성인(만 19세+) 전용 게이트 (ADDENDUM 01 §3)
-//   마음부부는 부부 관계 통역 → 성인 전용. 생년월일로 검증 후 KV에 성인 플래그 저장.
+// 연령 3층 체계 (SPEC 3장 / DEV_01 §2)
+//   teen(만14~18) / adult(19~64) / senior(65+)
+//   ⚠️ 마음부부의 "성인 19+ 게이트"를 그대로 쓰면 안 된다 — 이 앱은 청소년이 핵심 사용자다.
+//   하한 만 14세 근거: 개인정보보호법상 만 14세 미만은 법정대리인 동의 필요 →
+//   부모와의 갈등을 다루는 앱에 부모 동의를 요구하면 서비스가 성립하지 않는다.
 // ----------------------------------------------------------------------------
+function calcAge(birthDate: string): number | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec((birthDate || '').trim());
+  if (!m) return null;
+  const by = +m[1], bm = +m[2], bd = +m[3];
+  const now = new Date();
+  let age = now.getUTCFullYear() - by;
+  if (now.getUTCMonth() + 1 < bm || (now.getUTCMonth() + 1 === bm && now.getUTCDate() < bd)) age--;
+  if (by < 1900 || age < 0 || age > 120) return null;
+  return age;
+}
+function tierOf(age: number): AgeTier {
+  if (age < 19) return 'teen';
+  if (age >= 65) return 'senior';
+  return 'adult';
+}
+// ⚠️ 연령등급은 가입 시 고정이 아니라 **매 요청 시 생년월일로 재계산**한다(DEV_01 §3).
+//    만 19세 도달 시 teen→adult 자동 전환(제한 해제). KV에 저장된 등급을 믿으면 생일이 지나도 안 바뀐다.
+async function getAgeTier(kv: KVNamespace, uid: number): Promise<AgeTier | null> {
+  const birth = await kv.get(`sedae_birth:${uid}`);
+  if (!birth) return null;
+  const age = calcAge(birth);
+  return age == null ? null : tierOf(age);
+}
+
+// POST /api/age/verify — 생년월일 등록 → 연령등급 산출
 translate.post('/age/verify', async (c) => {
   try {
     const uid = c.get('uid');
     const { birthDate } = await c.req.json<{ birthDate: string }>();
-    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec((birthDate || '').trim());
-    if (!m) return c.json({ error: '생년월일을 정확히 입력해 주세요.' }, 400);
-    const by = +m[1], bm = +m[2], bd = +m[3];
-    const now = new Date();
-    let age = now.getUTCFullYear() - by;
-    if (now.getUTCMonth() + 1 < bm || (now.getUTCMonth() + 1 === bm && now.getUTCDate() < bd)) age--;
-    if (by < 1900 || age < 0 || age > 120) return c.json({ error: '생년월일을 확인해 주세요.' }, 400);
-    if (age < 19) return c.json({ ok: false, minor: true, message: '마음부부는 만 19세 이상 성인 부부를 위한 서비스예요.' });
-    await c.env.KV.put(`sedae_adult:${uid}`, birthDate);
-    return c.json({ ok: true, adult: true });
+    const age = calcAge(birthDate);
+    if (age == null) return c.json({ error: '생년월일을 정확히 입력해 주세요.' }, 400);
+    if (age < 14) {
+      // 만 14세 미만은 법정대리인 동의가 필요해 본인 가입이 성립하지 않는다.
+      return c.json({ ok: false, tooYoung: true, message: '마음세대는 만 14세부터 이용할 수 있어요. 힘든 일이 있다면 청소년상담전화 1388로 이야기해 보세요.' });
+    }
+    await c.env.KV.put(`sedae_birth:${uid}`, birthDate.trim());
+    const tier = tierOf(age);
+    return c.json({ ok: true, ageTier: tier, isTeen: tier === 'teen' });
   } catch (e) { console.error('age verify error:', e); return c.json({ error: '확인에 실패했어요.' }, 500); }
+});
+
+// GET /api/me — 내 연령등급 (프론트 게이트 판단용)
+translate.get('/me', async (c) => {
+  const uid = c.get('uid');
+  const tier = await getAgeTier(c.env.KV, uid);
+  return c.json({ ok: true, ageTier: tier, needAgeCheck: tier == null });
 });
 
 // ============================================================================
