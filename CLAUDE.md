@@ -11,6 +11,7 @@
 | `maumgame-main/` | 마음풀 게임 (game.maumful.com) | `maumful-main/CLAUDE.md` |
 | `package/maumcouple/` | 마음커플 (couple.maumful.com) | `maumful-main/CLAUDE.md` |
 | `maumbubu/` | 마음부부 (부부 대화 통역, bubu.maumful.com) *신규* | `maumbubu/CLAUDE.md` (마음커플 패턴 공유) |
+| `maumsedae/` | 마음세대 (부모-자녀 세대 통역, sedae.maumful.com) *신규* | `maumsedae/CLAUDE.md` (마음부부에서 파생) |
 | `cts-maum-main/` | CTS 메인 (jesusmaum.com) — **별도 레포** `lightoflife-cts` | `cts-maum-main/CLAUDE.md` (+ 공통은 maumful-main) |
 | `cts-game-main/` | CTS 게임 (`lightoflife-game`) — ⚠️ **이 레포 안에 있음** | `cts-maum-main/CLAUDE.md` (+ maumful-main) |
 | `maumotter/` | 마음수달 (아이 정서 통역) *신규* | `maumotter/CLAUDE.md` + `_shared/` |
@@ -76,7 +77,7 @@ gh auth setup-git                   # gh를 git 자격증명 헬퍼로(GCM 캐�
 - **바로 가능**: 폐기된 상담사 승인 레거시 코드 제거 / 주간 리포트 메일 실수신 검증(사용자 동의 후)
 - **데이터 보고 판단**(2026-08-09경): 마음게임 콘텐츠 확장 — 어드민 🔁 루프 탭에서 검사↔게임 루프가 도는지 확인 후
 - **선행조건 대기**: 앱화·통합해석 상품화·연동형 통합결제 → 모두 **토스 실결제 반영 후**
-- **금지**: 커플 감정 내용 공유(동의·철회 UX 없이) / CTS 개발(명시적 재개 시에만) / 세대통역
+- **금지**: 커플 감정 내용 공유(동의·철회 UX 없이) / CTS 개발(명시적 재개 시에만)
 
 ---
 
