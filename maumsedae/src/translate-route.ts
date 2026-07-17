@@ -217,7 +217,13 @@ async function callClaude(
 
   const data = (await res.json()) as {
     content: Array<{ type: string; text?: string }>;
+    stop_reason?: string;
   };
+  // ⚠️ 잘림 감시 — 프롬프트에 내용을 추가하면 출력이 길어져 JSON이 잘리고 파싱이 실패한다(마음풀 실사고).
+  //    프롬프트를 늘릴 땐 이 경고가 뜨는지 확인하고 maxTokens를 올릴 것.
+  if (data.stop_reason && data.stop_reason !== 'end_turn') {
+    console.error('[callClaude] 출력이 잘렸을 수 있음. stop_reason=', data.stop_reason, 'maxTokens=', maxTokens);
+  }
   return data.content
     .filter((b) => b.type === 'text' && b.text)
     .map((b) => b.text)
