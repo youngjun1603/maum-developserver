@@ -845,63 +845,11 @@ function Multimodal({ relationId, config, onBack }) {
   );
 }
 
-// ── 수신함 + 배우자 연결 ──────────────────────────────────────────────────────
-const SHARE_LABEL = { message: '✉️ 배우자가 다듬은 한마디', mediate_view: '🔗 중재 통역 함께 보기', perspective_view: '🔗 관점 통역 함께 보기', activity_invite: '💌 같이 해볼래?' };
-function InboxItem({ it, onAccept }) {
-  const p = it.payload || {};
-  return (
-    <Card style={{ marginBottom: 10 }}>
-      <div style={{ fontSize: 12.5, fontWeight: 800, color: GREEN, marginBottom: 6 }}>{SHARE_LABEL[it.item_type] || '공유'}</div>
-      {it.item_type === 'message' && <div style={{ fontSize: 15, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{p.text}</div>}
-      {it.item_type === 'activity_invite' && (<>
-        <div style={{ fontSize: 15, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{p.action}</div>
-        {it.status === 'accepted'
-          ? <div style={{ fontSize: 13, color: GREEN, marginTop: 8 }}>같이 하기로 했어요 🌱</div>
-          : <Btn onClick={() => onAccept(it.id)} style={{ marginTop: 10 }}>같이 할게요</Btn>}
-      </>)}
-      {(it.item_type === 'mediate_view' || it.item_type === 'perspective_view') && (
-        <div style={{ fontSize: 14, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
-          {p.bridge || p.next_word || p.translation || p.surface || '함께 보기 내용'}
-        </div>
-      )}
-      <div style={{ fontSize: 11.5, color: MUT, marginTop: 8 }}>{(it.created_at || '').slice(0, 16).replace('T', ' ')}</div>
-    </Card>
-  );
-}
-function Inbox({ relationId, onBack, onSeen }) {
-  const [items, setItems] = useState(null);
-  const [code, setCode] = useState('');
-  const [joinCode, setJoinCode] = useState('');
-  const [msg, setMsg] = useState('');
-  const load = async () => { const r = await api(`/share/inbox?relationId=${relationId}`); setItems(r.ok ? (r.items || []) : []); if (onSeen) onSeen(); };
-  useEffect(() => { load(); }, []);
-  const makeInvite = async () => { const r = await api('/relation/invite', 'POST', { relationId }); if (r.ok) setCode(r.inviteCode); };
-  const join = async () => {
-    const c = joinCode.trim().toUpperCase(); if (!c) return;
-    const r = await api('/relation/join', 'POST', { inviteCode: c });
-    setMsg(r.ok ? '배우자와 연결됐어요 ✓ 이제 공유가 앱 안에서 바로 도착해요.' : (r.error || '연결에 실패했어요.'));
-  };
-  const accept = async (id) => { await api('/share/respond', 'POST', { shareId: id, action: 'accepted' }); load(); };
-  return (
-    <Shell title="📬 수신함" onBack={onBack}>
-      <Card style={{ marginBottom: 14, background: '#f6faf8' }}>
-        <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 6 }}>🤝 배우자 연결</div>
-        <div style={{ fontSize: 12.5, color: MUT, lineHeight: 1.65, marginBottom: 10 }}>연결하면 공유한 항목이 앱 안에서 바로 오갑니다. 한쪽이 코드를 만들고, 다른 쪽이 입력하면 끝.</div>
-        <Btn kind="ghost" onClick={makeInvite}>내 초대코드 만들기</Btn>
-        {code && <div style={{ textAlign: 'center', fontSize: 22, fontWeight: 800, letterSpacing: 3, color: GREEN, margin: '10px 0', fontFamily: 'monospace' }}>{code}</div>}
-        <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-          <input value={joinCode} onChange={e => setJoinCode(e.target.value)} placeholder="배우자 코드 입력" maxLength={6}
-            style={{ flex: 1, border: `1.5px solid ${LINE}`, borderRadius: 10, padding: 10, fontSize: 15, textTransform: 'uppercase', outline: 'none', fontFamily: 'monospace', letterSpacing: 2 }} />
-          <Btn onClick={join} style={{ width: 'auto', padding: '10px 16px' }}>연결</Btn>
-        </div>
-        {msg && <div style={{ fontSize: 12.5, color: GREEN, marginTop: 8, lineHeight: 1.6 }}>{msg}</div>}
-      </Card>
-      {items === null ? <div style={{ color: MUT, textAlign: 'center', padding: 30 }}>불러오는 중…</div>
-        : items.length === 0 ? <div style={{ color: MUT, textAlign: 'center', padding: 30 }}>아직 받은 공유가 없어요.</div>
-          : items.map(it => <InboxItem key={it.id} it={it} onAccept={accept} />)}
-    </Shell>
-  );
-}
+// ⚠️ 수신함·초대(Inbox)는 **제거했다** (2026-07-17).
+//   공유는 웹뷰 링크 단일 경로다(/s/:id) — 상대가 가입하지 않아도 열람하므로 초대·수신함이 필요 없다.
+//   SPEC 2장의 "일방향 통역 기본, 상대 참여 설득 불필요"와도 일치.
+//   되살릴 땐 청소년 안전 먼저: teen 관계 연결 금지 + /share/inbox teen 차단.
+
 
 // ── 성인 연령 게이트 (만 19세+, ADDENDUM 01 §3) ──────────────────────────────
 function AgeGate({ onPass }) {

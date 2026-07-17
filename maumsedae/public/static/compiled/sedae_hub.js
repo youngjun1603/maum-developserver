@@ -654,49 +654,6 @@ function Multimodal({ relationId, config, onBack }) {
     onBack();
   } }, "\uB3D9\uC758 \uCCA0\uD68C\uD558\uACE0 \uC885\uB8CC")));
 }
-const SHARE_LABEL = { message: "\u2709\uFE0F \uBC30\uC6B0\uC790\uAC00 \uB2E4\uB4EC\uC740 \uD55C\uB9C8\uB514", mediate_view: "\u{1F517} \uC911\uC7AC \uD1B5\uC5ED \uD568\uAED8 \uBCF4\uAE30", perspective_view: "\u{1F517} \uAD00\uC810 \uD1B5\uC5ED \uD568\uAED8 \uBCF4\uAE30", activity_invite: "\u{1F48C} \uAC19\uC774 \uD574\uBCFC\uB798?" };
-function InboxItem({ it, onAccept }) {
-  const p = it.payload || {};
-  return /* @__PURE__ */ React.createElement(Card, { style: { marginBottom: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, fontWeight: 800, color: GREEN, marginBottom: 6 } }, SHARE_LABEL[it.item_type] || "\uACF5\uC720"), it.item_type === "message" && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, lineHeight: 1.7, whiteSpace: "pre-wrap" } }, p.text), it.item_type === "activity_invite" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, lineHeight: 1.7, whiteSpace: "pre-wrap" } }, p.action), it.status === "accepted" ? /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: GREEN, marginTop: 8 } }, "\uAC19\uC774 \uD558\uAE30\uB85C \uD588\uC5B4\uC694 \u{1F331}") : /* @__PURE__ */ React.createElement(Btn, { onClick: () => onAccept(it.id), style: { marginTop: 10 } }, "\uAC19\uC774 \uD560\uAC8C\uC694")), (it.item_type === "mediate_view" || it.item_type === "perspective_view") && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, lineHeight: 1.7, whiteSpace: "pre-wrap" } }, p.bridge || p.next_word || p.translation || p.surface || "\uD568\uAED8 \uBCF4\uAE30 \uB0B4\uC6A9"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: MUT, marginTop: 8 } }, (it.created_at || "").slice(0, 16).replace("T", " ")));
-}
-function Inbox({ relationId, onBack, onSeen }) {
-  const [items, setItems] = useState(null);
-  const [code, setCode] = useState("");
-  const [joinCode, setJoinCode] = useState("");
-  const [msg, setMsg] = useState("");
-  const load = async () => {
-    const r = await api(`/share/inbox?relationId=${relationId}`);
-    setItems(r.ok ? r.items || [] : []);
-    if (onSeen) onSeen();
-  };
-  useEffect(() => {
-    load();
-  }, []);
-  const makeInvite = async () => {
-    const r = await api("/relation/invite", "POST", { relationId });
-    if (r.ok) setCode(r.inviteCode);
-  };
-  const join = async () => {
-    const c = joinCode.trim().toUpperCase();
-    if (!c) return;
-    const r = await api("/relation/join", "POST", { inviteCode: c });
-    setMsg(r.ok ? "\uBC30\uC6B0\uC790\uC640 \uC5F0\uACB0\uB410\uC5B4\uC694 \u2713 \uC774\uC81C \uACF5\uC720\uAC00 \uC571 \uC548\uC5D0\uC11C \uBC14\uB85C \uB3C4\uCC29\uD574\uC694." : r.error || "\uC5F0\uACB0\uC5D0 \uC2E4\uD328\uD588\uC5B4\uC694.");
-  };
-  const accept = async (id) => {
-    await api("/share/respond", "POST", { shareId: id, action: "accepted" });
-    load();
-  };
-  return /* @__PURE__ */ React.createElement(Shell, { title: "\u{1F4EC} \uC218\uC2E0\uD568", onBack }, /* @__PURE__ */ React.createElement(Card, { style: { marginBottom: 14, background: "#f6faf8" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 800, marginBottom: 6 } }, "\u{1F91D} \uBC30\uC6B0\uC790 \uC5F0\uACB0"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: MUT, lineHeight: 1.65, marginBottom: 10 } }, "\uC5F0\uACB0\uD558\uBA74 \uACF5\uC720\uD55C \uD56D\uBAA9\uC774 \uC571 \uC548\uC5D0\uC11C \uBC14\uB85C \uC624\uAC11\uB2C8\uB2E4. \uD55C\uCABD\uC774 \uCF54\uB4DC\uB97C \uB9CC\uB4E4\uACE0, \uB2E4\uB978 \uCABD\uC774 \uC785\uB825\uD558\uBA74 \uB05D."), /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: makeInvite }, "\uB0B4 \uCD08\uB300\uCF54\uB4DC \uB9CC\uB4E4\uAE30"), code && /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", fontSize: 22, fontWeight: 800, letterSpacing: 3, color: GREEN, margin: "10px 0", fontFamily: "monospace" } }, code), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 10 } }, /* @__PURE__ */ React.createElement(
-    "input",
-    {
-      value: joinCode,
-      onChange: (e) => setJoinCode(e.target.value),
-      placeholder: "\uBC30\uC6B0\uC790 \uCF54\uB4DC \uC785\uB825",
-      maxLength: 6,
-      style: { flex: 1, border: `1.5px solid ${LINE}`, borderRadius: 10, padding: 10, fontSize: 15, textTransform: "uppercase", outline: "none", fontFamily: "monospace", letterSpacing: 2 }
-    }
-  ), /* @__PURE__ */ React.createElement(Btn, { onClick: join, style: { width: "auto", padding: "10px 16px" } }, "\uC5F0\uACB0")), msg && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: GREEN, marginTop: 8, lineHeight: 1.6 } }, msg)), items === null ? /* @__PURE__ */ React.createElement("div", { style: { color: MUT, textAlign: "center", padding: 30 } }, "\uBD88\uB7EC\uC624\uB294 \uC911\u2026") : items.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { color: MUT, textAlign: "center", padding: 30 } }, "\uC544\uC9C1 \uBC1B\uC740 \uACF5\uC720\uAC00 \uC5C6\uC5B4\uC694.") : items.map((it) => /* @__PURE__ */ React.createElement(InboxItem, { key: it.id, it, onAccept: accept })));
-}
 function AgeGate({ onPass }) {
   const [y, setY] = useState("");
   const [m, setM] = useState("");

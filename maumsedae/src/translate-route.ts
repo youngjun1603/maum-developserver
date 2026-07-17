@@ -101,8 +101,6 @@ const TEEN_BLOCKED: Record<string, string> = {
   '/community/posts': '커뮤니티는 어른들이 이야기하는 공간이라 아직 열려 있지 않아요.',
   '/share/send':      '통역한 내용을 부모님께 보내는 기능은 쓸 수 없어요. 네 기록은 너만 볼 수 있어요.',
   '/share/respond':   '이 기능은 어른 계정에서만 쓸 수 있어요.',
-  '/relation/invite': '부모님을 초대하는 기능은 쓸 수 없어요.',
-  '/relation/join':   '이 기능은 어른 계정에서만 쓸 수 있어요.',
 };
 translate.use('*', async (c, next) => {
   const path = new URL(c.req.url).pathname.replace(/^\/api/, '');
@@ -124,9 +122,6 @@ const NOT_YET: Record<string, { status: 403 | 503; msg: string }> = {
   '/consent/request': { status: 403, msg: '멀티모달(사진·녹음)은 아직 제공하지 않아요. 지금은 텍스트로 이용해 주세요.' },
   '/consent/accept':  { status: 403, msg: '멀티모달(사진·녹음)은 아직 제공하지 않아요.' },
   '/consent/revoke':  { status: 403, msg: '멀티모달(사진·녹음)은 아직 제공하지 않아요.' },
-  // 3단계 예정 (테이블 미생성)
-  '/relation/invite': { status: 503, msg: '상대 초대는 준비 중이에요.' },
-  '/relation/join':   { status: 503, msg: '상대 초대는 준비 중이에요.' },
 };
 translate.use('*', async (c, next) => {
   const path = new URL(c.req.url).pathname.replace(/^\/api/, '');
@@ -921,48 +916,21 @@ translate.get('/me', async (c) => {
 // ============================================================================
 const SHARE_TYPES = ['message', 'mediate_view', 'perspective_view', 'activity_invite'];
 // 초대코드: 마음커플 genSessionCode 패턴 재사용(6자·혼동문자 제외, 사람이 입력)
-const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-function genInviteCode(): string {
-  return Array.from(crypto.getRandomValues(new Uint8Array(6))).map((b) => CODE_CHARS[b % CODE_CHARS.length]).join('');
-}
+// ⚠️ 초대 흐름(relation/invite·join)은 **제거했다** (2026-07-17).
+//   ① SPEC 2장: "자녀가 사용자, 부모가 통역 대상인 구도 지배적 → 일방향 통역 기본, **상대 참여 설득 불필요**"
+//   ② 그 자리를 공유 웹뷰(/s/:id)가 메운다 — 상대는 가입 없이 열람한다.
+//   ③ ★ 안전: assertRelationOwner가 counterpart_id도 허용하므로, 연결되면 상대가 그 관계의 당사자가 된다.
+//      마음부부에선 무해하지만 이 앱에선 **학대 부모가 아이의 관계에 들어오는** 경로가 된다
+//      (기억은 복합키로 분리되지만 /share/inbox로 아이에게 닿는다).
+//   되살릴 일이 생기면: teen 관계 연결 금지 + /share/inbox의 teen 차단을 반드시 함께 넣을 것.
+//   `sedae_relations.counterpart_id` 컬럼은 남겨둔다(스키마 보존 — 재검토 여지).
+
 function safeJson(s: string): unknown { try { return JSON.parse(s); } catch { return s; } }
-// T1/T2 안전 플래그가 최근(30일)에 있으면 공유 차단
+// T1/T2 안전 플래그가 최근(30일)에 있으면 공유 차단 — 가해자에게 흔적이 가지 않도록.
 async function hasRecentSafety(db: D1Database, relationId: number): Promise<boolean> {
   const row = await db.prepare("SELECT 1 AS ok FROM sedae_relation_safety WHERE relation_id = ? AND created_at > datetime('now','-30 days') LIMIT 1").bind(relationId).first<{ ok: number }>();
   return !!row;
 }
-
-// POST /api/relation/invite — 배우자 초대 코드 발급(관계에 user_b 연결용)
-translate.post('/relation/invite', async (c) => {
-  try {
-    const uid = c.get('uid');
-    const { relationId } = await c.req.json<{ relationId: number }>();
-    if (!(await assertRelationOwner(c.env.DB, relationId, uid))) return c.json({ error: '이 관계에 접근 권한이 없어요.' }, 403);
-    const code = genInviteCode();
-    await c.env.KV.put(`sedae_invite:${code}`, String(relationId), { expirationTtl: 7 * 86400 });
-    return c.json({ ok: true, inviteCode: code });
-  } catch (e) { console.error('invite error:', e); return c.json({ error: '초대 코드 발급에 실패했어요.' }, 500); }
-});
-
-// POST /api/relation/join — 배우자가 코드로 관계에 연결(user_b)
-translate.post('/relation/join', async (c) => {
-  try {
-    const uid = c.get('uid');
-    const { inviteCode } = await c.req.json<{ inviteCode: string }>();
-    const code = (inviteCode || '').trim().toUpperCase();
-    const ridStr = await c.env.KV.get(`sedae_invite:${code}`);
-    if (!ridStr) return c.json({ error: '만료되었거나 잘못된 코드예요.' }, 404);
-    const relationId = Number(ridStr);
-    // 마음세대 스키마: user_a/user_b가 아니라 owner_id/counterpart_id다.
-    const rel = await c.env.DB.prepare('SELECT owner_id, counterpart_id FROM sedae_relations WHERE id = ?').bind(relationId).first<{ owner_id: number; counterpart_id: number | null }>();
-    if (!rel) return c.json({ error: '관계를 찾을 수 없어요.' }, 404);
-    if (rel.owner_id === uid) return c.json({ error: '본인이 만든 초대예요.' }, 400);
-    if (rel.counterpart_id != null && rel.counterpart_id !== uid) return c.json({ error: '이미 다른 분과 연결된 관계예요.' }, 409);
-    if (rel.counterpart_id == null) await c.env.DB.prepare('UPDATE sedae_relations SET counterpart_id = ? WHERE id = ?').bind(uid, relationId).run();
-    await c.env.KV.delete(`sedae_invite:${code}`);
-    return c.json({ ok: true, relationId });
-  } catch (e) { console.error('join error:', e); return c.json({ error: '연결에 실패했어요.' }, 500); }
-});
 
 // POST /api/share/send — 승인된 결과만 건별 공유 (T1/T2 안전 세션 차단)
 // ⚠️ 공유 가능한 것은 SHARE_TYPES뿐이다. **절대 공유 금지**(자동이든 수동이든):
