@@ -2831,45 +2831,79 @@ app.post('/api/webhook/toss', async (c) => {
   const { DB } = c.env
   const rawBody = await c.req.text()
 
-  // ── 토스페이먼츠 Webhook 서명 검증 ──────────────────────────
-  // 토스는 Authorization: Basic base64(secret:) 헤더로 검증
+  // ── 이중 방어 ①: 서명 검증 (미설정이면 통과가 아니라 거부) ──────────
+  // 토스는 Authorization: Basic base64(secret:) 헤더로 검증.
+  // ⚠️ 예전엔 시크릿 미설정 시 "건너뜀"이었다 → 누구나 위조 본문을 POST해 무료 크레딧을 받을 수 있었다.
+  //    설정 누락으로 구멍이 열리지 않도록 fail-safe(거부)로 바꾼다. 503이면 토스가 재시도하므로,
+  //    시크릿을 설정하는 즉시 밀린 웹훅이 정상 처리된다.
   const tossSecret = c.env.TOSS_WEBHOOK_SECRET
-  if (tossSecret) {
-    const authHeader = c.req.header('Authorization') ?? ''
-    const expected = 'Basic ' + btoa(tossSecret + ':')
-    if (authHeader !== expected) {
-      console.error('[Toss Webhook] 서명 불일치 — 위조 요청 차단')
-      return c.json({ error: 'Unauthorized' }, 401)
-    }
-  } else {
-    // 시크릿 미설정 시 로그만 남기고 개발 환경에서 통과 (프로덕션에서는 반드시 설정)
-    console.warn('[Toss Webhook] TOSS_WEBHOOK_SECRET 미설정 — 서명 검증 건너뜀')
+  if (!tossSecret) {
+    console.error('[Toss Webhook] TOSS_WEBHOOK_SECRET 미설정 — 요청 거부 (wrangler secret put TOSS_WEBHOOK_SECRET)')
+    return c.json({ error: 'webhook secret not configured' }, 503)
+  }
+  const authHeader = c.req.header('Authorization') ?? ''
+  if (authHeader !== 'Basic ' + btoa(tossSecret + ':')) {
+    console.error('[Toss Webhook] 서명 불일치 — 위조 요청 차단')
+    return c.json({ error: 'Unauthorized' }, 401)
   }
 
   let body: Record<string, unknown>
   try { body = JSON.parse(rawBody) } catch { return c.json({ error: 'invalid json' }, 400) }
   if (body.status !== 'DONE') return c.json({ ok: true })
 
-  const { userId, packageKey } = (body.metadata as Record<string, string>) ?? {}
-  if (!userId || !packageKey) return c.json({ error: 'metadata 누락' }, 400)
-  const pkg = PACKAGES[packageKey]; if (!pkg) return c.json({ error: '잘못된 패키지' }, 400)
-
   const pgTid = body.paymentKey as string
   if (!pgTid) return c.json({ error: 'paymentKey 누락' }, 400)
 
-  // 중복 처리 방지
+  // 중복 처리 방지 (success 콜백이 이미 처리했을 수 있다)
   const existing = await DB.prepare('SELECT id FROM credit_charges WHERE pg_tid=?').bind(pgTid).first()
   if (existing) return c.json({ ok: true, msg: 'already_processed' })
 
-  await DB.prepare('UPDATE credit_charges SET status=?,pg_tid=?,completed_at=CURRENT_TIMESTAMP WHERE pg=? AND status=? AND user_id=?')
-    .bind('completed', pgTid, 'toss', 'pending', parseInt(userId)).run()
-  await gainCredits(DB, parseInt(userId), pkg.credits, 'charge', pgTid)
-  console.log('[Toss Webhook] 크레딧 지급 완료 — userId:', userId, 'credits:', pkg.credits)
-  completeReferral(DB, parseInt(userId)).catch(err => console.error('[Referral] 완료 실패 userId=' + userId, err))
+  // ── 이중 방어 ②: 토스에 실제 결제인지 되묻는다 ────────────────────
+  // 서명이 뚫리더라도 여기서 막힌다. 요청 본문(metadata)은 신뢰하지 않는다.
+  const tossKey = c.env.TOSS_SECRET_KEY
+  if (!tossKey) { console.error('[Toss Webhook] TOSS_SECRET_KEY 미설정'); return c.json({ error: 'server' }, 500) }
+  let pay: { status?: string; orderId?: string; totalAmount?: number }
+  try {
+    const inq = await fetch(`https://api.tosspayments.com/v1/payments/${encodeURIComponent(pgTid)}`, {
+      headers: { 'Authorization': 'Basic ' + btoa(tossKey + ':') },
+    })
+    if (!inq.ok) {
+      console.error('[Toss Webhook] 결제 조회 실패 — 지급 거부. paymentKey:', pgTid, 'status:', inq.status)
+      return c.json({ error: 'payment not found' }, 400)
+    }
+    pay = await inq.json()
+  } catch (e) {
+    console.error('[Toss Webhook] 결제 조회 오류:', e)
+    return c.json({ error: 'inquiry failed' }, 502)  // 502면 토스가 재시도
+  }
+  if (pay.status !== 'DONE') return c.json({ ok: true, msg: 'not_done' })
+
+  // 지급 근거는 요청이 아니라 **우리 DB**. orderId는 checkout이 `charge_<chargeId>_<ts>`로 만든다.
+  const m = /^charge_(\d+)_/.exec(String(pay.orderId ?? ''))
+  if (!m) { console.error('[Toss Webhook] orderId 형식 불일치:', pay.orderId); return c.json({ error: 'bad orderId' }, 400) }
+  const chargeId = parseInt(m[1])
+  const charge = await DB.prepare('SELECT user_id, credits, amount, status FROM credit_charges WHERE id=? AND pg=?')
+    .bind(chargeId, 'toss').first<{ user_id: number; credits: number; amount: number; status: string }>()
+  if (!charge) { console.error('[Toss Webhook] charge 없음:', chargeId); return c.json({ error: 'charge not found' }, 404) }
+
+  // 금액 위조 차단 — 토스가 말하는 실제 결제금액과 주문 시 확정한 금액이 같아야 한다.
+  if (Number(pay.totalAmount) !== Number(charge.amount)) {
+    console.error('[Toss Webhook] 금액 불일치 — 지급 거부. 토스:', pay.totalAmount, 'DB:', charge.amount, 'chargeId:', chargeId)
+    return c.json({ error: 'amount mismatch' }, 400)
+  }
+
+  // 원자적 선점 — pending일 때만 완료 처리. success 콜백과 동시에 와도 한 번만 지급된다.
+  const upd = await DB.prepare('UPDATE credit_charges SET status=?,pg_tid=?,completed_at=CURRENT_TIMESTAMP WHERE id=? AND status=?')
+    .bind('completed', pgTid, chargeId, 'pending').run()
+  if (upd.meta.changes === 0) return c.json({ ok: true, msg: 'already_processed' })
+
+  await gainCredits(DB, charge.user_id, charge.credits, 'charge', pgTid)
+  console.log('[Toss Webhook] 크레딧 지급 완료 — userId:', charge.user_id, 'credits:', charge.credits, 'chargeId:', chargeId)
+  completeReferral(DB, charge.user_id).catch(err => console.error('[Referral] 완료 실패 userId=' + charge.user_id, err))
 
   // 영수증 이메일 (비동기)
-  const twUser = await DB.prepare('SELECT email, nickname FROM users WHERE id=?').bind(parseInt(userId)).first<{ email: string; nickname: string | null }>()
-  if (twUser) sendReceiptEmail(c.env, twUser.email, twUser.nickname || '', pkg.credits, pkg.amount, 'KRW', pgTid).catch(() => {})
+  const twUser = await DB.prepare('SELECT email, nickname FROM users WHERE id=?').bind(charge.user_id).first<{ email: string; nickname: string | null }>()
+  if (twUser) sendReceiptEmail(c.env, twUser.email, twUser.nickname || '', charge.credits, charge.amount, 'KRW', pgTid).catch(() => {})
 
   return c.json({ ok: true })
 })
@@ -3047,9 +3081,16 @@ app.get('/api/payment/toss/success', async (c) => {
       ).bind(chargeIdNum, 'pending').first<{ user_id: number; credits: number; package_key: string }>()
 
       if (charge) {
-        await DB.prepare(
-          'UPDATE credit_charges SET status=?,pg_tid=?,completed_at=CURRENT_TIMESTAMP WHERE id=?'
-        ).bind('completed', paymentKey, chargeIdNum).run()
+        // ⚠️ 원자적 선점 — pending일 때만 완료 처리하고, 바뀐 행이 있을 때만 지급한다.
+        //    예전엔 SELECT(pending) → UPDATE(id만)이라 웹훅과 동시에 오면 둘 다 지급될 수 있었다(중복 지급).
+        const upd = await DB.prepare(
+          'UPDATE credit_charges SET status=?,pg_tid=?,completed_at=CURRENT_TIMESTAMP WHERE id=? AND status=?'
+        ).bind('completed', paymentKey, chargeIdNum, 'pending').run()
+        if (upd.meta.changes === 0) {
+          // 웹훅이 먼저 지급함 — 결제 자체는 성공이므로 성공 화면으로 보낸다(재지급 없음).
+          console.log('[Toss] 이미 처리됨(웹훅 선처리) chargeId:', chargeIdNum)
+          return c.redirect('/?payment=success')
+        }
 
         const newBalance = await gainCredits(DB, charge.user_id, charge.credits, 'charge', paymentKey)
         console.log('[Toss] 크레딧 지급:', charge.user_id, '+', charge.credits, '→', newBalance)
