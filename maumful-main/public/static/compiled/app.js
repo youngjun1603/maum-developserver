@@ -601,29 +601,6 @@ function PsychologicalTestSystem() {
   function clearLoginState() {
     storage.remove("current_login");
   }
-  async function loadMasterData() {
-    const token = getToken();
-    if (!token) {
-      console.warn("[loadMasterData] \uD1A0\uD070 \uC5C6\uC74C, \uB85C\uB4DC \uC2A4\uD0B5");
-      return;
-    }
-    console.log("[loadMasterData] \uB370\uC774\uD130 \uB85C\uB4DC \uC2DC\uC791");
-    try {
-      await loadOrganizations();
-      await loadMasterSessions();
-      await loadNotifications("all");
-      await loadNotices("all");
-      const [pendingResult, approvedResult] = await Promise.all([
-        api.getPendingCounselors(),
-        api.getApprovedCounselors()
-      ]);
-      if (pendingResult && pendingResult.success) setPendingCounselors(pendingResult.data || []);
-      if (approvedResult && approvedResult.success) setApprovedCounselors(approvedResult.data || []);
-      console.log("[loadMasterData] \uB370\uC774\uD130 \uB85C\uB4DC \uC644\uB8CC");
-    } catch (error) {
-      console.error("[loadMasterData] \uC624\uB958:", error);
-    }
-  }
   function loadAllSubmitted() {
     const r = storage.get("submitted_list");
     const list = r ? JSON.parse(r.value) : [];
@@ -635,15 +612,6 @@ function PsychologicalTestSystem() {
       const data = await res.json();
       if (data.success) setApiSettings(data.data || []);
     } catch (e) {
-    }
-  }
-  async function loadOrgCounselors(orgId) {
-    try {
-      const response = await authFetch(`/api/organizations/${orgId}/counselors`);
-      const data = await response.json();
-      if (data.success) setOrgCounselors(data.data || []);
-      else setOrgCounselors([]);
-    } catch (error) {
     }
   }
   function checkAndCleanExpiredSessions() {
@@ -1457,16 +1425,6 @@ function PsychologicalTestSystem() {
   const setCounselorPhone = () => {
   };
   const setActiveLinkData = () => {
-  };
-  const setApprovedCounselors = () => {
-  };
-  const setPendingCounselors = () => {
-  };
-  const setOrgCounselors = () => {
-  };
-  const setQuotaEditingPhone = () => {
-  };
-  const setQuotaEditingValue = () => {
   };
   const setApiTestLoading = () => {
   };
@@ -5778,99 +5736,6 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
     reader.readAsText(file, "UTF-8");
     e.target.value = "";
   }
-  async function approveCounselor(phone) {
-    console.log("\u{1F504} \uC0C1\uB2F4\uC0AC \uC2B9\uC778 \uC2DC\uC791:", phone);
-    try {
-      const result = await api.approveCounselor(phone);
-      if (result.success) {
-        console.log("\u2705 \uC2B9\uC778 \uC644\uB8CC:", phone);
-        const pendingResult = await api.getPendingCounselors();
-        if (pendingResult.success) {
-          setPendingCounselors(pendingResult.data);
-        }
-        const approvedResult = await api.getApprovedCounselors();
-        if (approvedResult.success) {
-          setApprovedCounselors(approvedResult.data);
-          console.log("\u2705 \uC2B9\uC778\uB41C \uC0C1\uB2F4\uC0AC \uBAA9\uB85D \uC5C5\uB370\uC774\uD2B8:", approvedResult.data.length + "\uBA85");
-        }
-        alert(`\u2705 ${phone} \uC0C1\uB2F4\uC0AC\uAC00 \uC2B9\uC778\uB418\uC5C8\uC2B5\uB2C8\uB2E4! (\uBB34\uB8CC 5\uD68C \uCCB4\uD5D8 \uC81C\uACF5)`);
-      } else {
-        alert("\u274C \uC2B9\uC778 \uC2E4\uD328: " + result.error);
-      }
-    } catch (error) {
-      console.error("\u274C \uC0C1\uB2F4\uC0AC \uC2B9\uC778 \uC911 \uC624\uB958:", error);
-      alert("\u274C \uC11C\uBC84 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
-    }
-  }
-  function startEditQuota(phone, currentQuota) {
-    setQuotaEditingPhone(phone);
-    setQuotaEditingValue(currentQuota.toString());
-  }
-  function cancelEditQuota() {
-    setQuotaEditingPhone(null);
-    setQuotaEditingValue("");
-  }
-  async function saveQuotaEdit(phone, name) {
-    const newQuota = parseInt(quotaEditingValue, 10);
-    if (isNaN(newQuota) || newQuota < 0) {
-      alert("\u274C \uCFFC\uD130\uB294 0 \uC774\uC0C1\uC758 \uC22B\uC790\uC5EC\uC57C \uD569\uB2C8\uB2E4.");
-      return;
-    }
-    console.log("\u{1F504} \uCFFC\uD130 \uBCC0\uACBD \uC2DC\uC791:", phone, "\u2192", newQuota);
-    try {
-      const result = await api.updateCounselorQuota(phone, newQuota);
-      if (result.success) {
-        console.log("\u2705 \uCFFC\uD130 \uBCC0\uACBD \uC644\uB8CC:", result.data);
-        const approvedResult = await api.getApprovedCounselors();
-        if (approvedResult.success) {
-          setApprovedCounselors(approvedResult.data);
-        }
-        setQuotaEditingPhone(null);
-        setQuotaEditingValue("");
-        alert(`\u2705 ${name}(${phone}) \uC0C1\uB2F4\uC0AC\uC758 \uCFFC\uD130\uAC00 ${newQuota}\uD68C\uB85C \uBCC0\uACBD\uB418\uC5C8\uC2B5\uB2C8\uB2E4.
-\uB0A8\uC740 \uCFFC\uD130: ${result.data.quotaRemaining}\uD68C`);
-      } else {
-        alert("\u274C \uCFFC\uD130 \uBCC0\uACBD \uC2E4\uD328: " + result.error);
-      }
-    } catch (error) {
-      console.error("\u274C \uCFFC\uD130 \uBCC0\uACBD \uC911 \uC624\uB958:", error);
-      alert("\u274C \uC11C\uBC84 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
-    }
-  }
-  async function approveCounselor_OLD(phone) {
-    console.log("\u{1F504} \uC0C1\uB2F4\uC0AC \uC2B9\uC778 \uC2DC\uC791:", phone);
-    try {
-      const result = await api.approveCounselor(phone);
-      if (result.success) {
-        console.log("\u2705 \uC2B9\uC778 \uC644\uB8CC:", phone);
-        const pendingResult = await api.getPendingCounselors();
-        if (pendingResult.success) {
-          setPendingCounselors(pendingResult.data);
-        }
-        const approvedResult = await api.getApprovedCounselors();
-        if (approvedResult.success) {
-          setApprovedCounselors(approvedResult.data);
-          console.log("\u2705 \uC2B9\uC778\uB41C \uC0C1\uB2F4\uC0AC \uBAA9\uB85D \uC5C5\uB370\uC774\uD2B8:", approvedResult.data.length + "\uBA85");
-        }
-        alert(`\u2705 ${phone} \uC0C1\uB2F4\uC0AC\uAC00 \uC2B9\uC778\uB418\uC5C8\uC2B5\uB2C8\uB2E4! (\uBB34\uB8CC 5\uD68C \uCCB4\uD5D8 \uC81C\uACF5)`);
-      } else {
-        alert("\u274C \uC2B9\uC778 \uC2E4\uD328: " + result.error);
-      }
-    } catch (error) {
-      console.error("\u274C \uC2B9\uC778 \uC624\uB958:", error);
-      alert("\u274C \uC11C\uBC84 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
-    }
-  }
-  async function rejectCounselor(phone) {
-    console.log("\u{1F504} \uC0C1\uB2F4\uC0AC \uAC70\uBD80:", phone);
-    const r = storage.get("counselor_requests");
-    let list = r ? JSON.parse(r.value) : [];
-    list = list.filter((c) => c.phone !== phone);
-    storage.set("counselor_requests", JSON.stringify(list));
-    console.log("\u{1F4DD} \uB300\uAE30 \uBAA9\uB85D \uC5C5\uB370\uC774\uD2B8:", list.length + "\uAC74 \uB0A8\uC74C");
-    setPendingCounselors(list.filter((c) => c.status === "pending"));
-    alert(`\u274C ${phone} \uC0C1\uB2F4\uC0AC\uB97C \uAC70\uBD80\uD588\uC2B5\uB2C8\uB2E4.`);
-  }
   function advanceToNextTest(currentTestType, sessionData) {
     storeSession(sessionData);
     const completedIds = [...multiSessionIds, sessionData.sessionId];
@@ -7698,13 +7563,6 @@ ${recommendations.join("\n\n")}
     } catch {
     }
     setView("memberDashboard");
-  }
-  function getCounselorSessions() {
-    return submitted.filter((s) => {
-      if (!s.linkId) return false;
-      const linkData = loadLink(s.linkId);
-      return false;
-    });
   }
   console.log("\u{1F3AC} \uB80C\uB354\uB9C1 \uC2DC\uC791 - current view:", view);
   if (view === "login") {

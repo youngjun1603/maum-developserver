@@ -532,35 +532,6 @@ function PsychologicalTestSystem() {
       storage.remove("current_login");
     }
 
-  async function loadMasterData() {
-      const token = getToken();
-      if (!token) {
-        console.warn('[loadMasterData] 토큰 없음, 로드 스킵');
-        return;
-      }
-    
-      console.log('[loadMasterData] 데이터 로드 시작');
-    
-      // 순차적으로 로드하여 안정성 확보
-      try {
-        await loadOrganizations();
-        await loadMasterSessions();
-        await loadNotifications('all');
-        await loadNotices('all');
-      
-        const [pendingResult, approvedResult] = await Promise.all([
-          api.getPendingCounselors(),
-          api.getApprovedCounselors()
-        ]);
-        if (pendingResult && pendingResult.success) setPendingCounselors(pendingResult.data || []);
-        if (approvedResult && approvedResult.success) setApprovedCounselors(approvedResult.data || []);
-      
-        console.log('[loadMasterData] 데이터 로드 완료');
-      } catch (error) {
-        console.error('[loadMasterData] 오류:', error);
-      }
-    }
-
   function loadAllSubmitted() {
       const r = storage.get("submitted_list");
       const list = r ? JSON.parse(r.value) : [];
@@ -573,16 +544,6 @@ function PsychologicalTestSystem() {
         const data = await res.json();
         if (data.success) setApiSettings(data.data || []);
       } catch (e) {
-      }
-    }
-
-  async function loadOrgCounselors(orgId) {
-      try {
-        const response = await authFetch(`/api/organizations/${orgId}/counselors`);
-        const data = await response.json();
-        if (data.success) setOrgCounselors(data.data || []);
-        else setOrgCounselors([]);
-      } catch (error) {
       }
     }
 
@@ -1449,11 +1410,6 @@ function PsychologicalTestSystem() {
   const setIsCounselor       = () => {};
   const setCounselorPhone    = () => {};
   const setActiveLinkData    = () => {};
-  const setApprovedCounselors = () => {};
-  const setPendingCounselors  = () => {};
-  const setOrgCounselors      = () => {};
-  const setQuotaEditingPhone  = () => {};
-  const setQuotaEditingValue  = () => {};
   const setApiTestLoading     = () => {};
   const setApiTestResult      = () => {};
 
@@ -6996,140 +6952,11 @@ function PsychologicalTestSystem() {
     e.target.value = '';
   }
 
-  
-
-  async function approveCounselor(phone) {
-    console.log('🔄 상담사 승인 시작:', phone);
-    
-    try {
-      // D1 API로 승인
-      const result = await api.approveCounselor(phone);
-      
-      if (result.success) {
-        console.log('✅ 승인 완료:', phone);
-        
-        // 대기 중인 상담사 목록 새로고침
-        const pendingResult = await api.getPendingCounselors();
-        if (pendingResult.success) {
-          setPendingCounselors(pendingResult.data);
-        }
-        
-        // 승인된 상담사 목록 새로고침
-        const approvedResult = await api.getApprovedCounselors();
-        if (approvedResult.success) {
-          setApprovedCounselors(approvedResult.data);
-          console.log('✅ 승인된 상담사 목록 업데이트:', approvedResult.data.length + '명');
-        }
-        
-        // 확인 메시지
-        alert(`✅ ${phone} 상담사가 승인되었습니다! (무료 5회 체험 제공)`);
-      } else {
-        alert('❌ 승인 실패: ' + result.error);
-      }
-    } catch (error) {
-      console.error('❌ 상담사 승인 중 오류:', error);
-      alert('❌ 서버 오류가 발생했습니다.');
-    }
-  }
-
   // 🔢 쿼터 수정 시작
-  function startEditQuota(phone, currentQuota) {
-    setQuotaEditingPhone(phone);
-    setQuotaEditingValue(currentQuota.toString());
-  }
 
   // 🔢 쿼터 수정 취소
-  function cancelEditQuota() {
-    setQuotaEditingPhone(null);
-    setQuotaEditingValue('');
-  }
 
   // 🔢 쿼터 수정 저장
-  async function saveQuotaEdit(phone, name) {
-    const newQuota = parseInt(quotaEditingValue, 10);
-    
-    // 유효성 검사
-    if (isNaN(newQuota) || newQuota < 0) {
-      alert('❌ 쿼터는 0 이상의 숫자여야 합니다.');
-      return;
-    }
-    
-    console.log('🔄 쿼터 변경 시작:', phone, '→', newQuota);
-    
-    try {
-      const result = await api.updateCounselorQuota(phone, newQuota);
-      
-      if (result.success) {
-        console.log('✅ 쿼터 변경 완료:', result.data);
-        
-        // 승인된 상담사 목록 새로고침
-        const approvedResult = await api.getApprovedCounselors();
-        if (approvedResult.success) {
-          setApprovedCounselors(approvedResult.data);
-        }
-        
-        // 편집 모드 종료
-        setQuotaEditingPhone(null);
-        setQuotaEditingValue('');
-        
-        // 확인 메시지
-        alert(`✅ ${name}(${phone}) 상담사의 쿼터가 ${newQuota}회로 변경되었습니다.\n남은 쿼터: ${result.data.quotaRemaining}회`);
-      } else {
-        alert('❌ 쿼터 변경 실패: ' + result.error);
-      }
-    } catch (error) {
-      console.error('❌ 쿼터 변경 중 오류:', error);
-      alert('❌ 서버 오류가 발생했습니다.');
-    }
-  }
-
-  async function approveCounselor_OLD(phone) {
-    console.log('🔄 상담사 승인 시작:', phone);
-    
-    try {
-      // D1 API로 승인
-      const result = await api.approveCounselor(phone);
-      
-      if (result.success) {
-        console.log('✅ 승인 완료:', phone);
-        
-        // 대기 중인 상담사 목록 새로고침
-        const pendingResult = await api.getPendingCounselors();
-        if (pendingResult.success) {
-          setPendingCounselors(pendingResult.data);
-        }
-        
-        // 승인된 상담사 목록 새로고침
-        const approvedResult = await api.getApprovedCounselors();
-        if (approvedResult.success) {
-          setApprovedCounselors(approvedResult.data);
-          console.log('✅ 승인된 상담사 목록 업데이트:', approvedResult.data.length + '명');
-        }
-        
-        // 확인 메시지
-        alert(`✅ ${phone} 상담사가 승인되었습니다! (무료 5회 체험 제공)`);
-      } else {
-        alert('❌ 승인 실패: ' + result.error);
-      }
-    } catch (error) {
-      console.error('❌ 승인 오류:', error);
-      alert('❌ 서버 오류가 발생했습니다.');
-    }
-  }
-  
-  async function rejectCounselor(phone) {
-    console.log('🔄 상담사 거부:', phone);
-    
-    // TODO: 거부 API 구현 필요 (현재는 LocalStorage 사용)
-    const r = storage.get("counselor_requests");
-    let list = r ? JSON.parse(r.value) : [];
-    list = list.filter(c => c.phone !== phone);
-    storage.set("counselor_requests", JSON.stringify(list));
-    console.log('📝 대기 목록 업데이트:', list.length + '건 남음');
-    setPendingCounselors(list.filter(c => c.status === "pending"));
-    
-    alert(`❌ ${phone} 상담사를 거부했습니다.`);
-  }
 
 
   // ===================================================
@@ -9242,14 +9069,6 @@ function PsychologicalTestSystem() {
     setAiChatUsed(0);
     try { localStorage.removeItem(AI_LIMIT_KEY); } catch {}
     setView('memberDashboard');
-  }
-
-  function getCounselorSessions() {
-    return submitted.filter(s => {
-      if (!s.linkId) return false;
-      const linkData = loadLink(s.linkId);
-      return false; // B2B 제거됨
-    });
   }
 
   // ========== VIEWS ==========
