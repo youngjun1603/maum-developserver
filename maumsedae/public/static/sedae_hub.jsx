@@ -1,6 +1,8 @@
 // ============================================================================
-// 마음부부 (MaumBubu) 프론트 — React 18 (esbuild 사전컴파일, 마음커플 방식)
-// 진입: 마음풀 /api/bubu-token → ?t= → localStorage('bubu_token')
+// 마음세대 (MaumSedae) — 부모-자녀 세대 통역 프론트. 마음부부에서 파생.
+// 진입: 마음풀 /api/sedae-token → ?t= → localStorage('sedae_token')
+// ⚠️ 부부와 근본 차이: **다중 관계**(아버지·어머니·자녀별 각각) — 모든 화면은 선택된 relation 스코프.
+// ⚠️ 청소년(만14~18) 사용자가 핵심 — teen은 커뮤니티·공유·멀티모달 미노출(서버도 403으로 이중 차단).
 // ============================================================================
 const { useState, useEffect, useRef } = React;
 
@@ -10,7 +12,7 @@ const INK = '#1a2b22', MUT = '#5a6b62', LINE = '#dbe7e0';
 const ACCENT = { psychology: '#2d6a4f', christian: '#3b6fb5' };
 
 // ── API ─────────────────────────────────────────────────────────────────────
-const token = () => localStorage.getItem('bubu_token') || '';
+const token = () => localStorage.getItem('sedae_token') || '';
 async function api(path, method, body) {
   const opt = { method: method || 'GET', headers: { Authorization: 'Bearer ' + token() } };
   if (body) { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
@@ -21,15 +23,15 @@ async function api(path, method, body) {
 }
 
 // ── 설정(온보딩) 저장 ─────────────────────────────────────────────────────────
-const loadConfig = () => { try { return JSON.parse(localStorage.getItem('bubu_config') || 'null'); } catch { return null; } };
-const saveConfig = (c) => localStorage.setItem('bubu_config', JSON.stringify(c));
+const loadConfig = () => { try { return JSON.parse(localStorage.getItem('sedae_config') || 'null'); } catch { return null; } };
+const saveConfig = (c) => localStorage.setItem('sedae_config', JSON.stringify(c));
 
 // ── 4모드 ──────────────────────────────────────────────────────────────────
 const MODES = [
-  { key: 'receive', emoji: '👂', title: '수신 통역', desc: '"저 말이 무슨 뜻이야?"', ex: '배우자가 한 말의 속뜻이 궁금할 때', placeholder: '배우자에게서 들은 말을 그대로 붙여넣어 보세요.' },
-  { key: 'send', emoji: '✍️', title: '발신 통역', desc: '"이걸 어떻게 말하지?"', ex: '싸우지 않게 부드럽게 말하고 싶을 때', placeholder: '배우자에게 하고 싶은 말을 적어 보세요.' },
-  { key: 'mediate', emoji: '🕊️', title: '중재 통역', desc: '싸운 대화 전체를 분석', ex: '다툰 대화를 통째로 짚어보고 싶을 때', placeholder: '주고받은 대화(카톡 등)를 통째로 붙여넣어 보세요.' },
-  { key: 'perspective', emoji: '🔄', title: '관점 통역', desc: '"상대는 어떻게 느꼈을까?"', ex: '상대 입장이 도무지 이해 안 될 때', placeholder: '어떤 사건이나 대화를 적어 보세요. 배우자 입장에서 통역해 드려요.' },
+  { key: 'receive', emoji: '👂', title: '수신 통역', desc: '"저 말이 무슨 뜻이야?"', ex: '그 말의 속뜻이 궁금할 때', placeholder: '들은 말을 그대로 붙여넣어 보세요.' },
+  { key: 'send', emoji: '✍️', title: '발신 통역', desc: '"이걸 어떻게 말하지?"', ex: '부딪히지 않게 말하고 싶을 때', placeholder: '하고 싶은 말을 적어 보세요.' },
+  { key: 'mediate', emoji: '🕊️', title: '중재 통역', desc: '부딪힌 대화 전체를 분석', ex: '다툰 대화를 통째로 짚어보고 싶을 때', placeholder: '주고받은 대화(카톡 등)를 통째로 붙여넣어 보세요.' },
+  { key: 'perspective', emoji: '🔄', title: '관점 통역', desc: '"상대는 어떻게 느꼈을까?"', ex: '상대 입장이 도무지 이해 안 될 때', placeholder: '어떤 사건이나 대화를 적어 보세요. 상대 입장에서 통역해 드려요.' },
 ];
 
 // ── 통역 결과 필드 라벨 (모드 공통 렌더) ─────────────────────────────────────────
@@ -39,16 +41,17 @@ const FIELD = {
   original_intent: '진짜 전하고 싶은 마음', risk_in_original: '원래 표현이 들릴 수 있는 방식',
   rewritten: '이렇게 말해보세요', alternative: '다른 톤 버전', timing_tip: '타이밍', avoid: '피할 표현',
   miss_point: '서로 놓친 결정적 지점', cycle: '반복되는 패턴', next_word: '먼저 건넬 한마디',
-  your_feeling_first: '먼저, 당신의 마음', partner_view: '배우자의 눈에는', partner_feeling: '그때 배우자의 감정',
+  your_feeling_first: '먼저, 당신의 마음', partner_view: '상대의 눈에는', partner_feeling: '그때 상대의 감정',
   blind_spot: '놓쳤을 수 있는 것', bridge: '두 관점을 잇는 다리',
 };
 const REACTIONS = [
   { key: 'positive', label: '좋았어요 😊' }, { key: 'awkward', label: '어색했어요 😅' },
   { key: 'cold', label: '냉담했어요 😐' }, { key: 'conflict', label: '오히려 싸웠어요 😞' },
 ];
+// 커뮤니티 방 (DEV_01 §3) — 성인 전용. 청소년 방은 1차 출시 제외(그루밍 등 접촉 위험).
 const ROOMS = [
-  { key: 'couple', label: '부부 이야기' }, { key: 'holiday', label: '명절·양가' },
-  { key: 'teen_parent', label: '자녀·육아' }, { key: 'caregiving', label: '돌봄·간병' },
+  { key: 'teen_parent', label: '사춘기 자녀' }, { key: 'retire_dad', label: '은퇴한 아버지' },
+  { key: 'holiday', label: '명절' }, { key: 'caregiving', label: '간병' }, { key: 'kangaroo', label: '한집살이' },
 ];
 
 // ── 온디바이스 표정 분석 (마음수달 방식: face-api.js CDN 지연로드, 원본 미저장·미전송) ──
@@ -92,7 +95,7 @@ function Shell({ children, title, onBack, right }) {
     <div style={{ maxWidth: 560, margin: '0 auto', minHeight: '100vh', background: '#fff', boxShadow: '0 0 40px rgba(0,0,0,.04)' }}>
       <div style={{ position: 'sticky', top: 0, zIndex: 10, background: GREEN, color: '#fff', padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 10 }}>
         {onBack && <button onClick={onBack} style={{ background: 'rgba(255,255,255,.18)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: 9, cursor: 'pointer', fontSize: 16 }}>‹</button>}
-        <div style={{ fontSize: 18, fontWeight: 800, flex: 1 }}>{title || '💬 마음부부'}</div>
+        <div style={{ fontSize: 18, fontWeight: 800, flex: 1 }}>{title || '🌿 마음세대'}</div>
         {right}
       </div>
       <div style={{ padding: 18, animation: 'fadeUp .25s ease' }}>{children}</div>
@@ -152,7 +155,7 @@ function Onboarding({ onDone }) {
         <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 6 }}>어떤 언어로 통역할까요?</div>
         <div style={{ color: MUT, fontSize: 14, marginBottom: 16 }}>나에게 맞는 경로를 고르세요. 설정에서 언제든 바꿀 수 있어요.</div>
         <TrackCard v="psychology" title="🌱 심리상담 트랙" tag="처음이라면 추천" desc="신앙과 무관하게, 검증된 심리학(애착·정서)으로 마음을 풀어드려요." />
-        <TrackCard v="christian" title="✝️ 기독교 트랙" desc="신앙 안에서, 성경적 관점(은혜·언약·회복)으로 통역해요. 크리스천 부부에게 맞아요." />
+        <TrackCard v="christian" title="✝️ 기독교 트랙" desc="신앙 안에서, 성경적 관점(공경과 분리·회복)으로 통역해요. 신앙을 가진 가족에게 맞아요." />
         <div style={{ height: 12 }} />
         <Btn onClick={() => setStep(1)}>다음</Btn>
       </>)}
@@ -193,7 +196,7 @@ function Onboarding({ onDone }) {
           <b>안전이 우선입니다.</b><br />
           신체적 폭력·강압적 통제·위협이 있는 상황이라면, 이 서비스는 대화 기술의 문제로 다루지 않습니다.<br />
           긴급 시 <b>112</b> · 여성긴급전화 <b>1366</b> · 청소년 <b>1388</b> · 노인보호 <b>1577-1389</b> · 자살예방 상담 <b>109</b>(24시간).<br />
-          마음부부는 의료·상담을 대체하지 않는 <b>통역 도구</b>이며, 모든 통역은 단정이 아닌 <b>가설</b>로 제안됩니다.
+          마음세대는 의료·상담을 대체하지 않는 <b>통역 도구</b>이며, 모든 통역은 단정이 아닌 <b>가설</b>로 제안됩니다.
         </Card>
         <div style={{ height: 14 }} />
         <Btn onClick={() => { saveConfig({ track, emotionDepth, theologyLevel, pastoralTone }); onDone(); }}>동의하고 시작하기</Btn>
@@ -205,20 +208,35 @@ function Onboarding({ onDone }) {
 }
 
 // ── 홈 ──────────────────────────────────────────────────────────────────────
-function Home({ config, onMode, onCommunity, onMemory, onSettings, onMultimodal, onInbox, inboxCount }) {
+function Home({ config, ageTier, relationId, picker, onMode, onMemory, onSettings }) {
   const [ask, setAsk] = useState(false);
   const depthLabel = ['표면', '중간', '심층'][(config.emotionDepth || 2) - 1];
   const theoLabel = ['통합형', '균형형', '성경형'][(config.theologyLevel || 2) - 1];
   const toneLabel = config.pastoralTone === 'direct' ? '제한적 직면형' : '경청·은혜형';
   return (
     <Shell right={<button onClick={() => setAsk(true)} style={{ background: 'rgba(255,255,255,.18)', border: 'none', color: '#fff', padding: '6px 10px', borderRadius: 9, cursor: 'pointer', fontSize: 13 }}>⚙️ 설정</button>}>
+      {picker}
       <div style={{ fontSize: 15, color: MUT, marginBottom: 4 }}>
         {config.track === 'christian' ? '✝️ 기독교 트랙' : '🌱 심리상담 트랙'}
       </div>
-      <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>무엇을 통역해 드릴까요?</div>
-      <div style={{ color: MUT, fontSize: 13, marginBottom: 16 }}>상황에 맞는 걸 고르세요. 아래 "이럴 때"를 참고하면 쉬워요.</div>
+      <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>
+        {ageTier === 'teen' ? '무슨 일이 있었어?' : '무엇을 통역해 드릴까요?'}
+      </div>
+      <div style={{ color: MUT, fontSize: 13, marginBottom: 16 }}>
+        {ageTier === 'teen'
+          ? '무슨 말을 들었는지 그대로 적어도 괜찮아. 네 잘못인지 아닌지부터 같이 봐줄게.'
+          : '상황에 맞는 걸 고르세요. 아래 "이럴 때"를 참고하면 쉬워요.'}
+      </div>
+      {!relationId && (
+        <Card style={{ background: '#f6faf8', marginBottom: 12 }}>
+          <div style={{ fontSize: 13.5, color: MUT, lineHeight: 1.7 }}>
+            먼저 <b style={{ color: INK }}>누구와의 대화인지</b> 위에서 <b style={{ color: INK }}>+ 추가</b>로 만들어 주세요.
+            아버지·어머니는 각각 다른 관계로 나눠서 기억해요.
+          </div>
+        </Card>
+      )}
       {MODES.map(m => (
-        <div key={m.key} onClick={() => onMode(m)} style={{ cursor: 'pointer', border: `1px solid ${LINE}`, borderRadius: 16, padding: 16, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 14, background: '#fff' }}>
+        <div key={m.key} onClick={() => relationId && onMode(m)} style={{ opacity: relationId ? 1 : .45, cursor: relationId ? 'pointer' : 'not-allowed', border: `1px solid ${LINE}`, borderRadius: 16, padding: 16, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 14, background: '#fff' }}>
           <div style={{ fontSize: 30 }}>{m.emoji}</div>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 800, fontSize: 17 }}>{m.title}</div>
@@ -228,21 +246,13 @@ function Home({ config, onMode, onCommunity, onMemory, onSettings, onMultimodal,
           <div style={{ color: MUT, fontSize: 20 }}>›</div>
         </div>
       ))}
-      <div onClick={onMultimodal} style={{ cursor: 'pointer', border: `1px dashed ${GREEN2}`, background: '#f4faf6', borderRadius: 16, padding: 14, marginTop: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div style={{ fontSize: 26 }}>🎥</div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 800, fontSize: 15 }}>함께 분석 <span style={{ fontSize: 11, fontWeight: 700, color: '#fff', background: GREEN2, borderRadius: 10, padding: '1px 7px' }}>배우자 동의</span></div>
-          <div style={{ color: MUT, fontSize: 12.5, marginTop: 2 }}>동의 후 대화를 녹화(영상) 또는 녹음(음성)으로 분석 (표정·어조, 원본은 기기 안에서만)</div>
-        </div>
-        <div style={{ color: MUT, fontSize: 20 }}>›</div>
-      </div>
-      <Btn kind="ghost" onClick={onInbox} style={{ marginTop: 10, position: 'relative' }}>
-        📬 수신함 · 배우자 연결
-        {inboxCount > 0 && <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 800, color: '#fff', background: GREEN2, borderRadius: 10, padding: '1px 7px' }}>{inboxCount}</span>}
-      </Btn>
+      {/* ⚠️ 멀티모달·수신함·커뮤니티 진입점은 노출하지 않는다.
+           - 멀티모달: SPEC 6장 — 코드 동의 게이트가 노부모에게 비현실적이라 재설계 전까지 제외(서버 403).
+           - 커뮤니티·공유: 3단계-f 예정(테이블 미생성, 서버 503).
+           - 청소년: 위 전부가 코드 레벨로 금지(서버가 teenBlocked 403).
+           구현할 때 이 주석과 함께 되살릴 것. */}
       <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
-        <Btn kind="ghost" onClick={onMemory}>🧠 관계 기억</Btn>
-        <Btn kind="ghost" onClick={onCommunity}>💬 커뮤니티</Btn>
+        <Btn kind="ghost" onClick={onMemory} disabled={!relationId}>🧠 이 관계의 기억</Btn>
       </div>
 
       {ask && (
@@ -412,27 +422,36 @@ function Improvement({ imp, relationId, track }) {
           ) : <div style={{ fontSize: 14, color: MUT }}>기록했어요. 씨앗은 심겼어요 🌱</div>}
         </div>
       )}
-      <Share relationId={relationId} itemType="activity_invite" payload={{ action: imp.action }} preview={'같이 해볼래?\n' + imp.action} label="💌 같이 해볼래? 배우자에게 보내기" />
+      {/* ⚠️ 공유(Share)는 3단계-f 예정 — 서버 503. 되살릴 때 청소년은 반드시 미노출
+           (teen은 공유 발신이 코드 레벨 금지: 부모에게 통역 결과가 가는 경로 차단). */}
     </Card>
   );
 }
 
 // ── 모드 화면 ─────────────────────────────────────────────────────────────────
-function ModeView({ mode, config, relationId, onBack }) {
+function ModeView({ mode, config, relationId, ageTier, onBack }) {
   const [input, setInput] = useState('');
+  // 입력 출처 (DEV_01 §2.3) — 부모 사용자만. 'observed'(아이 카톡·일기를 본 것)는
+  // 통역 대신 신뢰 경계 안내가 먼저 나온다. 청소년에겐 이 선택 자체가 없다.
+  const [src, setSrc] = useState('direct');
+  const [boundary, setBoundary] = useState(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
   const [err, setErr] = useState('');
 
-  const run = async () => {
+  const run = async (ack) => {
     if (!input.trim() || busy) return;
+    setBoundary(null);
     setBusy(true); setErr(''); setResult(null);
     const r = await api('/translate', 'POST', {
       relationId, track: config.track, mode: mode.key, input: input.trim(),
       emotionDepth: config.emotionDepth, theologyLevel: config.theologyLevel, pastoralTone: config.pastoralTone,
+      inputSource: src, acknowledgeBoundary: ack,
     });
     setBusy(false);
     if (r.status === 402) { setErr('크레딧이 부족해요. 마음풀에서 구매 후 이용해 주세요.'); return; }
+    if (r.status === 429) { setErr(r.error || '오늘은 여기까지 이야기 나눴어요. 내일 다시 만나요.'); return; }
+    if (r.boundaryNotice) { setBoundary(r.result); return; }
     if (!r.ok || !r.result) { setErr(r.error || '통역에 실패했어요. 다시 시도해 주세요.'); return; }
     setResult(r.result);
   };
@@ -441,14 +460,46 @@ function ModeView({ mode, config, relationId, onBack }) {
     <Shell title={`${mode.emoji} ${mode.title}`} onBack={onBack}>
       {!result && (<>
         <div style={{ color: MUT, fontSize: 14, marginBottom: 10 }}>{mode.placeholder}</div>
+
+        {/* 입력 출처 — 부모 사용자만(DEV_01 §2.3). 청소년에겐 이 선택 자체를 보여주지 않는다. */}
+        {ageTier !== 'teen' && (mode.key === 'receive' || mode.key === 'perspective') && (
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ fontSize: 12.5, color: MUT, marginBottom: 5 }}>이 말을 어떻게 알게 되셨나요?</div>
+            <div style={{ display: 'flex', gap: 7 }}>
+              {[['direct', '저에게 직접 한 말'], ['observed', '카톡·일기 등을 봤어요']].map(([k, t]) => (
+                <div key={k} onClick={() => { setSrc(k); setBoundary(null); }}
+                  style={{ padding: '7px 12px', borderRadius: 100, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap',
+                    border: '1px solid ' + (src === k ? GREEN : LINE), background: src === k ? GREEN : '#fff', color: src === k ? '#fff' : INK,
+                    fontWeight: src === k ? 800 : 500 }}>{t}</div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <textarea value={input} onChange={e => setInput(e.target.value)} placeholder="여기에 입력하세요"
           style={{ width: '100%', minHeight: 140, border: `1.5px solid ${LINE}`, borderRadius: 13, padding: 14, fontSize: 15, lineHeight: 1.6, resize: 'vertical', outline: 'none' }} />
         {err && <div style={{ color: '#c0392b', fontSize: 13, margin: '8px 0' }}>{err}</div>}
+
+        {/* 신뢰 경계 안내 — 통역보다 먼저. 다만 자해·위험 신호가 걱정이면 계속 진행할 수 있게 문을 열어둔다. */}
+        {boundary && (
+          <Card style={{ background: '#fff9ec', border: '1px solid #fde68a', marginTop: 10 }}>
+            <div style={{ fontSize: 14.5, lineHeight: 1.8, color: '#78350f' }}>{boundary.message}</div>
+            {boundary.safety_note && <div style={{ fontSize: 13, lineHeight: 1.7, color: MUT, marginTop: 10 }}>{boundary.safety_note}</div>}
+            <div style={{ height: 12 }} />
+            <Btn kind="ghost" onClick={() => run(true)} disabled={busy}>그래도 통역해 주세요</Btn>
+          </Card>
+        )}
+
         <div style={{ height: 10 }} />
-        <Btn onClick={run} disabled={busy || !input.trim()}>{busy ? '통역 중…' : '통역하기'}</Btn>
-        <div style={{ fontSize: 12, color: MUT, textAlign: 'center', marginTop: 8 }}>
-          {mode.key === 'mediate' || mode.key === 'perspective' ? '3 크레딧' : '2 크레딧'} 사용
-        </div>
+        {!boundary && <Btn onClick={() => run(false)} disabled={busy || !input.trim()}>{busy ? '통역 중…' : '통역하기'}</Btn>}
+        {ageTier !== 'teen' && (
+          <div style={{ fontSize: 12, color: MUT, textAlign: 'center', marginTop: 8 }}>
+            {mode.key === 'mediate' || mode.key === 'perspective' ? '3 크레딧' : '2 크레딧'} 사용
+          </div>
+        )}
+        {ageTier === 'teen' && (
+          <div style={{ fontSize: 12, color: MUT, textAlign: 'center', marginTop: 8 }}>무료로 쓸 수 있어 · 하루 10번까지</div>
+        )}
       </>)}
       {result && (<>
         {result.safety_tier
@@ -456,9 +507,6 @@ function ModeView({ mode, config, relationId, onBack }) {
           : (<>
             <ResultBlock result={result} />
             <Improvement imp={result.improvement} relationId={relationId} track={config.track} />
-            {mode.key === 'send' && result.rewritten && <Share relationId={relationId} itemType="message" payload={{ text: result.rewritten }} preview={result.rewritten} label="✉️ 이 문장 배우자에게 보내기" />}
-            {mode.key === 'mediate' && <Share relationId={relationId} itemType="mediate_view" payload={result} preview={'[중재 통역 함께 보기]\n다음 한마디 · ' + (result.next_word || '')} label="🔗 함께 보기 보내기" />}
-            {mode.key === 'perspective' && <Share relationId={relationId} itemType="perspective_view" payload={result} preview={'[관점 통역 함께 보기]\n' + (result.bridge || '')} label="🔗 함께 보기 보내기" />}
           </>)}
         <div style={{ height: 12 }} />
         <Btn kind="ghost" onClick={() => { setResult(null); setInput(''); }}>다시 통역하기</Btn>
@@ -538,7 +586,7 @@ function Memory({ relationId, onBack }) {
             {mem.successPatterns?.length > 0 && <Row label="이 부부에게 통했던 것">{mem.successPatterns.map((s, i) => <div key={i} style={{ fontSize: 14, lineHeight: 1.6, marginBottom: 4 }}>· {s}</div>)}</Row>}
             {mem.psychologyProfile && <Row label="상호작용 패턴"><div style={{ fontSize: 14, lineHeight: 1.7 }}>{mem.psychologyProfile}</div></Row>}
             {mem.christianProfile && <Row label="마음의 패턴"><div style={{ fontSize: 14, lineHeight: 1.7 }}>{mem.christianProfile}</div></Row>}
-            {mem.partnerPerspective && <Row label="배우자의 인식 습관"><div style={{ fontSize: 14, lineHeight: 1.7 }}>{mem.partnerPerspective}</div></Row>}
+            {mem.partnerPerspective && <Row label="상대의 인식 습관"><div style={{ fontSize: 14, lineHeight: 1.7 }}>{mem.partnerPerspective}</div></Row>}
           </>)}
     </Shell>
   );
@@ -828,29 +876,127 @@ function AgeGate({ onPass }) {
   );
 }
 
+// ── 연령 확인 (만14+ / 3층 산출) ─────────────────────────────────────────────
+// ⚠️ 마음부부의 "성인 19+ 게이트"와 다르다. 이 앱은 만 14세부터 쓴다.
+//    14세 하한 근거: 만14세 미만은 법정대리인 동의 필요 → 부모와의 갈등을 다루는 앱에
+//    부모 동의를 요구하면 서비스가 성립하지 않는다.
+function AgeCheck({ onPass }) {
+  const [d, setD] = useState('');
+  const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState(false);
+  const submit = async () => {
+    if (busy) return; setBusy(true); setMsg('');
+    const r = await api('/age/verify', 'POST', { birthDate: d });
+    setBusy(false);
+    if (r.ok) return onPass(r.ageTier);
+    setMsg(r.message || r.error || '확인에 실패했어요.');
+  };
+  return (
+    <Shell title="🌿 마음세대">
+      <Card style={{ marginTop: 30 }}>
+        <div style={{ fontSize: 19, fontWeight: 800, marginBottom: 6 }}>먼저 나이를 알려주세요</div>
+        <div style={{ color: MUT, fontSize: 13.5, lineHeight: 1.7, marginBottom: 14 }}>
+          나이에 따라 안내 방식이 달라져요. 청소년에게는 청소년에게 맞는 방식으로 도와드려요.
+        </div>
+        {msg && <div style={{ background: '#fff4ee', border: '1px solid #f5c6a5', color: '#b45309', borderRadius: 10, padding: '10px 13px', fontSize: 13.5, lineHeight: 1.7, marginBottom: 12 }}>{msg}</div>}
+        <input type="date" value={d} onChange={e => setD(e.target.value)}
+          style={{ width: '100%', padding: '12px 13px', border: '1.5px solid ' + LINE, borderRadius: 10, fontSize: 15, boxSizing: 'border-box', marginBottom: 12 }} />
+        <Btn onClick={submit} disabled={!d || busy}>확인</Btn>
+        <div style={{ color: MUT, fontSize: 12, marginTop: 12, lineHeight: 1.7 }}>
+          생년월일은 나이 확인에만 쓰고, 다른 곳에 보여주지 않아요.
+        </div>
+      </Card>
+    </Shell>
+  );
+}
+
+// ── 관계 선택·생성 (이 앱의 근본 구조: 다중 관계) ───────────────────────────────
+// 아버지·어머니는 완전히 다른 관계다. 통역·기억·활동은 전부 선택된 관계 스코프에서만 동작한다.
+function RelationPicker({ relations, current, onPick, onCreated, ageTier }) {
+  const [open, setOpen] = useState(false);
+  const [role, setRole] = useState(ageTier === 'teen' ? 'child' : '');
+  const [label, setLabel] = useState('');
+  const [ctx, setCtx] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const create = async () => {
+    if (busy) return; setBusy(true); setErr('');
+    const r = await api('/relation', 'POST', { ownerRole: role, counterpartLabel: label.trim(), counterpartContext: ctx.trim() || undefined });
+    setBusy(false);
+    if (!r.ok) return setErr(r.error || '만들지 못했어요.');
+    setOpen(false); setLabel(''); setCtx('');
+    onCreated(r.relationId);
+  };
+  const chip = (on) => ({
+    padding: '7px 13px', borderRadius: 100, fontSize: 13.5, fontWeight: on ? 800 : 500, cursor: 'pointer',
+    border: '1px solid ' + (on ? GREEN : LINE), background: on ? GREEN : '#fff', color: on ? '#fff' : INK, whiteSpace: 'nowrap',
+  });
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ fontSize: 12.5, color: MUT, marginBottom: 6 }}>누구와의 대화인가요?</div>
+      <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', alignItems: 'center' }}>
+        {relations.map(r => (
+          <div key={r.id} onClick={() => onPick(r.id)} style={chip(r.id === current)}>{r.counterpart_label}</div>
+        ))}
+        <div onClick={() => setOpen(true)} style={{ ...chip(false), borderStyle: 'dashed', color: GREEN }}>+ 추가</div>
+      </div>
+      {open && (
+        <Card style={{ marginTop: 10 }}>
+          <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 10 }}>관계 추가</div>
+          {err && <div style={{ background: '#fff4ee', color: '#b45309', borderRadius: 8, padding: '8px 11px', fontSize: 13, marginBottom: 10 }}>{err}</div>}
+          {ageTier !== 'teen' && (
+            <div>
+              <div style={{ fontSize: 12.5, color: MUT, marginBottom: 5 }}>나는 이 관계에서</div>
+              <div style={{ display: 'flex', gap: 7, marginBottom: 12 }}>
+                <div onClick={() => setRole('child')} style={chip(role === 'child')}>자녀예요</div>
+                <div onClick={() => setRole('parent')} style={chip(role === 'parent')}>부모예요</div>
+              </div>
+            </div>
+          )}
+          <div style={{ fontSize: 12.5, color: MUT, marginBottom: 5 }}>상대를 뭐라고 부르나요?</div>
+          <input value={label} onChange={e => setLabel(e.target.value)} maxLength={20}
+            placeholder={role === 'parent' ? '예: 큰딸, 아들' : '예: 아버지, 어머니'}
+            style={{ width: '100%', padding: '10px 12px', border: '1.5px solid ' + LINE, borderRadius: 9, fontSize: 14, boxSizing: 'border-box', marginBottom: 10 }} />
+          <div style={{ fontSize: 12.5, color: MUT, marginBottom: 5 }}>상대에 대해 알려주실 것 (선택)</div>
+          <input value={ctx} onChange={e => setCtx(e.target.value)} maxLength={200}
+            placeholder="예: 70대, 은퇴 2년차 / 고2, 입시 준비 중"
+            style={{ width: '100%', padding: '10px 12px', border: '1.5px solid ' + LINE, borderRadius: 9, fontSize: 14, boxSizing: 'border-box', marginBottom: 12 }} />
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Btn kind="ghost" onClick={() => setOpen(false)}>취소</Btn>
+            <Btn onClick={create} disabled={!role || !label.trim() || busy}>만들기</Btn>
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}
+
 // ── 앱 라우터 ─────────────────────────────────────────────────────────────────
 function App() {
   const [ready, setReady] = useState(false);
   const [authed, setAuthed] = useState(true);
+  const [ageTier, setAgeTier] = useState(null);
+  const [relations, setRelations] = useState([]);
   const [relationId, setRelationId] = useState(null);
   const [config, setConfig] = useState(loadConfig());
-  const [view, setView] = useState('home');   // home | mode | community | memory | inbox
+  const [view, setView] = useState('home');
   const [mode, setMode] = useState(null);
-  const [inboxCount, setInboxCount] = useState(0);
-  const [adult, setAdult] = useState(true);
 
-  const refreshInbox = async (rid) => {
-    const id = rid || relationId; if (!id) return;
-    const r = await api(`/share/inbox?relationId=${id}&peek=1`);
-    if (r.ok) setInboxCount((r.items || []).filter(x => x.status === 'sent').length);
+  const loadRelations = async (pick) => {
+    const r = await api('/relations');
+    if (r.ok) {
+      const list = r.relations || [];
+      setRelations(list);
+      setRelationId(pick || (list[0] && list[0].id) || null);
+    }
   };
 
   useEffect(() => {
     (async () => {
       if (!token()) { setAuthed(false); setReady(true); return; }
-      const r = await api('/relation', 'POST', {});
-      if (r.status === 401) { setAuthed(false); setReady(true); return; }
-      if (r.ok) { setRelationId(r.relationId); setAdult(!!r.adult); refreshInbox(r.relationId); }
+      const me = await api('/me');
+      if (me.status === 401) { setAuthed(false); setReady(true); return; }
+      if (me.ok && me.ageTier) { setAgeTier(me.ageTier); await loadRelations(); }
       setReady(true);
     })();
   }, []);
@@ -860,32 +1006,30 @@ function App() {
   if (!authed) return (
     <Shell>
       <Card style={{ textAlign: 'center', marginTop: 40 }}>
-        <div style={{ fontSize: 40 }}>💬</div>
-        <div style={{ fontSize: 20, fontWeight: 800, margin: '10px 0' }}>마음부부</div>
-        <div style={{ color: MUT, fontSize: 14, lineHeight: 1.7 }}>마음풀에 로그인한 뒤,<br />메뉴의 <b>💬 마음부부</b>로 들어와 주세요.</div>
+        <div style={{ fontSize: 40 }}>🌿</div>
+        <div style={{ fontSize: 20, fontWeight: 800, margin: '10px 0' }}>마음세대</div>
+        <div style={{ color: MUT, fontSize: 14, lineHeight: 1.7 }}>마음풀에 로그인한 뒤,<br />메뉴의 <b>🌿 마음세대</b>로 들어와 주세요.</div>
         <div style={{ height: 16 }} />
         <Btn onClick={() => window.open('https://maumful.com', '_blank')}>마음풀로 가기</Btn>
       </Card>
     </Shell>
   );
 
-  if (!adult) return <AgeGate onPass={() => setAdult(true)} />;
+  if (!ageTier) return <AgeCheck onPass={async (t) => { setAgeTier(t); await loadRelations(); }} />;
+  if (!config) return <Onboarding onDone={() => setConfig(loadConfig())} ageTier={ageTier} />;
 
-  if (!config) return <Onboarding onDone={() => setConfig(loadConfig())} />;
+  if (view === 'mode' && mode && relationId) {
+    return <ModeView mode={mode} config={config} relationId={relationId} ageTier={ageTier}
+      onBack={() => setView('home')} />;
+  }
+  if (view === 'memory' && relationId) return <Memory relationId={relationId} onBack={() => setView('home')} />;
 
-  if (view === 'mode' && mode) return <ModeView mode={mode} config={config} relationId={relationId} onBack={() => setView('home')} />;
-  if (view === 'community') return <Community onBack={() => setView('home')} />;
-  if (view === 'memory') return <Memory relationId={relationId} onBack={() => setView('home')} />;
-  if (view === 'multimodal') return <Multimodal relationId={relationId} config={config} onBack={() => setView('home')} />;
-  if (view === 'inbox') return <Inbox relationId={relationId} onBack={() => { setView('home'); refreshInbox(); }} onSeen={() => setInboxCount(0)} />;
-
-  return <Home config={config} inboxCount={inboxCount}
+  return <Home config={config} ageTier={ageTier} relationId={relationId}
+    picker={<RelationPicker relations={relations} current={relationId} ageTier={ageTier}
+      onPick={setRelationId} onCreated={(id) => loadRelations(id)} />}
     onMode={(m) => { setMode(m); setView('mode'); }}
-    onCommunity={() => setView('community')}
     onMemory={() => setView('memory')}
-    onMultimodal={() => setView('multimodal')}
-    onInbox={() => setView('inbox')}
-    onSettings={() => { localStorage.removeItem('bubu_config'); setConfig(null); }} />;
+    onSettings={() => { localStorage.removeItem('sedae_config'); setConfig(null); }} />;
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);
