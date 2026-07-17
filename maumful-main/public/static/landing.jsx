@@ -110,7 +110,6 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
     { label: tl('검사 소개',  'Assessments'),    view: 'testsIntro' },
     { label: tl('심리검사',   'My Tests'),        view: 'memberDashboard', guestView: 'testsIntro' },
     { label: tl('AI 상담',   'AI Counseling'),   view: 'aiCounsel',       requireLogin: true },
-    { label: tl('상담센터',   'Centers'),         view: 'counseling' },
     { label: tl('마음 게임',  'Healing Games'),   view: 'gameIntro', isGame: true },
     { label: tl('마음커플',   'Maumful Couple'),  view: 'couple',    isCouple: true },
     { label: tl('마음수달',   'Maumotter'),       isOtter: true },

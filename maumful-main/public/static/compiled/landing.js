@@ -176,7 +176,6 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
     { label: tl("\uAC80\uC0AC \uC18C\uAC1C", "Assessments"), view: "testsIntro" },
     { label: tl("\uC2EC\uB9AC\uAC80\uC0AC", "My Tests"), view: "memberDashboard", guestView: "testsIntro" },
     { label: tl("AI \uC0C1\uB2F4", "AI Counseling"), view: "aiCounsel", requireLogin: true },
-    { label: tl("\uC0C1\uB2F4\uC13C\uD130", "Centers"), view: "counseling" },
     { label: tl("\uB9C8\uC74C \uAC8C\uC784", "Healing Games"), view: "gameIntro", isGame: true },
     { label: tl("\uB9C8\uC74C\uCEE4\uD50C", "Maumful Couple"), view: "couple", isCouple: true },
     { label: tl("\uB9C8\uC74C\uC218\uB2EC", "Maumotter"), isOtter: true },
