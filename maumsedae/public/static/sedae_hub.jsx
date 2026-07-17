@@ -210,21 +210,29 @@ function Onboarding({ onDone }) {
 // ── 홈 ──────────────────────────────────────────────────────────────────────
 function Home({ config, ageTier, relationId, picker, onMode, onMemory, onSettings }) {
   const [ask, setAsk] = useState(false);
+  // 시니어 최소 모드 (DEV_01 §2.2) — 큰 글씨 + 수신 통역 중심 단순 홈.
+  // "자녀가 이렇게 말했는데 무슨 뜻일까" 흐름이 핵심이라 4모드를 다 늘어놓지 않는다.
+  // 풀 시니어 UX·치매 감지 레이어 고도화는 Phase 2(phyweb 연계) — SPEC 7장.
+  const senior = ageTier === 'senior';
+  const [allMode, setAllMode] = useState(false);
+  const shownModes = senior && !allMode ? MODES.filter(m => m.key === 'receive' || m.key === 'send') : MODES;
   const depthLabel = ['표면', '중간', '심층'][(config.emotionDepth || 2) - 1];
   const theoLabel = ['통합형', '균형형', '성경형'][(config.theologyLevel || 2) - 1];
   const toneLabel = config.pastoralTone === 'direct' ? '제한적 직면형' : '경청·은혜형';
   return (
     <Shell right={<button onClick={() => setAsk(true)} style={{ background: 'rgba(255,255,255,.18)', border: 'none', color: '#fff', padding: '6px 10px', borderRadius: 9, cursor: 'pointer', fontSize: 13 }}>⚙️ 설정</button>}>
       {picker}
-      <div style={{ fontSize: 15, color: MUT, marginBottom: 4 }}>
+      <div style={{ fontSize: senior ? 17 : 15, color: MUT, marginBottom: 4 }}>
         {config.track === 'christian' ? '✝️ 기독교 트랙' : '🌱 심리상담 트랙'}
       </div>
-      <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>
-        {ageTier === 'teen' ? '무슨 일이 있었어?' : '무엇을 통역해 드릴까요?'}
+      <div style={{ fontSize: senior ? 27 : 22, fontWeight: 800, marginBottom: 4 }}>
+        {ageTier === 'teen' ? '무슨 일이 있었어?' : senior ? '무슨 말이 궁금하세요?' : '무엇을 통역해 드릴까요?'}
       </div>
-      <div style={{ color: MUT, fontSize: 13, marginBottom: 16 }}>
+      <div style={{ color: MUT, fontSize: senior ? 16 : 13, marginBottom: 16, lineHeight: senior ? 1.75 : 1.6 }}>
         {ageTier === 'teen'
           ? '무슨 말을 들었는지 그대로 적어도 괜찮아. 네 잘못인지 아닌지부터 같이 봐줄게.'
+          : senior
+          ? '자녀가 한 말을 그대로 적어 주세요. 무슨 뜻인지 읽어 드릴게요.'
           : '상황에 맞는 걸 고르세요. 아래 "이럴 때"를 참고하면 쉬워요.'}
       </div>
       {!relationId && (
@@ -235,17 +243,21 @@ function Home({ config, ageTier, relationId, picker, onMode, onMemory, onSetting
           </div>
         </Card>
       )}
-      {MODES.map(m => (
+      {shownModes.map(m => (
         <div key={m.key} onClick={() => relationId && onMode(m)} style={{ opacity: relationId ? 1 : .45, cursor: relationId ? 'pointer' : 'not-allowed', border: `1px solid ${LINE}`, borderRadius: 16, padding: 16, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 14, background: '#fff' }}>
           <div style={{ fontSize: 30 }}>{m.emoji}</div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 800, fontSize: 17 }}>{m.title}</div>
-            <div style={{ color: MUT, fontSize: 13, marginTop: 2 }}>{m.desc}</div>
+            <div style={{ fontWeight: 800, fontSize: senior ? 20 : 17 }}>{m.title}</div>
+            <div style={{ color: MUT, fontSize: senior ? 15 : 13, marginTop: 2 }}>{m.desc}</div>
             <div style={{ color: GREEN, fontSize: 12, marginTop: 4 }}>이럴 때 · {m.ex}</div>
           </div>
           <div style={{ color: MUT, fontSize: 20 }}>›</div>
         </div>
       ))}
+      {senior && !allMode && (
+        <Btn kind="ghost" onClick={() => setAllMode(true)} style={{ marginTop: 4 }}>다른 기능도 보기</Btn>
+      )}
+
       {/* ⚠️ 멀티모달·수신함·커뮤니티 진입점은 노출하지 않는다.
            - 멀티모달: SPEC 6장 — 코드 동의 게이트가 노부모에게 비현실적이라 재설계 전까지 제외(서버 403).
            - 커뮤니티·공유: 3단계-f 예정(테이블 미생성, 서버 503).
