@@ -125,11 +125,6 @@ const NOT_YET: Record<string, { status: 403 | 503; msg: string }> = {
   '/consent/accept':  { status: 403, msg: '멀티모달(사진·녹음)은 아직 제공하지 않아요.' },
   '/consent/revoke':  { status: 403, msg: '멀티모달(사진·녹음)은 아직 제공하지 않아요.' },
   // 3단계 예정 (테이블 미생성)
-  '/community/post':  { status: 503, msg: '커뮤니티는 준비 중이에요.' },
-  '/community/posts': { status: 503, msg: '커뮤니티는 준비 중이에요.' },
-  '/share/send':      { status: 503, msg: '공유는 준비 중이에요.' },
-  '/share/inbox':     { status: 503, msg: '공유는 준비 중이에요.' },
-  '/share/respond':   { status: 503, msg: '공유는 준비 중이에요.' },
   '/relation/invite': { status: 503, msg: '상대 초대는 준비 중이에요.' },
   '/relation/join':   { status: 503, msg: '상대 초대는 준비 중이에요.' },
 };
@@ -744,7 +739,7 @@ translate.post('/community/post', async (c) => {
 
     // ── 통과분만 저장 ──
     const result = await c.env.DB
-      .prepare('INSERT INTO community_posts (author_hash, room, content) VALUES (?, ?, ?) RETURNING id')
+      .prepare('INSERT INTO sedae_community_posts (author_hash, room, body) VALUES (?, ?, ?) RETURNING id')
       .bind(authorHash, body.room, body.content.trim())
       .first<{ id: number }>();
 
@@ -759,15 +754,19 @@ translate.post('/community/post', async (c) => {
 // GET /api/community/posts?room=&limit= — 커뮤니티 글 목록 (최신순, 순위 없음)
 // ----------------------------------------------------------------------------
 
+// 성인 방 5개만. 청소년 방은 1차 출시 제외(그루밍 등 접촉 위험) — TEEN_BLOCKED가 teen 접근 자체를 막는다.
+const ROOMS = ['teen_parent', 'retire_dad', 'holiday', 'caregiving', 'kangaroo'];
+
 translate.get('/community/posts', async (c) => {
   const room = c.req.query('room');
+  if (room && !ROOMS.includes(room)) return c.json({ error: '없는 방이에요.' }, 400);
   const limit = Math.min(Number(c.req.query('limit')) || 20, 50);
   if (!room) return c.json({ error: 'room이 필요합니다.' }, 400);
 
   const { results } = await c.env.DB
     .prepare(
-      `SELECT id, room, content, empathy_count, created_at
-       FROM community_posts WHERE room = ? AND status = 'published'
+      `SELECT id, room, body AS content, created_at
+       FROM sedae_community_posts WHERE room = ?
        ORDER BY created_at DESC LIMIT ?`
     )
     .bind(room, limit)
@@ -954,31 +953,57 @@ translate.post('/relation/join', async (c) => {
     const ridStr = await c.env.KV.get(`sedae_invite:${code}`);
     if (!ridStr) return c.json({ error: '만료되었거나 잘못된 코드예요.' }, 404);
     const relationId = Number(ridStr);
-    const rel = await c.env.DB.prepare('SELECT user_a_id, user_b_id FROM sedae_relations WHERE id = ?').bind(relationId).first<{ user_a_id: number; user_b_id: number | null }>();
+    // 마음세대 스키마: user_a/user_b가 아니라 owner_id/counterpart_id다.
+    const rel = await c.env.DB.prepare('SELECT owner_id, counterpart_id FROM sedae_relations WHERE id = ?').bind(relationId).first<{ owner_id: number; counterpart_id: number | null }>();
     if (!rel) return c.json({ error: '관계를 찾을 수 없어요.' }, 404);
-    if (rel.user_a_id === uid) return c.json({ error: '본인이 만든 초대예요.' }, 400);
-    if (rel.user_b_id != null && rel.user_b_id !== uid) return c.json({ error: '이미 다른 분과 연결된 관계예요.' }, 409);
-    if (rel.user_b_id == null) await c.env.DB.prepare('UPDATE sedae_relations SET user_b_id = ? WHERE id = ?').bind(uid, relationId).run();
+    if (rel.owner_id === uid) return c.json({ error: '본인이 만든 초대예요.' }, 400);
+    if (rel.counterpart_id != null && rel.counterpart_id !== uid) return c.json({ error: '이미 다른 분과 연결된 관계예요.' }, 409);
+    if (rel.counterpart_id == null) await c.env.DB.prepare('UPDATE sedae_relations SET counterpart_id = ? WHERE id = ?').bind(uid, relationId).run();
     await c.env.KV.delete(`sedae_invite:${code}`);
     return c.json({ ok: true, relationId });
   } catch (e) { console.error('join error:', e); return c.json({ error: '연결에 실패했어요.' }, 500); }
 });
 
 // POST /api/share/send — 승인된 결과만 건별 공유 (T1/T2 안전 세션 차단)
+// ⚠️ 공유 가능한 것은 SHARE_TYPES뿐이다. **절대 공유 금지**(자동이든 수동이든):
+//    수신 통역 결과(상대가 보면 "날 분석했구나"가 된다) · 통역 질의 이력 · 관계 기억 프로파일 · 활동 피드백 기록.
 translate.post('/share/send', async (c) => {
   try {
     const uid = c.get('uid');
     const { relationId, itemType, payload } = await c.req.json<{ relationId: number; itemType: string; payload: unknown }>();
     if (!relationId || !SHARE_TYPES.includes(itemType) || payload == null) return c.json({ error: '필수 정보가 누락되었습니다.' }, 400);
     if (!(await assertRelationOwner(c.env.DB, relationId, uid))) return c.json({ error: '이 관계에 접근 권한이 없어요.' }, 403);
-    // ADDENDUM 1.4-1: 안전 티어 감지된 relation은 공유 차단 (가해자에게 흔적 방지)
+    // 안전 티어(T1/T2)가 감지된 relation은 공유 차단 — 가해자에게 흔적이 가지 않도록.
     if (await hasRecentSafety(c.env.DB, relationId)) return c.json({ error: '지금은 안전을 위해 공유가 제한돼요.', blockedBySafety: true }, 403);
-    const id = Array.from(crypto.getRandomValues(new Uint8Array(9))).map((b) => b.toString(16).padStart(2, '0')).join('');
-    await c.env.DB.prepare('INSERT INTO shared_items (id, relation_id, sender_id, item_type, payload) VALUES (?, ?, ?, ?, ?)')
-      .bind(id, relationId, uid, itemType, JSON.stringify(payload)).run();
-    const rel = await c.env.DB.prepare('SELECT user_b_id FROM sedae_relations WHERE id = ?').bind(relationId).first<{ user_b_id: number | null }>();
-    return c.json({ ok: true, shareId: id, linked: !!(rel && rel.user_b_id != null) });
+
+    // 웹뷰에 보여줄 발신자 표시 — 관계의 반대편 호칭으로 만든다(실명·이메일 노출 금지).
+    const rel = await c.env.DB.prepare('SELECT owner_id, owner_role FROM sedae_relations WHERE id = ?')
+      .bind(relationId).first<{ owner_id: number; owner_role: string }>();
+    const senderIsOwner = rel ? rel.owner_id === uid : true;
+    const senderRole = rel ? (senderIsOwner ? rel.owner_role : (rel.owner_role === 'parent' ? 'child' : 'parent')) : 'child';
+    const senderLabel = senderRole === 'parent' ? '부모님' : '자녀';
+
+    const id = Array.from(crypto.getRandomValues(new Uint8Array(12))).map((b) => b.toString(16).padStart(2, '0')).join('');
+    await c.env.DB.prepare('INSERT INTO sedae_shared_items (id, relation_id, sender_id, item_type, payload, sender_label) VALUES (?, ?, ?, ?, ?, ?)')
+      .bind(id, relationId, uid, itemType, JSON.stringify(payload), senderLabel).run();
+
+    const rel2 = await c.env.DB.prepare('SELECT counterpart_id FROM sedae_relations WHERE id = ?')
+      .bind(relationId).first<{ counterpart_id: number | null }>();
+    // ★ 웹뷰 링크 — 상대가 미가입이어도 앱 설치 없이 열람할 수 있어야 한다(70대 부모 실효성의 조건).
+    const origin = new URL(c.req.url).origin;
+    return c.json({ ok: true, shareId: id, shareUrl: `${origin}/s/${id}`, linked: !!(rel2 && rel2.counterpart_id != null) });
   } catch (e) { console.error('share send error:', e); return c.json({ error: '공유에 실패했어요.' }, 500); }
+});
+
+// DELETE /api/share/:id — 철회(발신자만). 수신 측에서도 사라진다.
+translate.delete('/share/:id', async (c) => {
+  try {
+    const uid = c.get('uid');
+    const r = await c.env.DB.prepare("UPDATE sedae_shared_items SET status='revoked' WHERE id = ? AND sender_id = ?")
+      .bind(c.req.param('id'), uid).run();
+    if (!r.meta.changes) return c.json({ error: '철회할 수 없어요.' }, 404);
+    return c.json({ ok: true });
+  } catch (e) { console.error('share revoke error:', e); return c.json({ error: '철회에 실패했어요.' }, 500); }
 });
 
 // GET /api/share/inbox?relationId= — 내가 받은 공유(배우자가 보낸 것). viewed 처리
@@ -988,10 +1013,10 @@ translate.get('/share/inbox', async (c) => {
     const relationId = Number(c.req.query('relationId'));
     if (!relationId) return c.json({ error: 'relationId가 필요합니다.' }, 400);
     if (!(await assertRelationOwner(c.env.DB, relationId, uid))) return c.json({ error: '이 관계에 접근 권한이 없어요.' }, 403);
-    const { results } = await c.env.DB.prepare("SELECT id, item_type, payload, status, created_at FROM shared_items WHERE relation_id = ? AND sender_id != ? ORDER BY created_at DESC LIMIT 50").bind(relationId, uid).all();
+    const { results } = await c.env.DB.prepare("SELECT id, item_type, payload, status, created_at FROM sedae_shared_items WHERE relation_id = ? AND sender_id != ? AND status != 'revoked' ORDER BY created_at DESC LIMIT 50").bind(relationId, uid).all();
     // peek=1(뱃지 카운트용)이면 읽음 처리하지 않음 — 실제 열람 시에만 viewed
     if (c.req.query('peek') !== '1') {
-      await c.env.DB.prepare("UPDATE shared_items SET status = 'viewed', viewed_at = datetime('now') WHERE relation_id = ? AND sender_id != ? AND status = 'sent'").bind(relationId, uid).run();
+      await c.env.DB.prepare("UPDATE sedae_shared_items SET status = 'viewed', viewed_at = datetime('now') WHERE relation_id = ? AND sender_id != ? AND status = 'sent'").bind(relationId, uid).run();
     }
     return c.json({ ok: true, items: (results || []).map((r: Record<string, unknown>) => ({ ...r, payload: safeJson(r.payload as string) })) });
   } catch (e) { console.error('inbox error:', e); return c.json({ error: '수신함을 불러오지 못했어요.' }, 500); }
@@ -1002,7 +1027,7 @@ translate.post('/share/respond', async (c) => {
   try {
     const { shareId, action } = await c.req.json<{ shareId: string; action: string }>();
     if (action !== 'accepted' || !shareId) return c.json({ error: '잘못된 요청입니다.' }, 400);
-    await c.env.DB.prepare("UPDATE shared_items SET status = 'accepted' WHERE id = ?").bind(shareId).run();
+    await c.env.DB.prepare("UPDATE sedae_shared_items SET status = 'accepted' WHERE id = ?").bind(shareId).run();
     return c.json({ ok: true });
   } catch (e) { console.error('respond error:', e); return c.json({ error: '처리에 실패했어요.' }, 500); }
 });
