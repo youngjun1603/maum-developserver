@@ -187,7 +187,7 @@ function Onboarding({ onDone }) {
     onDone();
   } }, "\uB3D9\uC758\uD558\uACE0 \uC2DC\uC791\uD558\uAE30"), /* @__PURE__ */ React.createElement("div", { style: { height: 8 } }), /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: () => setStep(1) }, "\u2039 \uC774\uC804")));
 }
-function Home({ config, ageTier, relationId, picker, onMode, onMemory, onSettings }) {
+function Home({ config, ageTier, relationId, picker, onMode, onMemory, onCommunity, onSettings }) {
   const [ask, setAsk] = useState(false);
   const senior = ageTier === "senior";
   const [allMode, setAllMode] = useState(false);
@@ -195,7 +195,7 @@ function Home({ config, ageTier, relationId, picker, onMode, onMemory, onSetting
   const depthLabel = ["\uD45C\uBA74", "\uC911\uAC04", "\uC2EC\uCE35"][(config.emotionDepth || 2) - 1];
   const theoLabel = ["\uD1B5\uD569\uD615", "\uADE0\uD615\uD615", "\uC131\uACBD\uD615"][(config.theologyLevel || 2) - 1];
   const toneLabel = config.pastoralTone === "direct" ? "\uC81C\uD55C\uC801 \uC9C1\uBA74\uD615" : "\uACBD\uCCAD\xB7\uC740\uD61C\uD615";
-  return /* @__PURE__ */ React.createElement(Shell, { right: /* @__PURE__ */ React.createElement("button", { onClick: () => setAsk(true), style: { background: "rgba(255,255,255,.18)", border: "none", color: "#fff", padding: "6px 10px", borderRadius: 9, cursor: "pointer", fontSize: 13 } }, "\u2699\uFE0F \uC124\uC815") }, picker, /* @__PURE__ */ React.createElement("div", { style: { fontSize: senior ? 17 : 15, color: MUT, marginBottom: 4 } }, config.track === "christian" ? "\u271D\uFE0F \uAE30\uB3C5\uAD50 \uD2B8\uB799" : "\u{1F331} \uC2EC\uB9AC\uC0C1\uB2F4 \uD2B8\uB799"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: senior ? 27 : 22, fontWeight: 800, marginBottom: 4 } }, ageTier === "teen" ? "\uBB34\uC2A8 \uC77C\uC774 \uC788\uC5C8\uC5B4?" : senior ? "\uBB34\uC2A8 \uB9D0\uC774 \uAD81\uAE08\uD558\uC138\uC694?" : "\uBB34\uC5C7\uC744 \uD1B5\uC5ED\uD574 \uB4DC\uB9B4\uAE4C\uC694?"), /* @__PURE__ */ React.createElement("div", { style: { color: MUT, fontSize: senior ? 16 : 13, marginBottom: 16, lineHeight: senior ? 1.75 : 1.6 } }, ageTier === "teen" ? "\uBB34\uC2A8 \uB9D0\uC744 \uB4E4\uC5C8\uB294\uC9C0 \uADF8\uB300\uB85C \uC801\uC5B4\uB3C4 \uAD1C\uCC2E\uC544. \uB124 \uC798\uBABB\uC778\uC9C0 \uC544\uB2CC\uC9C0\uBD80\uD130 \uAC19\uC774 \uBD10\uC904\uAC8C." : senior ? "\uC790\uB140\uAC00 \uD55C \uB9D0\uC744 \uADF8\uB300\uB85C \uC801\uC5B4 \uC8FC\uC138\uC694. \uBB34\uC2A8 \uB73B\uC778\uC9C0 \uC77D\uC5B4 \uB4DC\uB9B4\uAC8C\uC694." : '\uC0C1\uD669\uC5D0 \uB9DE\uB294 \uAC78 \uACE0\uB974\uC138\uC694. \uC544\uB798 "\uC774\uB7F4 \uB54C"\uB97C \uCC38\uACE0\uD558\uBA74 \uC26C\uC6CC\uC694.'), !relationId && /* @__PURE__ */ React.createElement(Card, { style: { background: "#f6faf8", marginBottom: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13.5, color: MUT, lineHeight: 1.7 } }, "\uBA3C\uC800 ", /* @__PURE__ */ React.createElement("b", { style: { color: INK } }, "\uB204\uAD6C\uC640\uC758 \uB300\uD654\uC778\uC9C0"), " \uC704\uC5D0\uC11C ", /* @__PURE__ */ React.createElement("b", { style: { color: INK } }, "+ \uCD94\uAC00"), "\uB85C \uB9CC\uB4E4\uC5B4 \uC8FC\uC138\uC694. \uC544\uBC84\uC9C0\xB7\uC5B4\uBA38\uB2C8\uB294 \uAC01\uAC01 \uB2E4\uB978 \uAD00\uACC4\uB85C \uB098\uB220\uC11C \uAE30\uC5B5\uD574\uC694.")), shownModes.map((m) => /* @__PURE__ */ React.createElement("div", { key: m.key, onClick: () => relationId && onMode(m), style: { opacity: relationId ? 1 : 0.45, cursor: relationId ? "pointer" : "not-allowed", border: `1px solid ${LINE}`, borderRadius: 16, padding: 16, marginBottom: 10, display: "flex", alignItems: "center", gap: 14, background: "#fff" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 30 } }, m.emoji), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 800, fontSize: senior ? 20 : 17 } }, m.title), /* @__PURE__ */ React.createElement("div", { style: { color: MUT, fontSize: senior ? 15 : 13, marginTop: 2 } }, m.desc), /* @__PURE__ */ React.createElement("div", { style: { color: GREEN, fontSize: 12, marginTop: 4 } }, "\uC774\uB7F4 \uB54C \xB7 ", m.ex)), /* @__PURE__ */ React.createElement("div", { style: { color: MUT, fontSize: 20 } }, "\u203A"))), senior && !allMode && /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: () => setAllMode(true), style: { marginTop: 4 } }, "\uB2E4\uB978 \uAE30\uB2A5\uB3C4 \uBCF4\uAE30"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 10 } }, /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: onMemory, disabled: !relationId }, "\u{1F9E0} \uC774 \uAD00\uACC4\uC758 \uAE30\uC5B5")), ask && /* @__PURE__ */ React.createElement(
+  return /* @__PURE__ */ React.createElement(Shell, { right: /* @__PURE__ */ React.createElement("button", { onClick: () => setAsk(true), style: { background: "rgba(255,255,255,.18)", border: "none", color: "#fff", padding: "6px 10px", borderRadius: 9, cursor: "pointer", fontSize: 13 } }, "\u2699\uFE0F \uC124\uC815") }, picker, /* @__PURE__ */ React.createElement("div", { style: { fontSize: senior ? 17 : 15, color: MUT, marginBottom: 4 } }, config.track === "christian" ? "\u271D\uFE0F \uAE30\uB3C5\uAD50 \uD2B8\uB799" : "\u{1F331} \uC2EC\uB9AC\uC0C1\uB2F4 \uD2B8\uB799"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: senior ? 27 : 22, fontWeight: 800, marginBottom: 4 } }, ageTier === "teen" ? "\uBB34\uC2A8 \uC77C\uC774 \uC788\uC5C8\uC5B4?" : senior ? "\uBB34\uC2A8 \uB9D0\uC774 \uAD81\uAE08\uD558\uC138\uC694?" : "\uBB34\uC5C7\uC744 \uD1B5\uC5ED\uD574 \uB4DC\uB9B4\uAE4C\uC694?"), /* @__PURE__ */ React.createElement("div", { style: { color: MUT, fontSize: senior ? 16 : 13, marginBottom: 16, lineHeight: senior ? 1.75 : 1.6 } }, ageTier === "teen" ? "\uBB34\uC2A8 \uB9D0\uC744 \uB4E4\uC5C8\uB294\uC9C0 \uADF8\uB300\uB85C \uC801\uC5B4\uB3C4 \uAD1C\uCC2E\uC544. \uB124 \uC798\uBABB\uC778\uC9C0 \uC544\uB2CC\uC9C0\uBD80\uD130 \uAC19\uC774 \uBD10\uC904\uAC8C." : senior ? "\uC790\uB140\uAC00 \uD55C \uB9D0\uC744 \uADF8\uB300\uB85C \uC801\uC5B4 \uC8FC\uC138\uC694. \uBB34\uC2A8 \uB73B\uC778\uC9C0 \uC77D\uC5B4 \uB4DC\uB9B4\uAC8C\uC694." : '\uC0C1\uD669\uC5D0 \uB9DE\uB294 \uAC78 \uACE0\uB974\uC138\uC694. \uC544\uB798 "\uC774\uB7F4 \uB54C"\uB97C \uCC38\uACE0\uD558\uBA74 \uC26C\uC6CC\uC694.'), !relationId && /* @__PURE__ */ React.createElement(Card, { style: { background: "#f6faf8", marginBottom: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13.5, color: MUT, lineHeight: 1.7 } }, "\uBA3C\uC800 ", /* @__PURE__ */ React.createElement("b", { style: { color: INK } }, "\uB204\uAD6C\uC640\uC758 \uB300\uD654\uC778\uC9C0"), " \uC704\uC5D0\uC11C ", /* @__PURE__ */ React.createElement("b", { style: { color: INK } }, "+ \uCD94\uAC00"), "\uB85C \uB9CC\uB4E4\uC5B4 \uC8FC\uC138\uC694. \uC544\uBC84\uC9C0\xB7\uC5B4\uBA38\uB2C8\uB294 \uAC01\uAC01 \uB2E4\uB978 \uAD00\uACC4\uB85C \uB098\uB220\uC11C \uAE30\uC5B5\uD574\uC694.")), shownModes.map((m) => /* @__PURE__ */ React.createElement("div", { key: m.key, onClick: () => relationId && onMode(m), style: { opacity: relationId ? 1 : 0.45, cursor: relationId ? "pointer" : "not-allowed", border: `1px solid ${LINE}`, borderRadius: 16, padding: 16, marginBottom: 10, display: "flex", alignItems: "center", gap: 14, background: "#fff" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 30 } }, m.emoji), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 800, fontSize: senior ? 20 : 17 } }, m.title), /* @__PURE__ */ React.createElement("div", { style: { color: MUT, fontSize: senior ? 15 : 13, marginTop: 2 } }, m.desc), /* @__PURE__ */ React.createElement("div", { style: { color: GREEN, fontSize: 12, marginTop: 4 } }, "\uC774\uB7F4 \uB54C \xB7 ", m.ex)), /* @__PURE__ */ React.createElement("div", { style: { color: MUT, fontSize: 20 } }, "\u203A"))), senior && !allMode && /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: () => setAllMode(true), style: { marginTop: 4 } }, "\uB2E4\uB978 \uAE30\uB2A5\uB3C4 \uBCF4\uAE30"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 10 } }, /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: onMemory, disabled: !relationId }, "\u{1F9E0} \uC774 \uAD00\uACC4\uC758 \uAE30\uC5B5"), ageTier !== "teen" && /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: onCommunity }, "\u{1F4AC} \uCEE4\uBBA4\uB2C8\uD2F0")), ask && /* @__PURE__ */ React.createElement(
     "div",
     {
       style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 },
@@ -212,19 +212,54 @@ function Home({ config, ageTier, relationId, picker, onMode, onMemory, onSetting
 function Share({ relationId, itemType, payload, preview, label }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState("");
+  const [url, setUrl] = useState("");
+  const [msg, setMsg] = useState("");
+  const [copied, setCopied] = useState(false);
   const send = async () => {
     setBusy(true);
+    setMsg("");
     const r = await api("/share/send", "POST", { relationId, itemType, payload });
     setBusy(false);
+    if (r.ok && r.shareUrl) {
+      setUrl(r.shareUrl);
+      return;
+    }
     setOpen(false);
-    if (r.ok) setDone(r.linked ? "\uBC30\uC6B0\uC790\uC5D0\uAC8C \uBCF4\uB0C8\uC5B4\uC694 \u2713" : '\uBCF4\uB0C8\uC5B4\uC694. \uBC30\uC6B0\uC790\uAC00 \uC544\uC9C1 \uC5F0\uACB0 \uC804\uC774\uBA74 \uC218\uC2E0\uD568\uC5D0\uC11C "\uBC30\uC6B0\uC790 \uC5F0\uACB0"\uB85C \uCD08\uB300\uD558\uC138\uC694.');
-    else if (r.status === 403) setDone("\uC9C0\uAE08\uC740 \uC548\uC804\uC744 \uC704\uD574 \uACF5\uC720\uAC00 \uC81C\uD55C\uB3FC\uC694.");
-    else setDone(r.error || "\uACF5\uC720\uC5D0 \uC2E4\uD328\uD588\uC5B4\uC694.");
+    if (r.blockedBySafety) setMsg("\uC9C0\uAE08\uC740 \uC548\uC804\uC744 \uC704\uD574 \uACF5\uC720\uAC00 \uC81C\uD55C\uB3FC\uC694.");
+    else setMsg(r.error || "\uACF5\uC720\uC5D0 \uC2E4\uD328\uD588\uC5B4\uC694.");
   };
-  return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: () => setOpen(true), style: { fontSize: 13, padding: 11, marginTop: 8 } }, label), done && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: GREEN, marginTop: 6, lineHeight: 1.6 } }, done), open && /* @__PURE__ */ React.createElement("div", { style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 120, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }, onClick: (e) => {
-    if (e.target === e.currentTarget) setOpen(false);
-  } }, /* @__PURE__ */ React.createElement("div", { style: { background: "#fff", borderRadius: 16, maxWidth: 400, width: "100%", padding: 20 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 800, marginBottom: 8 } }, "\uBC30\uC6B0\uC790\uC5D0\uAC8C \uC774\uB807\uAC8C \uBCF4\uC5EC\uC694"), /* @__PURE__ */ React.createElement(Card, { style: { background: "#f6faf8", fontSize: 14, lineHeight: 1.7, marginBottom: 14, whiteSpace: "pre-wrap" } }, preview), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10 } }, /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: () => setOpen(false) }, "\uCDE8\uC18C"), /* @__PURE__ */ React.createElement(Btn, { onClick: send, disabled: busy }, busy ? "\uBCF4\uB0B4\uB294 \uC911\u2026" : "\uBCF4\uB0B4\uAE30")))));
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2e3);
+    } catch {
+    }
+  };
+  const share = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({ text: preview + "\n\n" + url });
+        return;
+      } catch {
+      }
+    }
+    copy();
+  };
+  const close = () => {
+    setOpen(false);
+    setUrl("");
+  };
+  return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: () => setOpen(true), style: { fontSize: 13, padding: 11, marginTop: 8 } }, label), msg && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: MUT, marginTop: 6, lineHeight: 1.6 } }, msg), open && /* @__PURE__ */ React.createElement(
+    "div",
+    {
+      style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 120, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 },
+      onClick: (e) => {
+        if (e.target === e.currentTarget) close();
+      }
+    },
+    /* @__PURE__ */ React.createElement("div", { style: { background: "#fff", borderRadius: 16, maxWidth: 400, width: "100%", padding: 20 } }, !url ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 800, marginBottom: 8 } }, "\uC0C1\uB300\uC5D0\uAC8C \uC774\uB807\uAC8C \uBCF4\uC5EC\uC694"), /* @__PURE__ */ React.createElement(Card, { style: { background: "#f6faf8", fontSize: 14, lineHeight: 1.7, marginBottom: 10, whiteSpace: "pre-wrap" } }, preview), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: MUT, lineHeight: 1.7, marginBottom: 14 } }, "\uACE0\uB978 \uB0B4\uC6A9\uB9CC \uB2F4\uAE34 \uB9C1\uD06C\uAC00 \uB9CC\uB4E4\uC5B4\uC838\uC694. \uB300\uD654 \uAE30\uB85D\uC774\uB098 \uD1B5\uC5ED \uBD84\uC11D\uC740 \uB2F4\uAE30\uC9C0 \uC54A\uC544\uC694."), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10 } }, /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: close }, "\uCDE8\uC18C"), /* @__PURE__ */ React.createElement(Btn, { onClick: send, disabled: busy }, busy ? "\uB9CC\uB4DC\uB294 \uC911\u2026" : "\uB9C1\uD06C \uB9CC\uB4E4\uAE30"))) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 800, marginBottom: 8 } }, "\uB9C1\uD06C\uAC00 \uB9CC\uB4E4\uC5B4\uC84C\uC5B4\uC694"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: MUT, lineHeight: 1.7, marginBottom: 10 } }, "\uCE74\uD1A1\uC774\uB098 \uBB38\uC790\uB85C \uBCF4\uB0B4\uC8FC\uC138\uC694. \uC0C1\uB300\uB294 ", /* @__PURE__ */ React.createElement("b", { style: { color: INK } }, "\uC571\uC744 \uAE54\uC9C0 \uC54A\uC544\uB3C4"), " \uC5F4\uC5B4\uBCFC \uC218 \uC788\uC5B4\uC694."), /* @__PURE__ */ React.createElement(Card, { style: { background: "#f6faf8", fontSize: 12.5, marginBottom: 12, wordBreak: "break-all", color: MUT } }, url), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10 } }, /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: copy }, copied ? "\uBCF5\uC0AC\uB428 \u2713" : "\uB9C1\uD06C \uBCF5\uC0AC"), /* @__PURE__ */ React.createElement(Btn, { onClick: share }, "\uBCF4\uB0B4\uAE30")), /* @__PURE__ */ React.createElement("div", { style: { height: 8 } }), /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: close, style: { fontSize: 13 } }, "\uB2EB\uAE30")))
+  ));
 }
 function SafetyScreen({ s }) {
   return /* @__PURE__ */ React.createElement(Card, { style: { background: "#fff4ee", border: "1px solid #f5c6a5" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 800, color: "#b45309", marginBottom: 8 } }, "\u{1F6DF} \uC9C0\uAE08\uC740 \uC548\uC804\uC774 \uBA3C\uC800\uC608\uC694"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14.5, lineHeight: 1.8, color: "#78350f" } }, s.response), s.reframe && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, lineHeight: 1.7, color: "#78350f", marginTop: 10 } }, s.reframe), s.protect_actions && s.protect_actions.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, fontWeight: 800, color: "#b45309", marginBottom: 6 } }, "\uC9C0\uAE08 \uD560 \uC218 \uC788\uB294 \uAC83"), s.protect_actions.map((a, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: { fontSize: 14, lineHeight: 1.7 } }, "\xB7 ", a))), s.resources && s.resources.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 12, display: "flex", flexWrap: "wrap", gap: 8 } }, s.resources.map((r, i) => {
@@ -338,13 +373,31 @@ function ModeView({ mode, config, relationId, ageTier, onBack }) {
       placeholder: "\uC5EC\uAE30\uC5D0 \uC785\uB825\uD558\uC138\uC694",
       style: { width: "100%", minHeight: 140, border: `1.5px solid ${LINE}`, borderRadius: 13, padding: 14, fontSize: 15, lineHeight: 1.6, resize: "vertical", outline: "none" }
     }
-  ), err && /* @__PURE__ */ React.createElement("div", { style: { color: "#c0392b", fontSize: 13, margin: "8px 0" } }, err), boundary && /* @__PURE__ */ React.createElement(Card, { style: { background: "#fff9ec", border: "1px solid #fde68a", marginTop: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14.5, lineHeight: 1.8, color: "#78350f" } }, boundary.message), boundary.safety_note && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, lineHeight: 1.7, color: MUT, marginTop: 10 } }, boundary.safety_note), /* @__PURE__ */ React.createElement("div", { style: { height: 12 } }), /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: () => run(true), disabled: busy }, "\uADF8\uB798\uB3C4 \uD1B5\uC5ED\uD574 \uC8FC\uC138\uC694")), /* @__PURE__ */ React.createElement("div", { style: { height: 10 } }), !boundary && /* @__PURE__ */ React.createElement(Btn, { onClick: () => run(false), disabled: busy || !input.trim() }, busy ? "\uD1B5\uC5ED \uC911\u2026" : "\uD1B5\uC5ED\uD558\uAE30"), ageTier !== "teen" && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: MUT, textAlign: "center", marginTop: 8 } }, mode.key === "mediate" || mode.key === "perspective" ? "3 \uD06C\uB808\uB527" : "2 \uD06C\uB808\uB527", " \uC0AC\uC6A9"), ageTier === "teen" && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: MUT, textAlign: "center", marginTop: 8 } }, "\uBB34\uB8CC\uB85C \uC4F8 \uC218 \uC788\uC5B4 \xB7 \uD558\uB8E8 10\uBC88\uAE4C\uC9C0")), result && /* @__PURE__ */ React.createElement(React.Fragment, null, result.safety_tier ? /* @__PURE__ */ React.createElement(SafetyScreen, { s: result }) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(ResultBlock, { result }), /* @__PURE__ */ React.createElement(Improvement, { imp: result.improvement, relationId, track: config.track })), /* @__PURE__ */ React.createElement("div", { style: { height: 12 } }), /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: () => {
+  ), err && /* @__PURE__ */ React.createElement("div", { style: { color: "#c0392b", fontSize: 13, margin: "8px 0" } }, err), boundary && /* @__PURE__ */ React.createElement(Card, { style: { background: "#fff9ec", border: "1px solid #fde68a", marginTop: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14.5, lineHeight: 1.8, color: "#78350f" } }, boundary.message), boundary.safety_note && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, lineHeight: 1.7, color: MUT, marginTop: 10 } }, boundary.safety_note), /* @__PURE__ */ React.createElement("div", { style: { height: 12 } }), /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: () => run(true), disabled: busy }, "\uADF8\uB798\uB3C4 \uD1B5\uC5ED\uD574 \uC8FC\uC138\uC694")), /* @__PURE__ */ React.createElement("div", { style: { height: 10 } }), !boundary && /* @__PURE__ */ React.createElement(Btn, { onClick: () => run(false), disabled: busy || !input.trim() }, busy ? "\uD1B5\uC5ED \uC911\u2026" : "\uD1B5\uC5ED\uD558\uAE30"), ageTier !== "teen" && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: MUT, textAlign: "center", marginTop: 8 } }, mode.key === "mediate" || mode.key === "perspective" ? "3 \uD06C\uB808\uB527" : "2 \uD06C\uB808\uB527", " \uC0AC\uC6A9"), ageTier === "teen" && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: MUT, textAlign: "center", marginTop: 8 } }, "\uBB34\uB8CC\uB85C \uC4F8 \uC218 \uC788\uC5B4 \xB7 \uD558\uB8E8 10\uBC88\uAE4C\uC9C0")), result && /* @__PURE__ */ React.createElement(React.Fragment, null, result.safety_tier ? /* @__PURE__ */ React.createElement(SafetyScreen, { s: result }) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(ResultBlock, { result }), /* @__PURE__ */ React.createElement(Improvement, { imp: result.improvement, relationId, track: config.track }), ageTier !== "teen" && mode.key === "send" && result.rewritten && /* @__PURE__ */ React.createElement(
+    Share,
+    {
+      relationId,
+      itemType: "message",
+      payload: { text: result.rewritten },
+      preview: result.rewritten,
+      label: "\u2709\uFE0F \uC774 \uBB38\uC7A5 \uB9C1\uD06C\uB85C \uBCF4\uB0B4\uAE30"
+    }
+  ), ageTier !== "teen" && (mode.key === "mediate" || mode.key === "perspective") && /* @__PURE__ */ React.createElement(
+    Share,
+    {
+      relationId,
+      itemType: mode.key === "mediate" ? "mediate_view" : "perspective_view",
+      payload: Object.fromEntries(Object.entries(result).filter(([k, v]) => typeof v === "string" && k !== "caution")),
+      preview: "\uD568\uAED8 \uBCF4\uAE30 \uB9C1\uD06C\uB97C \uB9CC\uB4E4\uC5B4\uC694",
+      label: "\u{1F517} \uD568\uAED8 \uBCF4\uAE30 \uB9C1\uD06C \uB9CC\uB4E4\uAE30"
+    }
+  )), /* @__PURE__ */ React.createElement("div", { style: { height: 12 } }), /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: () => {
     setResult(null);
     setInput("");
   } }, "\uB2E4\uC2DC \uD1B5\uC5ED\uD558\uAE30")));
 }
 function Community({ onBack }) {
-  const [room, setRoom] = useState("couple");
+  const [room, setRoom] = useState(ROOMS[0].key);
   const [posts, setPosts] = useState(null);
   const [content, setContent] = useState("");
   const [busy, setBusy] = useState(false);
@@ -798,6 +851,7 @@ function App() {
     );
   }
   if (view === "memory" && relationId) return /* @__PURE__ */ React.createElement(Memory, { relationId, onBack: () => setView("home") });
+  if (view === "community") return /* @__PURE__ */ React.createElement(Community, { onBack: () => setView("home") });
   return /* @__PURE__ */ React.createElement(
     Home,
     {
@@ -819,6 +873,7 @@ function App() {
         setView("mode");
       },
       onMemory: () => setView("memory"),
+      onCommunity: () => setView("community"),
       onSettings: () => {
         localStorage.removeItem("sedae_config");
         setConfig(null);

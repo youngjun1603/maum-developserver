@@ -208,7 +208,7 @@ function Onboarding({ onDone }) {
 }
 
 // ── 홈 ──────────────────────────────────────────────────────────────────────
-function Home({ config, ageTier, relationId, picker, onMode, onMemory, onSettings }) {
+function Home({ config, ageTier, relationId, picker, onMode, onMemory, onCommunity, onSettings }) {
   const [ask, setAsk] = useState(false);
   // 시니어 최소 모드 (DEV_01 §2.2) — 큰 글씨 + 수신 통역 중심 단순 홈.
   // "자녀가 이렇게 말했는데 무슨 뜻일까" 흐름이 핵심이라 4모드를 다 늘어놓지 않는다.
@@ -258,15 +258,17 @@ function Home({ config, ageTier, relationId, picker, onMode, onMemory, onSetting
         <Btn kind="ghost" onClick={() => setAllMode(true)} style={{ marginTop: 4 }}>다른 기능도 보기</Btn>
       )}
 
-      {/* ⚠️ 멀티모달·수신함·커뮤니티 진입점은 노출하지 않는다.
+      {/* ⚠️ 커뮤니티는 성인만 — 청소년 방은 1차 출시 제외(그루밍 등 접촉 위험). 서버도 teen 403. */}
+      <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+        <Btn kind="ghost" onClick={onMemory} disabled={!relationId}>🧠 이 관계의 기억</Btn>
+        {ageTier !== 'teen' && <Btn kind="ghost" onClick={onCommunity}>💬 커뮤니티</Btn>}
+      </div>
+
+      {/* ⚠️ 멀티모달 진입점은 노출하지 않는다.
            - 멀티모달: SPEC 6장 — 코드 동의 게이트가 노부모에게 비현실적이라 재설계 전까지 제외(서버 403).
            - 커뮤니티·공유: 3단계-f 예정(테이블 미생성, 서버 503).
            - 청소년: 위 전부가 코드 레벨로 금지(서버가 teenBlocked 403).
            구현할 때 이 주석과 함께 되살릴 것. */}
-      <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
-        <Btn kind="ghost" onClick={onMemory} disabled={!relationId}>🧠 이 관계의 기억</Btn>
-      </div>
-
       {ask && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
           onClick={e => { if (e.target === e.currentTarget) setAsk(false); }}>
@@ -300,30 +302,70 @@ function Home({ config, ageTier, relationId, picker, onMode, onMemory, onSetting
 }
 
 // ── 선택적 공유 (미리보기 확인 후 건별 전송, ADDENDUM 1) ──
+// ── 공유 (웹뷰 링크) ─────────────────────────────────────────────────────────
+// ⚠️ 마음부부는 "배우자 연결(초대코드)" 전제였지만, 이 앱은 상대가 70~80대 미가입자일 수 있다.
+//    → 링크를 만들어 카톡·문자로 보내면 상대가 앱 없이 열람한다(DEV_01 §4).
+// ⚠️ 공유 가능한 것만 넘긴다. 수신 통역 결과·통역 이력·관계 기억은 절대 공유 대상이 아니다.
+// ⚠️ 청소년에게는 이 버튼 자체가 렌더되지 않는다(호출부에서 ageTier로 차단, 서버도 403).
 function Share({ relationId, itemType, payload, preview, label }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState('');
+  const [url, setUrl] = useState('');
+  const [msg, setMsg] = useState('');
+  const [copied, setCopied] = useState(false);
+
   const send = async () => {
-    setBusy(true);
+    setBusy(true); setMsg('');
     const r = await api('/share/send', 'POST', { relationId, itemType, payload });
-    setBusy(false); setOpen(false);
-    if (r.ok) setDone(r.linked ? '배우자에게 보냈어요 ✓' : '보냈어요. 배우자가 아직 연결 전이면 수신함에서 "배우자 연결"로 초대하세요.');
-    else if (r.status === 403) setDone('지금은 안전을 위해 공유가 제한돼요.');
-    else setDone(r.error || '공유에 실패했어요.');
+    setBusy(false);
+    if (r.ok && r.shareUrl) { setUrl(r.shareUrl); return; }
+    setOpen(false);
+    if (r.blockedBySafety) setMsg('지금은 안전을 위해 공유가 제한돼요.');
+    else setMsg(r.error || '공유에 실패했어요.');
   };
+
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2000); }
+    catch { /* 클립보드 거부 시 사용자가 직접 선택 */ }
+  };
+  const share = async () => {
+    if (navigator.share) { try { await navigator.share({ text: preview + '\n\n' + url }); return; } catch { /* 취소 */ } }
+    copy();
+  };
+
+  const close = () => { setOpen(false); setUrl(''); };
+
   return (<>
     <Btn kind="ghost" onClick={() => setOpen(true)} style={{ fontSize: 13, padding: 11, marginTop: 8 }}>{label}</Btn>
-    {done && <div style={{ fontSize: 12.5, color: GREEN, marginTop: 6, lineHeight: 1.6 }}>{done}</div>}
+    {msg && <div style={{ fontSize: 12.5, color: MUT, marginTop: 6, lineHeight: 1.6 }}>{msg}</div>}
     {open && (
-      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={e => { if (e.target === e.currentTarget) setOpen(false); }}>
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+        onClick={e => { if (e.target === e.currentTarget) close(); }}>
         <div style={{ background: '#fff', borderRadius: 16, maxWidth: 400, width: '100%', padding: 20 }}>
-          <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 8 }}>배우자에게 이렇게 보여요</div>
-          <Card style={{ background: '#f6faf8', fontSize: 14, lineHeight: 1.7, marginBottom: 14, whiteSpace: 'pre-wrap' }}>{preview}</Card>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <Btn kind="ghost" onClick={() => setOpen(false)}>취소</Btn>
-            <Btn onClick={send} disabled={busy}>{busy ? '보내는 중…' : '보내기'}</Btn>
-          </div>
+          {!url ? (<>
+            {/* 공유 전 미리보기 확인 1회 — 필수(ADDENDUM 01 §1.4-3) */}
+            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 8 }}>상대에게 이렇게 보여요</div>
+            <Card style={{ background: '#f6faf8', fontSize: 14, lineHeight: 1.7, marginBottom: 10, whiteSpace: 'pre-wrap' }}>{preview}</Card>
+            <div style={{ fontSize: 12.5, color: MUT, lineHeight: 1.7, marginBottom: 14 }}>
+              고른 내용만 담긴 링크가 만들어져요. 대화 기록이나 통역 분석은 담기지 않아요.
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <Btn kind="ghost" onClick={close}>취소</Btn>
+              <Btn onClick={send} disabled={busy}>{busy ? '만드는 중…' : '링크 만들기'}</Btn>
+            </div>
+          </>) : (<>
+            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 8 }}>링크가 만들어졌어요</div>
+            <div style={{ fontSize: 13, color: MUT, lineHeight: 1.7, marginBottom: 10 }}>
+              카톡이나 문자로 보내주세요. 상대는 <b style={{ color: INK }}>앱을 깔지 않아도</b> 열어볼 수 있어요.
+            </div>
+            <Card style={{ background: '#f6faf8', fontSize: 12.5, marginBottom: 12, wordBreak: 'break-all', color: MUT }}>{url}</Card>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <Btn kind="ghost" onClick={copy}>{copied ? '복사됨 ✓' : '링크 복사'}</Btn>
+              <Btn onClick={share}>보내기</Btn>
+            </div>
+            <div style={{ height: 8 }} />
+            <Btn kind="ghost" onClick={close} style={{ fontSize: 13 }}>닫기</Btn>
+          </>)}
         </div>
       </div>
     )}
@@ -519,6 +561,16 @@ function ModeView({ mode, config, relationId, ageTier, onBack }) {
           : (<>
             <ResultBlock result={result} />
             <Improvement imp={result.improvement} relationId={relationId} track={config.track} />
+            {/* ⚠️ 공유는 성인만. 청소년은 부모에게 통역 결과가 가는 경로 자체를 막는다(서버도 403). */}
+            {ageTier !== 'teen' && mode.key === 'send' && result.rewritten && (
+              <Share relationId={relationId} itemType="message" payload={{ text: result.rewritten }}
+                preview={result.rewritten} label="✉️ 이 문장 링크로 보내기" />
+            )}
+            {ageTier !== 'teen' && (mode.key === 'mediate' || mode.key === 'perspective') && (
+              <Share relationId={relationId} itemType={mode.key === 'mediate' ? 'mediate_view' : 'perspective_view'}
+                payload={Object.fromEntries(Object.entries(result).filter(([k, v]) => typeof v === 'string' && k !== 'caution'))}
+                preview={'함께 보기 링크를 만들어요'} label="🔗 함께 보기 링크 만들기" />
+            )}
           </>)}
         <div style={{ height: 12 }} />
         <Btn kind="ghost" onClick={() => { setResult(null); setInput(''); }}>다시 통역하기</Btn>
@@ -529,7 +581,7 @@ function ModeView({ mode, config, relationId, ageTier, onBack }) {
 
 // ── 커뮤니티 ─────────────────────────────────────────────────────────────────
 function Community({ onBack }) {
-  const [room, setRoom] = useState('couple');
+  const [room, setRoom] = useState(ROOMS[0].key);  // 서버 화이트리스트와 일치해야 함(구 'couple'은 400)
   const [posts, setPosts] = useState(null);
   const [content, setContent] = useState('');
   const [busy, setBusy] = useState(false);
@@ -1035,12 +1087,14 @@ function App() {
       onBack={() => setView('home')} />;
   }
   if (view === 'memory' && relationId) return <Memory relationId={relationId} onBack={() => setView('home')} />;
+  if (view === 'community') return <Community onBack={() => setView('home')} />;
 
   return <Home config={config} ageTier={ageTier} relationId={relationId}
     picker={<RelationPicker relations={relations} current={relationId} ageTier={ageTier}
       onPick={setRelationId} onCreated={(id) => loadRelations(id)} />}
     onMode={(m) => { setMode(m); setView('mode'); }}
     onMemory={() => setView('memory')}
+    onCommunity={() => setView('community')}
     onSettings={() => { localStorage.removeItem('sedae_config'); setConfig(null); }} />;
 }
 
