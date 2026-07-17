@@ -1993,6 +1993,20 @@ function PsychologicalTestSystem() {
     window.open('https://bubu.maumful.com', '_blank', 'noopener noreferrer');
   }
 
+  // 마음세대(부모-자녀 세대 통역) 진입 — 마음부부와 동일 패턴(?t= 토큰 SSO)
+  async function openMaumSedae() {
+    if (!isLoggedIn) { setView('memberLogin'); return; }
+    try {
+      const res = await fetch('/api/sedae-token', { headers: api._authHeader() });
+      const data = await res.json();
+      if (data.success && data.sedaeToken) {
+        window.open('https://sedae.maumful.com/?t=' + encodeURIComponent(data.sedaeToken), '_blank', 'noopener noreferrer');
+        return;
+      }
+    } catch {}
+    window.open('https://sedae.maumful.com', '_blank', 'noopener noreferrer');
+  }
+
   // ============================================================
   // 검사 이력 로드
   // ============================================================
@@ -3986,6 +4000,12 @@ function PsychologicalTestSystem() {
                 className="text-gray-500 hover:text-emerald-700 text-sm px-1.5 py-1.5 rounded-lg hover:bg-emerald-50 transition flex items-center gap-1 whitespace-nowrap"
                 title="마음부부 — 부부 대화 통역">
                 💬 <span className="hidden md:inline">{t("부부","Bubu")}</span>
+              </button>
+              {/* 마음세대 */}
+              <button onClick={() => openMaumSedae()}
+                className="text-gray-500 hover:text-emerald-700 text-sm px-1.5 py-1.5 rounded-lg hover:bg-emerald-50 transition flex items-center gap-1 whitespace-nowrap"
+                title="마음세대 — 부모·자녀 마음 통역">
+                🌿 <span className="hidden md:inline">{t("세대","Sedae")}</span>
               </button>
               <button onClick={() => setView('myPage')} className="text-gray-500 hover:text-gray-700 text-sm px-1.5 py-1.5 rounded-lg hover:bg-gray-100 transition flex items-center gap-1 whitespace-nowrap">
                 👤 <span className="hidden sm:inline">{currentUser?.nickname || t('내 정보','My Info')}</span>

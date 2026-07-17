@@ -1994,6 +1994,22 @@ function PsychologicalTestSystem() {
     }
     window.open("https://bubu.maumful.com", "_blank", "noopener noreferrer");
   }
+  async function openMaumSedae() {
+    if (!isLoggedIn) {
+      setView("memberLogin");
+      return;
+    }
+    try {
+      const res = await fetch("/api/sedae-token", { headers: api._authHeader() });
+      const data = await res.json();
+      if (data.success && data.sedaeToken) {
+        window.open("https://sedae.maumful.com/?t=" + encodeURIComponent(data.sedaeToken), "_blank", "noopener noreferrer");
+        return;
+      }
+    } catch {
+    }
+    window.open("https://sedae.maumful.com", "_blank", "noopener noreferrer");
+  }
   async function loadTestHistory() {
     try {
       const r = await api.getTestHistory();
@@ -3415,6 +3431,15 @@ Visit Maumful and take the same test again to compare your progress.`));
       },
       "\u{1F4AC} ",
       /* @__PURE__ */ React.createElement("span", { className: "hidden md:inline" }, t("\uBD80\uBD80", "Bubu"))
+    ), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        onClick: () => openMaumSedae(),
+        className: "text-gray-500 hover:text-emerald-700 text-sm px-1.5 py-1.5 rounded-lg hover:bg-emerald-50 transition flex items-center gap-1 whitespace-nowrap",
+        title: "\uB9C8\uC74C\uC138\uB300 \u2014 \uBD80\uBAA8\xB7\uC790\uB140 \uB9C8\uC74C \uD1B5\uC5ED"
+      },
+      "\u{1F33F} ",
+      /* @__PURE__ */ React.createElement("span", { className: "hidden md:inline" }, t("\uC138\uB300", "Sedae"))
     ), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("myPage"), className: "text-gray-500 hover:text-gray-700 text-sm px-1.5 py-1.5 rounded-lg hover:bg-gray-100 transition flex items-center gap-1 whitespace-nowrap" }, "\u{1F464} ", /* @__PURE__ */ React.createElement("span", { className: "hidden sm:inline" }, (currentUser == null ? void 0 : currentUser.nickname) || t("\uB0B4 \uC815\uBCF4", "My Info"))), /* @__PURE__ */ React.createElement(
       "button",
       {

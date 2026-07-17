@@ -115,6 +115,7 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
     { label: tl('마음커플',   'Maumful Couple'),  view: 'couple',    isCouple: true },
     { label: tl('마음수달',   'Maumotter'),       isOtter: true },
     { label: tl('마음부부',   'Maumful Bubu'),    isBubu: true },
+    { label: tl('마음세대',   'Maumful Sedae'),   isSedae: true },
   ];
 
   const handleNavClick = (item) => {
@@ -158,6 +159,24 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
           else window.open('https://maumotter.com', '_blank', 'noopener noreferrer');
         })
         .catch(() => window.open('https://maumotter.com', '_blank', 'noopener noreferrer'));
+      return;
+    }
+    // 마음세대(부모-자녀 세대 통역): 마음부부와 동일 패턴(sedae-token SSO)
+    if (item.isSedae) {
+      if (!isLoggedIn) { setView('memberLogin'); return; }
+      const sedaeBase = 'https://sedae.maumful.com';
+      fetch('/api/sedae-token', {
+        headers: { Authorization: 'Bearer ' + (localStorage.getItem('access_token') || '') }
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success && data.sedaeToken) {
+            window.open(`${sedaeBase}/?t=${encodeURIComponent(data.sedaeToken)}`, '_blank', 'noopener noreferrer');
+          } else {
+            window.open(sedaeBase, '_blank', 'noopener noreferrer');
+          }
+        })
+        .catch(() => window.open(sedaeBase, '_blank', 'noopener noreferrer'));
       return;
     }
     // 마음부부: 로그인 상태면 bubu-token SSO, 미로그인이면 로그인 화면
