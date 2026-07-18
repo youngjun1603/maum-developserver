@@ -677,7 +677,7 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
               fontSize: 52, lineHeight: 1.2, fontWeight: 700,
               marginBottom: 20, letterSpacing: '-1px',
             }}>
-              {tl(<>당신이 알지 못하는<br />마음을 읽어서<br /><span style={{ color: '#2D6A4F' }}>전해&nbsp;드립니다.</span></>, <>We read the heart<br />you didn't know you had —<br /><span style={{ color: '#2D6A4F' }}>and bring it to you.</span></>)}
+              {tl(<>당신도 알지 못하던<br />마음을 읽어서<br /><span style={{ color: '#2D6A4F' }}>전해&nbsp;드립니다.</span></>, <>We read the heart<br />you didn't know you had —<br /><span style={{ color: '#2D6A4F' }}>and bring it to you.</span></>)}
             </h1>
 
             <p style={{ fontSize: 17, color: '#5A5A5A', lineHeight: 1.8, marginBottom: 36 }}>
