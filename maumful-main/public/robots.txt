@@ -2,7 +2,7 @@
 Sitemap: https://maumful.com/sitemap.xml
 
 
-# ── 일반 검색 엔진 허용 ───────────────────────────────────────
+# ── 일반 검색 엔진: 전체 허용 (SEO) ───────────────────────────
 User-agent: Googlebot
 Allow: /
 
@@ -21,14 +21,34 @@ Allow: /
 User-agent: Yeti
 Allow: /
 
-# ── AI 학습·크롤링 봇 차단 ──────────────────────────────────
-User-agent: GPTBot
-Disallow: /
 
-User-agent: ChatGPT-User
-Disallow: /
+# ── AI 검색·답변 봇: 마케팅 HTML만 허용 ──────────────────────
+#   홈 메타 + /story(브랜드 스토리)는 읽어 사이트를 소개하되,
+#   심리검사 문항이 든 JS 번들(/static/)과 API(/api/)는 차단한다.
+#   (검사 화면은 별도 URL이 없는 SPA라, 실제 보호 대상 = 문항 번들)
+User-agent: Google-Extended
+Allow: /
+Disallow: /static/
+Disallow: /api/
 
 User-agent: OAI-SearchBot
+Allow: /
+Disallow: /static/
+Disallow: /api/
+
+User-agent: ChatGPT-User
+Allow: /
+Disallow: /static/
+Disallow: /api/
+
+User-agent: PerplexityBot
+Allow: /
+Disallow: /static/
+Disallow: /api/
+
+
+# ── AI 학습 전용 봇: 전면 차단 (마케팅 이득 없음) ────────────
+User-agent: GPTBot
 Disallow: /
 
 User-agent: ClaudeBot
@@ -37,25 +57,16 @@ Disallow: /
 User-agent: anthropic-ai
 Disallow: /
 
-User-agent: Google-Extended
-Disallow: /
-
-User-agent: Applebot-Extended
-Disallow: /
-
 User-agent: CCBot
 Disallow: /
 
 User-agent: cohere-ai
 Disallow: /
 
-User-agent: Diffbot
+User-agent: Applebot-Extended
 Disallow: /
 
 User-agent: Bytespider
-Disallow: /
-
-User-agent: PerplexityBot
 Disallow: /
 
 User-agent: Meta-ExternalAgent
@@ -67,10 +78,7 @@ Disallow: /
 User-agent: Amazonbot
 Disallow: /
 
-User-agent: DataForSeoBot
-Disallow: /
-
-User-agent: ImagesiftBot
+User-agent: Diffbot
 Disallow: /
 
 User-agent: Omgili
@@ -83,6 +91,14 @@ User-agent: YouBot
 Disallow: /
 
 User-agent: PetalBot
+Disallow: /
+
+
+# ── SEO 분석·스크래퍼 봇: 전면 차단 ─────────────────────────
+User-agent: DataForSeoBot
+Disallow: /
+
+User-agent: ImagesiftBot
 Disallow: /
 
 User-agent: SemrushBot
@@ -102,6 +118,7 @@ Disallow: /
 
 User-agent: peer39_crawler
 Disallow: /
+
 
 # ── 기본: API 엔드포인트 차단 ────────────────────────────────
 User-agent: *

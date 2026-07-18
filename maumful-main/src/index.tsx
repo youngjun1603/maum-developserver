@@ -4129,7 +4129,7 @@ app.get('/', (c) => {
   <title>마음풀 — 온라인 심리검사 & AI 마음 상담</title>
   <meta name="description" content="PHQ-9·GAD-7·Big5 등 8종 심리검사를 무료로 시작하세요. AI 상담으로 내 마음을 더 깊이 이해하고, 제휴 상담사와 직접 연결됩니다.">
   <meta name="keywords" content="심리검사,PHQ-9,GAD-7,BIG5,우울자가진단,불안검사,번아웃,온라인심리상담,AI상담,마음건강">
-  <meta name="robots" content="index, follow, noai, noimageai">
+  <meta name="robots" content="index, follow, noimageai">
   <link rel="canonical" href="${siteUrl}/">
   ${naverKey ? `<meta name="naver-site-verification" content="${naverKey}">` : ''}
 
@@ -4283,7 +4283,7 @@ app.get('/', (c) => {
   </script>
 </body>
 </html>`)
-  res.headers.set('X-Robots-Tag', 'noai, noimageai')
+  res.headers.set('X-Robots-Tag', 'noimageai')
   return res
 })
 

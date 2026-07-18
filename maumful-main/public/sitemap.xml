@@ -5,9 +5,17 @@
   <!-- 메인 페이지 -->
   <url>
     <loc>https://maumful.com/</loc>
-    <lastmod>2026-05-29</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
+  </url>
+
+  <!-- 브랜드 스토리 (마케팅·AI 소개용 정적 페이지) -->
+  <url>
+    <loc>https://maumful.com/story/</loc>
+    <lastmod>2026-07-18</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
   </url>
 
 </urlset>
