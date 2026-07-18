@@ -524,6 +524,24 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
       .then(data => { const t = data.success ? data.coupleToken : (localStorage.getItem('access_token') || ''); window.open(`${coupleBase}?t=${encodeURIComponent(t)}`, '_blank', 'noopener noreferrer'); })
       .catch(() => window.open(coupleBase, '_blank', 'noopener noreferrer'));
   };
+  // 마음부부 진입(bubu-token SSO) — handleNavClick isBubu와 동일 로직
+  const openBubu = () => {
+    if (!isLoggedIn) { setView('memberLogin'); return; }
+    const h = window.location.hostname;
+    const bubuBase = (h.includes('workers.dev') || h.includes('-dev.')) ? 'https://maumbubu.limyj007.workers.dev' : 'https://bubu.maumful.com';
+    fetch('/api/bubu-token', { headers: { Authorization: 'Bearer ' + (localStorage.getItem('access_token') || '') } })
+      .then(r => r.json())
+      .then(data => { const t = data.success ? data.bubuToken : (localStorage.getItem('access_token') || ''); window.open(`${bubuBase}?t=${encodeURIComponent(t)}`, '_blank', 'noopener noreferrer'); })
+      .catch(() => window.open(bubuBase, '_blank', 'noopener noreferrer'));
+  };
+  // 마음세대 진입(sedae-token SSO)
+  const openSedae = () => {
+    if (!isLoggedIn) { setView('memberLogin'); return; }
+    fetch('/api/sedae-token', { headers: { Authorization: 'Bearer ' + (localStorage.getItem('access_token') || '') } })
+      .then(r => r.json())
+      .then(data => { if (data.success && data.sedaeToken) window.open('https://sedae.maumful.com/?t=' + encodeURIComponent(data.sedaeToken), '_blank', 'noopener noreferrer'); else window.open('https://sedae.maumful.com', '_blank', 'noopener noreferrer'); })
+      .catch(() => window.open('https://sedae.maumful.com', '_blank', 'noopener noreferrer'));
+  };
   const { useState: useS, useEffect: useE, useRef } = React;
   // 브랜드 스토리 배너 — 닫으면 30일간 미노출.
   // ⚠️ useS 구조분해(위 줄) 뒤에 둘 것 — const는 호이스팅 안 됨(TDZ). 앞에 두면 ReferenceError로 랜딩이 통째로 크래시.
@@ -560,7 +578,7 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
   useE(() => {
     const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (reduce) return;
-    const id = setInterval(() => { if (!pausedRef.current) setSlideIdx(p => (p + 1) % 4); }, 5000);
+    const id = setInterval(() => { if (!pausedRef.current) setSlideIdx(p => (p + 1) % SHOWCASE.length); }, 5000);
     return () => clearInterval(id);
   }, []);
 
@@ -600,6 +618,22 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
         { icon: '🤖', bg: '#E7F0FB', name: tl('마음 읽어 전하기', 'Heart, read & shared'), sub: tl('부모님께 따뜻하게', 'gently for parents'), tag: tl('읽기', 'Read') },
         { icon: '📷', bg: '#E7F0FB', name: tl('표정 영상 분석', 'Facial Reading'), sub: tl('기기 내·저장 안 함', 'on-device'), tag: tl('무저장', 'No-save') },
         { icon: '🔒', bg: '#E7F0FB', name: tl('안전 설계', 'Safe Design'), sub: tl('부모 PIN·위기 안내', 'PIN·crisis'), tag: tl('안전', 'Safe') } ] },
+    { key: 'bubu', accent: '#B45309', header: tl('💬 마음부부 · 부부 대화 통역', '💬 Maumful Bubu'),
+      badge: { icon: '💬', title: tl('말과 마음의 간극', 'Words vs feelings'), sub: tl('첫 3회 무료', '3 free to start') },
+      cta: () => openBubu(), ctaLabel: tl('마음부부 시작 →', 'Start Bubu →'),
+      rows: [
+        { icon: '💬', bg: '#FEF3C7', name: tl('대화 통역', 'Translate talk'), sub: tl('말 속 진짜 마음', 'the real meaning'), tag: tl('통역', 'Read') },
+        { icon: '🕊️', bg: '#FEF3C7', name: tl('싸움 중재', 'Mediation'), sub: tl('갈등 대화 분석', 'analyze conflicts'), tag: tl('중재', 'Calm') },
+        { icon: '💗', bg: '#FEF3C7', name: tl('관점 바꿔보기', 'Perspective'), sub: tl('상대 입장에서', "partner's view"), tag: tl('공감', 'Care') },
+        { icon: '✝️', bg: '#FEF3C7', name: tl('심리·기독교 트랙', 'Two tracks'), sub: tl('원하는 관점 선택', 'psych & faith'), tag: tl('트랙', 'Track') } ] },
+    { key: 'sedae', accent: '#0E7490', header: tl('🌿 마음세대 · 부모-자녀 통역', '🌿 Maumful Sedae'),
+      badge: { icon: '🌿', title: tl('세대 사이 통역', 'Across generations'), sub: tl('청소년 무료', 'Free for teens') },
+      cta: () => openSedae(), ctaLabel: tl('마음세대 시작 →', 'Start Sedae →'),
+      rows: [
+        { icon: '🌿', bg: '#CFFAFE', name: tl('부모-자녀 통역', 'Parent-child'), sub: tl('세대 간 말의 간극', 'the generation gap'), tag: tl('통역', 'Read') },
+        { icon: '🧒', bg: '#CFFAFE', name: tl('청소년 안전 우선', 'Teen safety'), sub: tl('보호가 먼저', 'protection first'), tag: tl('무료', 'Free') },
+        { icon: '📨', bg: '#CFFAFE', name: tl('웹뷰로 공유', 'Web share'), sub: tl('앱 없이 열람', 'no app needed'), tag: tl('공유', 'Share') },
+        { icon: '🤝', bg: '#CFFAFE', name: tl('가족 커뮤니티', 'Community'), sub: tl('성인 전용 방', 'adults only'), tag: tl('소통', 'Talk') } ] },
   ];
   const slide = SHOWCASE[slideIdx] || SHOWCASE[0];
 
@@ -748,8 +782,8 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
 
             {/* 롤링 카드 (좌측 CTA는 고정, 우측만 회전) */}
             <div style={{ position: 'relative', background: 'white', borderRadius: 20, boxShadow: '0 12px 48px rgba(0,0,0,0.10)', padding: '28px 30px 22px', overflow: 'hidden', minHeight: 392 }}>
-              <button onClick={() => setSlideIdx((slideIdx + 3) % 4)} aria-label={tl('이전', 'Prev')} style={{ position: 'absolute', left: 4, top: '50%', transform: 'translateY(-50%)', width: 32, height: 32, borderRadius: '50%', border: '1px solid #E8E8E8', background: 'white', cursor: 'pointer', fontSize: 18, color: '#666', zIndex: 5, lineHeight: '28px' }}>‹</button>
-              <button onClick={() => setSlideIdx((slideIdx + 1) % 4)} aria-label={tl('다음', 'Next')} style={{ position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)', width: 32, height: 32, borderRadius: '50%', border: '1px solid #E8E8E8', background: 'white', cursor: 'pointer', fontSize: 18, color: '#666', zIndex: 5, lineHeight: '28px' }}>›</button>
+              <button onClick={() => setSlideIdx((slideIdx + SHOWCASE.length - 1) % SHOWCASE.length)} aria-label={tl('이전', 'Prev')} style={{ position: 'absolute', left: 4, top: '50%', transform: 'translateY(-50%)', width: 32, height: 32, borderRadius: '50%', border: '1px solid #E8E8E8', background: 'white', cursor: 'pointer', fontSize: 18, color: '#666', zIndex: 5, lineHeight: '28px' }}>‹</button>
+              <button onClick={() => setSlideIdx((slideIdx + 1) % SHOWCASE.length)} aria-label={tl('다음', 'Next')} style={{ position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)', width: 32, height: 32, borderRadius: '50%', border: '1px solid #E8E8E8', background: 'white', cursor: 'pointer', fontSize: 18, color: '#666', zIndex: 5, lineHeight: '28px' }}>›</button>
 
               <div style={{ fontSize: 12, fontWeight: 700, color: slide.accent, marginBottom: 16, letterSpacing: '0.3px', textAlign: 'center' }}>{slide.header}</div>
               {slide.rows.map((r, i) => (
@@ -1679,6 +1713,142 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
               </div>
             </div>
 
+          </div>
+        </div>
+      </section>
+
+      {/* ── 마음부부 ─────────────────────────────────────── */}
+      <section style={{ padding: '80px 24px', background: '#FDF6EC' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }} className="ai-grid">
+            {/* 부부 카드 2×2 */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              {tl([
+                { emoji: '💬', name: '대화 통역',       tag: '말 속 진짜 마음',   color: '#B45309', bg: '#FEF3C7' },
+                { emoji: '🕊️', name: '싸움 중재',       tag: '갈등 대화 분석',   color: '#C2410C', bg: '#FFEDD5' },
+                { emoji: '💗', name: '관점 바꿔보기',   tag: '상대 입장에서',     color: '#DB2777', bg: '#FCE7F3' },
+                { emoji: '✝️', name: '심리·기독교 트랙', tag: '관점 선택 가능',   color: '#7C3AED', bg: '#F3E8FF' },
+              ], [
+                { emoji: '💬', name: 'Translate talk', tag: 'the real meaning',   color: '#B45309', bg: '#FEF3C7' },
+                { emoji: '🕊️', name: 'Mediation',      tag: 'analyze conflicts', color: '#C2410C', bg: '#FFEDD5' },
+                { emoji: '💗', name: 'Perspective',    tag: "partner's view",    color: '#DB2777', bg: '#FCE7F3' },
+                { emoji: '✝️', name: 'Two tracks',     tag: 'psych & faith',     color: '#7C3AED', bg: '#F3E8FF' },
+              ]).map(g => (
+                <div key={g.name} onClick={openBubu}
+                  style={{ background: g.bg, borderRadius: 16, padding: '22px 18px', cursor: 'pointer', transition: 'all 0.2s', border: `1.5px solid ${g.color}22` }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 8px 28px rgba(0,0,0,0.10)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}>
+                  <div style={{ fontSize: 36, marginBottom: 10 }}>{g.emoji}</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: '#1A1A1A', marginBottom: 6 }}>{g.name}</div>
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 100, background: 'white', color: g.color, border: `1px solid ${g.color}44` }}>{g.tag}</span>
+                </div>
+              ))}
+            </div>
+            {/* 텍스트 */}
+            <div>
+              <div style={{ display: 'inline-block', background: '#FBE8C9', color: '#B45309', fontSize: 12, fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', padding: '5px 14px', borderRadius: 100, marginBottom: 20 }}>Maumful Bubu</div>
+              <h2 style={{ fontSize: 36, fontWeight: 700, lineHeight: 1.3, marginBottom: 16 }}>
+                {tl(<>부부의 말과 마음을 통역하는<br /><span style={{ color: '#B45309' }}>마음부부</span></>, <>Interpreting words &amp; hearts<br /><span style={{ color: '#B45309' }}>Maumful Bubu</span></>)}
+              </h2>
+              <p style={{ fontSize: 16, color: '#5A5A5A', lineHeight: 1.8, marginBottom: 28 }}>
+                {tl(<>같은 말도 서로 다르게 들리는 부부 사이,<br />말 속에 담긴 진짜 마음을 읽어 전하고 갈등을 중재해 드려요. 첫 3회는 무료예요.</>, <>Couples often hear the same words differently.<br />We read the real heart behind them and help mediate conflict. First 3 free.</>)}
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
+                {tl([
+                  { icon: '💬', text: '대화 통역 — 말 속에 담긴 진짜 마음을 읽어요' },
+                  { icon: '🕊️', text: '싸움 중재 — 갈등이 된 대화를 함께 풀어요' },
+                  { icon: '💗', text: '관점 바꿔보기 — 상대의 입장에서 다시 들어요' },
+                  { icon: '✝️', text: '심리 상담·기독교 트랙 중 원하는 관점 선택' },
+                ], [
+                  { icon: '💬', text: 'Translate talk — read the real meaning behind words' },
+                  { icon: '🕊️', text: 'Mediation — work through the conversation that hurt' },
+                  { icon: '💗', text: 'Perspective — hear it again from their side' },
+                  { icon: '✝️', text: 'Choose a psychology or Christian track' },
+                ]).map(item => (
+                  <div key={item.text} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 18 }}>{item.icon}</span>
+                    <span style={{ fontSize: 14, color: '#5A5A5A' }}>{item.text}</span>
+                  </div>
+                ))}
+              </div>
+              <button onClick={openBubu}
+                style={{ background: '#B45309', color: 'white', border: 'none', borderRadius: 12, padding: '14px 32px', fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: "'Noto Sans KR', sans-serif", transition: 'all 0.2s' }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#92400E'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = '#B45309'; e.currentTarget.style.transform = 'none'; }}>
+                {tl('마음부부 시작하기 →', 'Start Maumful Bubu →')}
+              </button>
+              <div style={{ marginTop: 12, fontSize: 12, color: '#9A9A9A' }}>
+                {tl('만 19세 이상 부부 대상 · 원문은 저장하지 않아요', 'For married couples 19+ · your words are not stored')}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── 마음세대 ─────────────────────────────────────── */}
+      <section style={{ padding: '80px 24px', background: '#ECFBFD' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }} className="ai-grid">
+            {/* 텍스트 */}
+            <div>
+              <div style={{ display: 'inline-block', background: '#CFF3F7', color: '#0E7490', fontSize: 12, fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', padding: '5px 14px', borderRadius: 100, marginBottom: 20 }}>Maumful Sedae</div>
+              <h2 style={{ fontSize: 36, fontWeight: 700, lineHeight: 1.3, marginBottom: 16 }}>
+                {tl(<>부모와 자녀 사이를 잇는<br /><span style={{ color: '#0E7490' }}>마음세대</span></>, <>Bridging parent and child<br /><span style={{ color: '#0E7490' }}>Maumful Sedae</span></>)}
+              </h2>
+              <p style={{ fontSize: 16, color: '#5A5A5A', lineHeight: 1.8, marginBottom: 28 }}>
+                {tl(<>세대가 다르면 같은 말도 다르게 닿아요.<br />부모와 자녀 사이에 놓인 말의 간극을 통역해 전해 드려요. 청소년은 무료로 이용해요.</>, <>Across generations, the same words land differently.<br />We interpret the gap between parent and child. Free for teens.</>)}
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
+                {tl([
+                  { icon: '🌿', text: '부모-자녀 통역 — 세대 사이 말의 간극을 읽어요' },
+                  { icon: '🧒', text: '청소년 안전 우선 — 아이 보호가 언제나 먼저' },
+                  { icon: '📨', text: '웹뷰 공유 — 앱 설치 없이 링크로 열람' },
+                  { icon: '🤝', text: '가족 커뮤니티 — 성인 전용 방에서 함께 나눠요' },
+                ], [
+                  { icon: '🌿', text: 'Parent-child — read the generation gap in words' },
+                  { icon: '🧒', text: 'Teen safety first — protecting the child always comes first' },
+                  { icon: '📨', text: 'Web share — open via link, no app install' },
+                  { icon: '🤝', text: 'Family community — adults-only rooms to talk' },
+                ]).map(item => (
+                  <div key={item.text} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 18 }}>{item.icon}</span>
+                    <span style={{ fontSize: 14, color: '#5A5A5A' }}>{item.text}</span>
+                  </div>
+                ))}
+              </div>
+              <button onClick={openSedae}
+                style={{ background: '#0E7490', color: 'white', border: 'none', borderRadius: 12, padding: '14px 32px', fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: "'Noto Sans KR', sans-serif", transition: 'all 0.2s' }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#0B5A70'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = '#0E7490'; e.currentTarget.style.transform = 'none'; }}>
+                {tl('마음세대 시작하기 →', 'Start Maumful Sedae →')}
+              </button>
+              <div style={{ marginTop: 12, fontSize: 12, color: '#9A9A9A' }}>
+                {tl('청소년(만14~18)은 무료 · 아이 보호가 우선인 안전 설계', 'Free for teens (14–18) · safety-first for children')}
+              </div>
+            </div>
+            {/* 세대 카드 2×2 */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              {tl([
+                { emoji: '🌿', name: '부모-자녀 통역', tag: '세대 간 말의 간극', color: '#0E7490', bg: '#CFFAFE' },
+                { emoji: '🧒', name: '청소년 안전 우선', tag: '보호가 먼저',       color: '#16A34A', bg: '#E7F6EC' },
+                { emoji: '📨', name: '웹뷰로 공유',     tag: '앱 없이 열람',     color: '#2563EB', bg: '#E0EAFF' },
+                { emoji: '🤝', name: '가족 커뮤니티',   tag: '성인 전용 방',     color: '#9333EA', bg: '#F3E8FF' },
+              ], [
+                { emoji: '🌿', name: 'Parent-child',   tag: 'the generation gap', color: '#0E7490', bg: '#CFFAFE' },
+                { emoji: '🧒', name: 'Teen safety',    tag: 'protection first',   color: '#16A34A', bg: '#E7F6EC' },
+                { emoji: '📨', name: 'Web share',      tag: 'no app needed',      color: '#2563EB', bg: '#E0EAFF' },
+                { emoji: '🤝', name: 'Community',      tag: 'adults only',        color: '#9333EA', bg: '#F3E8FF' },
+              ]).map(g => (
+                <div key={g.name} onClick={openSedae}
+                  style={{ background: g.bg, borderRadius: 16, padding: '22px 18px', cursor: 'pointer', transition: 'all 0.2s', border: `1.5px solid ${g.color}22` }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 8px 28px rgba(0,0,0,0.10)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}>
+                  <div style={{ fontSize: 36, marginBottom: 10 }}>{g.emoji}</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: '#1A1A1A', marginBottom: 6 }}>{g.name}</div>
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 100, background: 'white', color: g.color, border: `1px solid ${g.color}44` }}>{g.tag}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>

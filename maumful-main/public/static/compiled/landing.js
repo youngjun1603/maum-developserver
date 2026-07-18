@@ -675,6 +675,28 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
       window.open(`${coupleBase}?t=${encodeURIComponent(t)}`, "_blank", "noopener noreferrer");
     }).catch(() => window.open(coupleBase, "_blank", "noopener noreferrer"));
   };
+  const openBubu = () => {
+    if (!isLoggedIn) {
+      setView("memberLogin");
+      return;
+    }
+    const h = window.location.hostname;
+    const bubuBase = h.includes("workers.dev") || h.includes("-dev.") ? "https://maumbubu.limyj007.workers.dev" : "https://bubu.maumful.com";
+    fetch("/api/bubu-token", { headers: { Authorization: "Bearer " + (localStorage.getItem("access_token") || "") } }).then((r) => r.json()).then((data) => {
+      const t = data.success ? data.bubuToken : localStorage.getItem("access_token") || "";
+      window.open(`${bubuBase}?t=${encodeURIComponent(t)}`, "_blank", "noopener noreferrer");
+    }).catch(() => window.open(bubuBase, "_blank", "noopener noreferrer"));
+  };
+  const openSedae = () => {
+    if (!isLoggedIn) {
+      setView("memberLogin");
+      return;
+    }
+    fetch("/api/sedae-token", { headers: { Authorization: "Bearer " + (localStorage.getItem("access_token") || "") } }).then((r) => r.json()).then((data) => {
+      if (data.success && data.sedaeToken) window.open("https://sedae.maumful.com/?t=" + encodeURIComponent(data.sedaeToken), "_blank", "noopener noreferrer");
+      else window.open("https://sedae.maumful.com", "_blank", "noopener noreferrer");
+    }).catch(() => window.open("https://sedae.maumful.com", "_blank", "noopener noreferrer"));
+  };
   const { useState: useS, useEffect: useE, useRef } = React;
   const STORY_BAR_KEY = "story_bar_dismissed";
   const [showStoryBar, setShowStoryBar] = useS(() => {
@@ -707,7 +729,7 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
     const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduce) return;
     const id = setInterval(() => {
-      if (!pausedRef.current) setSlideIdx((p) => (p + 1) % 4);
+      if (!pausedRef.current) setSlideIdx((p) => (p + 1) % SHOWCASE.length);
     }, 5e3);
     return () => clearInterval(id);
   }, []);
@@ -766,6 +788,34 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
         { icon: "\u{1F916}", bg: "#E7F0FB", name: tl("\uB9C8\uC74C \uC77D\uC5B4 \uC804\uD558\uAE30", "Heart, read & shared"), sub: tl("\uBD80\uBAA8\uB2D8\uAED8 \uB530\uB73B\uD558\uAC8C", "gently for parents"), tag: tl("\uC77D\uAE30", "Read") },
         { icon: "\u{1F4F7}", bg: "#E7F0FB", name: tl("\uD45C\uC815 \uC601\uC0C1 \uBD84\uC11D", "Facial Reading"), sub: tl("\uAE30\uAE30 \uB0B4\xB7\uC800\uC7A5 \uC548 \uD568", "on-device"), tag: tl("\uBB34\uC800\uC7A5", "No-save") },
         { icon: "\u{1F512}", bg: "#E7F0FB", name: tl("\uC548\uC804 \uC124\uACC4", "Safe Design"), sub: tl("\uBD80\uBAA8 PIN\xB7\uC704\uAE30 \uC548\uB0B4", "PIN\xB7crisis"), tag: tl("\uC548\uC804", "Safe") }
+      ]
+    },
+    {
+      key: "bubu",
+      accent: "#B45309",
+      header: tl("\u{1F4AC} \uB9C8\uC74C\uBD80\uBD80 \xB7 \uBD80\uBD80 \uB300\uD654 \uD1B5\uC5ED", "\u{1F4AC} Maumful Bubu"),
+      badge: { icon: "\u{1F4AC}", title: tl("\uB9D0\uACFC \uB9C8\uC74C\uC758 \uAC04\uADF9", "Words vs feelings"), sub: tl("\uCCAB 3\uD68C \uBB34\uB8CC", "3 free to start") },
+      cta: () => openBubu(),
+      ctaLabel: tl("\uB9C8\uC74C\uBD80\uBD80 \uC2DC\uC791 \u2192", "Start Bubu \u2192"),
+      rows: [
+        { icon: "\u{1F4AC}", bg: "#FEF3C7", name: tl("\uB300\uD654 \uD1B5\uC5ED", "Translate talk"), sub: tl("\uB9D0 \uC18D \uC9C4\uC9DC \uB9C8\uC74C", "the real meaning"), tag: tl("\uD1B5\uC5ED", "Read") },
+        { icon: "\u{1F54A}\uFE0F", bg: "#FEF3C7", name: tl("\uC2F8\uC6C0 \uC911\uC7AC", "Mediation"), sub: tl("\uAC08\uB4F1 \uB300\uD654 \uBD84\uC11D", "analyze conflicts"), tag: tl("\uC911\uC7AC", "Calm") },
+        { icon: "\u{1F497}", bg: "#FEF3C7", name: tl("\uAD00\uC810 \uBC14\uAFD4\uBCF4\uAE30", "Perspective"), sub: tl("\uC0C1\uB300 \uC785\uC7A5\uC5D0\uC11C", "partner's view"), tag: tl("\uACF5\uAC10", "Care") },
+        { icon: "\u271D\uFE0F", bg: "#FEF3C7", name: tl("\uC2EC\uB9AC\xB7\uAE30\uB3C5\uAD50 \uD2B8\uB799", "Two tracks"), sub: tl("\uC6D0\uD558\uB294 \uAD00\uC810 \uC120\uD0DD", "psych & faith"), tag: tl("\uD2B8\uB799", "Track") }
+      ]
+    },
+    {
+      key: "sedae",
+      accent: "#0E7490",
+      header: tl("\u{1F33F} \uB9C8\uC74C\uC138\uB300 \xB7 \uBD80\uBAA8-\uC790\uB140 \uD1B5\uC5ED", "\u{1F33F} Maumful Sedae"),
+      badge: { icon: "\u{1F33F}", title: tl("\uC138\uB300 \uC0AC\uC774 \uD1B5\uC5ED", "Across generations"), sub: tl("\uCCAD\uC18C\uB144 \uBB34\uB8CC", "Free for teens") },
+      cta: () => openSedae(),
+      ctaLabel: tl("\uB9C8\uC74C\uC138\uB300 \uC2DC\uC791 \u2192", "Start Sedae \u2192"),
+      rows: [
+        { icon: "\u{1F33F}", bg: "#CFFAFE", name: tl("\uBD80\uBAA8-\uC790\uB140 \uD1B5\uC5ED", "Parent-child"), sub: tl("\uC138\uB300 \uAC04 \uB9D0\uC758 \uAC04\uADF9", "the generation gap"), tag: tl("\uD1B5\uC5ED", "Read") },
+        { icon: "\u{1F9D2}", bg: "#CFFAFE", name: tl("\uCCAD\uC18C\uB144 \uC548\uC804 \uC6B0\uC120", "Teen safety"), sub: tl("\uBCF4\uD638\uAC00 \uBA3C\uC800", "protection first"), tag: tl("\uBB34\uB8CC", "Free") },
+        { icon: "\u{1F4E8}", bg: "#CFFAFE", name: tl("\uC6F9\uBDF0\uB85C \uACF5\uC720", "Web share"), sub: tl("\uC571 \uC5C6\uC774 \uC5F4\uB78C", "no app needed"), tag: tl("\uACF5\uC720", "Share") },
+        { icon: "\u{1F91D}", bg: "#CFFAFE", name: tl("\uAC00\uC871 \uCEE4\uBBA4\uB2C8\uD2F0", "Community"), sub: tl("\uC131\uC778 \uC804\uC6A9 \uBC29", "adults only"), tag: tl("\uC18C\uD1B5", "Talk") }
       ]
     }
   ];
@@ -942,7 +992,7 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
         }
       },
       /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", top: -16, right: -10, zIndex: 10, background: "white", borderRadius: 12, padding: "10px 14px", boxShadow: "0 8px 30px rgba(0,0,0,0.10)", display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 18 } }, slide.badge.icon), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 600 } }, slide.badge.title), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "#9A9A9A" } }, slide.badge.sub))),
-      /* @__PURE__ */ React.createElement("div", { style: { position: "relative", background: "white", borderRadius: 20, boxShadow: "0 12px 48px rgba(0,0,0,0.10)", padding: "28px 30px 22px", overflow: "hidden", minHeight: 392 } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setSlideIdx((slideIdx + 3) % 4), "aria-label": tl("\uC774\uC804", "Prev"), style: { position: "absolute", left: 4, top: "50%", transform: "translateY(-50%)", width: 32, height: 32, borderRadius: "50%", border: "1px solid #E8E8E8", background: "white", cursor: "pointer", fontSize: 18, color: "#666", zIndex: 5, lineHeight: "28px" } }, "\u2039"), /* @__PURE__ */ React.createElement("button", { onClick: () => setSlideIdx((slideIdx + 1) % 4), "aria-label": tl("\uB2E4\uC74C", "Next"), style: { position: "absolute", right: 4, top: "50%", transform: "translateY(-50%)", width: 32, height: 32, borderRadius: "50%", border: "1px solid #E8E8E8", background: "white", cursor: "pointer", fontSize: 18, color: "#666", zIndex: 5, lineHeight: "28px" } }, "\u203A"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: slide.accent, marginBottom: 16, letterSpacing: "0.3px", textAlign: "center" } }, slide.header), slide.rows.map((r, i) => /* @__PURE__ */ React.createElement(
+      /* @__PURE__ */ React.createElement("div", { style: { position: "relative", background: "white", borderRadius: 20, boxShadow: "0 12px 48px rgba(0,0,0,0.10)", padding: "28px 30px 22px", overflow: "hidden", minHeight: 392 } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setSlideIdx((slideIdx + SHOWCASE.length - 1) % SHOWCASE.length), "aria-label": tl("\uC774\uC804", "Prev"), style: { position: "absolute", left: 4, top: "50%", transform: "translateY(-50%)", width: 32, height: 32, borderRadius: "50%", border: "1px solid #E8E8E8", background: "white", cursor: "pointer", fontSize: 18, color: "#666", zIndex: 5, lineHeight: "28px" } }, "\u2039"), /* @__PURE__ */ React.createElement("button", { onClick: () => setSlideIdx((slideIdx + 1) % SHOWCASE.length), "aria-label": tl("\uB2E4\uC74C", "Next"), style: { position: "absolute", right: 4, top: "50%", transform: "translateY(-50%)", width: 32, height: 32, borderRadius: "50%", border: "1px solid #E8E8E8", background: "white", cursor: "pointer", fontSize: 18, color: "#666", zIndex: 5, lineHeight: "28px" } }, "\u203A"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: slide.accent, marginBottom: 16, letterSpacing: "0.3px", textAlign: "center" } }, slide.header), slide.rows.map((r, i) => /* @__PURE__ */ React.createElement(
         "div",
         {
           key: slide.key + i,
@@ -1859,7 +1909,113 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
       },
       tl("\uB9C8\uC74C\uC218\uB2EC \uC2DC\uC791\uD558\uAE30 \u2192", "Start Maumotter \u2192")
     ), /* @__PURE__ */ React.createElement("div", { style: { marginTop: 12, fontSize: 12, color: "#9A9A9A" } }, tl("\uB85C\uADF8\uC778 \uC2DC \uBCC4\uB3C4 \uB85C\uADF8\uC778 \uC5C6\uC774 \uBC14\uB85C \uC774\uB3D9\uD569\uB2C8\uB2E4 (\uB9C8\uC74C\uC218\uB2EC\uC740 \uBCC4\uB3C4 \uC11C\uBE44\uC2A4\uC608\uC694)", "Seamless single sign-on when logged in (Maumotter is a separate service)")))
-  ))), /* @__PURE__ */ React.createElement("div", { style: {
+  ))), /* @__PURE__ */ React.createElement("section", { style: { padding: "80px 24px", background: "#FDF6EC" } }, /* @__PURE__ */ React.createElement("div", { style: { maxWidth: 1200, margin: "0 auto" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 80, alignItems: "center" }, className: "ai-grid" }, /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 } }, tl([
+    { emoji: "\u{1F4AC}", name: "\uB300\uD654 \uD1B5\uC5ED", tag: "\uB9D0 \uC18D \uC9C4\uC9DC \uB9C8\uC74C", color: "#B45309", bg: "#FEF3C7" },
+    { emoji: "\u{1F54A}\uFE0F", name: "\uC2F8\uC6C0 \uC911\uC7AC", tag: "\uAC08\uB4F1 \uB300\uD654 \uBD84\uC11D", color: "#C2410C", bg: "#FFEDD5" },
+    { emoji: "\u{1F497}", name: "\uAD00\uC810 \uBC14\uAFD4\uBCF4\uAE30", tag: "\uC0C1\uB300 \uC785\uC7A5\uC5D0\uC11C", color: "#DB2777", bg: "#FCE7F3" },
+    { emoji: "\u271D\uFE0F", name: "\uC2EC\uB9AC\xB7\uAE30\uB3C5\uAD50 \uD2B8\uB799", tag: "\uAD00\uC810 \uC120\uD0DD \uAC00\uB2A5", color: "#7C3AED", bg: "#F3E8FF" }
+  ], [
+    { emoji: "\u{1F4AC}", name: "Translate talk", tag: "the real meaning", color: "#B45309", bg: "#FEF3C7" },
+    { emoji: "\u{1F54A}\uFE0F", name: "Mediation", tag: "analyze conflicts", color: "#C2410C", bg: "#FFEDD5" },
+    { emoji: "\u{1F497}", name: "Perspective", tag: "partner's view", color: "#DB2777", bg: "#FCE7F3" },
+    { emoji: "\u271D\uFE0F", name: "Two tracks", tag: "psych & faith", color: "#7C3AED", bg: "#F3E8FF" }
+  ]).map((g) => /* @__PURE__ */ React.createElement(
+    "div",
+    {
+      key: g.name,
+      onClick: openBubu,
+      style: { background: g.bg, borderRadius: 16, padding: "22px 18px", cursor: "pointer", transition: "all 0.2s", border: `1.5px solid ${g.color}22` },
+      onMouseEnter: (e) => {
+        e.currentTarget.style.transform = "translateY(-4px)";
+        e.currentTarget.style.boxShadow = "0 8px 28px rgba(0,0,0,0.10)";
+      },
+      onMouseLeave: (e) => {
+        e.currentTarget.style.transform = "none";
+        e.currentTarget.style.boxShadow = "none";
+      }
+    },
+    /* @__PURE__ */ React.createElement("div", { style: { fontSize: 36, marginBottom: 10 } }, g.emoji),
+    /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 700, color: "#1A1A1A", marginBottom: 6 } }, g.name),
+    /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 100, background: "white", color: g.color, border: `1px solid ${g.color}44` } }, g.tag)
+  ))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { display: "inline-block", background: "#FBE8C9", color: "#B45309", fontSize: 12, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", padding: "5px 14px", borderRadius: 100, marginBottom: 20 } }, "Maumful Bubu"), /* @__PURE__ */ React.createElement("h2", { style: { fontSize: 36, fontWeight: 700, lineHeight: 1.3, marginBottom: 16 } }, tl(/* @__PURE__ */ React.createElement(React.Fragment, null, "\uBD80\uBD80\uC758 \uB9D0\uACFC \uB9C8\uC74C\uC744 \uD1B5\uC5ED\uD558\uB294", /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { style: { color: "#B45309" } }, "\uB9C8\uC74C\uBD80\uBD80")), /* @__PURE__ */ React.createElement(React.Fragment, null, "Interpreting words & hearts", /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { style: { color: "#B45309" } }, "Maumful Bubu")))), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 16, color: "#5A5A5A", lineHeight: 1.8, marginBottom: 28 } }, tl(/* @__PURE__ */ React.createElement(React.Fragment, null, "\uAC19\uC740 \uB9D0\uB3C4 \uC11C\uB85C \uB2E4\uB974\uAC8C \uB4E4\uB9AC\uB294 \uBD80\uBD80 \uC0AC\uC774,", /* @__PURE__ */ React.createElement("br", null), "\uB9D0 \uC18D\uC5D0 \uB2F4\uAE34 \uC9C4\uC9DC \uB9C8\uC74C\uC744 \uC77D\uC5B4 \uC804\uD558\uACE0 \uAC08\uB4F1\uC744 \uC911\uC7AC\uD574 \uB4DC\uB824\uC694. \uCCAB 3\uD68C\uB294 \uBB34\uB8CC\uC608\uC694."), /* @__PURE__ */ React.createElement(React.Fragment, null, "Couples often hear the same words differently.", /* @__PURE__ */ React.createElement("br", null), "We read the real heart behind them and help mediate conflict. First 3 free."))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12, marginBottom: 32 } }, tl([
+    { icon: "\u{1F4AC}", text: "\uB300\uD654 \uD1B5\uC5ED \u2014 \uB9D0 \uC18D\uC5D0 \uB2F4\uAE34 \uC9C4\uC9DC \uB9C8\uC74C\uC744 \uC77D\uC5B4\uC694" },
+    { icon: "\u{1F54A}\uFE0F", text: "\uC2F8\uC6C0 \uC911\uC7AC \u2014 \uAC08\uB4F1\uC774 \uB41C \uB300\uD654\uB97C \uD568\uAED8 \uD480\uC5B4\uC694" },
+    { icon: "\u{1F497}", text: "\uAD00\uC810 \uBC14\uAFD4\uBCF4\uAE30 \u2014 \uC0C1\uB300\uC758 \uC785\uC7A5\uC5D0\uC11C \uB2E4\uC2DC \uB4E4\uC5B4\uC694" },
+    { icon: "\u271D\uFE0F", text: "\uC2EC\uB9AC \uC0C1\uB2F4\xB7\uAE30\uB3C5\uAD50 \uD2B8\uB799 \uC911 \uC6D0\uD558\uB294 \uAD00\uC810 \uC120\uD0DD" }
+  ], [
+    { icon: "\u{1F4AC}", text: "Translate talk \u2014 read the real meaning behind words" },
+    { icon: "\u{1F54A}\uFE0F", text: "Mediation \u2014 work through the conversation that hurt" },
+    { icon: "\u{1F497}", text: "Perspective \u2014 hear it again from their side" },
+    { icon: "\u271D\uFE0F", text: "Choose a psychology or Christian track" }
+  ]).map((item) => /* @__PURE__ */ React.createElement("div", { key: item.text, style: { display: "flex", alignItems: "center", gap: 10 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 18 } }, item.icon), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, color: "#5A5A5A" } }, item.text)))), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: openBubu,
+      style: { background: "#B45309", color: "white", border: "none", borderRadius: 12, padding: "14px 32px", fontSize: 16, fontWeight: 700, cursor: "pointer", fontFamily: "'Noto Sans KR', sans-serif", transition: "all 0.2s" },
+      onMouseEnter: (e) => {
+        e.currentTarget.style.background = "#92400E";
+        e.currentTarget.style.transform = "translateY(-1px)";
+      },
+      onMouseLeave: (e) => {
+        e.currentTarget.style.background = "#B45309";
+        e.currentTarget.style.transform = "none";
+      }
+    },
+    tl("\uB9C8\uC74C\uBD80\uBD80 \uC2DC\uC791\uD558\uAE30 \u2192", "Start Maumful Bubu \u2192")
+  ), /* @__PURE__ */ React.createElement("div", { style: { marginTop: 12, fontSize: 12, color: "#9A9A9A" } }, tl("\uB9CC 19\uC138 \uC774\uC0C1 \uBD80\uBD80 \uB300\uC0C1 \xB7 \uC6D0\uBB38\uC740 \uC800\uC7A5\uD558\uC9C0 \uC54A\uC544\uC694", "For married couples 19+ \xB7 your words are not stored")))))), /* @__PURE__ */ React.createElement("section", { style: { padding: "80px 24px", background: "#ECFBFD" } }, /* @__PURE__ */ React.createElement("div", { style: { maxWidth: 1200, margin: "0 auto" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 80, alignItems: "center" }, className: "ai-grid" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { display: "inline-block", background: "#CFF3F7", color: "#0E7490", fontSize: 12, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", padding: "5px 14px", borderRadius: 100, marginBottom: 20 } }, "Maumful Sedae"), /* @__PURE__ */ React.createElement("h2", { style: { fontSize: 36, fontWeight: 700, lineHeight: 1.3, marginBottom: 16 } }, tl(/* @__PURE__ */ React.createElement(React.Fragment, null, "\uBD80\uBAA8\uC640 \uC790\uB140 \uC0AC\uC774\uB97C \uC787\uB294", /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { style: { color: "#0E7490" } }, "\uB9C8\uC74C\uC138\uB300")), /* @__PURE__ */ React.createElement(React.Fragment, null, "Bridging parent and child", /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { style: { color: "#0E7490" } }, "Maumful Sedae")))), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 16, color: "#5A5A5A", lineHeight: 1.8, marginBottom: 28 } }, tl(/* @__PURE__ */ React.createElement(React.Fragment, null, "\uC138\uB300\uAC00 \uB2E4\uB974\uBA74 \uAC19\uC740 \uB9D0\uB3C4 \uB2E4\uB974\uAC8C \uB2FF\uC544\uC694.", /* @__PURE__ */ React.createElement("br", null), "\uBD80\uBAA8\uC640 \uC790\uB140 \uC0AC\uC774\uC5D0 \uB193\uC778 \uB9D0\uC758 \uAC04\uADF9\uC744 \uD1B5\uC5ED\uD574 \uC804\uD574 \uB4DC\uB824\uC694. \uCCAD\uC18C\uB144\uC740 \uBB34\uB8CC\uB85C \uC774\uC6A9\uD574\uC694."), /* @__PURE__ */ React.createElement(React.Fragment, null, "Across generations, the same words land differently.", /* @__PURE__ */ React.createElement("br", null), "We interpret the gap between parent and child. Free for teens."))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12, marginBottom: 32 } }, tl([
+    { icon: "\u{1F33F}", text: "\uBD80\uBAA8-\uC790\uB140 \uD1B5\uC5ED \u2014 \uC138\uB300 \uC0AC\uC774 \uB9D0\uC758 \uAC04\uADF9\uC744 \uC77D\uC5B4\uC694" },
+    { icon: "\u{1F9D2}", text: "\uCCAD\uC18C\uB144 \uC548\uC804 \uC6B0\uC120 \u2014 \uC544\uC774 \uBCF4\uD638\uAC00 \uC5B8\uC81C\uB098 \uBA3C\uC800" },
+    { icon: "\u{1F4E8}", text: "\uC6F9\uBDF0 \uACF5\uC720 \u2014 \uC571 \uC124\uCE58 \uC5C6\uC774 \uB9C1\uD06C\uB85C \uC5F4\uB78C" },
+    { icon: "\u{1F91D}", text: "\uAC00\uC871 \uCEE4\uBBA4\uB2C8\uD2F0 \u2014 \uC131\uC778 \uC804\uC6A9 \uBC29\uC5D0\uC11C \uD568\uAED8 \uB098\uB220\uC694" }
+  ], [
+    { icon: "\u{1F33F}", text: "Parent-child \u2014 read the generation gap in words" },
+    { icon: "\u{1F9D2}", text: "Teen safety first \u2014 protecting the child always comes first" },
+    { icon: "\u{1F4E8}", text: "Web share \u2014 open via link, no app install" },
+    { icon: "\u{1F91D}", text: "Family community \u2014 adults-only rooms to talk" }
+  ]).map((item) => /* @__PURE__ */ React.createElement("div", { key: item.text, style: { display: "flex", alignItems: "center", gap: 10 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 18 } }, item.icon), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, color: "#5A5A5A" } }, item.text)))), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: openSedae,
+      style: { background: "#0E7490", color: "white", border: "none", borderRadius: 12, padding: "14px 32px", fontSize: 16, fontWeight: 700, cursor: "pointer", fontFamily: "'Noto Sans KR', sans-serif", transition: "all 0.2s" },
+      onMouseEnter: (e) => {
+        e.currentTarget.style.background = "#0B5A70";
+        e.currentTarget.style.transform = "translateY(-1px)";
+      },
+      onMouseLeave: (e) => {
+        e.currentTarget.style.background = "#0E7490";
+        e.currentTarget.style.transform = "none";
+      }
+    },
+    tl("\uB9C8\uC74C\uC138\uB300 \uC2DC\uC791\uD558\uAE30 \u2192", "Start Maumful Sedae \u2192")
+  ), /* @__PURE__ */ React.createElement("div", { style: { marginTop: 12, fontSize: 12, color: "#9A9A9A" } }, tl("\uCCAD\uC18C\uB144(\uB9CC14~18)\uC740 \uBB34\uB8CC \xB7 \uC544\uC774 \uBCF4\uD638\uAC00 \uC6B0\uC120\uC778 \uC548\uC804 \uC124\uACC4", "Free for teens (14\u201318) \xB7 safety-first for children"))), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 } }, tl([
+    { emoji: "\u{1F33F}", name: "\uBD80\uBAA8-\uC790\uB140 \uD1B5\uC5ED", tag: "\uC138\uB300 \uAC04 \uB9D0\uC758 \uAC04\uADF9", color: "#0E7490", bg: "#CFFAFE" },
+    { emoji: "\u{1F9D2}", name: "\uCCAD\uC18C\uB144 \uC548\uC804 \uC6B0\uC120", tag: "\uBCF4\uD638\uAC00 \uBA3C\uC800", color: "#16A34A", bg: "#E7F6EC" },
+    { emoji: "\u{1F4E8}", name: "\uC6F9\uBDF0\uB85C \uACF5\uC720", tag: "\uC571 \uC5C6\uC774 \uC5F4\uB78C", color: "#2563EB", bg: "#E0EAFF" },
+    { emoji: "\u{1F91D}", name: "\uAC00\uC871 \uCEE4\uBBA4\uB2C8\uD2F0", tag: "\uC131\uC778 \uC804\uC6A9 \uBC29", color: "#9333EA", bg: "#F3E8FF" }
+  ], [
+    { emoji: "\u{1F33F}", name: "Parent-child", tag: "the generation gap", color: "#0E7490", bg: "#CFFAFE" },
+    { emoji: "\u{1F9D2}", name: "Teen safety", tag: "protection first", color: "#16A34A", bg: "#E7F6EC" },
+    { emoji: "\u{1F4E8}", name: "Web share", tag: "no app needed", color: "#2563EB", bg: "#E0EAFF" },
+    { emoji: "\u{1F91D}", name: "Community", tag: "adults only", color: "#9333EA", bg: "#F3E8FF" }
+  ]).map((g) => /* @__PURE__ */ React.createElement(
+    "div",
+    {
+      key: g.name,
+      onClick: openSedae,
+      style: { background: g.bg, borderRadius: 16, padding: "22px 18px", cursor: "pointer", transition: "all 0.2s", border: `1.5px solid ${g.color}22` },
+      onMouseEnter: (e) => {
+        e.currentTarget.style.transform = "translateY(-4px)";
+        e.currentTarget.style.boxShadow = "0 8px 28px rgba(0,0,0,0.10)";
+      },
+      onMouseLeave: (e) => {
+        e.currentTarget.style.transform = "none";
+        e.currentTarget.style.boxShadow = "none";
+      }
+    },
+    /* @__PURE__ */ React.createElement("div", { style: { fontSize: 36, marginBottom: 10 } }, g.emoji),
+    /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 700, color: "#1A1A1A", marginBottom: 6 } }, g.name),
+    /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 100, background: "white", color: g.color, border: `1px solid ${g.color}44` } }, g.tag)
+  )))))), /* @__PURE__ */ React.createElement("div", { style: {
     background: "#F0FDF4",
     borderTop: "1px solid #86EFAC",
     borderBottom: "1px solid #86EFAC",
