@@ -380,7 +380,13 @@ translate.post('/translate', async (c) => {
     //    결제 경로를 아예 만들지 않는다. 기획 원칙("회복 책임을 아이에게 지우지 않는다")과도 맞다.
     //    대신 남용 방지로 일일 한도만 둔다.
     const isTeen = ageTier === 'teen';
-    const cost = isTeen ? 0 : (CREDIT_COST[spendMode] ?? 2);
+    // 성인 첫 N회 무료(프리미엄 프리미엄 전략) → 유료 전환. 청소년은 이미 무료(아래 일일한도).
+    //   KV 카운터로 사용자별 무료 사용횟수 추적. 무료 소진 후 크레딧 차감, 없으면 402→마음풀 상품 안내.
+    const FREE_QUOTA = 3;
+    const freeKey = `sedae_free_used:${uid}`;
+    const usedFree = isTeen ? 0 : (parseInt((await c.env.KV.get(freeKey)) || '0', 10) || 0);
+    const isFreeIntro = !isTeen && usedFree < FREE_QUOTA;
+    const cost = isTeen ? 0 : (isFreeIntro ? 0 : (CREDIT_COST[spendMode] ?? 2));
     if (isTeen) {
       const today = new Date().toISOString().slice(0, 10);
       const key = `sedae_teen_daily:${uid}:${today}`;
@@ -436,9 +442,11 @@ translate.post('/translate', async (c) => {
     const { system, userMessage } = buildTranslationPrompt(config);
 
     // ── [fix④] 크레딧 차감 후 Claude 호출 (실패 시 환불) ──
-    const spent = await spendCredits(c.env.DB, uid, cost, `sedae:translate:${spendMode}`);
-    if (!spent.ok) {
-      return c.json({ error: '크레딧이 부족해요. 마음풀에서 구매 후 이용해 주세요.', balance: spent.balance }, 402);
+    if (cost > 0) {
+      const spent = await spendCredits(c.env.DB, uid, cost, `sedae:translate:${spendMode}`);
+      if (!spent.ok) {
+        return c.json({ error: '크레딧이 부족해요. 마음풀에서 구매 후 이용해 주세요.', balance: spent.balance, needPurchase: true }, 402);
+      }
     }
     let raw: string;
     try {
@@ -451,6 +459,11 @@ translate.post('/translate', async (c) => {
     if (!parsed) {
       await refundCredits(c.env.DB, uid, cost, `sedae:refund:${spendMode}`);
       return c.json({ error: '통역 결과 처리에 실패했어요. 다시 시도해 주세요.' }, 502);
+    }
+
+    // 성인 무료 체험분을 성공적으로 사용했으면 카운트 증가(실패 시엔 위에서 이미 return/throw)
+    if (isFreeIntro) {
+      await c.env.KV.put(freeKey, String(usedFree + 1));
     }
 
     // ── 사용 로그 (원문 미저장 — 프라이버시 원칙 상속. track/mode/age_tier만) ──
