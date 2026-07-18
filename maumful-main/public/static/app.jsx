@@ -9838,7 +9838,7 @@ function PsychologicalTestSystem() {
     return (
       <div className="min-h-screen bg-gray-50 p-4 flex flex-col items-center justify-start pt-10"
         style={{fontFamily:"'Noto Sans KR',sans-serif"}}>
-        <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-lg text-center mb-4">
+        <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-2xl text-center mb-4">
           <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
