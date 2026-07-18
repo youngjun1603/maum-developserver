@@ -670,18 +670,18 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
               fontSize: 13, fontWeight: 600, marginBottom: 24,
             }}>
               <span style={{ fontSize: 8, animation: 'pulse 2s infinite' }}>●</span>
-              {tl("전문 심리검사 10종 제공", "10 Professional Assessments")}
+              {tl("마음을 읽는 일", "The work of reading hearts")}
             </div>
 
             <h1 style={{
               fontSize: 52, lineHeight: 1.2, fontWeight: 700,
               marginBottom: 20, letterSpacing: '-1px',
             }}>
-              {tl(<>나를 이해하는<br /><span style={{ color: '#2D6A4F' }}>첫걸음</span>,<br />심리검사</>, <>Your journey<br />to <span style={{ color: '#2D6A4F' }}>self-understanding</span><br />starts here</>)}
+              {tl(<>당신이 알지 못하는<br />마음을 읽어서<br /><span style={{ color: '#2D6A4F' }}>전해&nbsp;드립니다.</span></>, <>We read the heart<br />you didn't know you had —<br /><span style={{ color: '#2D6A4F' }}>and bring it to you.</span></>)}
             </h1>
 
             <p style={{ fontSize: 17, color: '#5A5A5A', lineHeight: 1.8, marginBottom: 36 }}>
-              {tl(<>전문가들이 널리 활용하는 표준 심리검사를 온라인에서 간편하게.<br />검사 후 AI 상담으로 나의 결과를 깊이 이해하세요.</>, <>Standardized self-assessments widely used by professionals — easily accessible online.<br />Understand your results deeply through AI counseling after each test.</>)}
+              {tl(<>마음은 늘 말보다 한 걸음 뒤에 있습니다. 마음풀은 그 닿지 못한 마음을 읽어 <b style={{ color: '#3A3A3A' }}>당신에게 건네는 서비스</b>입니다.<br />심리검사로 나를, <b style={{ color: '#3A3A3A' }}>관계 통역</b>으로 상대를, <b style={{ color: '#3A3A3A' }}>마음게임</b>으로 지친 마음을 돌봐 드립니다.</>, <>The heart is always one step behind our words. Maumful <b style={{ color: '#3A3A3A' }}>reads those unspoken feelings and brings them to you</b>.<br />Yourself through assessments, others through <b style={{ color: '#3A3A3A' }}>relationship interpreting</b>, and a weary heart through <b style={{ color: '#3A3A3A' }}>Maum Games</b>.</>)}
             </p>
 
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
