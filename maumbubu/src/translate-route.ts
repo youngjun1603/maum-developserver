@@ -344,7 +344,14 @@ translate.post('/translate', async (c) => {
 
     // ── [fix④] 크레딧 비용 산정 (실제 차감은 게이트 통과 후 Claude 호출 직전) ──
     const spendMode: Mode = (['receive', 'send', 'mediate', 'perspective'] as Mode[]).includes(body.mode) ? body.mode : 'receive';
-    const cost = CREDIT_COST[spendMode] ?? 2;
+    // ── 무료 체험(첫 N회 무료) → 유료 전환 (프리미엄 프리미엄 전략) ──
+    //   KV 카운터로 사용자별 무료 사용횟수 추적(translation_logs엔 user_id가 없어 KV 사용).
+    //   무료 소진 후 크레딧 차감, 크레딧 없으면 402 → 마음풀 상품 안내(전환 지점).
+    const FREE_QUOTA = 3;
+    const freeKey = `bubu_free_used:${uid}`;
+    const usedFree = parseInt((await c.env.KV.get(freeKey)) || '0', 10) || 0;
+    const isFreeIntro = usedFree < FREE_QUOTA;
+    const cost = isFreeIntro ? 0 : (CREDIT_COST[spendMode] ?? 2);
 
     // ── 멀티모달 동의 게이트 검증 (동의 없으면 멀티모달 데이터 자체를 제거) ──
     let multimodal = undefined;
@@ -381,9 +388,11 @@ translate.post('/translate', async (c) => {
     const { system, userMessage } = buildTranslationPrompt(config);
 
     // ── [fix④] 크레딧 차감 후 Claude 호출 (실패 시 환불) ──
-    const spent = await spendCredits(c.env.DB, uid, cost, `bubu:translate:${spendMode}`);
-    if (!spent.ok) {
-      return c.json({ error: '크레딧이 부족해요. 마음풀에서 구매 후 이용해 주세요.', balance: spent.balance }, 402);
+    if (cost > 0) {
+      const spent = await spendCredits(c.env.DB, uid, cost, `bubu:translate:${spendMode}`);
+      if (!spent.ok) {
+        return c.json({ error: '크레딧이 부족해요. 마음풀에서 구매 후 이용해 주세요.', balance: spent.balance, needPurchase: true }, 402);
+      }
     }
     let raw: string;
     try {
@@ -403,6 +412,11 @@ translate.post('/translate', async (c) => {
       .prepare('INSERT INTO translation_logs (relation_id, track, mode) VALUES (?, ?, ?)')
       .bind(body.relationId, config.track, config.mode)
       .run();
+
+    // 무료 체험분을 성공적으로 사용했으면 카운트 증가(실패 시엔 위에서 이미 return/throw → 증가 안 함)
+    if (isFreeIntro) {
+      await c.env.KV.put(freeKey, String(usedFree + 1));
+    }
 
     // ── [StageB] 안전 티어(T1/T2) 감지 시 기록 → 공유 차단·이후 민감도 ──
     const safetyTier = (parsed as Record<string, unknown>).safety_tier;
