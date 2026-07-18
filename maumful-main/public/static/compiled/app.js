@@ -6394,10 +6394,6 @@ AI \uBD84\uC11D \uAE30\uB2A5\uC774 \uC911\uB2E8\uB429\uB2C8\uB2E4.`)) return;
   }
   async function runIntegratedAnalysis() {
     var _a2;
-    if (isAiChatExhausted()) {
-      setShowAiLimitModal(true);
-      return;
-    }
     setIntegratedLoading(true);
     setIntegratedErr("");
     setIntegratedText("");
@@ -6411,6 +6407,11 @@ AI \uBD84\uC11D \uAE30\uB2A5\uC774 \uC911\uB2E8\uB429\uB2C8\uB2E4.`)) return;
         const err = await res.json().catch(() => ({}));
         if (res.status === 401) throw new Error(t("\uB85C\uADF8\uC778\uC774 \uD544\uC694\uD569\uB2C8\uB2E4.", "Login required."));
         if (res.status === 429) throw new Error(t("\uC694\uCCAD\uC774 \uB108\uBB34 \uB9CE\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.", "Too many requests. Please try again shortly."));
+        if (res.status === 402) {
+          setShowChargeView(true);
+          setIntegratedLoading(false);
+          return;
+        }
         throw new Error(err.error || t("\uC11C\uBC84 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.", "A server error occurred."));
       }
       const reader = res.body.getReader();

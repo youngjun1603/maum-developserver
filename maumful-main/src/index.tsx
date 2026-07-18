@@ -1732,6 +1732,21 @@ app.post('/api/ai-analyze/integrated', async (c) => {
   const game = await buildGameSummary(DB, userId)
 
   const { system, user } = buildIntegratedPrompt(tests, lang, counselingType, moodSummary, game?.text ?? '')
+
+  // ── 무료 1회 → 이후 유료(프리미엄 프리미엄, 2026-07-18). 마스터는 무제한 무료. ──
+  //   스트리밍 엔드포인트라 스트림 시작 전 선결제. upstream 실패(502) 시 환불, 무료분은 성공 시점에 소진.
+  const isMasterUser = isMasterAccount(u?.email)
+  const INTEGRATED_COST = 20
+  const integratedFreeKey = `integrated_free_used:${userId}`
+  const integratedUsedFree = isMasterUser ? 1 : (parseInt((await KV.get(integratedFreeKey)) || '0', 10) || 0)
+  const integratedIsFree = !isMasterUser && integratedUsedFree < 1
+  let integratedCharged = false
+  if (!isMasterUser && !integratedIsFree) {
+    const spent = await spendCredits(DB, userId, INTEGRATED_COST, 'integrated_analyze')
+    if (!spent.ok) return c.json({ error: '통합 심층 해석은 첫 1회 무료 후 이용권이 필요해요. 마음풀에서 구매해 주세요.', balance: spent.balance, needPurchase: true, product: 'integrated_one' }, 402)
+    integratedCharged = true
+  }
+
   // ⚠️ sonnet-4-6/haiku-4-5는 temperature 허용. 모델을 sonnet-5/opus-4.7+로 올릴 땐 temperature 제거 필수(안 그러면 400).
   // system 배열의 cache_control은 현 프롬프트 길이(<2048토큰)에선 캐시 미적용(에러 아님) — 프롬프트가 커지면 자동 적용.
   const INTEGRATED_FALLBACKS = ['claude-sonnet-4-6', 'claude-haiku-4-5-20251001']
@@ -1753,10 +1768,12 @@ app.post('/api/ai-analyze/integrated', async (c) => {
     if (upstream.ok || (upstream.status !== 404 && upstream.status !== 403)) break
   }
   if (!upstream.ok) {
+    if (integratedCharged) await gainCredits(DB, userId, INTEGRATED_COST, 'integrated_refund')   // 스트림 실패 → 환불
     const errBody = await upstream.text().catch(() => '')
     console.error('[ai-analyze-integrated] error:', upstream.status, errBody.slice(0, 300))
     return c.json({ error: 'AI 서비스 오류 (' + upstream.status + ')' }, 502)
   }
+  if (integratedIsFree) c.executionCtx.waitUntil(KV.put(integratedFreeKey, '1'))   // 무료 1회 소진(스트림 시작 성공)
   return new Response(upstream.body, {
     headers: {
       'Content-Type': 'text/event-stream',

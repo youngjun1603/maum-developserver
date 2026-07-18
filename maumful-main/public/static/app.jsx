@@ -7626,7 +7626,7 @@ function PsychologicalTestSystem() {
 
   // 🧩 통합 심층 해석 — 여러 검사를 종합 (/api/ai-analyze/integrated, 기존 runAiAnalysis와 별개)
   async function runIntegratedAnalysis() {
-    if (isAiChatExhausted()) { setShowAiLimitModal(true); return; }
+    // 게이팅은 서버가 판단(첫 1회 무료 → 이후 크레딧). 402면 구매 유도.
     setIntegratedLoading(true); setIntegratedErr(''); setIntegratedText('');
     try {
       const res = await fetch('/api/ai-analyze/integrated', {
@@ -7638,6 +7638,7 @@ function PsychologicalTestSystem() {
         const err = await res.json().catch(() => ({}));
         if (res.status === 401) throw new Error(t('로그인이 필요합니다.', 'Login required.'));
         if (res.status === 429) throw new Error(t('요청이 너무 많습니다. 잠시 후 다시 시도해주세요.', 'Too many requests. Please try again shortly.'));
+        if (res.status === 402) { setShowChargeView(true); setIntegratedLoading(false); return; }   // 무료 소진 → 이용권 구매
         throw new Error(err.error || t('서버 오류가 발생했습니다.', 'A server error occurred.'));
       }
       const reader = res.body.getReader();
