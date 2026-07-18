@@ -621,7 +621,7 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
             }}>
             <span aria-hidden="true">🌿</span>
             <span style={{ opacity: 0.92 }}>
-              {tl('마음풀은 당신이 알지 못하는 마음을 읽어 전합니다', "Maumful reads the heart you didn't know you had")}
+              {tl('마음풀은 당신도 알지 못하던 마음을 읽어 전합니다', "Maumful reads the heart you didn't know you had")}
             </span>
             <span style={{ fontWeight: 700, whiteSpace: 'nowrap', textDecoration: 'underline', textUnderlineOffset: 3 }}>
               {tl('이야기 보기 →', 'Our story →')}

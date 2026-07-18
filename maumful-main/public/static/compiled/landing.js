@@ -791,7 +791,7 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
       }
     },
     /* @__PURE__ */ React.createElement("span", { "aria-hidden": "true" }, "\u{1F33F}"),
-    /* @__PURE__ */ React.createElement("span", { style: { opacity: 0.92 } }, tl("\uB9C8\uC74C\uD480\uC740 \uB2F9\uC2E0\uC774 \uC54C\uC9C0 \uBABB\uD558\uB294 \uB9C8\uC74C\uC744 \uC77D\uC5B4 \uC804\uD569\uB2C8\uB2E4", "Maumful reads the heart you didn't know you had")),
+    /* @__PURE__ */ React.createElement("span", { style: { opacity: 0.92 } }, tl("\uB9C8\uC74C\uD480\uC740 \uB2F9\uC2E0\uB3C4 \uC54C\uC9C0 \uBABB\uD558\uB358 \uB9C8\uC74C\uC744 \uC77D\uC5B4 \uC804\uD569\uB2C8\uB2E4", "Maumful reads the heart you didn't know you had")),
     /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, whiteSpace: "nowrap", textDecoration: "underline", textUnderlineOffset: 3 } }, tl("\uC774\uC57C\uAE30 \uBCF4\uAE30 \u2192", "Our story \u2192"))
   ), /* @__PURE__ */ React.createElement(
     "button",
