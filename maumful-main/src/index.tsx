@@ -2711,6 +2711,11 @@ const PACKAGES: Record<string, { credits: number; amount: number; label: string;
   ai_10:     { credits: 20, amount: 2000, label: 'AI 상담 10회권',          product: true },
   pdf_one:   { credits: 3,  amount: 1000, label: 'PDF 결과해석',            product: true },
   allinone:  { credits: 33, amount: 3900, label: '올인원(검사+AI10회+PDF)', product: true },
+  // ── 서비스별 프리미엄 상품(모두 마음풀 users.credits 지급 → 각 서비스가 차감) ──
+  //    프리미엄 포지셔닝(2026-07-18): 저가 지양. 부부·세대는 통역이 maumful 크레딧을 쓴다(세대는 성인만).
+  integrated_one: { credits: 20, amount: 6900, label: '통합 심층 해석 1회', product: true },
+  bubu_pack10:    { credits: 25, amount: 5900, label: '마음부부 통역 10회팩', product: true },
+  sedae_pack10:   { credits: 25, amount: 5900, label: '마음세대 통역팩(성인)', product: true },
 }
 
 // ── 구독 플랜 정의 ─────────────────────────────────────────

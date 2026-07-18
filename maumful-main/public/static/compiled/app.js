@@ -4139,7 +4139,11 @@ Visit Maumful and take the same test again to compare your progress.`));
       { key: "test_one", credits: 10, amount: 2e3, label: t("\uC2EC\uB9AC\uAC80\uC0AC 1\uD68C", "Assessment"), desc: t("\uAC80\uC0AC 1\uD68C + \uACB0\uACFC \uD574\uC11D", "1 test + report"), badge: null },
       { key: "ai_10", credits: 20, amount: 2e3, label: t("AI \uC0C1\uB2F4 10\uD68C\uAD8C", "AI chat \xD710"), desc: t("AI \uCC44\uD305 10\uD68C", "10 AI chats"), badge: t("\uC778\uAE30", "Popular") },
       { key: "pdf_one", credits: 3, amount: 1e3, label: t("PDF \uACB0\uACFC\uD574\uC11D", "PDF report"), desc: t("\uC2EC\uCE35 \uD574\uC11D PDF 1\uD68C", "In-depth PDF"), badge: null },
-      { key: "allinone", credits: 33, amount: 3900, label: t("\uC62C\uC778\uC6D0 \uD328\uD0A4\uC9C0", "All-in-One"), desc: t("\uAC80\uC0AC+AI 10\uD68C+PDF", "Test+AI+PDF"), badge: t("\uCD94\uCC9C", "Best") }
+      { key: "allinone", credits: 33, amount: 3900, label: t("\uC62C\uC778\uC6D0 \uD328\uD0A4\uC9C0", "All-in-One"), desc: t("\uAC80\uC0AC+AI 10\uD68C+PDF", "Test+AI+PDF"), badge: t("\uCD94\uCC9C", "Best") },
+      // ── 서비스별 프리미엄 상품(마음풀 크레딧 지급 → 각 서비스에서 사용) ──
+      { key: "integrated_one", credits: 20, amount: 6900, label: t("\uD1B5\uD569 \uC2EC\uCE35 \uD574\uC11D 1\uD68C", "Integrated Insight"), desc: t("\uC5EC\uB7EC \uAC80\uC0AC\uB97C \uD55C \uC0AC\uB78C\uC73C\uB85C \uC885\uD569", "All tests, one deep read"), badge: t("\uC2EC\uCE35", "Deep") },
+      { key: "bubu_pack10", credits: 25, amount: 5900, label: t("\uB9C8\uC74C\uBD80\uBD80 \uD1B5\uC5ED 10\uD68C\uD329", "Maum Bubu \xD710"), desc: t("\uBD80\uBD80 \uB300\uD654 \uD1B5\uC5ED 10\uD68C", "10 couple translations"), badge: null },
+      { key: "sedae_pack10", credits: 25, amount: 5900, label: t("\uB9C8\uC74C\uC138\uB300 \uD1B5\uC5ED\uD329", "Maum Sedae pack"), desc: t("\uBD80\uBAA8-\uC790\uB140 \uD1B5\uC5ED(\uC131\uC778)", "Parent-child (adult)"), badge: null }
     ];
     const PACKAGES_GLOBAL = [
       { key: "starter_g", credits: 50, amount: 2.99, label: "Starter", badge: null },
