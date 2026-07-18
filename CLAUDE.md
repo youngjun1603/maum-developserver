@@ -20,6 +20,8 @@
 | `_assets/` | 이미지·디자인·문서 자산 | — |
 
 - **마음풀·CTS는 트윈**(~90% 동일). 공통 개발규칙은 `maumful-main/CLAUDE.md`에 두고 CTS는 차이점만 관리.
+- ⚠️ **CTS는 유지보수 모드 — 에러·버그 수정만, 신규 기능 금지**(사용자 확정 2026-07-18). CTS(`cts-maum-main`·`cts-game-main`)에는 **버그·에러 수정만** 반영한다. **신규 기능(마음풀에 새로 넣은 것 포함)은 포팅하지 않는다.** 계획이 바뀌면 사용자가 다시 알려준다. → 메모리 `project_cts_payment_nonprofit`
+  - 즉 마음풀 고유 서비스(마음 시리즈 수달·곁·부부·세대 + 커플)는 물론, **마음풀 본체의 신규 기능도** CTS로 자동 동기화하지 않는다. 트윈 동기화는 이제 사실상 버그·안전 수정에 한정.
 - ⚠️ **CTS 전달 시 누락 주의**: CTS는 워커 2개(`lightoflife` + `lightoflife-game`)인데 **본체는 별도 레포(`lightoflife-cts`), 게임은 이 레포 안**에 있다. `lightoflife-cts`만 넘기면 **CTS 게임이 통째로 빠진다** → `cts-game-main/` 폴더를 함께 export할 것. 범위·인프라·시크릿·체크리스트는 **`cts-maum-main/HANDOVER.md`**. (레포 통합 여부는 미결정)
 - **마음 시리즈(수달·곁)는 별개 스택**(React CDN·no-build·GitHub 웹UI 배포) — 마음풀/CTS 규칙을 끌어오지 말 것.
 
