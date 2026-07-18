@@ -224,6 +224,20 @@ npm run deploy:cts    # lightoflife-couple (wrangler.lightoflife.toml)
 
 ---
 
+## 유료화 — 프리미엄 프리미엄 & 통합결제 (2026-07-18 구현·배포)
+
+전략(사용자 확정) = **무료로 경험 → 유료 전환**, 저가 포지셔닝 지양(프리미엄 가격). ⚠️ **실결제는 토스 라이브키 등록 후** 동작(현재 테스트키 — 카탈로그·전환로직은 다 살아 있고 결제만 대기).
+
+- **마음풀 상품**(`PACKAGES` index.tsx / `ChargeView` PACKAGES_KR app.jsx):
+  - 내부(마음풀 크레딧 지급): 통합해석 ₩6,900·부부/세대 통역팩 ₩5,900. 부부·세대는 maumful `users.credits`를 차감하므로 상품=크레딧 지급.
+  - 외부(수달·곁, `service`+`grantType`·credits=0): 라이트 ₩7,900/프로 ₩14,900/10회팩 ₩6,900.
+- **무료→유료 전환**(프리미엄 프리미엄): 부부·세대 **첫 3회 무료**(KV `bubu_free_used`/`sedae_free_used`{uid}, 세대는 성인만·청소년 무료) → 크레딧 차감 → 없으면 402 `needPurchase`. 통합해석 **첫 1회 무료**(KV `integrated_free_used`)→20cr 선결제(스트리밍이라 스트림 시작 전 선결제·upstream 502 시 환불·마스터 무제한).
+- **통합결제 grant**(수달·곁은 별도 생태계라 크레딧 대신 지급 전달): 결제성공(success·webhook)→`service` 있으면 `deliverGrant`(`signSso` 서명→POST `maumotter.com`/`maumgyeot.com` `/api/grant`)→각 서비스 `verifySso`·`applyGrant`. 큐 `external_grants`(마음풀)·멱등 `external_orders`(수달곁). 재시도 `/api/admin/deliver-pending-grants`. **`MAUM_SSO_SECRET` 3곳 동일값 필수**(마음풀·수달·곁). E2E 검증 완료(지급·멱등·위조401·환불revoke). 상세=메모리 [[project_maum_unified_payment]].
+
+## 크롤링 정책 (robots.txt, 2026-07-18)
+
+마케팅 노출 위해 **AI 검색·답변봇 부분 허용**: Google-Extended(Gemini)·OAI-SearchBot·ChatGPT-User·PerplexityBot = HTML 허용 + `/static/`(검사문항 든 JS번들)·`/api/` 차단. **AI 학습봇**(GPTBot·ClaudeBot·CCBot 등)·**스크래퍼**(Ahrefs·Semrush 등)는 전면 차단. `X-Robots-Tag`/meta에서 `noai` 제거(noimageai 유지). ⚠️ 순수 SPA라 검사화면 URL이 없다 → 실보호 대상 = 문항이 든 **`/static/` 번들**. sitemap에 `/story` 추가. 상세=메모리 [[project_maumful_crawl_policy]].
+
 ## 개발 완료 후 검증 원칙 ⚠️ 필수
 기능 개발 완료 시 **즉시(요청 없어도)** 에러·버그 검증. 시점: 빌드 성공 후, 배포 전/직후.
 - 범위: 변경 파일 + 직접 연관(프론트·백엔드). 신규 함수 변수 스코프·타입·undefined. 크레딧 차감 레이스/원자성. API 응답 구조 일치(프론트↔백). `parseInt()` NaN, `.first()` null. React Hook 의존성 배열.
