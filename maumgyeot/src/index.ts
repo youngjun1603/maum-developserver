@@ -5,7 +5,7 @@ import { Hono } from 'hono';
 import { registerUser, loginUser, getUser, issueToken, requireAuth, deleteUser, findByEmail, setPassword, markEmailVerified, isEmailVerified } from './auth';
 import { BEHAVIOR, signalsToLines } from './behavior';
 
-type Bindings = { DB: D1Database; AUTH_DB: D1Database; KV: KVNamespace; JWT_SECRET: string; ANTHROPIC_API_KEY: string; ASSETS: Fetcher; ADMIN_SECRET?: string; RESEND_API_KEY?: string; EMAIL_FROM?: string };
+type Bindings = { DB: D1Database; AUTH_DB: D1Database; KV: KVNamespace; JWT_SECRET: string; ANTHROPIC_API_KEY: string; ASSETS: Fetcher; ADMIN_SECRET?: string; RESEND_API_KEY?: string; EMAIL_FROM?: string; MAUM_SSO_SECRET?: string };
 const app = new Hono<{ Bindings: Bindings; Variables: { uid: number } }>();
 
 const REPORT_MODEL = 'claude-sonnet-4-6';
@@ -364,6 +364,78 @@ app.post('/api/coupon/redeem', requireAuth, async (c) => {
   await c.env.DB.prepare('UPDATE coupons SET redeemed_count=redeemed_count+1 WHERE code=?').bind(norm).run();
   const result = await applyGrant(c.env, uid, cp.type);
   return c.json({ ok: true, granted: cp.type, result, entitlement: await getEntitlement(c.env, uid) });
+});
+
+// ── 마음풀 통합결제: 서명 grant 수신 (마음풀 결제성공 → 여기로 지급). 수달과 대칭 ──
+//   서명 = 마음풀 signSso(MAUM_SSO_SECRET, {email,service,grantType,orderId,amount,exp}). HMAC-SHA256, payloadB64u.sig.
+async function verifySso(secret: string, token: string): Promise<any | null> {
+  try {
+    const i = String(token).lastIndexOf('.');
+    if (i < 0) return null;
+    const payloadB64 = token.slice(0, i), sig = token.slice(i + 1);
+    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const expBuf = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payloadB64));
+    const expSig = btoa(String.fromCharCode(...new Uint8Array(expBuf))).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+    if (expSig !== sig) return null;
+    return JSON.parse(atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/')));
+  } catch { return null; }
+}
+async function verifyGrantToken(secret: string, token: string): Promise<any | null> {
+  const p = await verifySso(secret, token);
+  if (!p) return null;
+  if (!p.exp || Number(p.exp) < Math.floor(Date.now() / 1000)) return null;
+  return p;
+}
+app.post('/api/grant', async (c) => {
+  const secret = c.env.MAUM_SSO_SECRET;
+  if (!secret) return c.json({ error: 'grant secret 미설정' }, 503);
+  const body = await c.req.json().catch(() => ({} as any));
+  const p = await verifyGrantToken(secret, String(body.token || ''));
+  if (!p) return c.json({ error: 'invalid or expired grant' }, 401);
+  if (p.service && p.service !== 'gyeot') return c.json({ error: 'service mismatch' }, 400);
+  const email = String(p.email || '').toLowerCase();
+  const grantType = String(p.grantType || '');
+  const orderId = String(p.orderId || '');
+  if (!email || !orderId) return c.json({ error: 'email/orderId 누락' }, 400);
+  if (!PLAN[grantType] && !PACK[grantType]) return c.json({ error: 'unknown grantType' }, 400);
+  const existing = await c.env.DB.prepare('SELECT status FROM external_orders WHERE order_id=?').bind(orderId).first<any>();
+  if (existing) return c.json({ ok: true, dedup: true, status: existing.status });
+  let user = await findByEmail(c.env.AUTH_DB, email);
+  if (!user) {
+    try { user = await registerUser(c.env.AUTH_DB, { email, password: crypto.randomUUID() + crypto.randomUUID() }); }
+    catch { user = await findByEmail(c.env.AUTH_DB, email); }
+  }
+  if (!user) return c.json({ error: '계정 처리 실패' }, 500);
+  await markEmailVerified(c.env.AUTH_DB, user.id);
+  const result = await applyGrant(c.env, user.id, grantType);
+  await c.env.DB.prepare("INSERT INTO external_orders (order_id,email,maum_user_id,grant_type,status,applied_at) VALUES (?,?,?,?,'applied',datetime('now'))")
+    .bind(orderId, email, user.id, grantType).run();
+  return c.json({ ok: true, applied: true, grantType, result });
+});
+app.post('/api/grant/revoke', async (c) => {
+  const secret = c.env.MAUM_SSO_SECRET;
+  if (!secret) return c.json({ error: 'grant secret 미설정' }, 503);
+  const body = await c.req.json().catch(() => ({} as any));
+  const p = await verifyGrantToken(secret, String(body.token || ''));
+  if (!p) return c.json({ error: 'invalid or expired' }, 401);
+  const orderId = String(p.orderId || '');
+  const ord = await c.env.DB.prepare('SELECT * FROM external_orders WHERE order_id=?').bind(orderId).first<any>();
+  if (!ord) return c.json({ ok: true, note: 'no such order' });
+  if (ord.status !== 'applied') return c.json({ ok: true, note: 'already ' + ord.status });
+  const gt = ord.grant_type;
+  if (PLAN[gt]) {
+    const g = PLAN[gt];
+    const sub = await c.env.DB.prepare('SELECT expires_at FROM subscriptions WHERE maum_user_id=?').bind(ord.maum_user_id).first<any>();
+    if (sub?.expires_at) {
+      const pulled = new Date(new Date(sub.expires_at).getTime() - g.days * 86400000).toISOString();
+      await c.env.DB.prepare("UPDATE subscriptions SET expires_at=?, updated_at=datetime('now') WHERE maum_user_id=?").bind(pulled, ord.maum_user_id).run();
+    }
+  } else if (PACK[gt]) {
+    const g = PACK[gt];
+    await c.env.DB.prepare("UPDATE packs SET remaining=MAX(0, remaining-?), updated_at=datetime('now') WHERE maum_user_id=?").bind(g.count, ord.maum_user_id).run();
+  }
+  await c.env.DB.prepare("UPDATE external_orders SET status='revoked', revoked_at=datetime('now') WHERE order_id=?").bind(orderId).run();
+  return c.json({ ok: true, revoked: true });
 });
 
 // ── 어드민: 쿠폰 발행/조회 (ADMIN_SECRET Bearer) ──
