@@ -1898,7 +1898,6 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
             {[
               { emoji: '✝️', name: 'The Light of Life', desc: tl('성경적 상담·심리검사', 'Biblical counseling & assessments'), url: 'https://jesusmaum.com', domain: 'jesusmaum.com', accent: '#0F2044' },
-              { emoji: '🦦', name: tl('마음수달', 'Maumotter'), desc: tl('아이의 속마음 읽어 전하기', "Read your child's feelings"), url: 'https://maumotter.com', domain: 'maumotter.com', accent: '#3E78C0' },
               { emoji: '🐾', name: tl('마음곁', 'Maumgyeot'), desc: tl('반려동물 마음 읽어 전하기', "Read your pet's feelings"), url: 'https://maumgyeot.com', domain: 'maumgyeot.com', accent: '#2E8B7A' },
               { emoji: '🏢', name: 'phyweb', desc: tl('기업·기관 전문 심리검사', 'Assessments for organizations'), url: 'https://phyweb.pages.dev', domain: 'phyweb.pages.dev', accent: '#2E7D6B' },
             ].map(s => (
