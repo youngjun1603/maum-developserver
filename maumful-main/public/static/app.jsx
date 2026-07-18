@@ -6557,7 +6557,11 @@ function PsychologicalTestSystem() {
             )}
 
             {/* 메시지 목록 */}
-            <div ref={chatContainerRef} className="h-[50vh] overflow-y-auto p-4 space-y-3 bg-gray-50">
+            {/* ⚠️ overflowAnchor:'none' — 스트리밍 중 화면 '위아래 덜덜덜' 떨림의 근본 원인 제거.
+                컨테이너가 넘칠 때(좁은 레이아웃·긴 답변) 브라우저 스크롤 앵커링이 내용 성장에 맞춰
+                스크롤을 매 프레임 보정하며 진동한다(넓은 레이아웃은 안 넘쳐서 앵커링 미발동 → 안 떨림).
+                하단 추적은 아래 rAF(scrollTop=scrollHeight)가 담당하므로 앵커링은 꺼도 무방. */}
+            <div ref={chatContainerRef} className="h-[50vh] overflow-y-auto p-4 space-y-3 bg-gray-50" style={{ overflowAnchor: 'none' }}>
               {chatMessages.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-full text-center">
                   <p className="text-4xl mb-3">🤝</p>
