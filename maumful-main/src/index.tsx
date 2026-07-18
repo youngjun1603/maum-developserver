@@ -2697,7 +2697,7 @@ ${summary ?? (counselingType === 'biblical' ? 'No test result — proceed as fai
 // ============================================================
 // ── 패키지 정의 (credits: 지급량, amount: 결제금액, currency 단위에 맞게)
 // KRW: 원 단위 / USD: 센트 단위 (Stripe 기준)
-const PACKAGES: Record<string, { credits: number; amount: number; label: string; product?: boolean }> = {
+const PACKAGES: Record<string, { credits: number; amount: number; label: string; product?: boolean; service?: 'otter' | 'gyeot'; grantType?: string }> = {
   starter_kr:  { credits: 50,  amount: 2900,  label: '스타터' },
   standard_kr: { credits: 120, amount: 5900,  label: '표준'   },
   premium_kr:  { credits: 300, amount: 12900, label: '프리미엄' },
@@ -2716,7 +2716,59 @@ const PACKAGES: Record<string, { credits: number; amount: number; label: string;
   integrated_one: { credits: 20, amount: 6900, label: '통합 심층 해석 1회', product: true },
   bubu_pack10:    { credits: 25, amount: 5900, label: '마음부부 통역 10회팩', product: true },
   sedae_pack10:   { credits: 25, amount: 5900, label: '마음세대 통역팩(성인)', product: true },
+  // ── 외부 서비스 상품(마음풀 판매 → 서명 grant로 수달·곁에 지급). credits=0(내부 크레딧 안 줌) ──
+  otter_light:  { credits: 0, amount: 7900,  label: '마음수달 라이트(월 30세션)', product: true, service: 'otter', grantType: 'sub_light' },
+  otter_pro:    { credits: 0, amount: 14900, label: '마음수달 프로(월 100세션)',  product: true, service: 'otter', grantType: 'sub_pro' },
+  otter_pack10: { credits: 0, amount: 6900,  label: '마음수달 10회팩',            product: true, service: 'otter', grantType: 'pack10' },
+  gyeot_light:  { credits: 0, amount: 7900,  label: '마음곁 라이트(월 30세션)',   product: true, service: 'gyeot', grantType: 'sub_light' },
+  gyeot_pro:    { credits: 0, amount: 14900, label: '마음곁 프로(월 100세션)',    product: true, service: 'gyeot', grantType: 'sub_pro' },
+  gyeot_pack10: { credits: 0, amount: 6900,  label: '마음곁 10회팩',              product: true, service: 'gyeot', grantType: 'pack10' },
 }
+// 외부 서비스 grant 수신 URL(각 워커 루트 도메인). 결제 성공 → signSso 서명 → POST /api/grant.
+const SERVICE_API: Record<string, string> = { otter: 'https://maumotter.com', gyeot: 'https://maumgyeot.com' }
+// 결제 성공분을 외부 서비스로 지급 전달. external_grants 큐에 기록 후 서명 POST. 실패해도 결제는 유지(재시도).
+async function deliverGrant(env: any, charge: { chargeId: number; user_id: number; package_key: string }): Promise<void> {
+  const DB = env.DB
+  const pkg = PACKAGES[charge.package_key]
+  if (!pkg?.service || !pkg.grantType) return
+  const u = await DB.prepare('SELECT email FROM users WHERE id=?').bind(charge.user_id).first<{ email: string }>()
+  const email = String(u?.email || '').toLowerCase()
+  const orderId = `mf_charge_${charge.chargeId}`
+  await DB.prepare("INSERT INTO external_grants (order_id,user_id,email,service,grant_type,amount,status) VALUES (?,?,?,?,?,?,'pending') ON CONFLICT(order_id) DO NOTHING")
+    .bind(orderId, charge.user_id, email, pkg.service, pkg.grantType, pkg.amount).run()
+  const secret = env.MAUM_SSO_SECRET
+  if (!secret || !email) return   // 지급 근거 부족 → pending 유지(재시도)
+  try {
+    const token = await signSso(secret, { email, service: pkg.service, grantType: pkg.grantType, orderId, amount: pkg.amount, exp: Math.floor(Date.now() / 1000) + 300 })
+    const res = await fetch(`${SERVICE_API[pkg.service]}/api/grant`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) })
+    if (res.ok) {
+      await DB.prepare("UPDATE external_grants SET status='delivered', attempts=attempts+1, delivered_at=CURRENT_TIMESTAMP WHERE order_id=?").bind(orderId).run()
+    } else {
+      await DB.prepare("UPDATE external_grants SET status='failed', attempts=attempts+1 WHERE order_id=?").bind(orderId).run()
+    }
+  } catch {
+    await DB.prepare("UPDATE external_grants SET status='failed', attempts=attempts+1 WHERE order_id=?").bind(orderId).run()
+  }
+}
+// 미전달/실패 grant 재시도(관리자). 결제는 됐으나 전달 실패분(수달·곁 다운 등)을 재지급.
+app.post('/api/admin/deliver-pending-grants', async (c) => {
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+  const secret = (c.env as any).MAUM_SSO_SECRET
+  if (!secret) return c.json({ error: 'MAUM_SSO_SECRET 미설정' }, 503)
+  const rows = await c.env.DB.prepare("SELECT order_id,email,service,grant_type,amount FROM external_grants WHERE status IN ('pending','failed') AND attempts < 8 ORDER BY created_at LIMIT 50").all<any>()
+  let delivered = 0, failed = 0
+  for (const r of (rows.results ?? [])) {
+    if (!r.email || !SERVICE_API[r.service]) continue
+    try {
+      const token = await signSso(secret, { email: r.email, service: r.service, grantType: r.grant_type, orderId: r.order_id, amount: r.amount, exp: Math.floor(Date.now() / 1000) + 300 })
+      const res = await fetch(`${SERVICE_API[r.service]}/api/grant`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) })
+      if (res.ok) { await c.env.DB.prepare("UPDATE external_grants SET status='delivered',attempts=attempts+1,delivered_at=CURRENT_TIMESTAMP WHERE order_id=?").bind(r.order_id).run(); delivered++ }
+      else { await c.env.DB.prepare("UPDATE external_grants SET status='failed',attempts=attempts+1 WHERE order_id=?").bind(r.order_id).run(); failed++ }
+    } catch { await c.env.DB.prepare("UPDATE external_grants SET status='failed',attempts=attempts+1 WHERE order_id=?").bind(r.order_id).run(); failed++ }
+  }
+  return c.json({ ok: true, delivered, failed, scanned: (rows.results ?? []).length })
+})
 
 // ── 구독 플랜 정의 ─────────────────────────────────────────
 const SUBSCRIPTION_PLANS: Record<string, {
@@ -2906,8 +2958,8 @@ app.post('/api/webhook/toss', async (c) => {
   const m = /^charge_(\d+)_/.exec(String(pay.orderId ?? ''))
   if (!m) { console.error('[Toss Webhook] orderId 형식 불일치:', pay.orderId); return c.json({ error: 'bad orderId' }, 400) }
   const chargeId = parseInt(m[1])
-  const charge = await DB.prepare('SELECT user_id, credits, amount, status FROM credit_charges WHERE id=? AND pg=?')
-    .bind(chargeId, 'toss').first<{ user_id: number; credits: number; amount: number; status: string }>()
+  const charge = await DB.prepare('SELECT user_id, credits, amount, status, package_key FROM credit_charges WHERE id=? AND pg=?')
+    .bind(chargeId, 'toss').first<{ user_id: number; credits: number; amount: number; status: string; package_key: string }>()
   if (!charge) { console.error('[Toss Webhook] charge 없음:', chargeId); return c.json({ error: 'charge not found' }, 404) }
 
   // 금액 위조 차단 — 토스가 말하는 실제 결제금액과 주문 시 확정한 금액이 같아야 한다.
@@ -2921,8 +2973,14 @@ app.post('/api/webhook/toss', async (c) => {
     .bind('completed', pgTid, chargeId, 'pending').run()
   if (upd.meta.changes === 0) return c.json({ ok: true, msg: 'already_processed' })
 
-  await gainCredits(DB, charge.user_id, charge.credits, 'charge', pgTid)
-  console.log('[Toss Webhook] 크레딧 지급 완료 — userId:', charge.user_id, 'credits:', charge.credits, 'chargeId:', chargeId)
+  // 외부 서비스 상품(수달·곁)이면 크레딧 대신 서명 grant 전달, 아니면 기존 크레딧 지급.
+  if (PACKAGES[charge.package_key]?.service) {
+    await deliverGrant(c.env, { chargeId, user_id: charge.user_id, package_key: charge.package_key })
+    console.log('[Toss Webhook] 외부 grant 전달 —', charge.package_key, 'chargeId:', chargeId)
+  } else {
+    await gainCredits(DB, charge.user_id, charge.credits, 'charge', pgTid)
+    console.log('[Toss Webhook] 크레딧 지급 완료 — userId:', charge.user_id, 'credits:', charge.credits, 'chargeId:', chargeId)
+  }
   completeReferral(DB, charge.user_id).catch(err => console.error('[Referral] 완료 실패 userId=' + charge.user_id, err))
 
   // 영수증 이메일 (비동기)
@@ -3116,8 +3174,13 @@ app.get('/api/payment/toss/success', async (c) => {
           return c.redirect('/?payment=success')
         }
 
-        const newBalance = await gainCredits(DB, charge.user_id, charge.credits, 'charge', paymentKey)
-        console.log('[Toss] 크레딧 지급:', charge.user_id, '+', charge.credits, '→', newBalance)
+        if (PACKAGES[charge.package_key]?.service) {
+          await deliverGrant(c.env, { chargeId: chargeIdNum, user_id: charge.user_id, package_key: charge.package_key })
+          console.log('[Toss] 외부 grant 전달:', charge.package_key)
+        } else {
+          const newBalance = await gainCredits(DB, charge.user_id, charge.credits, 'charge', paymentKey)
+          console.log('[Toss] 크레딧 지급:', charge.user_id, '+', charge.credits, '→', newBalance)
+        }
         completeReferral(DB, charge.user_id).catch(() => {})
 
         // 영수증 이메일
