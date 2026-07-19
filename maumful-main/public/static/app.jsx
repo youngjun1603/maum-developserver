@@ -395,6 +395,7 @@ function PsychologicalTestSystem() {
     try { return parseInt(localStorage.getItem(AI_GUEST_KEY) || '0', 10); } catch { return 0; }
   });
   const [showAiLimitModal, setShowAiLimitModal] = useState(false);
+  const [signupVerifyEmail, setSignupVerifyEmail] = useState(null);  // 가입 후 이메일 인증 안내 모달(null=숨김)
 
   // ── 상담 모드 (심리상담 / 기독교 상담) ───────────────────
   // localStorage에 저장 → 로그인 유지 시 기억
@@ -1768,7 +1769,16 @@ function PsychologicalTestSystem() {
     const result = await api.register(email, password, nickname || email.split('@')[0], savedPartnerCode, signupConsents.marketing, 'ko', gender || null, age_range || null, phone || null);
     if (!result.success) { setFormMsg({ type: 'error', text: result.error || t('가입에 실패했습니다.','Sign-up failed. Please try again.') }); return; }
 
-    // 가입 성공 → 자동 로그인
+    // 이메일 인증 강제 — 인증 전엔 로그인 불가. 자동로그인 시도하지 말고 인증 안내 모달을 띄운다.
+    if (result.data?.requiresVerification || result.requiresVerification) {
+      setSignupVerifyEmail(result.data?.email || email);
+      setFormMsg({ type: '', text: '' });
+      setSignupForm({ email: '', password: '', pwConfirm: '', nickname: '', gender: '', age_range: '', phone: '' });
+      setSignupConsents({ terms: false, privacy: false, sensitive: false, overseas: false, age: false, marketing: false });
+      return;
+    }
+
+    // 가입 성공(인증 불필요 케이스) → 자동 로그인
     setFormMsg({ type: 'loading', text: t('잠시만요...','Just a moment...') });
     const loginResult = await api.login(email, password);
     if (!loginResult.success) {
@@ -2562,6 +2572,30 @@ function PsychologicalTestSystem() {
   );
 
   // ── AI 횟수 초과 모달 ─────────────────────────────────────
+  // 가입 직후 이메일 인증 안내 모달 — "인증해야 가입 완료" + 재발송
+  const SignupVerifyModal = () => !signupVerifyEmail ? null : (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60] p-4" onClick={() => setSignupVerifyEmail(null)}>
+      <div className="bg-white rounded-2xl p-7 max-w-sm w-full text-center shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="text-5xl mb-3">📧</div>
+        <h3 className="text-lg font-bold text-gray-800 mb-2">{t('이메일 인증이 필요해요','Verify your email')}</h3>
+        <p className="text-sm text-gray-600 leading-relaxed mb-1">
+          {t(<><span className="font-bold text-emerald-700 break-all">{signupVerifyEmail}</span> 로<br />인증 메일을 보냈어요.</>, <>We sent a verification email to<br /><span className="font-bold text-emerald-700 break-all">{signupVerifyEmail}</span>.</>)}
+        </p>
+        <p className="text-sm text-gray-700 font-semibold leading-relaxed mb-1">{t('메일 속 링크를 눌러 인증을 완료해야 가입이 완료돼요.','Click the link in the email to complete your sign-up.')}</p>
+        <p className="text-xs text-gray-400 mb-5">{t('메일이 안 보이면 스팸함도 확인해 주세요.',"If you don't see it, please check your spam folder.")}</p>
+        <button onClick={async () => {
+          setFormMsg({ type: 'loading', text: t('재발송 중...','Resending...') });
+          try {
+            const r = await fetch('/api/auth/resend-verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: signupVerifyEmail }) }).then(r => r.json());
+            window.alert(r.success ? t('✅ 인증 메일을 재발송했어요. 메일함을 확인해 주세요.','✅ Verification email resent. Please check your inbox.') : (r.error || t('재발송 실패','Resend failed')));
+          } catch { window.alert(t('재발송 실패','Resend failed')); }
+          setFormMsg({ type: '', text: '' });
+        }} className="w-full mb-2 bg-emerald-600 text-white py-2.5 rounded-xl font-bold text-sm hover:bg-emerald-700 transition">{t('📧 인증 메일 재발송','Resend verification email')}</button>
+        <button onClick={() => { setSignupVerifyEmail(null); setView('memberLogin'); }} className="w-full text-gray-500 text-sm py-2 hover:text-gray-700">{t('인증 후 로그인하기','I\'ll log in after verifying')}</button>
+      </div>
+    </div>
+  );
+
   const AiLimitModal = () => !showAiLimitModal ? null : (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl p-7 w-full max-w-sm">
@@ -3104,6 +3138,7 @@ function PsychologicalTestSystem() {
   // ============================================================
   if (!isLoggedIn && view === 'memberSignup') return (
     <div className="bg-gradient-to-br from-slate-50 to-green-100 flex flex-col items-center px-4 py-10" style={{minHeight:'100dvh'}}>
+      <SignupVerifyModal />
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
         <button onClick={() => { setView('memberLogin'); setFormMsg({ type: '', text: '' }); setSignupForm({ email: '', password: '', pwConfirm: '', nickname: '' }); }}
           className="text-gray-400 hover:text-gray-600 text-sm mb-5 flex items-center gap-1">← {t("뒤로","Back")}</button>
@@ -4384,6 +4419,7 @@ function PsychologicalTestSystem() {
 
         <CreditModal />
         <AiLimitModal />
+        <SignupVerifyModal />
         <CookieBanner />
         {showChargeView && <ChargeView onClose={async () => {
           setShowChargeView(false);

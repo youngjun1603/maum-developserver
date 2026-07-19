@@ -482,6 +482,7 @@ function PsychologicalTestSystem() {
     }
   });
   const [showAiLimitModal, setShowAiLimitModal] = useState(false);
+  const [signupVerifyEmail, setSignupVerifyEmail] = useState(null);
   const [counselingMode, setCounselingMode] = useState(() => {
     try {
       return localStorage.getItem("counseling_mode") || "psychological";
@@ -1741,6 +1742,7 @@ function PsychologicalTestSystem() {
     loadTestHistory();
   }
   async function handleSignup(e) {
+    var _a2, _b2;
     if (e) e.preventDefault();
     const { email, password, pwConfirm, nickname, gender, age_range, phone } = signupForm;
     if (!email || !password) {
@@ -1773,6 +1775,13 @@ function PsychologicalTestSystem() {
     const result = await api.register(email, password, nickname || email.split("@")[0], savedPartnerCode, signupConsents.marketing, "ko", gender || null, age_range || null, phone || null);
     if (!result.success) {
       setFormMsg({ type: "error", text: result.error || t("\uAC00\uC785\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.", "Sign-up failed. Please try again.") });
+      return;
+    }
+    if (((_a2 = result.data) == null ? void 0 : _a2.requiresVerification) || result.requiresVerification) {
+      setSignupVerifyEmail(((_b2 = result.data) == null ? void 0 : _b2.email) || email);
+      setFormMsg({ type: "", text: "" });
+      setSignupForm({ email: "", password: "", pwConfirm: "", nickname: "", gender: "", age_range: "", phone: "" });
+      setSignupConsents({ terms: false, privacy: false, sensitive: false, overseas: false, age: false, marketing: false });
       return;
     }
     setFormMsg({ type: "loading", text: t("\uC7A0\uC2DC\uB9CC\uC694...", "Just a moment...") });
@@ -2526,6 +2535,19 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
     },
     t("\uB098\uC911\uC5D0", "Later")
   )));
+  const SignupVerifyModal = () => !signupVerifyEmail ? null : /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 bg-black/40 flex items-center justify-center z-[60] p-4", onClick: () => setSignupVerifyEmail(null) }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl p-7 max-w-sm w-full text-center shadow-2xl", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React.createElement("div", { className: "text-5xl mb-3" }, "\u{1F4E7}"), /* @__PURE__ */ React.createElement("h3", { className: "text-lg font-bold text-gray-800 mb-2" }, t("\uC774\uBA54\uC77C \uC778\uC99D\uC774 \uD544\uC694\uD574\uC694", "Verify your email")), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-gray-600 leading-relaxed mb-1" }, t(/* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("span", { className: "font-bold text-emerald-700 break-all" }, signupVerifyEmail), " \uB85C", /* @__PURE__ */ React.createElement("br", null), "\uC778\uC99D \uBA54\uC77C\uC744 \uBCF4\uB0C8\uC5B4\uC694."), /* @__PURE__ */ React.createElement(React.Fragment, null, "We sent a verification email to", /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { className: "font-bold text-emerald-700 break-all" }, signupVerifyEmail), "."))), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-gray-700 font-semibold leading-relaxed mb-1" }, t("\uBA54\uC77C \uC18D \uB9C1\uD06C\uB97C \uB20C\uB7EC \uC778\uC99D\uC744 \uC644\uB8CC\uD574\uC57C \uAC00\uC785\uC774 \uC644\uB8CC\uB3FC\uC694.", "Click the link in the email to complete your sign-up.")), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-400 mb-5" }, t("\uBA54\uC77C\uC774 \uC548 \uBCF4\uC774\uBA74 \uC2A4\uD338\uD568\uB3C4 \uD655\uC778\uD574 \uC8FC\uC138\uC694.", "If you don't see it, please check your spam folder.")), /* @__PURE__ */ React.createElement("button", { onClick: async () => {
+    setFormMsg({ type: "loading", text: t("\uC7AC\uBC1C\uC1A1 \uC911...", "Resending...") });
+    try {
+      const r = await fetch("/api/auth/resend-verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: signupVerifyEmail }) }).then((r2) => r2.json());
+      window.alert(r.success ? t("\u2705 \uC778\uC99D \uBA54\uC77C\uC744 \uC7AC\uBC1C\uC1A1\uD588\uC5B4\uC694. \uBA54\uC77C\uD568\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694.", "\u2705 Verification email resent. Please check your inbox.") : r.error || t("\uC7AC\uBC1C\uC1A1 \uC2E4\uD328", "Resend failed"));
+    } catch {
+      window.alert(t("\uC7AC\uBC1C\uC1A1 \uC2E4\uD328", "Resend failed"));
+    }
+    setFormMsg({ type: "", text: "" });
+  }, className: "w-full mb-2 bg-emerald-600 text-white py-2.5 rounded-xl font-bold text-sm hover:bg-emerald-700 transition" }, t("\u{1F4E7} \uC778\uC99D \uBA54\uC77C \uC7AC\uBC1C\uC1A1", "Resend verification email")), /* @__PURE__ */ React.createElement("button", { onClick: () => {
+    setSignupVerifyEmail(null);
+    setView("memberLogin");
+  }, className: "w-full text-gray-500 text-sm py-2 hover:text-gray-700" }, t("\uC778\uC99D \uD6C4 \uB85C\uADF8\uC778\uD558\uAE30", "I'll log in after verifying"))));
   const AiLimitModal = () => !showAiLimitModal ? null : /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl shadow-2xl p-7 w-full max-w-sm" }, !isLoggedIn ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "text-center mb-5" }, /* @__PURE__ */ React.createElement("div", { className: "text-4xl mb-3" }, "\u{1F33F}"), /* @__PURE__ */ React.createElement("h2", { className: "text-xl font-bold text-gray-800 mb-2" }, t("\uBB34\uB8CC \uCCB4\uD5D8\uC774 \uB05D\uB0AC\uC2B5\uB2C8\uB2E4", "Free trial ended")), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-gray-500 leading-relaxed" }, t(/* @__PURE__ */ React.createElement(React.Fragment, null, "AI \uC0C1\uB2F4 ", /* @__PURE__ */ React.createElement("strong", null, AI_GUEST_TOTAL, "\uD68C"), "\uB97C \uBAA8\uB450 \uC0AC\uC6A9\uD588\uC5B4\uC694.", /* @__PURE__ */ React.createElement("br", null), "\uD68C\uC6D0\uAC00\uC785\uD558\uBA74 ", /* @__PURE__ */ React.createElement("span", { className: "text-green-700 font-bold" }, "20 \uD06C\uB808\uB527 \uC989\uC2DC \uC9C0\uAE09"), " +", /* @__PURE__ */ React.createElement("br", null), "\uAC80\uC0AC \uACB0\uACFC \uC800\uC7A5 \xB7 \uD558\uB8E8 5\uD68C AI \uC0C1\uB2F4\uC774 \uC81C\uACF5\uB429\uB2C8\uB2E4."), /* @__PURE__ */ React.createElement(React.Fragment, null, "You've used all ", /* @__PURE__ */ React.createElement("strong", null, AI_GUEST_TOTAL), " free AI sessions.", /* @__PURE__ */ React.createElement("br", null), "Sign up to get ", /* @__PURE__ */ React.createElement("span", { className: "text-green-700 font-bold" }, "20 credits instantly"), " +", /* @__PURE__ */ React.createElement("br", null), "saved history & 5 AI chats per day.")))), /* @__PURE__ */ React.createElement("div", { className: "space-y-2 mb-4" }, window.KAKAO_APP_KEY && /* @__PURE__ */ React.createElement(
     "button",
     {
@@ -2945,7 +2967,7 @@ Visit Maumful and take the same test again to compare your progress.`));
     },
     t("\uC778\uC99D \uBA54\uC77C\uC744 \uBC1B\uC9C0 \uBABB\uD558\uC168\uB098\uC694? \uC7AC\uBC1C\uC1A1", "Didn't receive verification email? Resend")
   ), /* @__PURE__ */ React.createElement("div", { className: "flex justify-center gap-4 mt-3" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setView("privacy"), className: "text-xs text-gray-300 hover:text-gray-500" }, t("\uAC1C\uC778\uC815\uBCF4 \uCC98\uB9AC\uBC29\uCE68", "Privacy Policy")), /* @__PURE__ */ React.createElement("span", { className: "text-gray-200 text-xs" }, "|"), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("terms"), className: "text-xs text-gray-300 hover:text-gray-500" }, t("\uC774\uC6A9\uC57D\uAD00", "Terms of Service")))));
-  if (!isLoggedIn && view === "memberSignup") return /* @__PURE__ */ React.createElement("div", { className: "bg-gradient-to-br from-slate-50 to-green-100 flex flex-col items-center px-4 py-10", style: { minHeight: "100dvh" } }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md" }, /* @__PURE__ */ React.createElement(
+  if (!isLoggedIn && view === "memberSignup") return /* @__PURE__ */ React.createElement("div", { className: "bg-gradient-to-br from-slate-50 to-green-100 flex flex-col items-center px-4 py-10", style: { minHeight: "100dvh" } }, /* @__PURE__ */ React.createElement(SignupVerifyModal, null), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md" }, /* @__PURE__ */ React.createElement(
     "button",
     {
       onClick: () => {
@@ -3657,7 +3679,7 @@ Visit Maumful and take the same test again to compare your progress.`));
         "\u{1F504} ",
         t(`${daysSince}\uC77C \uD6C4 \uC7AC\uAC80\uC0AC\uB85C \uBCC0\uD654 \uD655\uC778\uD558\uAE30`, `Retest after ${daysSince} days to track your progress`)
       ));
-    })))), /* @__PURE__ */ React.createElement(CreditModal, null), /* @__PURE__ */ React.createElement(AiLimitModal, null), /* @__PURE__ */ React.createElement(CookieBanner, null), showChargeView && /* @__PURE__ */ React.createElement(ChargeView, { onClose: async () => {
+    })))), /* @__PURE__ */ React.createElement(CreditModal, null), /* @__PURE__ */ React.createElement(AiLimitModal, null), /* @__PURE__ */ React.createElement(SignupVerifyModal, null), /* @__PURE__ */ React.createElement(CookieBanner, null), showChargeView && /* @__PURE__ */ React.createElement(ChargeView, { onClose: async () => {
       setShowChargeView(false);
       await refreshCredits();
       if (pendingTestAfterCharge) {
