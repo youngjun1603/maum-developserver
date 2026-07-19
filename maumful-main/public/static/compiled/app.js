@@ -3716,6 +3716,92 @@ Visit Maumful and take the same test again to compare your progress.`));
       loading ? t("\uD655\uC778 \uC911...", "...") : t("\uB4F1\uB85D", "Redeem")
     )), msg && /* @__PURE__ */ React.createElement("div", { className: `mt-2 text-xs font-semibold ${msg.type === "success" ? "text-green-600" : "text-red-500"}` }, msg.text));
   }
+  function MasterPartnerPanel() {
+    var _a2, _b2, _c2, _d2, _e2, _f2;
+    const [partners, setPartners] = useState(null);
+    const [sel, setSel] = useState(null);
+    const [showNew, setShowNew] = useState(false);
+    const [f, setF] = useState({ code: "", name: "", revenue_share_rate: "0.2", contact_email: "", commission_start: "", commission_end: "" });
+    const [pmsg, setPmsg] = useState("");
+    const isoD = (d) => d.toISOString().slice(0, 10);
+    const [from, setFrom] = useState(() => isoD(new Date(Date.now() - 30 * 864e5)));
+    const [to, setTo] = useState(() => isoD(/* @__PURE__ */ new Date()));
+    const [ledger, setLedger] = useState(null);
+    const won = (n) => "\u20A9" + (Number(n) || 0).toLocaleString("ko-KR");
+    const loadPartners = async () => {
+      try {
+        const d = await adminFetch("/api/admin/partners");
+        if (d.success) setPartners(d.data || []);
+      } catch {
+      }
+    };
+    React.useEffect(() => {
+      loadPartners();
+    }, []);
+    const create = async () => {
+      if (!f.code.trim() || !f.name.trim()) {
+        setPmsg("\uCF54\uB4DC\xB7\uD30C\uD2B8\uB108\uBA85\uC740 \uD544\uC218\uC608\uC694");
+        return;
+      }
+      const body = { ...f, revenue_share_rate: Number(f.revenue_share_rate) || 0, commission_start: f.commission_start || void 0, commission_end: f.commission_end || void 0 };
+      try {
+        const d = await adminFetch("/api/admin/partners", { method: "POST", body: JSON.stringify(body) });
+        if (d.success) {
+          setPmsg("\uD30C\uD2B8\uB108 \uB4F1\uB85D \uC644\uB8CC");
+          setShowNew(false);
+          setF({ code: "", name: "", revenue_share_rate: "0.2", contact_email: "", commission_start: "", commission_end: "" });
+          loadPartners();
+        } else setPmsg(d.error || "\uB4F1\uB85D \uC2E4\uD328");
+      } catch {
+        setPmsg("\uB124\uD2B8\uC6CC\uD06C \uC624\uB958");
+      }
+    };
+    const loadLedger = async (code) => {
+      const c = code || sel;
+      if (!c) return;
+      try {
+        const d = await adminFetch(`/api/admin/partner-commissions?code=${encodeURIComponent(c)}&from=${from}&to=${to}`);
+        if (d.success) setLedger(d.data);
+      } catch {
+      }
+    };
+    const pick = async (code) => {
+      setSel(code);
+      setLedger(null);
+      await loadLedger(code);
+    };
+    const downloadCsv = () => {
+      if (!ledger || !(ledger.rows || []).length) return;
+      const hdr = ["\uACB0\uC81CID", "\uC77C\uC2DC", "\uD68C\uC6D0(\uB9C8\uC2A4\uD0B9)", "\uC0C1\uD488", "\uACB0\uC81C\uC561", "\uC250\uC5B4\uC728", "\uC250\uC5B4\uC561", "\uD1B5\uD654", "\uC0C1\uD0DC"];
+      const esc = (v) => {
+        const s = String(v == null ? "" : v);
+        return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+      };
+      const lines = ledger.rows.map((r) => [r.charge_id, r.created_at, r.user_email_masked, r.package_key || "", r.charge_amount, r.rate, r.share_amount, r.currency, r.status].map(esc).join(","));
+      const csv = "\uFEFF" + [hdr.join(","), ...lines].join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `\uC815\uC0B0_${sel}_${from}_${to}.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    };
+    const settle = async () => {
+      if (!window.confirm(`${sel} \xB7 ${from}~${to}
+\uC774 \uAE30\uAC04\uC758 \uBBF8\uC815\uC0B0 \uAC74\uC744 '\uC815\uC0B0\uC644\uB8CC'\uB85C \uD45C\uC2DC\uD560\uAE4C\uC694? (\uC2E4\uC81C \uC9C0\uAE09\uC740 \uBCC4\uB3C4)`)) return;
+      const ref = window.prompt("\uC815\uC0B0 \uCC38\uC870(\uC120\uD0DD, \uC608: 2026-07 \uC774\uCCB4)", "") || void 0;
+      try {
+        const d = await adminFetch("/api/admin/partner-commissions/settle", { method: "POST", body: JSON.stringify({ code: sel, from, to, ref }) });
+        if (d.success) {
+          window.alert(`${d.settled}\uAC74 \uC815\uC0B0\uC644\uB8CC \uCC98\uB9AC`);
+          loadLedger(sel);
+        }
+      } catch {
+      }
+    };
+    const inp = "w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-400";
+    return /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl p-5 mb-5 border-2 border-emerald-100" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mb-3" }, /* @__PURE__ */ React.createElement("div", { className: "text-sm font-bold text-emerald-700" }, "\u{1F91D} \uC81C\uD734 \uD30C\uD2B8\uB108 \uAD00\uB9AC ", partners ? `(${partners.length}\uAC1C)` : ""), /* @__PURE__ */ React.createElement("button", { onClick: () => setShowNew((v) => !v), className: "text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-emerald-700" }, showNew ? "\u2715 \uB2EB\uAE30" : "+ \uD30C\uD2B8\uB108 \uB4F1\uB85D")), pmsg && /* @__PURE__ */ React.createElement("div", { className: `text-xs px-3 py-2 rounded-lg mb-3 ${pmsg.includes("\uC644\uB8CC") ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}` }, pmsg), showNew && /* @__PURE__ */ React.createElement("div", { className: "border border-gray-100 rounded-xl p-4 mb-4 bg-gray-50" }, /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-3" }, [["code", "\uD30C\uD2B8\uB108 \uCF54\uB4DC (\uC601\uBB38\uB300\uBB38\uC790, \uC608: KAKAO_HEALTH)"], ["name", "\uD30C\uD2B8\uB108\uBA85"], ["revenue_share_rate", "\uC218\uC775\uC250\uC5B4\uC728 (0~1, \uC608: 0.2 \xB7 \uC5B8\uC81C\uB4E0 \uBCC0\uACBD \uAC00\uB2A5)"], ["contact_email", "\uC815\uC0B0 \uB2F4\uB2F9\uC790 \uC774\uBA54\uC77C"], ["commission_start", "\uC815\uC0B0 \uADC0\uC18D \uC2DC\uC791\uC77C (\uC120\uD0DD, YYYY-MM-DD \xB7 \uBE44\uC6B0\uBA74 \uBB34\uAE30\uD55C)"], ["commission_end", "\uC815\uC0B0 \uADC0\uC18D \uC885\uB8CC\uC77C (\uC120\uD0DD)"]].map(([k, label]) => /* @__PURE__ */ React.createElement("div", { key: k }, /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mb-1" }, label), /* @__PURE__ */ React.createElement("input", { value: f[k], onChange: (e) => setF((o) => ({ ...o, [k]: e.target.value })), className: inp })))), /* @__PURE__ */ React.createElement("button", { onClick: create, className: "mt-3 bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-emerald-700" }, "\uB4F1\uB85D\uD558\uAE30")), /* @__PURE__ */ React.createElement("div", { className: "grid md:grid-cols-[280px_1fr] gap-4 items-start" }, /* @__PURE__ */ React.createElement("div", { className: "flex flex-col gap-2" }, partners === null && /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 p-4 text-center" }, "\uB85C\uB529 \uC911..."), partners && partners.length === 0 && /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 p-4 text-center bg-gray-50 rounded-xl" }, "\uB4F1\uB85D\uB41C \uD30C\uD2B8\uB108\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4"), (partners || []).map((p) => /* @__PURE__ */ React.createElement("div", { key: p.code, onClick: () => pick(p.code), className: `bg-white border-2 rounded-xl p-3 cursor-pointer ${sel === p.code ? "border-emerald-500" : "border-gray-100"}` }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mb-1" }, /* @__PURE__ */ React.createElement("div", { className: "font-bold text-sm" }, p.name), /* @__PURE__ */ React.createElement("span", { className: `text-[10px] px-2 py-0.5 rounded-full font-bold ${p.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}` }, p.is_active ? "\uD65C\uC131" : "\uBE44\uD65C\uC131")), /* @__PURE__ */ React.createElement("div", { className: "text-[11px] text-gray-400 mb-1" }, "\uCF54\uB4DC: ", p.code, " \xB7 \uC250\uC5B4 ", ((p.revenue_share_rate || 0) * 100).toFixed(0), "%"), /* @__PURE__ */ React.createElement("div", { className: "text-[11px] text-gray-500" }, "\uC720\uC785 ", (p.total_users || 0).toLocaleString(), "\uBA85 \xB7 \uB9E4\uCD9C ", won(p.total_revenue))))), /* @__PURE__ */ React.createElement("div", { className: "bg-white border border-gray-100 rounded-xl p-4" }, !sel ? /* @__PURE__ */ React.createElement("div", { className: "text-center text-gray-400 text-sm py-10" }, "\uD30C\uD2B8\uB108\uB97C \uC120\uD0DD\uD558\uBA74 \uC815\uC0B0 \uB0B4\uC5ED\uC744 \uC870\uD68C\uD558\uACE0 CSV\uB85C \uBC1B\uC744 \uC218 \uC788\uC5B4\uC694") : /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between flex-wrap gap-2 mb-3" }, /* @__PURE__ */ React.createElement("div", { className: "text-sm font-bold" }, "\u{1F4D2} ", sel, " \uC815\uC0B0 \uC6D0\uC7A5"), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-1.5" }, /* @__PURE__ */ React.createElement("input", { type: "date", value: from, onChange: (e) => setFrom(e.target.value), className: "px-2 py-1 border border-gray-200 rounded text-xs" }), /* @__PURE__ */ React.createElement("span", { className: "text-gray-400" }, "~"), /* @__PURE__ */ React.createElement("input", { type: "date", value: to, onChange: (e) => setTo(e.target.value), className: "px-2 py-1 border border-gray-200 rounded text-xs" }), /* @__PURE__ */ React.createElement("button", { onClick: () => loadLedger(sel), className: "bg-emerald-600 text-white px-3 py-1 rounded text-xs font-bold" }, "\uC870\uD68C"))), ledger && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "flex gap-4 flex-wrap text-xs text-gray-600 bg-gray-50 rounded-lg px-4 py-2.5 mb-3" }, /* @__PURE__ */ React.createElement("span", null, "\uAC74\uC218 ", /* @__PURE__ */ React.createElement("b", null, (((_a2 = ledger.totals) == null ? void 0 : _a2.cnt) || 0).toLocaleString())), /* @__PURE__ */ React.createElement("span", null, "\uACB0\uC81C\uC561 ", /* @__PURE__ */ React.createElement("b", null, won((_b2 = ledger.totals) == null ? void 0 : _b2.revenue))), /* @__PURE__ */ React.createElement("span", null, "\uC250\uC5B4 \uD569\uACC4 ", /* @__PURE__ */ React.createElement("b", { className: "text-amber-700" }, won((_c2 = ledger.totals) == null ? void 0 : _c2.share))), /* @__PURE__ */ React.createElement("span", null, "\uBBF8\uC815\uC0B0 ", /* @__PURE__ */ React.createElement("b", { className: "text-orange-600" }, won((_d2 = ledger.totals) == null ? void 0 : _d2.unsettled)))), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mb-3" }, /* @__PURE__ */ React.createElement("button", { onClick: downloadCsv, disabled: !(ledger.rows || []).length, className: `px-3 py-1.5 rounded-lg text-xs font-bold ${(ledger.rows || []).length ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-400"}` }, "\u2B07 CSV \uB2E4\uC6B4\uB85C\uB4DC"), /* @__PURE__ */ React.createElement("button", { onClick: settle, disabled: !((_e2 = ledger.totals) == null ? void 0 : _e2.unsettled), className: `px-3 py-1.5 rounded-lg text-xs font-bold border ${((_f2 = ledger.totals) == null ? void 0 : _f2.unsettled) ? "border-amber-300 text-amber-700 bg-white" : "border-gray-200 text-gray-400"}` }, "\uC774 \uAE30\uAC04 \uC815\uC0B0\uC644\uB8CC \uCC98\uB9AC")), (ledger.rows || []).length === 0 ? /* @__PURE__ */ React.createElement("div", { className: "text-center text-gray-400 text-xs py-6" }, "\uD574\uB2F9 \uAE30\uAC04 \uC801\uB9BD \uB0B4\uC5ED\uC774 \uC5C6\uC2B5\uB2C8\uB2E4 (\uC2E4\uACB0\uC81C\uAC00 \uC313\uC774\uBA74 \uD45C\uC2DC\uB3FC\uC694)") : /* @__PURE__ */ React.createElement("div", { className: "overflow-x-auto" }, /* @__PURE__ */ React.createElement("table", { className: "w-full text-[11px] border-collapse" }, /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", { className: "bg-gray-100 text-left text-gray-500" }, ["\uC77C\uC2DC", "\uD68C\uC6D0", "\uC0C1\uD488", "\uACB0\uC81C\uC561", "\uC728", "\uC250\uC5B4\uC561", "\uC0C1\uD0DC"].map((h) => /* @__PURE__ */ React.createElement("th", { key: h, className: "px-2 py-1.5 font-bold" }, h)))), /* @__PURE__ */ React.createElement("tbody", null, ledger.rows.map((r) => /* @__PURE__ */ React.createElement("tr", { key: r.charge_id, className: "border-b border-gray-50" }, /* @__PURE__ */ React.createElement("td", { className: "px-2 py-1.5 text-gray-500" }, (r.created_at || "").slice(0, 10)), /* @__PURE__ */ React.createElement("td", { className: "px-2 py-1.5" }, r.user_email_masked), /* @__PURE__ */ React.createElement("td", { className: "px-2 py-1.5" }, r.package_key || "-"), /* @__PURE__ */ React.createElement("td", { className: "px-2 py-1.5" }, won(r.charge_amount)), /* @__PURE__ */ React.createElement("td", { className: "px-2 py-1.5" }, ((r.rate || 0) * 100).toFixed(0), "%"), /* @__PURE__ */ React.createElement("td", { className: "px-2 py-1.5 font-bold text-amber-700" }, won(r.share_amount)), /* @__PURE__ */ React.createElement("td", { className: "px-2 py-1.5" }, /* @__PURE__ */ React.createElement("span", { className: `text-[10px] font-bold px-2 py-0.5 rounded-full ${r.status === "settled" ? "bg-green-100 text-green-700" : r.status === "reversed" ? "bg-gray-100 text-gray-500" : "bg-amber-100 text-amber-700"}` }, r.status === "settled" ? "\uC815\uC0B0\uC644\uB8CC" : r.status === "reversed" ? "\uD658\uBD88" : "\uBBF8\uC815\uC0B0"))))))))))));
+  }
   function MasterCouponPanel() {
     var _a2;
     const [mode, setMode] = useState("single");
@@ -8525,7 +8611,7 @@ Tested on Maumful! https://maumful.com`), testLabel: t("LOST \uD589\uB3D9 \uC6B4
         adminLoading ? "\uD655\uC778 \uC911..." : "\uB85C\uADF8\uC778"
       ), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("memberDashboard"), className: "w-full text-sm text-gray-400 hover:text-gray-600 mt-3 text-center" }, "\u2190 \uB3CC\uC544\uAC00\uAE30")));
     }
-    return /* @__PURE__ */ React.createElement("div", { className: "min-h-screen bg-gray-50" }, /* @__PURE__ */ React.createElement("header", { className: "bg-white border-b border-gray-200 sticky top-0 z-10" }, /* @__PURE__ */ React.createElement("div", { className: "max-w-5xl mx-auto px-4 py-3 flex items-center justify-between" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3" }, /* @__PURE__ */ React.createElement("span", { className: "text-2xl" }, "\u{1F6E0}\uFE0F"), /* @__PURE__ */ React.createElement("span", { className: "font-bold text-gray-800" }, "\uB9C8\uC74C\uD480 \uAD00\uB9AC\uC790")), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, adminLoading && /* @__PURE__ */ React.createElement("div", { className: "w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" }), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("memberDashboard"), className: "text-sm text-gray-500 hover:text-gray-700 px-3 py-1.5 bg-gray-100 rounded-lg" }, "\u2190 \uB300\uC2DC\uBCF4\uB4DC")))), /* @__PURE__ */ React.createElement("main", { className: "max-w-5xl mx-auto px-4 py-6" }, adminMsg.text && /* @__PURE__ */ React.createElement("div", { className: `mb-4 px-4 py-3 rounded-xl text-sm font-medium ${adminMsg.type === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}` }, adminMsg.text, /* @__PURE__ */ React.createElement("button", { onClick: () => setAdminMsg({ type: "", text: "" }), className: "ml-3 opacity-60 hover:opacity-100" }, "\u2715")), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mb-6 flex-wrap" }, [["overview", "\u{1F4CA} \uAC1C\uC694"], ["users", "\u{1F465} \uC0AC\uC6A9\uC790"], ["payments", "\u{1F4B3} \uACB0\uC81C"], ["tests", "\u{1F4CB} \uAC80\uC0AC"], ["coupons", "\u{1F39F}\uFE0F \uCFE0\uD3F0"], ["loop", "\u{1F501} \uB8E8\uD504"], ["feedback", "\u{1F642} \uD574\uC11D \uD53C\uB4DC\uBC31"]].map(([tab, label]) => /* @__PURE__ */ React.createElement(
+    return /* @__PURE__ */ React.createElement("div", { className: "min-h-screen bg-gray-50" }, /* @__PURE__ */ React.createElement("header", { className: "bg-white border-b border-gray-200 sticky top-0 z-10" }, /* @__PURE__ */ React.createElement("div", { className: "max-w-5xl mx-auto px-4 py-3 flex items-center justify-between" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3" }, /* @__PURE__ */ React.createElement("span", { className: "text-2xl" }, "\u{1F6E0}\uFE0F"), /* @__PURE__ */ React.createElement("span", { className: "font-bold text-gray-800" }, "\uB9C8\uC74C\uD480 \uAD00\uB9AC\uC790")), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, adminLoading && /* @__PURE__ */ React.createElement("div", { className: "w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" }), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("memberDashboard"), className: "text-sm text-gray-500 hover:text-gray-700 px-3 py-1.5 bg-gray-100 rounded-lg" }, "\u2190 \uB300\uC2DC\uBCF4\uB4DC")))), /* @__PURE__ */ React.createElement("main", { className: "max-w-5xl mx-auto px-4 py-6" }, adminMsg.text && /* @__PURE__ */ React.createElement("div", { className: `mb-4 px-4 py-3 rounded-xl text-sm font-medium ${adminMsg.type === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}` }, adminMsg.text, /* @__PURE__ */ React.createElement("button", { onClick: () => setAdminMsg({ type: "", text: "" }), className: "ml-3 opacity-60 hover:opacity-100" }, "\u2715")), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mb-6 flex-wrap" }, [["overview", "\u{1F4CA} \uAC1C\uC694"], ["users", "\u{1F465} \uC0AC\uC6A9\uC790"], ["payments", "\u{1F4B3} \uACB0\uC81C"], ["tests", "\u{1F4CB} \uAC80\uC0AC"], ["coupons", "\u{1F39F}\uFE0F \uCFE0\uD3F0"], ["partners", "\u{1F91D} \uD30C\uD2B8\uB108"], ["loop", "\u{1F501} \uB8E8\uD504"], ["feedback", "\u{1F642} \uD574\uC11D \uD53C\uB4DC\uBC31"]].map(([tab, label]) => /* @__PURE__ */ React.createElement(
       "button",
       {
         key: tab,
@@ -8540,7 +8626,7 @@ Tested on Maumful! https://maumful.com`), testLabel: t("LOST \uD589\uB3D9 \uC6B4
         className: S.tabBtn(adminTab === tab)
       },
       label
-    ))), adminTab === "coupons" && /* @__PURE__ */ React.createElement(MasterCouponPanel, null), adminTab === "loop" && /* @__PURE__ */ React.createElement("div", { className: "space-y-6" }, !adminLoop && /* @__PURE__ */ React.createElement("div", { className: "text-sm text-gray-400 py-8 text-center" }, "\uBD88\uB7EC\uC624\uB294 \uC911\u2026"), adminLoop && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-500" }, "\uCD5C\uADFC ", adminLoop.days, "\uC77C \xB7 \uAC01 \uB2E8\uACC4\uB294 ", /* @__PURE__ */ React.createElement("b", null, "\uC0AC\uB78C \uC218(\uC911\uBCF5 \uC81C\uAC70)"), "\uC785\uB2C8\uB2E4."), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-gray-100 p-5" }, /* @__PURE__ */ React.createElement("h3", { className: "text-sm font-bold text-emerald-700 mb-4" }, "\u2462 \uAC80\uC0AC \u2192 \uAC8C\uC784 (\uC815\uBC29\uD5A5)"), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-4 gap-3" }, [
+    ))), adminTab === "coupons" && /* @__PURE__ */ React.createElement(MasterCouponPanel, null), adminTab === "partners" && /* @__PURE__ */ React.createElement(MasterPartnerPanel, null), adminTab === "loop" && /* @__PURE__ */ React.createElement("div", { className: "space-y-6" }, !adminLoop && /* @__PURE__ */ React.createElement("div", { className: "text-sm text-gray-400 py-8 text-center" }, "\uBD88\uB7EC\uC624\uB294 \uC911\u2026"), adminLoop && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-500" }, "\uCD5C\uADFC ", adminLoop.days, "\uC77C \xB7 \uAC01 \uB2E8\uACC4\uB294 ", /* @__PURE__ */ React.createElement("b", null, "\uC0AC\uB78C \uC218(\uC911\uBCF5 \uC81C\uAC70)"), "\uC785\uB2C8\uB2E4."), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-gray-100 p-5" }, /* @__PURE__ */ React.createElement("h3", { className: "text-sm font-bold text-emerald-700 mb-4" }, "\u2462 \uAC80\uC0AC \u2192 \uAC8C\uC784 (\uC815\uBC29\uD5A5)"), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-4 gap-3" }, [
       ["\uAC80\uC0AC \uC644\uB8CC", adminLoop.forward.tested],
       ["\uB9AC\uD3EC\uD2B8 \uC5F4\uB78C", adminLoop.forward.reportView],
       ["\uAC8C\uC784 \uCC98\uBC29 \uD074\uB9AD", adminLoop.forward.rxClick],

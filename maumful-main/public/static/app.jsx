@@ -4447,6 +4447,146 @@ function PsychologicalTestSystem() {
   }
 
   // 🎟️ 마스터 전용 쿠폰 발행·관리 패널 (마이페이지) — 신규
+  // 🤝 제휴 파트너 관리 — 코드 발급/수익쉐어율/귀속기간 + 정산 원장 조회·CSV 다운로드
+  function MasterPartnerPanel() {
+    const [partners, setPartners] = useState(null);
+    const [sel, setSel] = useState(null);
+    const [showNew, setShowNew] = useState(false);
+    const [f, setF] = useState({ code:'', name:'', revenue_share_rate:'0.2', contact_email:'', commission_start:'', commission_end:'' });
+    const [pmsg, setPmsg] = useState('');
+    const isoD = (d) => d.toISOString().slice(0,10);
+    const [from, setFrom] = useState(() => isoD(new Date(Date.now()-30*86400000)));
+    const [to, setTo] = useState(() => isoD(new Date()));
+    const [ledger, setLedger] = useState(null);
+    const won = (n) => '₩' + (Number(n)||0).toLocaleString('ko-KR');
+
+    const loadPartners = async () => { try { const d = await adminFetch('/api/admin/partners'); if (d.success) setPartners(d.data||[]); } catch {} };
+    React.useEffect(() => { loadPartners(); }, []);
+
+    const create = async () => {
+      if (!f.code.trim() || !f.name.trim()) { setPmsg('코드·파트너명은 필수예요'); return; }
+      const body = { ...f, revenue_share_rate: Number(f.revenue_share_rate)||0, commission_start: f.commission_start||undefined, commission_end: f.commission_end||undefined };
+      try {
+        const d = await adminFetch('/api/admin/partners', { method:'POST', body: JSON.stringify(body) });
+        if (d.success) { setPmsg('파트너 등록 완료'); setShowNew(false); setF({ code:'', name:'', revenue_share_rate:'0.2', contact_email:'', commission_start:'', commission_end:'' }); loadPartners(); }
+        else setPmsg(d.error || '등록 실패');
+      } catch { setPmsg('네트워크 오류'); }
+    };
+    const loadLedger = async (code) => {
+      const c = code || sel; if (!c) return;
+      try { const d = await adminFetch(`/api/admin/partner-commissions?code=${encodeURIComponent(c)}&from=${from}&to=${to}`); if (d.success) setLedger(d.data); } catch {}
+    };
+    const pick = async (code) => { setSel(code); setLedger(null); await loadLedger(code); };
+    const downloadCsv = () => {
+      if (!ledger || !(ledger.rows||[]).length) return;
+      const hdr = ['결제ID','일시','회원(마스킹)','상품','결제액','쉐어율','쉐어액','통화','상태'];
+      const esc = (v) => { const s = String(v==null?'':v); return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; };
+      const lines = ledger.rows.map(r => [r.charge_id, r.created_at, r.user_email_masked, r.package_key||'', r.charge_amount, r.rate, r.share_amount, r.currency, r.status].map(esc).join(','));
+      const csv = '﻿' + [hdr.join(','), ...lines].join('\n');
+      const blob = new Blob([csv], { type:'text/csv;charset=utf-8' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `정산_${sel}_${from}_${to}.csv`; a.click(); URL.revokeObjectURL(a.href);
+    };
+    const settle = async () => {
+      if (!window.confirm(`${sel} · ${from}~${to}\n이 기간의 미정산 건을 '정산완료'로 표시할까요? (실제 지급은 별도)`)) return;
+      const ref = window.prompt('정산 참조(선택, 예: 2026-07 이체)', '') || undefined;
+      try { const d = await adminFetch('/api/admin/partner-commissions/settle', { method:'POST', body: JSON.stringify({ code: sel, from, to, ref }) }); if (d.success) { window.alert(`${d.settled}건 정산완료 처리`); loadLedger(sel); } } catch {}
+    };
+    const inp = "w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-400";
+    return (
+      <div className="bg-white rounded-2xl p-5 mb-5 border-2 border-emerald-100">
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-sm font-bold text-emerald-700">🤝 제휴 파트너 관리 {partners ? `(${partners.length}개)` : ''}</div>
+          <button onClick={() => setShowNew(v => !v)} className="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-emerald-700">{showNew ? '✕ 닫기' : '+ 파트너 등록'}</button>
+        </div>
+        {pmsg && <div className={`text-xs px-3 py-2 rounded-lg mb-3 ${pmsg.includes('완료') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>{pmsg}</div>}
+        {showNew && (
+          <div className="border border-gray-100 rounded-xl p-4 mb-4 bg-gray-50">
+            <div className="grid grid-cols-2 gap-3">
+              {[['code','파트너 코드 (영문대문자, 예: KAKAO_HEALTH)'],['name','파트너명'],['revenue_share_rate','수익쉐어율 (0~1, 예: 0.2 · 언제든 변경 가능)'],['contact_email','정산 담당자 이메일'],['commission_start','정산 귀속 시작일 (선택, YYYY-MM-DD · 비우면 무기한)'],['commission_end','정산 귀속 종료일 (선택)']].map(([k, label]) => (
+                <div key={k}>
+                  <div className="text-xs text-gray-500 mb-1">{label}</div>
+                  <input value={f[k]} onChange={e => setF(o => ({ ...o, [k]: e.target.value }))} className={inp} />
+                </div>
+              ))}
+            </div>
+            <button onClick={create} className="mt-3 bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-emerald-700">등록하기</button>
+          </div>
+        )}
+        <div className="grid md:grid-cols-[280px_1fr] gap-4 items-start">
+          {/* 파트너 목록 */}
+          <div className="flex flex-col gap-2">
+            {partners === null && <div className="text-xs text-gray-400 p-4 text-center">로딩 중...</div>}
+            {partners && partners.length === 0 && <div className="text-xs text-gray-400 p-4 text-center bg-gray-50 rounded-xl">등록된 파트너가 없습니다</div>}
+            {(partners||[]).map(p => (
+              <div key={p.code} onClick={() => pick(p.code)} className={`bg-white border-2 rounded-xl p-3 cursor-pointer ${sel === p.code ? 'border-emerald-500' : 'border-gray-100'}`}>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="font-bold text-sm">{p.name}</div>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${p.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{p.is_active ? '활성' : '비활성'}</span>
+                </div>
+                <div className="text-[11px] text-gray-400 mb-1">코드: {p.code} · 쉐어 {((p.revenue_share_rate||0)*100).toFixed(0)}%</div>
+                <div className="text-[11px] text-gray-500">유입 {(p.total_users||0).toLocaleString()}명 · 매출 {won(p.total_revenue)}</div>
+              </div>
+            ))}
+          </div>
+          {/* 정산 원장 */}
+          <div className="bg-white border border-gray-100 rounded-xl p-4">
+            {!sel ? (
+              <div className="text-center text-gray-400 text-sm py-10">파트너를 선택하면 정산 내역을 조회하고 CSV로 받을 수 있어요</div>
+            ) : (
+              <div>
+                <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+                  <div className="text-sm font-bold">📒 {sel} 정산 원장</div>
+                  <div className="flex items-center gap-1.5">
+                    <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="px-2 py-1 border border-gray-200 rounded text-xs" />
+                    <span className="text-gray-400">~</span>
+                    <input type="date" value={to} onChange={e => setTo(e.target.value)} className="px-2 py-1 border border-gray-200 rounded text-xs" />
+                    <button onClick={() => loadLedger(sel)} className="bg-emerald-600 text-white px-3 py-1 rounded text-xs font-bold">조회</button>
+                  </div>
+                </div>
+                {ledger && (
+                  <div>
+                    <div className="flex gap-4 flex-wrap text-xs text-gray-600 bg-gray-50 rounded-lg px-4 py-2.5 mb-3">
+                      <span>건수 <b>{(ledger.totals?.cnt||0).toLocaleString()}</b></span>
+                      <span>결제액 <b>{won(ledger.totals?.revenue)}</b></span>
+                      <span>쉐어 합계 <b className="text-amber-700">{won(ledger.totals?.share)}</b></span>
+                      <span>미정산 <b className="text-orange-600">{won(ledger.totals?.unsettled)}</b></span>
+                    </div>
+                    <div className="flex gap-2 mb-3">
+                      <button onClick={downloadCsv} disabled={!(ledger.rows||[]).length} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${(ledger.rows||[]).length ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-400'}`}>⬇ CSV 다운로드</button>
+                      <button onClick={settle} disabled={!(ledger.totals?.unsettled)} className={`px-3 py-1.5 rounded-lg text-xs font-bold border ${(ledger.totals?.unsettled) ? 'border-amber-300 text-amber-700 bg-white' : 'border-gray-200 text-gray-400'}`}>이 기간 정산완료 처리</button>
+                    </div>
+                    {(ledger.rows||[]).length === 0 ? (
+                      <div className="text-center text-gray-400 text-xs py-6">해당 기간 적립 내역이 없습니다 (실결제가 쌓이면 표시돼요)</div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-[11px] border-collapse">
+                          <thead><tr className="bg-gray-100 text-left text-gray-500">{['일시','회원','상품','결제액','율','쉐어액','상태'].map(h => <th key={h} className="px-2 py-1.5 font-bold">{h}</th>)}</tr></thead>
+                          <tbody>
+                            {ledger.rows.map(r => (
+                              <tr key={r.charge_id} className="border-b border-gray-50">
+                                <td className="px-2 py-1.5 text-gray-500">{(r.created_at||'').slice(0,10)}</td>
+                                <td className="px-2 py-1.5">{r.user_email_masked}</td>
+                                <td className="px-2 py-1.5">{r.package_key||'-'}</td>
+                                <td className="px-2 py-1.5">{won(r.charge_amount)}</td>
+                                <td className="px-2 py-1.5">{((r.rate||0)*100).toFixed(0)}%</td>
+                                <td className="px-2 py-1.5 font-bold text-amber-700">{won(r.share_amount)}</td>
+                                <td className="px-2 py-1.5"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${r.status === 'settled' ? 'bg-green-100 text-green-700' : r.status === 'reversed' ? 'bg-gray-100 text-gray-500' : 'bg-amber-100 text-amber-700'}`}>{r.status === 'settled' ? '정산완료' : r.status === 'reversed' ? '환불' : '미정산'}</span></td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   function MasterCouponPanel() {
     const [mode, setMode] = useState('single');
     const [value, setValue] = useState(50);
@@ -11186,13 +11326,14 @@ function PsychologicalTestSystem() {
             </div>
           )}
           <div className="flex gap-2 mb-6 flex-wrap">
-            {[['overview','📊 개요'],['users','👥 사용자'],['payments','💳 결제'],['tests','📋 검사'],['coupons','🎟️ 쿠폰'],['loop','🔁 루프'],['feedback','🙂 해석 피드백']].map(([tab, label]) => (
+            {[['overview','📊 개요'],['users','👥 사용자'],['payments','💳 결제'],['tests','📋 검사'],['coupons','🎟️ 쿠폰'],['partners','🤝 파트너'],['loop','🔁 루프'],['feedback','🙂 해석 피드백']].map(([tab, label]) => (
               <button key={tab} onClick={() => { setAdminTab(tab); if(tab==='overview') loadAdminOverview(); else if(tab==='users') loadAdminUsers(); else if(tab==='payments') loadAdminPayments(); else if(tab==='loop') loadAdminLoop(); else if(tab==='feedback') loadAdminFb(); }}
                 className={S.tabBtn(adminTab===tab)}>{label}</button>
             ))}
           </div>
 
           {adminTab === 'coupons' && <MasterCouponPanel />}
+          {adminTab === 'partners' && <MasterPartnerPanel />}
 
           {adminTab === 'loop' && (
             <div className="space-y-6">
