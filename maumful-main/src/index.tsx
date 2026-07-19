@@ -404,6 +404,18 @@ app.post('/api/auth/register', async (c) => {
 })
 
 // 이메일 인증
+// 인증 결과 페이지(브라우저에서 직접 열리는 링크라 raw JSON 대신 HTML)
+function verifyResultHtml(ok: boolean, title: string, msg: string): string {
+  return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>이메일 인증 · 마음풀</title></head>
+<body style="margin:0;font-family:'Noto Sans KR',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F4F7F5;display:flex;min-height:100vh;align-items:center;justify-content:center;padding:24px;box-sizing:border-box">
+  <div style="background:#fff;border-radius:20px;box-shadow:0 8px 40px rgba(0,0,0,.06);max-width:420px;width:100%;padding:44px 28px;text-align:center">
+    <div style="font-size:52px;margin-bottom:14px">${ok ? '✅' : '⚠️'}</div>
+    <h1 style="font-size:20px;color:${ok ? '#1C4D38' : '#B45309'};margin:0 0 10px">${title}</h1>
+    <p style="font-size:14px;color:#5A5A5A;line-height:1.75;margin:0 0 26px">${msg}</p>
+    <a href="https://maumful.com/" style="display:inline-block;background:#2F7D5B;color:#fff;text-decoration:none;padding:13px 30px;border-radius:12px;font-weight:700;font-size:15px">마음풀로 이동 →</a>
+  </div>
+</body></html>`
+}
 app.get('/api/auth/verify/:token', async (c) => {
   const { DB } = c.env
   const token = c.req.param('token')
@@ -411,16 +423,24 @@ app.get('/api/auth/verify/:token', async (c) => {
     SELECT id, user_id, expires_at, used_at FROM auth_tokens WHERE token = ? AND type = 'email_verify'
   `).bind(token).first<{ id: number; user_id: number; expires_at: string; used_at: string | null }>()
 
-  if (!row)          return c.json({ success: false, error: '유효하지 않은 인증 링크입니다.' }, 400)
-  if (row.used_at)   return c.json({ success: false, error: '이미 사용된 인증 링크입니다.' }, 400)
+  if (!row) return c.html(verifyResultHtml(false, '인증 링크 오류', '유효하지 않은 인증 링크예요. 회원가입을 다시 진행하거나 로그인 화면에서 인증 메일을 다시 받아 주세요.'))
+
+  // ⚠️ 멱등 — 이미 사용됨(메일 클라이언트/보안 스캐너의 링크 프리페치 포함)이거나 이미 인증된 계정이면
+  //    에러가 아니라 '인증 완료'로 안내한다. 예전엔 프리페치가 토큰을 먼저 소진해 사용자 클릭 시 에러가 났다.
+  const u = await DB.prepare('SELECT is_email_verified FROM users WHERE id = ?').bind(row.user_id).first<{ is_email_verified: number }>()
+  if (row.used_at || u?.is_email_verified) {
+    if (!u?.is_email_verified) await DB.prepare('UPDATE users SET is_email_verified = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?').bind(row.user_id).run()
+    return c.html(verifyResultHtml(true, '이메일 인증 완료', '이미 인증이 완료된 이메일이에요. 이제 마음풀에 로그인하실 수 있어요.'))
+  }
+
   if (new Date(row.expires_at) < new Date())
-    return c.json({ success: false, error: '만료된 링크입니다. 다시 요청해주세요.' }, 400)
+    return c.html(verifyResultHtml(false, '링크 만료', '인증 링크가 만료됐어요(발송 후 6시간). 로그인 화면에서 인증 메일을 다시 요청해 주세요.'))
 
   await DB.batch([
     DB.prepare('UPDATE users SET is_email_verified = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?').bind(row.user_id),
     DB.prepare('UPDATE auth_tokens SET used_at = CURRENT_TIMESTAMP WHERE id = ?').bind(row.id),
   ])
-  return c.json({ success: true, message: '이메일 인증 완료. 로그인해주세요.' })
+  return c.html(verifyResultHtml(true, '이메일 인증 완료', '이메일 인증이 완료됐어요. 이제 마음풀에 로그인하실 수 있어요.'))
 })
 
 // 이메일 로그인
