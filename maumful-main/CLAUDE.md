@@ -196,6 +196,10 @@ npm run deploy:cts    # lightoflife-couple (wrangler.lightoflife.toml)
 
 ---
 
+## 이메일 인증 (2026-07-19 강제 활성화)
+- **신규 이메일가입만 인증 강제**: `/api/auth/login`이 미인증 시 403 `requiresVerification` → 프론트가 '인증 필요 + 재발송'(`/api/auth/resend-verify`) 안내. 기존 회원은 그랜드파더링(`is_email_verified=1`)했고, **소셜 로그인은 면제**(게이트가 login에만 있고 소셜은 가입 시 verified=1). 끄려면 login의 미인증 차단 블록 주석 처리.
+- ⚠️ **verify 링크는 프리페치 안전(멱등) 필수**: 이메일 속 `GET /api/auth/verify/:token`은 메일 클라이언트·보안 스캐너가 **프리페치**해 토큰을 먼저 소진한다 → 일회용 토큰을 GET으로 소진하면 사용자 클릭 시 "이미 사용됨" 에러. **used_at/이미 인증됐으면 성공으로 안내(멱등)** + raw JSON 아닌 **HTML 페이지** 응답. (CTS도 동일 반영). 메모리 `project_maumful_email_verify`.
+
 ## 카카오 소셜 로그인 (마음풀)
 - **Redirect URI 등록 위치:** 콘솔 → 앱 설정 → **플랫폼 키/어드민 키 → REST API 키** → 카카오 로그인 리다이렉트 URI (※ "카카오 로그인>일반" 아님)
 - 마음풀 등록 URI: `https://maumful.com/api/auth/kakao/callback`. REST 방식(서버 사이드 팝업)
@@ -239,6 +243,9 @@ npm run deploy:cts    # lightoflife-couple (wrangler.lightoflife.toml)
   - 외부(수달·곁, `service`+`grantType`·credits=0): 라이트 ₩7,900/프로 ₩14,900/10회팩 ₩6,900.
 - **무료→유료 전환**(프리미엄 프리미엄): 부부·세대 **첫 3회 무료**(KV `bubu_free_used`/`sedae_free_used`{uid}, 세대는 성인만·청소년 무료) → 크레딧 차감 → 없으면 402 `needPurchase`. 통합해석 **첫 1회 무료**(KV `integrated_free_used`)→20cr 선결제(스트리밍이라 스트림 시작 전 선결제·upstream 502 시 환불·마스터 무제한).
 - **통합결제 grant**(수달·곁은 별도 생태계라 크레딧 대신 지급 전달): 결제성공(success·webhook)→`service` 있으면 `deliverGrant`(`signSso` 서명→POST `maumotter.com`/`maumgyeot.com` `/api/grant`)→각 서비스 `verifySso`·`applyGrant`. 큐 `external_grants`(마음풀)·멱등 `external_orders`(수달곁). 재시도 `/api/admin/deliver-pending-grants`. **`MAUM_SSO_SECRET` 3곳 동일값 필수**(마음풀·수달·곁). E2E 검증 완료(지급·멱등·위조401·환불revoke). 상세=메모리 [[project_maum_unified_payment]].
+
+## 제휴코드 수익 쉐어 정산 (2026-07-19)
+기존 파트너 시스템(`partners.revenue_share_rate`·`credit_charges.partner_code`) 위에 **정산 원장** 추가. 결제 완료 시 `accruePartnerCommission`(비차단 `.catch`)이 `partner_commissions`에 적립 — **charge_id PK 멱등**·**적립 시점 rate 스냅샷**(율 변경돼도 과거 정산 불변)·`partners.commission_start/end`(귀속 기간). 어드민 = **메인 관리자(app.jsx) 🤝 파트너 탭 `MasterPartnerPanel`**(등록·정산 원장 조회·**CSV 다운로드**·정산완료). 개인 친구초대(`referrals` 크레딧)와 별개. 실적립은 토스 라이브 후. 메모리 `project_maumful_partner_revshare`.
 
 ## 크롤링 정책 (robots.txt, 2026-07-18)
 
