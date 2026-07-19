@@ -2999,6 +2999,7 @@ app.post('/api/webhook/toss', async (c) => {
     console.log('[Toss Webhook] 크레딧 지급 완료 — userId:', charge.user_id, 'credits:', charge.credits, 'chargeId:', chargeId)
   }
   completeReferral(DB, charge.user_id).catch(err => console.error('[Referral] 완료 실패 userId=' + charge.user_id, err))
+  accruePartnerCommission(DB, chargeId).catch(err => console.error('[PartnerShare] 적립 실패 chargeId=' + chargeId, err))
 
   // 영수증 이메일 (비동기)
   const twUser = await DB.prepare('SELECT email, nickname FROM users WHERE id=?').bind(charge.user_id).first<{ email: string; nickname: string | null }>()
@@ -3199,6 +3200,7 @@ app.get('/api/payment/toss/success', async (c) => {
           console.log('[Toss] 크레딧 지급:', charge.user_id, '+', charge.credits, '→', newBalance)
         }
         completeReferral(DB, charge.user_id).catch(() => {})
+        accruePartnerCommission(DB, chargeIdNum).catch(() => {})
 
         // 영수증 이메일
         const user = await DB.prepare('SELECT email, nickname FROM users WHERE id=?')
@@ -3531,6 +3533,31 @@ async function completeReferral(db: D1Database, refereeId: number): Promise<void
 
   await db.prepare('UPDATE referrals SET status = "completed" WHERE id = ?').bind(ref.id).run()
   await gainCredits(db, ref.referrer_id, ref.referrer_bonus, 'referral', `referee_${refereeId}`)
+}
+
+// ── 파트너(제휴코드) 수익 쉐어 적립 — 완료된 charge를 원장(partner_commissions)에 기록 ──
+//   ⚠️ 비차단(호출부에서 .catch) — 절대 결제 흐름을 막지 않는다. charge_id PK로 멱등(success+webhook 중복 방지).
+//   율은 **적립 시점 스냅샷**(partners.revenue_share_rate가 나중에 바뀌어도 과거 정산 불변).
+//   귀속 기간(commission_start/end)이 설정돼 있으면 그 안의 결제만 적립. 개인 친구초대(referrals·크레딧)와는 별개.
+async function accruePartnerCommission(db: D1Database, chargeId: number): Promise<void> {
+  const ch = await db.prepare(
+    "SELECT id, user_id, amount, currency, partner_code, status, date(COALESCE(completed_at, created_at)) AS cday FROM credit_charges WHERE id=?"
+  ).bind(chargeId).first<{ id: number; user_id: number; amount: number; currency: string | null; partner_code: string | null; status: string; cday: string | null }>()
+  if (!ch || ch.status !== 'completed' || !ch.partner_code) return
+  const p = await db.prepare("SELECT revenue_share_rate, commission_start, commission_end, is_active FROM partners WHERE code=?")
+    .bind(ch.partner_code).first<{ revenue_share_rate: number; commission_start: string | null; commission_end: string | null; is_active: number }>()
+  if (!p || !p.is_active || !p.revenue_share_rate || p.revenue_share_rate <= 0) return
+  const day = ch.cday || new Date().toISOString().slice(0, 10)
+  if (p.commission_start && day < p.commission_start) return   // 귀속 기간 밖
+  if (p.commission_end && day > p.commission_end) return
+  const rate = p.revenue_share_rate
+  const share = Math.round(ch.amount * rate)
+  await db.prepare("INSERT OR IGNORE INTO partner_commissions (charge_id, partner_code, user_id, charge_amount, rate, share_amount, currency) VALUES (?,?,?,?,?,?,?)")
+    .bind(ch.id, ch.partner_code, ch.user_id, ch.amount, rate, share, ch.currency || 'KRW').run()
+}
+// 환불 시 원장 회수 — 이미 정산(지급)된 건은 건드리지 않는다(수기 조정).
+async function reversePartnerCommission(db: D1Database, chargeId: number): Promise<void> {
+  await db.prepare("UPDATE partner_commissions SET status='reversed' WHERE charge_id=? AND status!='settled'").bind(chargeId).run()
 }
 
 // 내 초대 목록 조회
@@ -5654,7 +5681,7 @@ app.post('/api/admin/partners', async (c) => {
   if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
 
   const body = await c.req.json() as Record<string, unknown>
-  const { code, name, sso_secret, revenue_share_rate, welcome_message, featured_tests, primary_color, logo_url, contact_email } = body
+  const { code, name, sso_secret, revenue_share_rate, welcome_message, featured_tests, primary_color, logo_url, contact_email, commission_start, commission_end } = body
 
   if (!code || !name) return c.json({ success: false, error: 'code, name 필수' }, 400)
   const codeStr = String(code).toUpperCase().replace(/[^A-Z0-9_]/g, '')
@@ -5664,8 +5691,8 @@ app.post('/api/admin/partners', async (c) => {
   if (existing) return c.json({ success: false, error: '이미 존재하는 파트너 코드' }, 409)
 
   await DB.prepare(`
-    INSERT INTO partners (code, name, sso_secret, revenue_share_rate, welcome_message, featured_tests, primary_color, logo_url, contact_email)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO partners (code, name, sso_secret, revenue_share_rate, welcome_message, featured_tests, primary_color, logo_url, contact_email, commission_start, commission_end)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).bind(
     codeStr, String(name),
     sso_secret ? String(sso_secret) : null,
@@ -5675,6 +5702,8 @@ app.post('/api/admin/partners', async (c) => {
     primary_color   ? String(primary_color)   : null,
     logo_url        ? String(logo_url)        : null,
     contact_email   ? String(contact_email)   : null,
+    commission_start ? String(commission_start) : null,
+    commission_end   ? String(commission_end)   : null,
   ).run()
 
   return c.json({ success: true, data: { code: codeStr } }, 201)
@@ -5688,7 +5717,7 @@ app.patch('/api/admin/partners/:code', async (c) => {
 
   const code = c.req.param('code').toUpperCase()
   const body = await c.req.json() as Record<string, unknown>
-  const allowed = ['name','sso_secret','revenue_share_rate','welcome_message','featured_tests','primary_color','logo_url','contact_email','is_active']
+  const allowed = ['name','sso_secret','revenue_share_rate','welcome_message','featured_tests','primary_color','logo_url','contact_email','is_active','commission_start','commission_end']
   const sets: string[] = []
   const vals: unknown[] = []
 
@@ -5805,6 +5834,50 @@ app.get('/api/admin/partner-settlement', async (c) => {
       maumful_revenue: totalRevenue - shareAmount,
     },
   })
+})
+
+// ── 파트너 정산 원장 조회 (제휴코드별 상세 내역 — CSV 다운로드용) ──
+//   partner_commissions(적립 시점 율 스냅샷)에서 조회. 기간(from~to)·상태 필터. 개인정보는 마스킹.
+app.get('/api/admin/partner-commissions', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+  const { code, from, to, status } = c.req.query() as Record<string, string>
+  if (!code) return c.json({ success: false, error: 'code 파라미터 필수' }, 400)
+  const fromDate = from ?? new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)
+  const toDate   = to   ?? new Date().toISOString().slice(0, 10)
+  const conds = ['pc.partner_code=?', 'date(pc.created_at) >= ?', 'date(pc.created_at) <= ?']
+  const binds: unknown[] = [code.toUpperCase(), fromDate, toDate]
+  if (status && ['pending', 'settled', 'reversed'].includes(status)) { conds.push('pc.status=?'); binds.push(status) }
+  const rows = await DB.prepare(`
+    SELECT pc.charge_id, pc.charge_amount, pc.rate, pc.share_amount, pc.currency, pc.status,
+           pc.created_at, pc.settled_at, pc.settlement_ref,
+           SUBSTR(u.email,1,3) || '***' AS user_email_masked, cc.package_key
+    FROM partner_commissions pc
+    LEFT JOIN users u ON u.id = pc.user_id
+    LEFT JOIN credit_charges cc ON cc.id = pc.charge_id
+    WHERE ${conds.join(' AND ')}
+    ORDER BY pc.created_at DESC
+  `).bind(...binds).all()
+  const totals = await DB.prepare(`
+    SELECT COUNT(*) AS cnt, COALESCE(SUM(charge_amount),0) AS revenue, COALESCE(SUM(share_amount),0) AS share,
+           COALESCE(SUM(CASE WHEN status='pending' THEN share_amount ELSE 0 END),0) AS unsettled
+    FROM partner_commissions pc WHERE ${conds.join(' AND ')}
+  `).bind(...binds).first()
+  return c.json({ success: true, data: { code: code.toUpperCase(), period: { from: fromDate, to: toDate }, totals, rows: rows.results } })
+})
+
+// ── 파트너 정산 완료 표시 (지급 완료한 pending 건을 settled로) ──
+app.post('/api/admin/partner-commissions/settle', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+  const { code, from, to, ref } = await c.req.json().catch(() => ({})) as { code?: string; from?: string; to?: string; ref?: string }
+  if (!code || !from || !to) return c.json({ success: false, error: 'code, from, to 필수' }, 400)
+  const r = await DB.prepare(
+    "UPDATE partner_commissions SET status='settled', settled_at=datetime('now'), settlement_ref=? WHERE partner_code=? AND status='pending' AND date(created_at) >= ? AND date(created_at) <= ?"
+  ).bind(ref ?? null, code.toUpperCase(), from, to).run()
+  return c.json({ success: true, settled: r.meta.changes })
 })
 
 // ── POST /api/admin/push/reminder — 6주 재검사 알림 수동 트리거 ─

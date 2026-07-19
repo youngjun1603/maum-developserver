@@ -45,6 +45,8 @@ const aApi = {
   async updatePartner(code,body)      { return (await fetch(`/api/admin/partners/${code}`,{method:'PATCH',headers:this._h(),body:JSON.stringify(body)})).json(); },
   async partnerStats(code,from,to)    { return (await fetch(`/api/admin/partner-stats?code=${code}&from=${from}&to=${to}`,{headers:this._h()})).json(); },
   async partnerSettlement(code,month) { return (await fetch(`/api/admin/partner-settlement?code=${code}&month=${month}`,{headers:this._h()})).json(); },
+  async partnerCommissions(code,from,to,status){ return (await fetch(`/api/admin/partner-commissions?code=${code}&from=${from}&to=${to}${status?`&status=${status}`:''}`,{headers:this._h()})).json(); },
+  async settlePartner(body){ return (await fetch('/api/admin/partner-commissions/settle',{method:'POST',headers:this._h(),body:JSON.stringify(body)})).json(); },
 };
 
 const fmtW  = n => Number(n||0).toLocaleString('ko-KR')+'원';
@@ -1147,9 +1149,30 @@ function AdminPartners(){
   const [settlement,setSettlement]=useS(null);
   const [statsMonth,setStatsMonth]=useS(()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;});
   const [showCreate,setShowCreate]=useS(false);
-  const [form,setForm]=useS({code:'',name:'',sso_secret:'',revenue_share_rate:'0',welcome_message:'',featured_tests:'',primary_color:'#2D6A4F',contact_email:''});
+  const [form,setForm]=useS({code:'',name:'',sso_secret:'',revenue_share_rate:'0',welcome_message:'',featured_tests:'',primary_color:'#2D6A4F',contact_email:'',commission_start:'',commission_end:''});
   const [saving,setSaving]=useS(false);
   const [msg,setMsg]=useS('');
+  // 정산 원장(제휴코드별 상세 + CSV 다운로드)
+  const [ledger,setLedger]=useS(null);
+  const iso=(d)=>d.toISOString().slice(0,10);
+  const [ledgerFrom,setLedgerFrom]=useS(()=>iso(new Date(Date.now()-30*86400000)));
+  const [ledgerTo,setLedgerTo]=useS(()=>iso(new Date()));
+  const loadLedger=async(code)=>{ const r=await aApi.partnerCommissions(code||selected,ledgerFrom,ledgerTo); if(r.success)setLedger(r.data); };
+  const downloadCsv=()=>{
+    if(!ledger||!(ledger.rows||[]).length)return;
+    const hdr=['결제ID','일시','회원(마스킹)','상품','결제액','쉐어율','쉐어액','통화','상태'];
+    const esc=(v)=>{const s=String(v==null?'':v);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;};
+    const lines=(ledger.rows||[]).map(r=>[r.charge_id,r.created_at,r.user_email_masked,r.package_key||'',r.charge_amount,r.rate,r.share_amount,r.currency,r.status].map(esc).join(','));
+    const csv='﻿'+[hdr.join(','),...lines].join('\n');   // BOM=엑셀 한글 깨짐 방지
+    const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`정산_${selected}_${ledgerFrom}_${ledgerTo}.csv`;a.click();URL.revokeObjectURL(a.href);
+  };
+  const markSettled=async()=>{
+    if(!confirm(`${selected} · ${ledgerFrom}~${ledgerTo}\n이 기간의 미정산 건을 '정산완료'로 표시할까요? (실제 지급은 별도)`))return;
+    const ref=prompt('정산 참조(선택, 예: 2026-07 이체)','')||undefined;
+    const r=await aApi.settlePartner({code:selected,from:ledgerFrom,to:ledgerTo,ref});
+    if(r.success){alert(`${r.settled}건 정산완료 처리`);loadLedger(selected);}
+  };
 
   useE(()=>{ aApi.partners().then(r=>{ if(r.success)setPartners(r.data||[]); }).finally(()=>setLoading(false)); },[]);
 
@@ -1170,7 +1193,7 @@ function AdminPartners(){
     const body={...form, revenue_share_rate:Number(form.revenue_share_rate)};
     const r=await aApi.createPartner(body);
     setSaving(false);
-    if(r.success){setMsg('파트너 등록 완료');setShowCreate(false);setForm({code:'',name:'',sso_secret:'',revenue_share_rate:'0',welcome_message:'',featured_tests:'',primary_color:'#2D6A4F',contact_email:''});aApi.partners().then(r2=>{if(r2.success)setPartners(r2.data||[]);});}
+    if(r.success){setMsg('파트너 등록 완료');setShowCreate(false);setForm({code:'',name:'',sso_secret:'',revenue_share_rate:'0',welcome_message:'',featured_tests:'',primary_color:'#2D6A4F',contact_email:'',commission_start:'',commission_end:''});aApi.partners().then(r2=>{if(r2.success)setPartners(r2.data||[]);});}
     else setMsg(r.error||'등록 실패');
   };
 
@@ -1198,7 +1221,7 @@ function AdminPartners(){
         <div style={{background:'white',border:'1px solid rgba(0,0,0,.08)',borderRadius:12,padding:20,marginBottom:16}}>
           <div style={{fontWeight:700,marginBottom:12,fontSize:14}}>신규 파트너 등록</div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-            {[['code','파트너 코드 (영문대문자, 예: KAKAO_HEALTH)'],['name','파트너명'],['sso_secret','SSO 시크릿 (없으면 SSO 미지원)'],['revenue_share_rate','수익쉐어율 (0~1, 예: 0.3)'],['welcome_message','환영 메시지'],['featured_tests','추천 검사 (쉼표구분, 예: PHQ9,BURNOUT)'],['primary_color','브랜드 색상'],['contact_email','정산 담당자 이메일']].map(([k,label])=>(
+            {[['code','파트너 코드 (영문대문자, 예: KAKAO_HEALTH)'],['name','파트너명'],['sso_secret','SSO 시크릿 (없으면 SSO 미지원)'],['revenue_share_rate','수익쉐어율 (0~1, 예: 0.3 · 언제든 변경 가능)'],['commission_start','정산 귀속 시작일 (선택, 예: 2026-07-01 · 비우면 무기한)'],['commission_end','정산 귀속 종료일 (선택)'],['welcome_message','환영 메시지'],['featured_tests','추천 검사 (쉼표구분, 예: PHQ9,BURNOUT)'],['primary_color','브랜드 색상'],['contact_email','정산 담당자 이메일']].map(([k,label])=>(
               <div key={k} style={{gridColumn:['welcome_message','featured_tests','sso_secret'].includes(k)?'1 / -1':'auto'}}>
                 <div style={{fontSize:11,color:'#666',marginBottom:4}}>{label}</div>
                 <input value={form[k]} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))}
@@ -1310,6 +1333,57 @@ function AdminPartners(){
                 </div>
               </div>
             )}
+
+            {/* 정산 원장 — 제휴코드별 상세(율 스냅샷) + CSV 다운로드 */}
+            <div style={{marginTop:16,borderTop:'1px solid rgba(0,0,0,.08)',paddingTop:16}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10,flexWrap:'wrap',gap:8}}>
+                <div style={{fontSize:13,fontWeight:700}}>📒 정산 원장 (기간별 상세)</div>
+                <div style={{display:'flex',gap:6,alignItems:'center'}}>
+                  <input type="date" value={ledgerFrom} onChange={e=>setLedgerFrom(e.target.value)} style={{padding:'6px 8px',border:'1px solid #E0E0E0',borderRadius:6,fontSize:12}}/>
+                  <span style={{color:'#9A9A9A'}}>~</span>
+                  <input type="date" value={ledgerTo} onChange={e=>setLedgerTo(e.target.value)} style={{padding:'6px 8px',border:'1px solid #E0E0E0',borderRadius:6,fontSize:12}}/>
+                  <button onClick={()=>loadLedger(selected)} style={{padding:'6px 12px',background:'#2D6A4F',color:'white',border:'none',borderRadius:6,fontSize:12,cursor:'pointer'}}>조회</button>
+                </div>
+              </div>
+              {ledger&&(
+                <div>
+                  <div style={{display:'flex',gap:16,flexWrap:'wrap',fontSize:12,color:'#5A5A5A',marginBottom:10,background:'#F8F8F5',borderRadius:8,padding:'10px 14px'}}>
+                    <span>건수 <strong>{(ledger.totals?.cnt||0).toLocaleString()}</strong></span>
+                    <span>결제액 <strong>{fmtW(ledger.totals?.revenue)}</strong></span>
+                    <span>쉐어 합계 <strong style={{color:'#92400E'}}>{fmtW(ledger.totals?.share)}</strong></span>
+                    <span>미정산 <strong style={{color:'#B45309'}}>{fmtW(ledger.totals?.unsettled)}</strong></span>
+                  </div>
+                  <div style={{display:'flex',gap:8,marginBottom:10}}>
+                    <button onClick={downloadCsv} disabled={!(ledger.rows||[]).length} style={{padding:'7px 14px',background:'#1F6FEB',color:'white',border:'none',borderRadius:8,fontSize:12,fontWeight:700,cursor:(ledger.rows||[]).length?'pointer':'default',opacity:(ledger.rows||[]).length?1:0.5}}>⬇ CSV 다운로드</button>
+                    <button onClick={markSettled} disabled={!(ledger.totals?.unsettled)} style={{padding:'7px 14px',background:'white',color:'#92400E',border:'1px solid #F5DFA0',borderRadius:8,fontSize:12,fontWeight:700,cursor:(ledger.totals?.unsettled)?'pointer':'default',opacity:(ledger.totals?.unsettled)?1:0.5}}>이 기간 정산완료 처리</button>
+                  </div>
+                  {(ledger.rows||[]).length===0?(
+                    <div style={{padding:20,textAlign:'center',color:'#9A9A9A',fontSize:12}}>해당 기간 적립 내역이 없습니다 (실결제가 쌓이면 표시됩니다)</div>
+                  ):(
+                    <div style={{overflowX:'auto'}}>
+                      <table style={{width:'100%',borderCollapse:'collapse',fontSize:11}}>
+                        <thead><tr style={{background:'#F0F0ED',textAlign:'left'}}>
+                          {['일시','회원','상품','결제액','율','쉐어액','상태'].map(h=><th key={h} style={{padding:'6px 8px',fontWeight:700,color:'#666'}}>{h}</th>)}
+                        </tr></thead>
+                        <tbody>
+                          {(ledger.rows||[]).map(r=>(
+                            <tr key={r.charge_id} style={{borderBottom:'1px solid #F0F0F0'}}>
+                              <td style={{padding:'6px 8px',color:'#888'}}>{(r.created_at||'').slice(0,10)}</td>
+                              <td style={{padding:'6px 8px'}}>{r.user_email_masked}</td>
+                              <td style={{padding:'6px 8px'}}>{r.package_key||'-'}</td>
+                              <td style={{padding:'6px 8px'}}>{fmtW(r.charge_amount)}</td>
+                              <td style={{padding:'6px 8px'}}>{((r.rate||0)*100).toFixed(0)}%</td>
+                              <td style={{padding:'6px 8px',fontWeight:700,color:'#92400E'}}>{fmtW(r.share_amount)}</td>
+                              <td style={{padding:'6px 8px'}}><span style={{fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:100,background:r.status==='settled'?'#D8F3DC':r.status==='reversed'?'#EEE':'#FEF3C7',color:r.status==='settled'?'#1A6B3C':r.status==='reversed'?'#888':'#92400E'}}>{r.status==='settled'?'정산완료':r.status==='reversed'?'환불':'미정산'}</span></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         ):(
           <div style={{background:'white',border:'1px solid rgba(0,0,0,.08)',borderRadius:12,padding:32,textAlign:'center',color:'#9A9A9A'}}>
