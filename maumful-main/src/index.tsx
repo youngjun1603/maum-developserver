@@ -3639,8 +3639,8 @@ app.get('/api/admin/stats', async (c) => {
       DB.prepare('SELECT COUNT(*) AS cnt FROM users WHERE email NOT LIKE "deleted_%"'),
       // 오늘 로그인 (credit_transactions 기준)
       DB.prepare(`SELECT COUNT(DISTINCT user_id) AS cnt FROM credit_transactions WHERE DATE(created_at) = ?`).bind(today),
-      // 이번 달 신규 가입
-      DB.prepare(`SELECT COUNT(*) AS cnt FROM users WHERE created_at >= ? AND email NOT LIKE "deleted_%"`).bind(month1st),
+      // 이번 달 신규 가입 (+ 오늘 신규)
+      DB.prepare(`SELECT COUNT(*) AS cnt, SUM(CASE WHEN DATE(created_at)=? THEN 1 ELSE 0 END) AS today FROM users WHERE created_at >= ? AND email NOT LIKE "deleted_%"`).bind(today, month1st),
       // 전체 발행 크레딧 합계 (gain)
       DB.prepare(`SELECT COALESCE(SUM(amount),0) AS total, COALESCE(SUM(CASE WHEN reason='charge' THEN amount ELSE 0 END),0) AS paid FROM credit_transactions WHERE type='gain'`),
       // 검사 수행 수 (전체 / 오늘)
@@ -3667,6 +3667,7 @@ app.get('/api/admin/stats', async (c) => {
       data: {
         users: {
           total:       u?.cnt ?? 0,
+          today:       nm?.today ?? 0,
           activeToday: at?.cnt ?? 0,
           newThisMonth: nm?.cnt ?? 0,
         },

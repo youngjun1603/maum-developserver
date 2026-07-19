@@ -10005,9 +10005,16 @@ function PsychologicalTestSystem() {
             ))}
           </div>
 
-          {/* AI 상담 체험 */}
+          {/* 검사 결과 먼저 보기 — 결과를 보고 상담하는 흐름이 더 자연스럽다(사용자 요청 2026-07-19) */}
+          <button
+            onClick={() => { const rv={SCT:'sctResult',DSI:'dsiResult',PHQ9:'phq9Result',GAD7:'gad7Result',DASS21:'dass21Result',BIG5:'big5Result',BURNOUT:'burnoutResult',LOST:'lostResult',RIASEC:'riasecResult',VALUES:'valuesResult'}; setView(rv[completedTest]||'phq9Result'); }}
+            className="w-full mb-5 bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-xl font-bold text-sm transition flex items-center justify-center gap-2 shadow-sm">
+            📄 {t("검사 결과 자세히 보기", "View detailed results")}
+          </button>
+
+          {/* AI 상담 체험 (결과 확인 후) */}
           <div className="mb-4 text-left">
-            <div className="text-sm font-bold text-blue-800 mb-1">💬 {t("AI 상담 체험하기", "Try AI Counseling")}</div>
+            <div className="text-sm font-bold text-blue-800 mb-1">💬 {t("결과를 본 뒤, AI 상담 체험하기", "After reviewing, try AI counseling")}</div>
             <div className="text-xs text-blue-600 mb-3">{t("검사 결과를 바탕으로 AI와 3회 무료 상담을 받아보세요", "Get 3 free AI counseling sessions based on your results")}</div>
             <ChatBox testType={completedTest} initialPrompts={
               ['PHQ9','GAD7'].includes(completedTest) ? (lang === 'en' ? [
@@ -11449,8 +11456,8 @@ function PsychologicalTestSystem() {
             <div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 {[
-                  { label:'총 가입자', val:adminStats.users?.total?.toLocaleString(), sub:`오늘 +${adminStats.users?.today}`, color:'text-indigo-600' },
-                  { label:'이번달 매출', val:`₩${adminStats.revenue?.monthly?.toLocaleString()}`, sub:`결제 ${adminStats.payments?.monthly}건`, color:'text-emerald-600' },
+                  { label:'총 가입자', val:(adminStats.users?.total||0).toLocaleString(), sub:`오늘 +${adminStats.users?.today||0}`, color:'text-indigo-600' },
+                  { label:'이번달 매출', val:`₩${(adminStats.revenue?.thisMonthAmount||0).toLocaleString()}`, sub:`결제 ${adminStats.revenue?.thisMonthCount||0}건`, color:'text-emerald-600' },
                   { label:'총 검사 수', val:adminStats.tests?.total?.toLocaleString(), sub:`오늘 ${adminStats.tests?.today}건`, color:'text-orange-600' },
                   { label:'AI 상담', val:adminStats.chats?.total?.toLocaleString(), sub:`오늘 ${adminStats.chats?.today}건`, color:'text-purple-600' },
                 ].map(c => (
