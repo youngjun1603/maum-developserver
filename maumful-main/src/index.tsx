@@ -467,12 +467,13 @@ app.post('/api/auth/login', async (c) => {
     return c.json({ success: false, error: '이메일 또는 비밀번호가 올바르지 않습니다.' }, 401)
 
 
-  // 이메일 인증 차단 비활성화 (추후 활성화 예정)
-  // 이메일 인증 확인
-  // 베타 기간: 이메일 미인증도 로그인 허용
-  // if (user.is_email_verified === 0) {
-  //   return c.json({ success: false, error: '이메일 인증이 필요합니다.', requiresVerification: true, email: user.email }, 403)
-  // }
+  // ── 이메일 인증 강제 (2026-07-19 활성화) ──
+  //   기존 회원은 그랜드파더링(is_email_verified=1)했고, 이 시점 이후 신규 이메일가입만 인증 필수.
+  //   소셜 로그인(구글·카카오·네이버)은 가입 시 is_email_verified=1이라 무관.
+  //   프론트는 requiresVerification를 받아 '인증 필요 + 재발송' 안내(/api/auth/resend-verify).
+  if (user.is_email_verified === 0) {
+    return c.json({ success: false, error: '이메일 인증이 필요합니다. 가입 시 받은 인증 메일을 확인해 주세요.', requiresVerification: true, email: user.email }, 403)
+  }
 
   const secret       = await getJwtSecret(KV)
   const now          = Math.floor(Date.now() / 1000)
