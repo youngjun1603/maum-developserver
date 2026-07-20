@@ -483,6 +483,24 @@ function PsychologicalTestSystem() {
   });
   const [showAiLimitModal, setShowAiLimitModal] = useState(false);
   const [signupVerifyEmail, setSignupVerifyEmail] = useState(null);
+  const [notices, setNotices] = useState(null);
+  const [noticeDismissed, setNoticeDismissed] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("notice_dismissed") || "[]");
+    } catch {
+      return [];
+    }
+  });
+  const dismissNotice = (id) => {
+    setNoticeDismissed((prev) => {
+      const next = [.../* @__PURE__ */ new Set([...prev, id])].slice(-50);
+      try {
+        localStorage.setItem("notice_dismissed", JSON.stringify(next));
+      } catch {
+      }
+      return next;
+    });
+  };
   const [counselingMode, setCounselingMode] = useState(() => {
     try {
       return localStorage.getItem("counseling_mode") || "psychological";
@@ -1201,6 +1219,19 @@ function PsychologicalTestSystem() {
   };
   const forgotPassword = (...args) => {
   };
+  useEffect(() => {
+    if (notices !== null) return;
+    if (view !== "memberDashboard" && view !== "notices") return;
+    let alive = true;
+    fetch("/api/notices").then((r) => r.json()).then((d) => {
+      if (alive && d.success) setNotices(d.data || []);
+    }).catch(() => {
+      if (alive) setNotices([]);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [view, notices]);
   useEffect(() => {
     if (!view.startsWith("partnerTest:")) return;
     const key = view.split(":")[1];
@@ -2819,6 +2850,26 @@ Visit Maumful and take the same test again to compare your progress.`));
     "\uAC80\uC0AC \uC2DC\uC791\uD558\uAE30"
   ), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "#BBB", marginTop: 12 } }, "\uB85C\uADF8\uC778 \uC5C6\uC774 \uCC38\uC5EC \uAC00\uB2A5\uD569\uB2C8\uB2E4")));
   if (view === "partnerComplete") return /* @__PURE__ */ React.createElement("div", { style: { minHeight: "100vh", background: "#FDF7F9", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 } }, /* @__PURE__ */ React.createElement("div", { style: { maxWidth: 400, width: "100%", background: "white", borderRadius: 24, padding: 40, boxShadow: "0 8px 32px rgba(0,0,0,0.1)", textAlign: "center" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 56, marginBottom: 16 } }, "\u{1F389}"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 18, fontWeight: 700, color: "#2D2D2D", marginBottom: 12 } }, "\uAC80\uC0AC \uC644\uB8CC!"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "#888", lineHeight: 1.8 } }, partnerMode == null ? void 0 : partnerMode.hostName, "\uB2D8\uC774 \uC774\uC81C", /* @__PURE__ */ React.createElement("br", null), "\uCEE4\uD50C \uB9AC\uD3EC\uD2B8\uB97C \uD655\uC778\uD560 \uC218 \uC788\uC5B4\uC694.", /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { style: { color: "#BBB", fontSize: 12 } }, "\uCC3D\uC744 \uB2EB\uC544\uB3C4 \uB429\uB2C8\uB2E4."))));
+  if (view === "notices") return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(
+    GlobalNav,
+    {
+      setView,
+      isLoggedIn,
+      currentUser,
+      credits,
+      activeView: "notices",
+      lang,
+      onLangToggle: updateLang
+    }
+  ), /* @__PURE__ */ React.createElement("div", { className: "min-h-screen bg-gradient-to-br from-slate-50 to-green-50" }, /* @__PURE__ */ React.createElement("div", { className: "max-w-2xl mx-auto px-4 py-8" }, /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: () => setView(isLoggedIn ? "memberDashboard" : "landing"),
+      className: "text-gray-400 hover:text-green-700 text-sm mb-5 flex items-center gap-1"
+    },
+    "\u2190 ",
+    t("\uB4A4\uB85C", "Back")
+  ), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 mb-6" }, /* @__PURE__ */ React.createElement("span", { className: "text-3xl" }, "\u{1F4E2}"), /* @__PURE__ */ React.createElement("h1", { className: "text-2xl font-bold text-gray-800" }, t("\uACF5\uC9C0\uC0AC\uD56D", "Notices"))), notices === null && /* @__PURE__ */ React.createElement("div", { className: "text-sm text-gray-400 text-center py-12" }, t("\uBD88\uB7EC\uC624\uB294 \uC911...", "Loading...")), notices && notices.length === 0 && /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl p-10 text-center border border-gray-100" }, /* @__PURE__ */ React.createElement("div", { className: "text-4xl mb-3" }, "\u{1F33F}"), /* @__PURE__ */ React.createElement("div", { className: "text-sm text-gray-400" }, t("\uC544\uC9C1 \uB4F1\uB85D\uB41C \uACF5\uC9C0\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.", "No notices yet."))), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col gap-3" }, (notices || []).map((n) => /* @__PURE__ */ React.createElement("div", { key: n.id, className: `bg-white rounded-2xl p-5 border ${n.is_important ? "border-amber-200" : "border-gray-100"}` }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 flex-wrap mb-1.5" }, !!n.is_important && /* @__PURE__ */ React.createElement("span", { className: "text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-bold" }, t("\uC911\uC694", "Important")), /* @__PURE__ */ React.createElement("h2", { className: "text-base font-bold text-gray-800" }, n.title)), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 mb-3" }, (n.created_at || "").slice(0, 10)), /* @__PURE__ */ React.createElement("div", { className: "text-sm text-gray-700 leading-relaxed whitespace-pre-wrap" }, n.content)))))));
   if (view === "landing") return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(
     GlobalNav,
     {
@@ -2966,7 +3017,7 @@ Visit Maumful and take the same test again to compare your progress.`));
       className: "w-full text-center text-gray-300 text-xs hover:text-gray-500 py-1"
     },
     t("\uC778\uC99D \uBA54\uC77C\uC744 \uBC1B\uC9C0 \uBABB\uD558\uC168\uB098\uC694? \uC7AC\uBC1C\uC1A1", "Didn't receive verification email? Resend")
-  ), /* @__PURE__ */ React.createElement("div", { className: "flex justify-center gap-4 mt-3" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setView("privacy"), className: "text-xs text-gray-300 hover:text-gray-500" }, t("\uAC1C\uC778\uC815\uBCF4 \uCC98\uB9AC\uBC29\uCE68", "Privacy Policy")), /* @__PURE__ */ React.createElement("span", { className: "text-gray-200 text-xs" }, "|"), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("terms"), className: "text-xs text-gray-300 hover:text-gray-500" }, t("\uC774\uC6A9\uC57D\uAD00", "Terms of Service")))));
+  ), /* @__PURE__ */ React.createElement("div", { className: "flex justify-center gap-4 mt-3" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setView("notices"), className: "text-xs text-gray-300 hover:text-gray-500" }, t("\uACF5\uC9C0\uC0AC\uD56D", "Notices")), /* @__PURE__ */ React.createElement("span", { className: "text-gray-200 text-xs" }, "|"), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("privacy"), className: "text-xs text-gray-300 hover:text-gray-500" }, t("\uAC1C\uC778\uC815\uBCF4 \uCC98\uB9AC\uBC29\uCE68", "Privacy Policy")), /* @__PURE__ */ React.createElement("span", { className: "text-gray-200 text-xs" }, "|"), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("terms"), className: "text-xs text-gray-300 hover:text-gray-500" }, t("\uC774\uC6A9\uC57D\uAD00", "Terms of Service")))));
   if (!isLoggedIn && view === "memberSignup") return /* @__PURE__ */ React.createElement("div", { className: "bg-gradient-to-br from-slate-50 to-green-100 flex flex-col items-center px-4 py-10", style: { minHeight: "100dvh" } }, /* @__PURE__ */ React.createElement(SignupVerifyModal, null), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md" }, /* @__PURE__ */ React.createElement(
     "button",
     {
@@ -3431,7 +3482,7 @@ Visit Maumful and take the same test again to compare your progress.`));
         className: "text-gray-400 hover:text-gray-600 text-xs px-1.5 py-1.5 rounded-lg hover:bg-gray-100 transition"
       },
       "\u{1F510}"
-    )))), /* @__PURE__ */ React.createElement("main", { className: "max-w-2xl mx-auto px-4 py-6" }, /* @__PURE__ */ React.createElement("div", { className: "sm:hidden flex justify-end mb-3" }, /* @__PURE__ */ React.createElement(
+    )))), /* @__PURE__ */ React.createElement("main", { className: "max-w-2xl mx-auto px-4 py-6" }, (notices || []).filter((n) => n.is_important && !noticeDismissed.includes(n.id)).slice(0, 1).map((n) => /* @__PURE__ */ React.createElement("div", { key: n.id, className: "mb-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-3" }, /* @__PURE__ */ React.createElement("span", { className: "text-lg leading-none mt-0.5" }, "\u{1F4E2}"), /* @__PURE__ */ React.createElement("div", { className: "min-w-0 flex-1" }, /* @__PURE__ */ React.createElement("div", { className: "text-sm font-bold text-amber-900" }, n.title), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-amber-800 mt-1 whitespace-pre-wrap leading-relaxed line-clamp-3" }, n.content), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("notices"), className: "text-xs font-semibold text-amber-700 underline mt-1.5 hover:text-amber-900" }, t("\uACF5\uC9C0 \uC804\uCCB4 \uBCF4\uAE30", "View all notices"))), /* @__PURE__ */ React.createElement("button", { onClick: () => dismissNotice(n.id), className: "text-amber-400 hover:text-amber-700 text-sm shrink-0", title: t("\uB2EB\uAE30", "Dismiss") }, "\u2715"))), /* @__PURE__ */ React.createElement("div", { className: "sm:hidden flex justify-end mb-3" }, /* @__PURE__ */ React.createElement(
       "a",
       {
         href: "#test-list",
@@ -3679,7 +3730,7 @@ Visit Maumful and take the same test again to compare your progress.`));
         "\u{1F504} ",
         t(`${daysSince}\uC77C \uD6C4 \uC7AC\uAC80\uC0AC\uB85C \uBCC0\uD654 \uD655\uC778\uD558\uAE30`, `Retest after ${daysSince} days to track your progress`)
       ));
-    })))), /* @__PURE__ */ React.createElement(CreditModal, null), /* @__PURE__ */ React.createElement(AiLimitModal, null), /* @__PURE__ */ React.createElement(SignupVerifyModal, null), /* @__PURE__ */ React.createElement(CookieBanner, null), showChargeView && /* @__PURE__ */ React.createElement(ChargeView, { onClose: async () => {
+    }))), /* @__PURE__ */ React.createElement("div", { className: "mt-8 pt-5 border-t border-gray-100 text-center" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setView("notices"), className: "text-xs text-gray-400 hover:text-green-700 transition" }, "\u{1F4E2} ", t("\uACF5\uC9C0\uC0AC\uD56D", "Notices")))), /* @__PURE__ */ React.createElement(CreditModal, null), /* @__PURE__ */ React.createElement(AiLimitModal, null), /* @__PURE__ */ React.createElement(SignupVerifyModal, null), /* @__PURE__ */ React.createElement(CookieBanner, null), showChargeView && /* @__PURE__ */ React.createElement(ChargeView, { onClose: async () => {
       setShowChargeView(false);
       await refreshCredits();
       if (pendingTestAfterCharge) {
@@ -3737,6 +3788,88 @@ Visit Maumful and take the same test again to compare your progress.`));
       },
       loading ? t("\uD655\uC778 \uC911...", "...") : t("\uB4F1\uB85D", "Redeem")
     )), msg && /* @__PURE__ */ React.createElement("div", { className: `mt-2 text-xs font-semibold ${msg.type === "success" ? "text-green-600" : "text-red-500"}` }, msg.text));
+  }
+  function MasterNoticePanel() {
+    const [list, setList] = useState(null);
+    const [editId, setEditId] = useState(null);
+    const [f, setF] = useState({ title: "", content: "", is_important: false, is_published: true });
+    const [nmsg, setNmsg] = useState("");
+    const load = async () => {
+      try {
+        const d = await adminFetch("/api/admin/notices");
+        if (d.success) setList(d.data || []);
+        else setNmsg(d.error || "\uBD88\uB7EC\uC624\uAE30 \uC2E4\uD328");
+      } catch {
+        setNmsg("\uB124\uD2B8\uC6CC\uD06C \uC624\uB958");
+      }
+    };
+    React.useEffect(() => {
+      load();
+    }, []);
+    const openNew = () => {
+      setEditId(0);
+      setF({ title: "", content: "", is_important: false, is_published: true });
+      setNmsg("");
+    };
+    const openEdit = (n) => {
+      setEditId(n.id);
+      setF({ title: n.title, content: n.content, is_important: !!n.is_important, is_published: !!n.is_published });
+      setNmsg("");
+    };
+    const close = () => {
+      setEditId(null);
+      setNmsg("");
+    };
+    const save = async () => {
+      if (!f.title.trim() || !f.content.trim()) {
+        setNmsg("\uC81C\uBAA9\uACFC \uB0B4\uC6A9\uC744 \uC785\uB825\uD574 \uC8FC\uC138\uC694");
+        return;
+      }
+      const isNew = editId === 0;
+      try {
+        const d = await adminFetch(
+          isNew ? "/api/admin/notices" : `/api/admin/notices/${editId}`,
+          { method: isNew ? "POST" : "PUT", body: JSON.stringify(f) }
+        );
+        if (d.success) {
+          setNmsg(isNew ? "\uACF5\uC9C0 \uB4F1\uB85D \uC644\uB8CC" : "\uACF5\uC9C0 \uC218\uC815 \uC644\uB8CC");
+          close();
+          load();
+        } else setNmsg(d.error || "\uC800\uC7A5 \uC2E4\uD328");
+      } catch {
+        setNmsg("\uB124\uD2B8\uC6CC\uD06C \uC624\uB958");
+      }
+    };
+    const remove = async (n) => {
+      if (!window.confirm(`"${n.title}"
+\uC774 \uACF5\uC9C0\uB97C \uC0AD\uC81C\uD560\uAE4C\uC694? \uB418\uB3CC\uB9B4 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.`)) return;
+      try {
+        const d = await adminFetch(`/api/admin/notices/${n.id}`, { method: "DELETE" });
+        if (d.success) {
+          setNmsg("\uC0AD\uC81C \uC644\uB8CC");
+          load();
+        }
+      } catch {
+      }
+    };
+    const inp = "w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400";
+    return /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl p-5 mb-5 border-2 border-indigo-100" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between mb-3" }, /* @__PURE__ */ React.createElement("div", { className: "text-sm font-bold text-indigo-700" }, "\u{1F4E2} \uACF5\uC9C0\uC0AC\uD56D \uAD00\uB9AC ", list ? `(${list.length}\uAC74)` : ""), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        onClick: () => editId === null ? openNew() : close(),
+        className: "text-xs bg-indigo-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-indigo-700"
+      },
+      editId === null ? "+ \uACF5\uC9C0 \uB4F1\uB85D" : "\u2715 \uB2EB\uAE30"
+    )), nmsg && /* @__PURE__ */ React.createElement("div", { className: `text-xs px-3 py-2 rounded-lg mb-3 ${nmsg.includes("\uC644\uB8CC") ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}` }, nmsg), editId !== null && /* @__PURE__ */ React.createElement("div", { className: "border border-gray-100 rounded-xl p-4 mb-4 bg-gray-50" }, /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mb-1" }, "\uC81C\uBAA9"), /* @__PURE__ */ React.createElement("input", { value: f.title, onChange: (e) => setF((o) => ({ ...o, title: e.target.value })), className: inp, placeholder: "\uC608: \uC2DC\uC2A4\uD15C \uC810\uAC80 \uC548\uB0B4" }), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500 mb-1 mt-3" }, "\uB0B4\uC6A9"), /* @__PURE__ */ React.createElement(
+      "textarea",
+      {
+        value: f.content,
+        onChange: (e) => setF((o) => ({ ...o, content: e.target.value })),
+        rows: 6,
+        className: inp + " resize-y",
+        placeholder: "\uC904\uBC14\uAFC8 \uADF8\uB300\uB85C \uD45C\uC2DC\uB429\uB2C8\uB2E4."
+      }
+    ), /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap gap-4 mt-3" }, /* @__PURE__ */ React.createElement("label", { className: "flex items-center gap-2 text-sm text-gray-600 cursor-pointer" }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: f.is_important, onChange: (e) => setF((o) => ({ ...o, is_important: e.target.checked })) }), "\u2B50 \uC911\uC694 \uACF5\uC9C0 (\uB85C\uADF8\uC778 \uD6C4 \uB300\uC2DC\uBCF4\uB4DC \uC0C1\uB2E8 \uBC30\uB108\uC5D0 \uB178\uCD9C)"), /* @__PURE__ */ React.createElement("label", { className: "flex items-center gap-2 text-sm text-gray-600 cursor-pointer" }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: f.is_published, onChange: (e) => setF((o) => ({ ...o, is_published: e.target.checked })) }), "\uACF5\uAC1C (\uB044\uBA74 \uC784\uC2DC\uC800\uC7A5 \u2014 \uC0AC\uC6A9\uC790\uC5D0\uAC8C \uC548 \uBCF4\uC784)")), /* @__PURE__ */ React.createElement("button", { onClick: save, className: "mt-3 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-indigo-700" }, editId === 0 ? "\uB4F1\uB85D\uD558\uAE30" : "\uC218\uC815 \uC800\uC7A5")), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col gap-2" }, list === null && /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 p-4 text-center" }, "\uB85C\uB529 \uC911..."), list && list.length === 0 && /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 p-4 text-center bg-gray-50 rounded-xl" }, "\uB4F1\uB85D\uB41C \uACF5\uC9C0\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4"), (list || []).map((n) => /* @__PURE__ */ React.createElement("div", { key: n.id, className: "border border-gray-100 rounded-xl p-3 flex items-start justify-between gap-3" }, /* @__PURE__ */ React.createElement("div", { className: "min-w-0" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-1.5 flex-wrap" }, !!n.is_important && /* @__PURE__ */ React.createElement("span", { className: "text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold" }, "\uC911\uC694"), !n.is_published && /* @__PURE__ */ React.createElement("span", { className: "text-[10px] bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded font-bold" }, "\uBE44\uACF5\uAC1C"), /* @__PURE__ */ React.createElement("span", { className: "text-sm font-semibold text-gray-800 truncate" }, n.title)), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400 mt-0.5" }, (n.created_at || "").slice(0, 16).replace("T", " "))), /* @__PURE__ */ React.createElement("div", { className: "flex gap-1 shrink-0" }, /* @__PURE__ */ React.createElement("button", { onClick: () => openEdit(n), className: "text-xs px-2 py-1 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200" }, "\uC218\uC815"), /* @__PURE__ */ React.createElement("button", { onClick: () => remove(n), className: "text-xs px-2 py-1 rounded-lg bg-red-50 text-red-500 hover:bg-red-100" }, "\uC0AD\uC81C"))))));
   }
   function MasterPartnerPanel() {
     var _a2, _b2, _c2, _d2, _e2, _f2;
@@ -8644,7 +8777,7 @@ Tested on Maumful! https://maumful.com`), testLabel: t("LOST \uD589\uB3D9 \uC6B4
         adminLoading ? "\uD655\uC778 \uC911..." : "\uB85C\uADF8\uC778"
       ), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("memberDashboard"), className: "w-full text-sm text-gray-400 hover:text-gray-600 mt-3 text-center" }, "\u2190 \uB3CC\uC544\uAC00\uAE30")));
     }
-    return /* @__PURE__ */ React.createElement("div", { className: "min-h-screen bg-gray-50" }, /* @__PURE__ */ React.createElement("header", { className: "bg-white border-b border-gray-200 sticky top-0 z-10" }, /* @__PURE__ */ React.createElement("div", { className: "max-w-5xl mx-auto px-4 py-3 flex items-center justify-between" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3" }, /* @__PURE__ */ React.createElement("span", { className: "text-2xl" }, "\u{1F6E0}\uFE0F"), /* @__PURE__ */ React.createElement("span", { className: "font-bold text-gray-800" }, "\uB9C8\uC74C\uD480 \uAD00\uB9AC\uC790")), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, adminLoading && /* @__PURE__ */ React.createElement("div", { className: "w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" }), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("memberDashboard"), className: "text-sm text-gray-500 hover:text-gray-700 px-3 py-1.5 bg-gray-100 rounded-lg" }, "\u2190 \uB300\uC2DC\uBCF4\uB4DC")))), /* @__PURE__ */ React.createElement("main", { className: "max-w-5xl mx-auto px-4 py-6" }, adminMsg.text && /* @__PURE__ */ React.createElement("div", { className: `mb-4 px-4 py-3 rounded-xl text-sm font-medium ${adminMsg.type === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}` }, adminMsg.text, /* @__PURE__ */ React.createElement("button", { onClick: () => setAdminMsg({ type: "", text: "" }), className: "ml-3 opacity-60 hover:opacity-100" }, "\u2715")), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mb-6 flex-wrap" }, [["overview", "\u{1F4CA} \uAC1C\uC694"], ["users", "\u{1F465} \uC0AC\uC6A9\uC790"], ["payments", "\u{1F4B3} \uACB0\uC81C"], ["tests", "\u{1F4CB} \uAC80\uC0AC"], ["coupons", "\u{1F39F}\uFE0F \uCFE0\uD3F0"], ["partners", "\u{1F91D} \uD30C\uD2B8\uB108"], ["loop", "\u{1F501} \uB8E8\uD504"], ["feedback", "\u{1F642} \uD574\uC11D \uD53C\uB4DC\uBC31"]].map(([tab, label]) => /* @__PURE__ */ React.createElement(
+    return /* @__PURE__ */ React.createElement("div", { className: "min-h-screen bg-gray-50" }, /* @__PURE__ */ React.createElement("header", { className: "bg-white border-b border-gray-200 sticky top-0 z-10" }, /* @__PURE__ */ React.createElement("div", { className: "max-w-5xl mx-auto px-4 py-3 flex items-center justify-between" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3" }, /* @__PURE__ */ React.createElement("span", { className: "text-2xl" }, "\u{1F6E0}\uFE0F"), /* @__PURE__ */ React.createElement("span", { className: "font-bold text-gray-800" }, "\uB9C8\uC74C\uD480 \uAD00\uB9AC\uC790")), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, adminLoading && /* @__PURE__ */ React.createElement("div", { className: "w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" }), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("memberDashboard"), className: "text-sm text-gray-500 hover:text-gray-700 px-3 py-1.5 bg-gray-100 rounded-lg" }, "\u2190 \uB300\uC2DC\uBCF4\uB4DC")))), /* @__PURE__ */ React.createElement("main", { className: "max-w-5xl mx-auto px-4 py-6" }, adminMsg.text && /* @__PURE__ */ React.createElement("div", { className: `mb-4 px-4 py-3 rounded-xl text-sm font-medium ${adminMsg.type === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}` }, adminMsg.text, /* @__PURE__ */ React.createElement("button", { onClick: () => setAdminMsg({ type: "", text: "" }), className: "ml-3 opacity-60 hover:opacity-100" }, "\u2715")), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 mb-6 flex-wrap" }, [["overview", "\u{1F4CA} \uAC1C\uC694"], ["users", "\u{1F465} \uC0AC\uC6A9\uC790"], ["payments", "\u{1F4B3} \uACB0\uC81C"], ["tests", "\u{1F4CB} \uAC80\uC0AC"], ["coupons", "\u{1F39F}\uFE0F \uCFE0\uD3F0"], ["partners", "\u{1F91D} \uD30C\uD2B8\uB108"], ["notices", "\u{1F4E2} \uACF5\uC9C0"], ["loop", "\u{1F501} \uB8E8\uD504"], ["feedback", "\u{1F642} \uD574\uC11D \uD53C\uB4DC\uBC31"]].map(([tab, label]) => /* @__PURE__ */ React.createElement(
       "button",
       {
         key: tab,
@@ -8659,7 +8792,7 @@ Tested on Maumful! https://maumful.com`), testLabel: t("LOST \uD589\uB3D9 \uC6B4
         className: S.tabBtn(adminTab === tab)
       },
       label
-    ))), adminTab === "coupons" && /* @__PURE__ */ React.createElement(MasterCouponPanel, null), adminTab === "partners" && /* @__PURE__ */ React.createElement(MasterPartnerPanel, null), adminTab === "loop" && /* @__PURE__ */ React.createElement("div", { className: "space-y-6" }, !adminLoop && /* @__PURE__ */ React.createElement("div", { className: "text-sm text-gray-400 py-8 text-center" }, "\uBD88\uB7EC\uC624\uB294 \uC911\u2026"), adminLoop && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-500" }, "\uCD5C\uADFC ", adminLoop.days, "\uC77C \xB7 \uAC01 \uB2E8\uACC4\uB294 ", /* @__PURE__ */ React.createElement("b", null, "\uC0AC\uB78C \uC218(\uC911\uBCF5 \uC81C\uAC70)"), "\uC785\uB2C8\uB2E4."), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-gray-100 p-5" }, /* @__PURE__ */ React.createElement("h3", { className: "text-sm font-bold text-emerald-700 mb-4" }, "\u2462 \uAC80\uC0AC \u2192 \uAC8C\uC784 (\uC815\uBC29\uD5A5)"), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-4 gap-3" }, [
+    ))), adminTab === "coupons" && /* @__PURE__ */ React.createElement(MasterCouponPanel, null), adminTab === "partners" && /* @__PURE__ */ React.createElement(MasterPartnerPanel, null), adminTab === "notices" && /* @__PURE__ */ React.createElement(MasterNoticePanel, null), adminTab === "loop" && /* @__PURE__ */ React.createElement("div", { className: "space-y-6" }, !adminLoop && /* @__PURE__ */ React.createElement("div", { className: "text-sm text-gray-400 py-8 text-center" }, "\uBD88\uB7EC\uC624\uB294 \uC911\u2026"), adminLoop && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-500" }, "\uCD5C\uADFC ", adminLoop.days, "\uC77C \xB7 \uAC01 \uB2E8\uACC4\uB294 ", /* @__PURE__ */ React.createElement("b", null, "\uC0AC\uB78C \uC218(\uC911\uBCF5 \uC81C\uAC70)"), "\uC785\uB2C8\uB2E4."), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl border border-gray-100 p-5" }, /* @__PURE__ */ React.createElement("h3", { className: "text-sm font-bold text-emerald-700 mb-4" }, "\u2462 \uAC80\uC0AC \u2192 \uAC8C\uC784 (\uC815\uBC29\uD5A5)"), /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-4 gap-3" }, [
       ["\uAC80\uC0AC \uC644\uB8CC", adminLoop.forward.tested],
       ["\uB9AC\uD3EC\uD2B8 \uC5F4\uB78C", adminLoop.forward.reportView],
       ["\uAC8C\uC784 \uCC98\uBC29 \uD074\uB9AD", adminLoop.forward.rxClick],

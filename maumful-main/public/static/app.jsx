@@ -396,6 +396,18 @@ function PsychologicalTestSystem() {
   });
   const [showAiLimitModal, setShowAiLimitModal] = useState(false);
   const [signupVerifyEmail, setSignupVerifyEmail] = useState(null);  // 가입 후 이메일 인증 안내 모달(null=숨김)
+  // 공지사항 — 목록 페이지 + 중요 공지 상단 배너(닫으면 그 공지는 다시 안 뜸)
+  const [notices, setNotices] = useState(null);  // null=미로드
+  const [noticeDismissed, setNoticeDismissed] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('notice_dismissed') || '[]'); } catch { return []; }
+  });
+  const dismissNotice = (id) => {
+    setNoticeDismissed(prev => {
+      const next = [...new Set([...prev, id])].slice(-50);  // 오래된 것부터 정리
+      try { localStorage.setItem('notice_dismissed', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
 
   // ── 상담 모드 (심리상담 / 기독교 상담) ───────────────────
   // localStorage에 저장 → 로그인 유지 시 기억
@@ -1182,6 +1194,18 @@ function PsychologicalTestSystem() {
   const forgotPassword = (...args) => {};
 
   // ── 파트너 모드: 비로그인 직접 검사 시작 (chargeForTest 불필요) ──
+  // 공지 로드 — 대시보드·공지목록에 들어올 때 1회만. 실패해도 조용히 무시(기존 화면 무영향).
+  useEffect(() => {
+    if (notices !== null) return;
+    if (view !== 'memberDashboard' && view !== 'notices') return;
+    let alive = true;
+    fetch('/api/notices')
+      .then(r => r.json())
+      .then(d => { if (alive && d.success) setNotices(d.data || []); })
+      .catch(() => { if (alive) setNotices([]); });
+    return () => { alive = false; };
+  }, [view, notices]);
+
   useEffect(() => {
     if (!view.startsWith('partnerTest:')) return;
     const key = view.split(':')[1];
@@ -2948,6 +2972,51 @@ function PsychologicalTestSystem() {
     </div>
   );
 
+  // 공지사항 목록 — 약관이 약속한 고지 기록. 비로그인도 볼 수 있음.
+  if (view === 'notices') return (
+    <>
+      <GlobalNav
+        setView={setView}
+        isLoggedIn={isLoggedIn}
+        currentUser={currentUser}
+        credits={credits}
+        activeView="notices"
+        lang={lang}
+        onLangToggle={updateLang}
+      />
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-green-50">
+        <div className="max-w-2xl mx-auto px-4 py-8">
+          <button onClick={() => setView(isLoggedIn ? 'memberDashboard' : 'landing')}
+            className="text-gray-400 hover:text-green-700 text-sm mb-5 flex items-center gap-1">← {t('뒤로','Back')}</button>
+          <div className="flex items-center gap-2 mb-6">
+            <span className="text-3xl">📢</span>
+            <h1 className="text-2xl font-bold text-gray-800">{t('공지사항','Notices')}</h1>
+          </div>
+
+          {notices === null && <div className="text-sm text-gray-400 text-center py-12">{t('불러오는 중...','Loading...')}</div>}
+          {notices && notices.length === 0 && (
+            <div className="bg-white rounded-2xl p-10 text-center border border-gray-100">
+              <div className="text-4xl mb-3">🌿</div>
+              <div className="text-sm text-gray-400">{t('아직 등록된 공지가 없습니다.','No notices yet.')}</div>
+            </div>
+          )}
+          <div className="flex flex-col gap-3">
+            {(notices || []).map(n => (
+              <div key={n.id} className={`bg-white rounded-2xl p-5 border ${n.is_important ? 'border-amber-200' : 'border-gray-100'}`}>
+                <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                  {!!n.is_important && <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-bold">{t('중요','Important')}</span>}
+                  <h2 className="text-base font-bold text-gray-800">{n.title}</h2>
+                </div>
+                <div className="text-xs text-gray-400 mb-3">{(n.created_at || '').slice(0, 10)}</div>
+                <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{n.content}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+
   if (view === 'landing') return (
     <>
       <GlobalNav
@@ -3125,6 +3194,8 @@ function PsychologicalTestSystem() {
           {t("인증 메일을 받지 못하셨나요? 재발송","Didn't receive verification email? Resend")}
         </button>
         <div className="flex justify-center gap-4 mt-3">
+          <button onClick={() => setView('notices')} className="text-xs text-gray-300 hover:text-gray-500">{t("공지사항","Notices")}</button>
+          <span className="text-gray-200 text-xs">|</span>
           <button onClick={() => setView('privacy')} className="text-xs text-gray-300 hover:text-gray-500">{t("개인정보 처리방침","Privacy Policy")}</button>
           <span className="text-gray-200 text-xs">|</span>
           <button onClick={() => setView('terms')}   className="text-xs text-gray-300 hover:text-gray-500">{t("이용약관","Terms of Service")}</button>
@@ -4010,6 +4081,20 @@ function PsychologicalTestSystem() {
         </header>
 
         <main className="max-w-2xl mx-auto px-4 py-6">
+          {/* 중요 공지 배너 — 닫으면 그 공지는 다시 안 뜸. 공지가 없으면 아무것도 렌더하지 않음 */}
+          {(notices || []).filter(n => n.is_important && !noticeDismissed.includes(n.id)).slice(0, 1).map(n => (
+            <div key={n.id} className="mb-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-3">
+              <span className="text-lg leading-none mt-0.5">📢</span>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-bold text-amber-900">{n.title}</div>
+                <div className="text-xs text-amber-800 mt-1 whitespace-pre-wrap leading-relaxed line-clamp-3">{n.content}</div>
+                <button onClick={() => setView('notices')} className="text-xs font-semibold text-amber-700 underline mt-1.5 hover:text-amber-900">
+                  {t('공지 전체 보기','View all notices')}
+                </button>
+              </div>
+              <button onClick={() => dismissNotice(n.id)} className="text-amber-400 hover:text-amber-700 text-sm shrink-0" title={t('닫기','Dismiss')}>✕</button>
+            </div>
+          ))}
           {/* 모바일: 검사 목록 빠른 이동 */}
           <div className="sm:hidden flex justify-end mb-3">
             <a href="#test-list"
@@ -4415,6 +4500,13 @@ function PsychologicalTestSystem() {
               </div>
             </div>
           )}
+
+          {/* 공지사항 진입 (조용한 링크 — 헤더가 붐벼서 하단에 둠) */}
+          <div className="mt-8 pt-5 border-t border-gray-100 text-center">
+            <button onClick={() => setView('notices')} className="text-xs text-gray-400 hover:text-green-700 transition">
+              📢 {t('공지사항','Notices')}
+            </button>
+          </div>
         </main>
 
         <CreditModal />
@@ -4484,6 +4576,97 @@ function PsychologicalTestSystem() {
 
   // 🎟️ 마스터 전용 쿠폰 발행·관리 패널 (마이페이지) — 신규
   // 🤝 제휴 파트너 관리 — 코드 발급/수익쉐어율/귀속기간 + 정산 원장 조회·CSV 다운로드
+  // 공지사항 관리 — 어드민에서 등록·수정·삭제. 사용자 노출은 목록 페이지 + 중요 공지 배너.
+  function MasterNoticePanel() {
+    const [list, setList] = useState(null);
+    const [editId, setEditId] = useState(null);       // null=신규 작성 폼 닫힘, 0=신규, N=수정
+    const [f, setF] = useState({ title:'', content:'', is_important:false, is_published:true });
+    const [nmsg, setNmsg] = useState('');
+
+    const load = async () => {
+      try { const d = await adminFetch('/api/admin/notices'); if (d.success) setList(d.data||[]); else setNmsg(d.error||'불러오기 실패'); }
+      catch { setNmsg('네트워크 오류'); }
+    };
+    React.useEffect(() => { load(); }, []);
+
+    const openNew  = () => { setEditId(0); setF({ title:'', content:'', is_important:false, is_published:true }); setNmsg(''); };
+    const openEdit = (n) => { setEditId(n.id); setF({ title:n.title, content:n.content, is_important:!!n.is_important, is_published:!!n.is_published }); setNmsg(''); };
+    const close    = () => { setEditId(null); setNmsg(''); };
+
+    const save = async () => {
+      if (!f.title.trim() || !f.content.trim()) { setNmsg('제목과 내용을 입력해 주세요'); return; }
+      const isNew = editId === 0;
+      try {
+        const d = await adminFetch(isNew ? '/api/admin/notices' : `/api/admin/notices/${editId}`,
+          { method: isNew ? 'POST' : 'PUT', body: JSON.stringify(f) });
+        if (d.success) { setNmsg(isNew ? '공지 등록 완료' : '공지 수정 완료'); close(); load(); }
+        else setNmsg(d.error || '저장 실패');
+      } catch { setNmsg('네트워크 오류'); }
+    };
+    const remove = async (n) => {
+      if (!window.confirm(`"${n.title}"\n이 공지를 삭제할까요? 되돌릴 수 없습니다.`)) return;
+      try { const d = await adminFetch(`/api/admin/notices/${n.id}`, { method:'DELETE' }); if (d.success) { setNmsg('삭제 완료'); load(); } } catch {}
+    };
+
+    const inp = "w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400";
+    return (
+      <div className="bg-white rounded-2xl p-5 mb-5 border-2 border-indigo-100">
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-sm font-bold text-indigo-700">📢 공지사항 관리 {list ? `(${list.length}건)` : ''}</div>
+          <button onClick={() => editId === null ? openNew() : close()}
+            className="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-indigo-700">
+            {editId === null ? '+ 공지 등록' : '✕ 닫기'}
+          </button>
+        </div>
+        {nmsg && <div className={`text-xs px-3 py-2 rounded-lg mb-3 ${nmsg.includes('완료') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>{nmsg}</div>}
+
+        {editId !== null && (
+          <div className="border border-gray-100 rounded-xl p-4 mb-4 bg-gray-50">
+            <div className="text-xs text-gray-500 mb-1">제목</div>
+            <input value={f.title} onChange={e => setF(o => ({ ...o, title:e.target.value }))} className={inp} placeholder="예: 시스템 점검 안내" />
+            <div className="text-xs text-gray-500 mb-1 mt-3">내용</div>
+            <textarea value={f.content} onChange={e => setF(o => ({ ...o, content:e.target.value }))} rows={6}
+              className={inp + ' resize-y'} placeholder="줄바꿈 그대로 표시됩니다." />
+            <div className="flex flex-wrap gap-4 mt-3">
+              <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                <input type="checkbox" checked={f.is_important} onChange={e => setF(o => ({ ...o, is_important:e.target.checked }))} />
+                ⭐ 중요 공지 (로그인 후 대시보드 상단 배너에 노출)
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                <input type="checkbox" checked={f.is_published} onChange={e => setF(o => ({ ...o, is_published:e.target.checked }))} />
+                공개 (끄면 임시저장 — 사용자에게 안 보임)
+              </label>
+            </div>
+            <button onClick={save} className="mt-3 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-indigo-700">
+              {editId === 0 ? '등록하기' : '수정 저장'}
+            </button>
+          </div>
+        )}
+
+        <div className="flex flex-col gap-2">
+          {list === null && <div className="text-xs text-gray-400 p-4 text-center">로딩 중...</div>}
+          {list && list.length === 0 && <div className="text-xs text-gray-400 p-4 text-center bg-gray-50 rounded-xl">등록된 공지가 없습니다</div>}
+          {(list||[]).map(n => (
+            <div key={n.id} className="border border-gray-100 rounded-xl p-3 flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {!!n.is_important && <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">중요</span>}
+                  {!n.is_published && <span className="text-[10px] bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded font-bold">비공개</span>}
+                  <span className="text-sm font-semibold text-gray-800 truncate">{n.title}</span>
+                </div>
+                <div className="text-xs text-gray-400 mt-0.5">{(n.created_at||'').slice(0,16).replace('T',' ')}</div>
+              </div>
+              <div className="flex gap-1 shrink-0">
+                <button onClick={() => openEdit(n)} className="text-xs px-2 py-1 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200">수정</button>
+                <button onClick={() => remove(n)} className="text-xs px-2 py-1 rounded-lg bg-red-50 text-red-500 hover:bg-red-100">삭제</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   function MasterPartnerPanel() {
     const [partners, setPartners] = useState(null);
     const [sel, setSel] = useState(null);
@@ -11369,7 +11552,7 @@ function PsychologicalTestSystem() {
             </div>
           )}
           <div className="flex gap-2 mb-6 flex-wrap">
-            {[['overview','📊 개요'],['users','👥 사용자'],['payments','💳 결제'],['tests','📋 검사'],['coupons','🎟️ 쿠폰'],['partners','🤝 파트너'],['loop','🔁 루프'],['feedback','🙂 해석 피드백']].map(([tab, label]) => (
+            {[['overview','📊 개요'],['users','👥 사용자'],['payments','💳 결제'],['tests','📋 검사'],['coupons','🎟️ 쿠폰'],['partners','🤝 파트너'],['notices','📢 공지'],['loop','🔁 루프'],['feedback','🙂 해석 피드백']].map(([tab, label]) => (
               <button key={tab} onClick={() => { setAdminTab(tab); if(tab==='overview') loadAdminOverview(); else if(tab==='users') loadAdminUsers(); else if(tab==='payments') loadAdminPayments(); else if(tab==='loop') loadAdminLoop(); else if(tab==='feedback') loadAdminFb(); }}
                 className={S.tabBtn(adminTab===tab)}>{label}</button>
             ))}
@@ -11377,6 +11560,7 @@ function PsychologicalTestSystem() {
 
           {adminTab === 'coupons' && <MasterCouponPanel />}
           {adminTab === 'partners' && <MasterPartnerPanel />}
+          {adminTab === 'notices' && <MasterNoticePanel />}
 
           {adminTab === 'loop' && (
             <div className="space-y-6">

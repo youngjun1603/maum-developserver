@@ -3688,6 +3688,75 @@ function adminGuard(c: Parameters<typeof requireAdmin>[0]): string | null {
   return requireAdmin(c)
 }
 
+// ── 공지사항 ─────────────────────────────────────────────
+// 공개 조회(비로그인 허용). 발행된 것만 최신순. 테이블이 없어도 빈 목록으로 응답해 기존 화면에 영향 없음.
+app.get('/api/notices', async (c) => {
+  const { DB } = c.env
+  const limit = Math.min(parseInt(c.req.query('limit') || '50', 10) || 50, 100)
+  try {
+    const rows = await DB.prepare(
+      'SELECT id, title, content, is_important, created_at FROM notices WHERE is_published=1 ORDER BY is_important DESC, created_at DESC LIMIT ?'
+    ).bind(limit).all()
+    return c.json({ success: true, data: rows.results ?? [] })
+  } catch {
+    return c.json({ success: true, data: [] })
+  }
+})
+
+// 어드민 CRUD
+app.get('/api/admin/notices', async (c) => {
+  const denied = adminGuard(c); if (denied) return c.json({ success: false, error: denied }, 403)
+  const { DB } = c.env
+  try {
+    const rows = await DB.prepare(
+      'SELECT id, title, content, is_important, is_published, created_at, updated_at FROM notices ORDER BY created_at DESC LIMIT 200'
+    ).all()
+    return c.json({ success: true, data: rows.results ?? [] })
+  } catch {
+    return c.json({ success: false, error: '공지 테이블이 없습니다. 마이그레이션 0026을 적용해 주세요.' }, 500)
+  }
+})
+
+app.post('/api/admin/notices', async (c) => {
+  const denied = adminGuard(c); if (denied) return c.json({ success: false, error: denied }, 403)
+  const { DB } = c.env
+  let b: { title?: string; content?: string; is_important?: boolean; is_published?: boolean }
+  try { b = await c.req.json() } catch { return c.json({ success: false, error: '잘못된 요청' }, 400) }
+  const title = (b.title || '').trim()
+  const content = (b.content || '').trim()
+  if (!title || !content) return c.json({ success: false, error: '제목과 내용을 입력해 주세요.' }, 400)
+  if (title.length > 200) return c.json({ success: false, error: '제목은 200자 이내로 입력해 주세요.' }, 400)
+  const r = await DB.prepare(
+    'INSERT INTO notices (title, content, is_important, is_published) VALUES (?, ?, ?, ?)'
+  ).bind(title, content, b.is_important ? 1 : 0, b.is_published === false ? 0 : 1).run()
+  return c.json({ success: true, id: r.meta?.last_row_id })
+})
+
+app.put('/api/admin/notices/:id', async (c) => {
+  const denied = adminGuard(c); if (denied) return c.json({ success: false, error: denied }, 403)
+  const { DB } = c.env
+  const id = parseInt(c.req.param('id'), 10)
+  if (!id) return c.json({ success: false, error: '잘못된 id' }, 400)
+  let b: { title?: string; content?: string; is_important?: boolean; is_published?: boolean }
+  try { b = await c.req.json() } catch { return c.json({ success: false, error: '잘못된 요청' }, 400) }
+  const title = (b.title || '').trim()
+  const content = (b.content || '').trim()
+  if (!title || !content) return c.json({ success: false, error: '제목과 내용을 입력해 주세요.' }, 400)
+  await DB.prepare(
+    'UPDATE notices SET title=?, content=?, is_important=?, is_published=?, updated_at=CURRENT_TIMESTAMP WHERE id=?'
+  ).bind(title, content, b.is_important ? 1 : 0, b.is_published === false ? 0 : 1, id).run()
+  return c.json({ success: true })
+})
+
+app.delete('/api/admin/notices/:id', async (c) => {
+  const denied = adminGuard(c); if (denied) return c.json({ success: false, error: denied }, 403)
+  const { DB } = c.env
+  const id = parseInt(c.req.param('id'), 10)
+  if (!id) return c.json({ success: false, error: '잘못된 id' }, 400)
+  await DB.prepare('DELETE FROM notices WHERE id=?').bind(id).run()
+  return c.json({ success: true })
+})
+
 // ── 클라이언트 에러 로그 수집 ────────────────────────────
 app.post('/api/debug/client-error', async (c) => {
   const { KV } = c.env
