@@ -249,17 +249,18 @@ async function spendCredits(
 async function gainCredits(
   db: D1Database, userId: number, amount: number, reason: string, refId?: string
 ): Promise<number> {
-  await db.prepare(
-    'UPDATE users SET credits = credits + ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-  ).bind(amount, userId).run()
+  // ⚠️ 크레딧 증감과 원장 기록을 원자적으로(D1 batch = 단일 트랜잭션). 예전엔 UPDATE→SELECT→INSERT
+  //    3문장이 비원자적이라, 결제 지급 중 원장 INSERT만 실패하면 "크레딧은 줬는데 throw"가 되어
+  //    호출부에서 롤백 시 이중지급 위험이 있었다. 이제 둘 다 성공 or 둘 다 실패.
+  //    balance_after는 같은 트랜잭션의 갱신값을 서브쿼리로 읽어 정확히 기록(레이스 제거).
+  await db.batch([
+    db.prepare('UPDATE users SET credits = credits + ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').bind(amount, userId),
+    db.prepare('INSERT INTO credit_transactions (user_id,type,amount,reason,balance_after,ref_id) VALUES (?,?,?,?,(SELECT credits FROM users WHERE id=?),?)')
+      .bind(userId, 'gain', amount, reason, userId, refId ?? null),
+  ])
 
   const updated = await db.prepare('SELECT credits FROM users WHERE id = ?').bind(userId).first<{ credits: number }>()
-  const newBalance = updated?.credits ?? 0
-
-  await db.prepare('INSERT INTO credit_transactions (user_id,type,amount,reason,balance_after,ref_id) VALUES (?,?,?,?,?,?)')
-    .bind(userId, 'gain', amount, reason, newBalance, refId ?? null).run()
-
-  return newBalance
+  return updated?.credits ?? 0
 }
 
 // API 키 복호화 (기존 로직 유지)
@@ -3090,12 +3091,21 @@ app.post('/api/webhook/toss', async (c) => {
   if (upd.meta.changes === 0) return c.json({ ok: true, msg: 'already_processed' })
 
   // 외부 서비스 상품(수달·곁)이면 크레딧 대신 서명 grant 전달, 아니면 기존 크레딧 지급.
-  if (PACKAGES[charge.package_key]?.service) {
-    await deliverGrant(c.env, { chargeId, user_id: charge.user_id, package_key: charge.package_key })
-    console.log('[Toss Webhook] 외부 grant 전달 —', charge.package_key, 'chargeId:', chargeId)
-  } else {
-    await gainCredits(DB, charge.user_id, charge.credits, 'charge', pgTid)
-    console.log('[Toss Webhook] 크레딧 지급 완료 — userId:', charge.user_id, 'credits:', charge.credits, 'chargeId:', chargeId)
+  try {
+    if (PACKAGES[charge.package_key]?.service) {
+      await deliverGrant(c.env, { chargeId, user_id: charge.user_id, package_key: charge.package_key })
+      console.log('[Toss Webhook] 외부 grant 전달 —', charge.package_key, 'chargeId:', chargeId)
+    } else {
+      await gainCredits(DB, charge.user_id, charge.credits, 'charge', pgTid)
+      console.log('[Toss Webhook] 크레딧 지급 완료 — userId:', charge.user_id, 'credits:', charge.credits, 'chargeId:', chargeId)
+    }
+  } catch (grantErr) {
+    // ⚠️ 지급 실패 — 내부 크레딧은 pending으로 롤백하고 500 반환 → 토스가 재시도해 치유. (gainCredits 원자적이라 이중지급 없음)
+    console.error('[Toss Webhook] 지급 실패 — chargeId:', chargeId, grantErr)
+    if (!PACKAGES[charge.package_key]?.service) {
+      await DB.prepare("UPDATE credit_charges SET status='pending', pg_tid=NULL WHERE id=? AND status='completed'").bind(chargeId).run()
+    }
+    return c.json({ error: 'grant failed, will retry' }, 500)
   }
   completeReferral(DB, charge.user_id).catch(err => console.error('[Referral] 완료 실패 userId=' + charge.user_id, err))
   accruePartnerCommission(DB, chargeId).catch(err => console.error('[PartnerShare] 적립 실패 chargeId=' + chargeId, err))
@@ -3209,14 +3219,14 @@ app.post('/api/payment/toss/checkout', async (c) => {
   const pkg = PACKAGES[packageKey]
   if (!pkg) return c.json({ success: false, error: '잘못된 패키지' }, 400)
 
-  const user = await DB.prepare('SELECT email, nickname FROM users WHERE id=?')
-    .bind(userId).first<{ email: string; nickname: string | null }>()
+  const user = await DB.prepare('SELECT email, nickname, partner_code FROM users WHERE id=?')
+    .bind(userId).first<{ email: string; nickname: string | null; partner_code: string | null }>()
   if (!user) return c.json({ success: false, error: '사용자 없음' }, 404)
 
-  // pending 레코드 생성
+  // pending 레코드 생성 — partner_code를 함께 저장해야 결제 완료 시 파트너 수익쉐어가 적립된다(누락 시 영영 안 쌓임).
   const r = await DB.prepare(
-    'INSERT INTO credit_charges (user_id,package_key,credits,amount,currency,pg) VALUES (?,?,?,?,?,?)'
-  ).bind(userId, packageKey, pkg.credits, pkg.amount, 'KRW', 'toss').run()
+    'INSERT INTO credit_charges (user_id,package_key,credits,amount,currency,pg,partner_code) VALUES (?,?,?,?,?,?,?)'
+  ).bind(userId, packageKey, pkg.credits, pkg.amount, 'KRW', 'toss', user.partner_code ?? null).run()
   const chargeId = r.meta.last_row_id as number
   const orderId  = `charge_${chargeId}_${Date.now()}`
   const serviceUrl = c.env.SERVICE_URL || 'http://localhost:3000'
@@ -3245,11 +3255,15 @@ app.post('/api/payment/toss/checkout', async (c) => {
 // 토스 결제 성공 콜백 (브라우저 redirect)
 app.get('/api/payment/toss/success', async (c) => {
   const { DB } = c.env
-  const { paymentKey, orderId, amount, chargeId } = c.req.query() as Record<string, string>
-  if (!paymentKey || !orderId || !chargeId) return c.redirect('/?payment=fail&msg=파라미터오류')
+  const { paymentKey, orderId, amount } = c.req.query() as Record<string, string>
+  if (!paymentKey || !orderId) return c.redirect('/?payment=fail&msg=파라미터오류')
   const amountNum = parseInt(amount)
-  const chargeIdNum = parseInt(chargeId)
-  if (isNaN(amountNum) || amountNum <= 0 || isNaN(chargeIdNum)) return c.redirect('/?payment=fail&msg=파라미터오류')
+  if (isNaN(amountNum) || amountNum <= 0) return c.redirect('/?payment=fail&msg=파라미터오류')
+  // ⚠️ chargeId는 URL 파라미터(사용자가 리다이렉트에서 바꿔치기 가능)를 믿지 않고 orderId에서 파싱한다.
+  //    orderId는 아래 confirm에서 토스가 실제 결제와 대조하므로 위조 불가. (웹훅과 동일 원칙)
+  const cm = /^charge_(\d+)_/.exec(orderId)
+  if (!cm) return c.redirect('/?payment=fail&msg=주문번호오류')
+  const chargeIdNum = parseInt(cm[1])
 
   const tossKey = c.env.TOSS_SECRET_KEY
   if (!tossKey) return c.redirect('/?payment=fail&msg=서버오류')
@@ -3267,19 +3281,34 @@ app.get('/api/payment/toss/success', async (c) => {
     })
 
     if (!confirmRes.ok) {
-      const err = await confirmRes.json() as { message: string }
-      console.error('[Toss] 결제 승인 실패:', err)
-      return c.redirect(`/?payment=fail&msg=${encodeURIComponent(err.message || '승인실패')}`)
+      // 토스 에러 응답 형태가 일정치 않아(때때로 message가 객체) 문자열만 안전하게 뽑는다.
+      // 예전엔 err.message가 객체면 사용자에게 "[object Object]"가 노출됐다.
+      let failMsg = '결제 승인에 실패했어요. 다시 시도해 주세요.'
+      try {
+        const err = await confirmRes.json() as { message?: unknown; code?: unknown }
+        if (typeof err?.message === 'string' && err.message.trim()) failMsg = err.message
+        else if (typeof err?.code === 'string' && err.code.trim()) failMsg = err.code
+      } catch { /* 본문 파싱 실패 시 기본 메시지 */ }
+      console.error('[Toss] 결제 승인 실패 status:', confirmRes.status, 'msg:', failMsg)
+      await DB.prepare("UPDATE credit_charges SET status='failed' WHERE id=? AND status='pending'").bind(chargeIdNum).run()
+      return c.redirect(`/?payment=fail&msg=${encodeURIComponent(failMsg)}`)
     }
 
     // 중복 처리 방지
     const existing = await DB.prepare('SELECT id FROM credit_charges WHERE pg_tid=?').bind(paymentKey).first()
     if (!existing) {
       const charge = await DB.prepare(
-        'SELECT user_id, credits, package_key FROM credit_charges WHERE id=? AND status=?'
-      ).bind(chargeIdNum, 'pending').first<{ user_id: number; credits: number; package_key: string }>()
+        'SELECT user_id, credits, amount, package_key FROM credit_charges WHERE id=? AND status=? AND pg=?'
+      ).bind(chargeIdNum, 'pending', 'toss').first<{ user_id: number; credits: number; amount: number; package_key: string }>()
 
       if (charge) {
+        // ⚠️ 금액 위조 차단 — 토스가 승인한 실제 결제금액과 주문 시 확정한 패키지 금액이 같아야 한다.
+        //    (chargeId를 orderId에서 파싱하므로 사실상 항상 일치하지만, 이중 방어로 명시 확인.)
+        if (Number(amountNum) !== Number(charge.amount)) {
+          console.error('[Toss] 금액 불일치 — 지급 거부. 결제:', amountNum, 'DB:', charge.amount, 'chargeId:', chargeIdNum)
+          return c.redirect('/?payment=fail&msg=금액불일치')
+        }
+
         // ⚠️ 원자적 선점 — pending일 때만 완료 처리하고, 바뀐 행이 있을 때만 지급한다.
         //    예전엔 SELECT(pending) → UPDATE(id만)이라 웹훅과 동시에 오면 둘 다 지급될 수 있었다(중복 지급).
         const upd = await DB.prepare(
@@ -3291,22 +3320,37 @@ app.get('/api/payment/toss/success', async (c) => {
           return c.redirect('/?payment=success')
         }
 
-        if (PACKAGES[charge.package_key]?.service) {
-          await deliverGrant(c.env, { chargeId: chargeIdNum, user_id: charge.user_id, package_key: charge.package_key })
-          console.log('[Toss] 외부 grant 전달:', charge.package_key)
-        } else {
-          const newBalance = await gainCredits(DB, charge.user_id, charge.credits, 'charge', paymentKey)
-          console.log('[Toss] 크레딧 지급:', charge.user_id, '+', charge.credits, '→', newBalance)
+        try {
+          if (PACKAGES[charge.package_key]?.service) {
+            await deliverGrant(c.env, { chargeId: chargeIdNum, user_id: charge.user_id, package_key: charge.package_key })
+            console.log('[Toss] 외부 grant 전달:', charge.package_key)
+          } else {
+            const newBalance = await gainCredits(DB, charge.user_id, charge.credits, 'charge', paymentKey)
+            console.log('[Toss] 크레딧 지급:', charge.user_id, '+', charge.credits, '→', newBalance)
+          }
+        } catch (grantErr) {
+          // ⚠️ 지급 실패 — 돈만 받고 끝나면 안 된다. 내부 크레딧은 gainCredits가 원자적이라(아무것도 안 됨)
+          //    completed를 pending으로 되돌려 웹훅/재시도가 치유하게 한다. 외부 grant는 external_grants 큐가
+          //    재시도하므로 completed 유지.
+          console.error('[Toss] 지급 실패 — chargeId:', chargeIdNum, grantErr)
+          if (!PACKAGES[charge.package_key]?.service) {
+            await DB.prepare("UPDATE credit_charges SET status='pending', pg_tid=NULL WHERE id=? AND status='completed'").bind(chargeIdNum).run()
+          }
+          return c.redirect('/?payment=success&pending=1')
         }
         completeReferral(DB, charge.user_id).catch(() => {})
         accruePartnerCommission(DB, chargeIdNum).catch(() => {})
 
-        // 영수증 이메일
-        const user = await DB.prepare('SELECT email, nickname FROM users WHERE id=?')
-          .bind(charge.user_id).first<{ email: string; nickname: string | null }>()
-        const pkg  = PACKAGES[charge.package_key]
-        if (user && pkg) {
-          await sendReceiptEmail(c.env, user.email, user.nickname || '', charge.credits, pkg.amount, 'KRW', paymentKey)
+        // 영수증 이메일 — 실패해도 결제·지급은 유효하므로 성공 화면을 유지한다(성공을 실패로 뒤집지 않음).
+        try {
+          const user = await DB.prepare('SELECT email, nickname FROM users WHERE id=?')
+            .bind(charge.user_id).first<{ email: string; nickname: string | null }>()
+          const pkg  = PACKAGES[charge.package_key]
+          if (user && pkg) {
+            await sendReceiptEmail(c.env, user.email, user.nickname || '', charge.credits, pkg.amount, 'KRW', paymentKey)
+          }
+        } catch (mailErr) {
+          console.error('[Toss] 영수증 메일 실패(결제·지급은 정상):', mailErr)
         }
       }
     }
@@ -4128,8 +4172,8 @@ app.post('/api/admin/payments/:id/refund', async (c) => {
   await DB.batch([
     DB.prepare(`UPDATE credit_charges SET status='refunded', completed_at=CURRENT_TIMESTAMP WHERE id=?`).bind(chargeId),
     DB.prepare(`UPDATE users SET credits = credits - ? WHERE id=? AND credits >= ?`).bind(charge.credits, charge.user_id, charge.credits),
-    DB.prepare(`INSERT INTO credit_transactions (user_id, type, amount, reason, ref_id) VALUES (?,?,?,?,?)`).bind(
-      charge.user_id, 'loss', charge.credits, 'admin_refund', chargeId
+    DB.prepare(`INSERT INTO credit_transactions (user_id, type, amount, reason, balance_after, ref_id) VALUES (?,?,?,?,(SELECT credits FROM users WHERE id=?),?)`).bind(
+      charge.user_id, 'loss', charge.credits, 'admin_refund', charge.user_id, chargeId
     ),
   ])
 
