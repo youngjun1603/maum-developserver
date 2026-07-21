@@ -3207,6 +3207,13 @@ app.post('/api/webhook/stripe', async (c) => {
 //      → clientKey + orderId 반환 → 프론트 SDK로 결제창 오픈
 //      → 결제 완료 → successUrl redirect → GET /api/payment/toss/success
 //      → 토스 Webhook POST /api/webhook/toss (크레딧 이중 지급 방지용)
+// 결제위젯 렌더용 클라이언트 키 반환(공개키라 노출 무해). 프론트가 위젯 초기화 시 사용.
+app.get('/api/payment/toss/client-key', async (c) => {
+  const clientKey = c.env.TOSS_CLIENT_KEY
+  if (!clientKey) return c.json({ success: false, error: 'TOSS_CLIENT_KEY 미설정' }, 500)
+  return c.json({ success: true, clientKey })
+})
+
 app.post('/api/payment/toss/checkout', async (c) => {
   const { DB, KV } = c.env
   const userId = await getAuthUserId(c.req.raw, KV)
@@ -3269,15 +3276,15 @@ app.get('/api/payment/toss/success', async (c) => {
   if (!tossKey) return c.redirect('/?payment=fail&msg=서버오류')
 
   try {
-    // 토스 결제 승인 API 호출 (v2: paymentKey를 URL에 포함)
-    const confirmRes = await fetch(`https://api.tosspayments.com/v1/payments/${paymentKey}/confirm`, {
+    // 토스 결제 승인 API (v2 결제위젯 규격) — paymentKey는 body에. 시크릿키(gsk)로 Basic 인증.
+    const confirmRes = await fetch('https://api.tosspayments.com/v1/payments/confirm', {
       method: 'POST',
       headers: {
         'Content-Type':  'application/json',
         'Authorization': 'Basic ' + btoa(tossKey + ':'),
         'Idempotency-Key': orderId,
       },
-      body: JSON.stringify({ orderId, amount: amountNum }),
+      body: JSON.stringify({ paymentKey, orderId, amount: amountNum }),
     })
 
     if (!confirmRes.ok) {
@@ -4533,7 +4540,7 @@ app.get('/', (c) => {
   <script async src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script async src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <!-- 토스페이먼츠 SDK (크레딧 결제) -->
-  <script src="https://js.tosspayments.com/v1"></script>
+  <script src="https://js.tosspayments.com/v2/standard"></script>
   ${googleClientId ? `<script src="https://accounts.google.com/gsi/client" async defer></script>` : ''}
   <script>window.GOOGLE_CLIENT_ID = ${JSON.stringify(googleClientId)};</script>
   ${kakaoAppKey ? `<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js" crossorigin="anonymous"></script>` : ''}
