@@ -3021,27 +3021,29 @@ app.post('/api/webhook/toss', async (c) => {
   const { DB } = c.env
   const rawBody = await c.req.text()
 
-  // ── 이중 방어 ①: 서명 검증 (미설정이면 통과가 아니라 거부) ──────────
-  // 토스는 Authorization: Basic base64(secret:) 헤더로 검증.
-  // ⚠️ 예전엔 시크릿 미설정 시 "건너뜀"이었다 → 누구나 위조 본문을 POST해 무료 크레딧을 받을 수 있었다.
-  //    설정 누락으로 구멍이 열리지 않도록 fail-safe(거부)로 바꾼다. 503이면 토스가 재시도하므로,
-  //    시크릿을 설정하는 즉시 밀린 웹훅이 정상 처리된다.
+  // ── 웹훅 검증 방식 (2026-07-21 변경) ──────────────────────────────
+  // 토스 웹훅 등록 콘솔에는 서명 시크릿/Authorization 설정란이 없다(실측). 즉 토스는 이
+  // 요청에 서명 헤더를 실어 주지 않는다. 예전 코드는 Authorization: Basic 헤더를 강제해
+  // 실제 라이브 웹훅이 전부 401/503으로 막혔다.
+  // → 진짜 검증은 아래 "이중 방어 ②"가 한다: 본문을 믿지 않고 토스 API에 결제를 되물어
+  //   (TOSS_SECRET_KEY) status=DONE·금액을 재확인하고, 지급 근거는 요청이 아니라 우리 DB
+  //   (orderId→chargeId의 pending 행)에서만 찾는다. 위조 본문으로는 크레딧을 못 받는다.
+  // (선택) TOSS_WEBHOOK_SECRET을 URL에 심어 두고 토스가 그대로 전달하는 환경이라면, 헤더가
+  //   실제로 온 경우에 한해 추가 대조한다 — 안 와도 ②로 안전하므로 막지 않는다(정상 웹훅 차단 방지).
   const tossSecret = c.env.TOSS_WEBHOOK_SECRET
-  if (!tossSecret) {
-    console.error('[Toss Webhook] TOSS_WEBHOOK_SECRET 미설정 — 요청 거부 (wrangler secret put TOSS_WEBHOOK_SECRET)')
-    return c.json({ error: 'webhook secret not configured' }, 503)
-  }
-  const authHeader = c.req.header('Authorization') ?? ''
-  if (authHeader !== 'Basic ' + btoa(tossSecret + ':')) {
-    console.error('[Toss Webhook] 서명 불일치 — 위조 요청 차단')
+  const authHeader = c.req.header('Authorization')
+  if (tossSecret && authHeader && authHeader !== 'Basic ' + btoa(tossSecret + ':')) {
+    console.error('[Toss Webhook] Authorization 헤더 불일치 — 차단')
     return c.json({ error: 'Unauthorized' }, 401)
   }
 
   let body: Record<string, unknown>
   try { body = JSON.parse(rawBody) } catch { return c.json({ error: 'invalid json' }, 400) }
-  if (body.status !== 'DONE') return c.json({ ok: true })
+  // 토스 웹훅 페이로드는 결제 객체가 최상위로 오거나 data 안에 올 수 있다(버전차) → 둘 다 대응.
+  const evt = (body.data && typeof body.data === 'object') ? (body.data as Record<string, unknown>) : body
+  if (evt.status !== 'DONE') return c.json({ ok: true })
 
-  const pgTid = body.paymentKey as string
+  const pgTid = evt.paymentKey as string
   if (!pgTid) return c.json({ error: 'paymentKey 누락' }, 400)
 
   // 중복 처리 방지 (success 콜백이 이미 처리했을 수 있다)

@@ -198,15 +198,15 @@ npm run deploy:cts    # lightoflife-couple (wrangler.lightoflife.toml)
 - **SDK v1** (`https://js.tosspayments.com/v1`, `<head>`). ⚠️ v2/base → 403. `window.TossPayments(clientKey).requestPayment('카드',{...})`
 - **플로우:** 프론트 → `POST /api/payment/toss/checkout`(clientKey·orderId·amount·successUrl 반환) → requestPayment → `GET /api/payment/toss/success`(confirm API → 크레딧 지급) → `POST /api/webhook/toss`(이중지급 방지)
 - **시크릿:** `TOSS_CLIENT_KEY`/`TOSS_SECRET_KEY`(test_/live_ prefix, 교체만 하면 코드 변경 불필요).
-- ⚠️ **`TOSS_WEBHOOK_SECRET`은 필수** — 미설정이면 웹훅이 **503으로 전부 거부**된다(2026-07 fail-safe로 변경. 예전엔 "검증 skip"이라 위조 요청으로 무료 크레딧이 나갈 수 있었다). 실결제 켤 때 반드시 함께 등록할 것.
-- **웹훅 이중 방어**(`/api/webhook/toss`): ① 서명 검증(미설정=503, 불일치=401) ② 토스 `GET /v1/payments/{paymentKey}`로 실제 결제·`totalAmount` 재확인. **지급 근거는 요청 metadata가 아니라 DB** — `orderId`(`charge_<chargeId>_<ts>`)에서 chargeId를 파싱해 `credit_charges` 행의 user_id·credits·amount를 쓴다. 웹훅·success 모두 `UPDATE … WHERE id=? AND status='pending'` + `meta.changes`로 원자적 선점(중복 지급 방지).
+- ⚠️ **`TOSS_WEBHOOK_SECRET`은 선택**(2026-07-21 정정). 토스 웹훅 콘솔엔 서명 시크릿/Authorization 설정란이 **없다**(실측) → 토스는 서명 헤더를 안 보낸다. 예전 코드는 이 헤더를 강제해 **라이브 웹훅이 전부 401/503으로 막혔다**. 이제 강제하지 않고 아래 이중 방어 ②(재조회)로 검증한다. 시크릿을 설정하고 URL에 심어 둔 경우엔 헤더가 올 때만 추가 대조.
+- **웹훅 이중 방어**(`/api/webhook/toss`): ① (선택) 시크릿+URL로 헤더가 오면 대조, 안 와도 통과 ② 토스 `GET /v1/payments/{paymentKey}`로 실제 결제·`totalAmount` 재확인(**진짜 검증은 여기**). **지급 근거는 요청 metadata가 아니라 DB** — `orderId`(`charge_<chargeId>_<ts>`)에서 chargeId를 파싱해 `credit_charges` 행의 user_id·credits·amount를 쓴다. 웹훅·success 모두 `UPDATE … WHERE id=? AND status='pending'` + `meta.changes`로 원자적 선점(중복 지급 방지). 위조 본문은 ②에서 막힌다(가짜 paymentKey→400, 실측). ⚠️ 웹훅 페이로드는 결제객체가 최상위/`data` 중 어디로 올지 몰라 **둘 다 파싱**(`body.data ?? body`).
 
-### 실결제 전환 체크리스트 (승인 시 그대로 실행)
-1. `wrangler secret put TOSS_CLIENT_KEY` ← `live_ck_…`
-2. `wrangler secret put TOSS_SECRET_KEY` ← `live_sk_…`
-3. `wrangler secret put TOSS_WEBHOOK_SECRET` ← 토스 콘솔 웹훅 시크릿 (**누락 시 웹훅 전부 503**)
-4. 토스 콘솔에 웹훅 URL 등록: `https://maumful.com/api/webhook/toss`
-5. 배포 불필요(시크릿만 교체). 소액 실결제 1건으로 지급·영수증·중복지급 없음 확인.
+### 실결제 전환 체크리스트 — ✅ 마음풀 라이브 완료 (2026-07-21)
+1. ✅ `wrangler secret put TOSS_CLIENT_KEY` ← `live_ck_…` (등록됨)
+2. ✅ `wrangler secret put TOSS_SECRET_KEY` ← `live_sk_…` (등록됨)
+3. `TOSS_WEBHOOK_SECRET`은 **불필요**(위 참조 — 안 넣어도 웹훅 정상). 넣지 않음.
+4. ✅ 토스 콘솔(마음서비스 상점) 라이브 웹훅 등록: URL `https://maumful.com/api/webhook/toss`, 이벤트 `PAYMENT_STATUS_CHANGED`.
+5. ⚠️ **남은 것: 실제 소액 결제 1건으로 최종 확인**(지급·영수증·중복지급 없음·웹훅 도착). 라이브키+PAYMENT_LIVE=true라 **지금 실결제 활성 상태**.
 - **정기결제(빌링)는 별도 계약** — 승인 시 `TOSS_BILLING_KEY` 추가 + 멤버십 탭 버튼을 `🔔 오픈 알림 신청` → 결제하기로 교체(백엔드 `/api/subscription/toss/*`는 이미 구현됨). 메모리 `project_payment_roadmap`.
 - **마음풀: 실결제 활성화**(ChargeView `PAYMENT_LIVE=true`). 테스트키면 실결제 없음. (CTS는 준비중 — CTS 문서)
 
