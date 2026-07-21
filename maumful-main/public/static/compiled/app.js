@@ -4415,6 +4415,7 @@ Visit Maumful and take the same test again to compare your progress.`));
       }
       setLoading(true);
       setErrMsg("");
+      let lastOrderId = "";
       try {
         if (isKorea) {
           const res = await api.tossCheckout(selected);
@@ -4424,6 +4425,7 @@ Visit Maumful and take the same test again to compare your progress.`));
             return;
           }
           const d = res.data;
+          lastOrderId = d.orderId || "";
           if (typeof window.TossPayments !== "function") {
             setErrMsg(t("\uACB0\uC81C SDK \uB85C\uB4DC \uC2E4\uD328. \uD398\uC774\uC9C0\uB97C \uC0C8\uB85C\uACE0\uCE68(Ctrl+Shift+R) \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.", "Payment SDK failed to load. Please hard-refresh and try again."));
             setLoading(false);
@@ -4450,10 +4452,16 @@ Visit Maumful and take the same test again to compare your progress.`));
           if (d.checkoutUrl) window.location.href = d.checkoutUrl;
         }
       } catch (err) {
-        console.error("[Toss] \uACB0\uC81C \uC5D0\uB7EC:", err);
-        if ((err == null ? void 0 : err.code) !== "USER_CANCEL") {
-          const detail = (err == null ? void 0 : err.message) ? ` (${err.code || ""}: ${err.message})` : "";
-          setErrMsg(t("\uACB0\uC81C \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4." + detail, "Payment error: " + detail));
+        try {
+          console.error("[Toss] \uACB0\uC81C \uC5D0\uB7EC \uC804\uCCB4:", JSON.stringify(err, Object.getOwnPropertyNames(err || {})), err);
+        } catch {
+          console.error("[Toss] \uACB0\uC81C \uC5D0\uB7EC:", err);
+        }
+        if ((err == null ? void 0 : err.code) !== "USER_CANCEL" && (err == null ? void 0 : err.code) !== "USER_CANCEL_PAYMENT") {
+          const code = (err == null ? void 0 : err.code) || "UNKNOWN";
+          const msg = (err == null ? void 0 : err.message) || t("\uC54C \uC218 \uC5C6\uB294 \uC624\uB958", "Unknown error");
+          const oid = lastOrderId ? t(" \xB7 \uC8FC\uBB38\uBC88\uD638 ", " \xB7 order ") + lastOrderId : "";
+          setErrMsg(t(`\uACB0\uC81C \uC624\uB958 [${code}] ${msg}${oid}`, `Payment error [${code}] ${msg}${oid}`));
         }
         setLoading(false);
       }

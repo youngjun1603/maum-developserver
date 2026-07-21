@@ -5578,12 +5578,14 @@ function PsychologicalTestSystem() {
     const handlePay = async () => {
       if (!currentUser) { onClose(); setView('memberLogin'); return; }
       setLoading(true); setErrMsg('');
+      let lastOrderId = '';  // catch에서 토스 로그 대조용 주문번호를 쓰기 위해 밖으로 뺌
       try {
         if (isKorea) {
           // 토스페이먼츠 v2 결제창 연동
           const res = await api.tossCheckout(selected);
           if (!res.success) { setErrMsg(res.error || t('결제 준비 실패','Payment preparation failed')); setLoading(false); return; }
           const d = res.data;
+          lastOrderId = d.orderId || '';
 
           // v1 SDK: TossPayments(clientKey) — 동기 초기화
           if (typeof window.TossPayments !== 'function') {
@@ -5609,10 +5611,16 @@ function PsychologicalTestSystem() {
           if (d.checkoutUrl) window.location.href = d.checkoutUrl;
         }
       } catch (err) {
-        console.error('[Toss] 결제 에러:', err);
-        if (err?.code !== 'USER_CANCEL') {
-          const detail = err?.message ? ` (${err.code || ''}: ${err.message})` : '';
-          setErrMsg(t('결제 중 오류가 발생했습니다.' + detail, 'Payment error: ' + detail));
+        // 토스 에러 객체의 모든 필드를 콘솔에 남긴다(비열거 속성 포함) — 원인 파악용.
+        try { console.error('[Toss] 결제 에러 전체:', JSON.stringify(err, Object.getOwnPropertyNames(err || {})), err); }
+        catch { console.error('[Toss] 결제 에러:', err); }
+        // 사용자 취소는 오류로 표시하지 않는다.
+        if (err?.code !== 'USER_CANCEL' && err?.code !== 'USER_CANCEL_PAYMENT') {
+          const code = err?.code || 'UNKNOWN';
+          const msg  = err?.message || t('알 수 없는 오류','Unknown error');
+          const oid  = lastOrderId ? (t(' · 주문번호 ',' · order ') + lastOrderId) : '';
+          // 토스가 준 코드·메시지를 그대로 노출(다음 디버깅 시 DevTools 없이 원인 확인).
+          setErrMsg(t(`결제 오류 [${code}] ${msg}${oid}`, `Payment error [${code}] ${msg}${oid}`));
         }
         setLoading(false);
       }
