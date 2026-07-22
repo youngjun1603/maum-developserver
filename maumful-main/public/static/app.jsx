@@ -5055,7 +5055,13 @@ function PsychologicalTestSystem() {
               {creditSubTab === 'charge' && (
                 <div className="space-y-2">
                   {chargeTxns.length === 0 && <p className="text-gray-400 text-sm text-center py-6">{t("구매 내역이 없습니다","No charge history")}</p>}
-                  {chargeTxns.map((tx, i) => (
+                  {chargeTxns.map((tx, i) => {
+                    // 환불 가능: 카드결제(charge)·완료상태·구매 7일 이내
+                    const doneMs = Date.parse(String(tx.pg_completed_at || tx.created_at || '').replace(' ', 'T') + 'Z');
+                    const days = (Date.now() - doneMs) / 86400000;
+                    const refundable = tx.reason === 'charge' && tx.pg_status === 'completed' && tx.pg_amount && days >= 0 && days <= 7;
+                    const isRefunded = tx.reason === 'charge' && tx.pg_status === 'refunded';
+                    return (
                     <div key={i} className="bg-white rounded-xl p-3.5 flex items-center justify-between border border-gray-100">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-green-50 flex items-center justify-center text-base">
@@ -5065,15 +5071,34 @@ function PsychologicalTestSystem() {
                           <div className="text-sm font-semibold text-gray-700">{reasonLabel(tx.reason)}</div>
                           <div className="text-xs text-gray-400">{fmtDt(tx.created_at)}</div>
                           {tx.reason==='charge' && tx.pg_amount && (
-                            <div className="text-xs text-blue-500 mt-0.5">
-                              ₩{Number(tx.pg_amount).toLocaleString('ko-KR')} {t("결제 완료","payment complete")}
+                            <div className={`text-xs mt-0.5 ${isRefunded ? 'text-gray-400' : 'text-blue-500'}`}>
+                              ₩{Number(tx.pg_amount).toLocaleString('ko-KR')} {isRefunded ? t("환불됨","refunded") : t("결제 완료","payment complete")}
                             </div>
                           )}
                         </div>
                       </div>
-                      <span className="font-bold text-sm text-green-600">+{tx.amount} cr</span>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className={`font-bold text-sm ${isRefunded ? 'text-gray-400 line-through' : 'text-green-600'}`}>+{tx.amount} cr</span>
+                        {refundable && (
+                          <button
+                            onClick={async () => {
+                              if (!window.confirm(t(
+                                `이 결제를 환불할까요?\n${tx.amount} 크레딧이 회수되고 ₩${Number(tx.pg_amount).toLocaleString('ko-KR')}이 카드로 환불돼요.\n(미사용 크레딧만 환불 가능)`,
+                                `Refund this payment?\n${tx.amount} credits reclaimed and ₩${Number(tx.pg_amount).toLocaleString('ko-KR')} refunded to your card.`))) return;
+                              try {
+                                const r = await api._fetch('/api/credits/refund', { method: 'POST', body: JSON.stringify({ pgTid: tx.ref_id }) }).then(res => res.json());
+                                if (r.success) { window.alert(r.message || t('환불이 완료됐어요.', 'Refunded.')); refreshCredits(); }
+                                else window.alert(r.error || t('환불에 실패했어요.', 'Refund failed.'));
+                              } catch { window.alert(t('환불 처리 중 오류가 발생했어요.', 'Refund error.')); }
+                            }}
+                            className="text-xs px-2 py-1 rounded-lg border border-gray-200 text-gray-500 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition">
+                            {t('환불 요청', 'Refund')}
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  ))}
+                    );
+                  })}
 
                   {chargeTxns.length > 0 && (
                     <div className="mt-2 bg-blue-50 rounded-xl p-3 text-center">

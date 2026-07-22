@@ -4114,7 +4114,37 @@ Visit Maumful and take the same test again to compare your progress.`));
         style: { fontFamily: "'Noto Sans KR',sans-serif" }
       },
       l
-    ))), creditSubTab === "usage" && /* @__PURE__ */ React.createElement("div", { className: "space-y-2" }, usageTxns.length === 0 && /* @__PURE__ */ React.createElement("p", { className: "text-gray-400 text-sm text-center py-6" }, t("\uC0AC\uC6A9 \uB0B4\uC5ED\uC774 \uC5C6\uC2B5\uB2C8\uB2E4", "No usage history")), usageTxns.map((tx, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "bg-white rounded-xl p-3.5 flex items-center justify-between border border-gray-100" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3" }, /* @__PURE__ */ React.createElement("div", { className: "w-9 h-9 rounded-full bg-red-50 flex items-center justify-center text-base" }, reasonIcon(tx)), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "text-sm font-semibold text-gray-700" }, reasonLabel(tx.reason)), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400" }, fmtDt(tx.created_at)))), /* @__PURE__ */ React.createElement("span", { className: "font-bold text-sm text-red-500" }, "-", tx.amount, " cr")))), creditSubTab === "charge" && /* @__PURE__ */ React.createElement("div", { className: "space-y-2" }, chargeTxns.length === 0 && /* @__PURE__ */ React.createElement("p", { className: "text-gray-400 text-sm text-center py-6" }, t("\uAD6C\uB9E4 \uB0B4\uC5ED\uC774 \uC5C6\uC2B5\uB2C8\uB2E4", "No charge history")), chargeTxns.map((tx, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "bg-white rounded-xl p-3.5 flex items-center justify-between border border-gray-100" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3" }, /* @__PURE__ */ React.createElement("div", { className: "w-9 h-9 rounded-full bg-green-50 flex items-center justify-center text-base" }, reasonIcon(tx)), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "text-sm font-semibold text-gray-700" }, reasonLabel(tx.reason)), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400" }, fmtDt(tx.created_at)), tx.reason === "charge" && tx.pg_amount && /* @__PURE__ */ React.createElement("div", { className: "text-xs text-blue-500 mt-0.5" }, "\u20A9", Number(tx.pg_amount).toLocaleString("ko-KR"), " ", t("\uACB0\uC81C \uC644\uB8CC", "payment complete")))), /* @__PURE__ */ React.createElement("span", { className: "font-bold text-sm text-green-600" }, "+", tx.amount, " cr"))), chargeTxns.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "mt-2 bg-blue-50 rounded-xl p-3 text-center" }, /* @__PURE__ */ React.createElement(
+    ))), creditSubTab === "usage" && /* @__PURE__ */ React.createElement("div", { className: "space-y-2" }, usageTxns.length === 0 && /* @__PURE__ */ React.createElement("p", { className: "text-gray-400 text-sm text-center py-6" }, t("\uC0AC\uC6A9 \uB0B4\uC5ED\uC774 \uC5C6\uC2B5\uB2C8\uB2E4", "No usage history")), usageTxns.map((tx, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "bg-white rounded-xl p-3.5 flex items-center justify-between border border-gray-100" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3" }, /* @__PURE__ */ React.createElement("div", { className: "w-9 h-9 rounded-full bg-red-50 flex items-center justify-center text-base" }, reasonIcon(tx)), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "text-sm font-semibold text-gray-700" }, reasonLabel(tx.reason)), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400" }, fmtDt(tx.created_at)))), /* @__PURE__ */ React.createElement("span", { className: "font-bold text-sm text-red-500" }, "-", tx.amount, " cr")))), creditSubTab === "charge" && /* @__PURE__ */ React.createElement("div", { className: "space-y-2" }, chargeTxns.length === 0 && /* @__PURE__ */ React.createElement("p", { className: "text-gray-400 text-sm text-center py-6" }, t("\uAD6C\uB9E4 \uB0B4\uC5ED\uC774 \uC5C6\uC2B5\uB2C8\uB2E4", "No charge history")), chargeTxns.map((tx, i) => {
+      const doneMs = Date.parse(String(tx.pg_completed_at || tx.created_at || "").replace(" ", "T") + "Z");
+      const days = (Date.now() - doneMs) / 864e5;
+      const refundable = tx.reason === "charge" && tx.pg_status === "completed" && tx.pg_amount && days >= 0 && days <= 7;
+      const isRefunded = tx.reason === "charge" && tx.pg_status === "refunded";
+      return /* @__PURE__ */ React.createElement("div", { key: i, className: "bg-white rounded-xl p-3.5 flex items-center justify-between border border-gray-100" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3" }, /* @__PURE__ */ React.createElement("div", { className: "w-9 h-9 rounded-full bg-green-50 flex items-center justify-center text-base" }, reasonIcon(tx)), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "text-sm font-semibold text-gray-700" }, reasonLabel(tx.reason)), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-400" }, fmtDt(tx.created_at)), tx.reason === "charge" && tx.pg_amount && /* @__PURE__ */ React.createElement("div", { className: `text-xs mt-0.5 ${isRefunded ? "text-gray-400" : "text-blue-500"}` }, "\u20A9", Number(tx.pg_amount).toLocaleString("ko-KR"), " ", isRefunded ? t("\uD658\uBD88\uB428", "refunded") : t("\uACB0\uC81C \uC644\uB8CC", "payment complete")))), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col items-end gap-1" }, /* @__PURE__ */ React.createElement("span", { className: `font-bold text-sm ${isRefunded ? "text-gray-400 line-through" : "text-green-600"}` }, "+", tx.amount, " cr"), refundable && /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          onClick: async () => {
+            if (!window.confirm(t(
+              `\uC774 \uACB0\uC81C\uB97C \uD658\uBD88\uD560\uAE4C\uC694?
+${tx.amount} \uD06C\uB808\uB527\uC774 \uD68C\uC218\uB418\uACE0 \u20A9${Number(tx.pg_amount).toLocaleString("ko-KR")}\uC774 \uCE74\uB4DC\uB85C \uD658\uBD88\uB3FC\uC694.
+(\uBBF8\uC0AC\uC6A9 \uD06C\uB808\uB527\uB9CC \uD658\uBD88 \uAC00\uB2A5)`,
+              `Refund this payment?
+${tx.amount} credits reclaimed and \u20A9${Number(tx.pg_amount).toLocaleString("ko-KR")} refunded to your card.`
+            ))) return;
+            try {
+              const r = await api._fetch("/api/credits/refund", { method: "POST", body: JSON.stringify({ pgTid: tx.ref_id }) }).then((res) => res.json());
+              if (r.success) {
+                window.alert(r.message || t("\uD658\uBD88\uC774 \uC644\uB8CC\uB410\uC5B4\uC694.", "Refunded."));
+                refreshCredits();
+              } else window.alert(r.error || t("\uD658\uBD88\uC5D0 \uC2E4\uD328\uD588\uC5B4\uC694.", "Refund failed."));
+            } catch {
+              window.alert(t("\uD658\uBD88 \uCC98\uB9AC \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC5B4\uC694.", "Refund error."));
+            }
+          },
+          className: "text-xs px-2 py-1 rounded-lg border border-gray-200 text-gray-500 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition"
+        },
+        t("\uD658\uBD88 \uC694\uCCAD", "Refund")
+      )));
+    }), chargeTxns.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "mt-2 bg-blue-50 rounded-xl p-3 text-center" }, /* @__PURE__ */ React.createElement(
       "button",
       {
         onClick: () => setShowChargeView(true),

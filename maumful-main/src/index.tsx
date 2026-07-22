@@ -1079,7 +1079,7 @@ app.get('/api/user/credits', async (c) => {
   // 트랜잭션 + 충전 금액 JOIN (영수증용)
   const txns = await DB.prepare(`
     SELECT ct.type, ct.amount, ct.reason, ct.balance_after, ct.created_at, ct.ref_id,
-           cc.amount AS pg_amount, cc.currency AS pg_currency
+           cc.amount AS pg_amount, cc.currency AS pg_currency, cc.status AS pg_status, cc.completed_at AS pg_completed_at
     FROM credit_transactions ct
     LEFT JOIN credit_charges cc ON ct.ref_id = cc.pg_tid AND ct.reason = 'charge'
     WHERE ct.user_id = ?
@@ -1088,6 +1088,83 @@ app.get('/api/user/credits', async (c) => {
   `).bind(userId).all()
 
   return c.json({ success: true, data: { balance: user?.credits ?? 0, transactions: txns.results } })
+})
+
+// ── 고객 셀프 환불 ────────────────────────────────────────
+// 미사용 크레딧(현재 잔액 ≥ 구매 크레딧) · 구매 7일 이내에만. 토스 결제 취소(실환불) + 크레딧 회수.
+// 안전: status 원자적 선점(completed→refunded)으로 이중환불 방지, 각 단계 실패 시 롤백.
+app.post('/api/credits/refund', async (c) => {
+  const { DB, KV } = c.env
+  const userId = await getAuthUserId(c.req.raw, KV)
+  if (!userId) return c.json({ success: false, error: '로그인이 필요합니다.' }, 401)
+
+  let body: { pgTid?: string }
+  try { body = await c.req.json() } catch { return c.json({ success: false, error: '잘못된 요청' }, 400) }
+  const pgTid = (body.pgTid || '').trim()
+  if (!pgTid) return c.json({ success: false, error: '환불할 결제를 찾을 수 없어요.' }, 400)
+
+  const charge = await DB.prepare(
+    "SELECT id, credits, amount, status, completed_at FROM credit_charges WHERE pg_tid=? AND user_id=? AND pg='toss'"
+  ).bind(pgTid, userId).first<{ id: number; credits: number; amount: number; status: string; completed_at: string | null }>()
+  if (!charge) return c.json({ success: false, error: '결제 내역을 찾을 수 없어요.' }, 404)
+  if (charge.status === 'refunded') return c.json({ success: false, error: '이미 환불된 결제예요.' }, 400)
+  if (charge.status !== 'completed') return c.json({ success: false, error: '환불할 수 없는 결제 상태예요.' }, 400)
+
+  // 7일 이내 (completed_at은 UTC 'YYYY-MM-DD HH:MM:SS')
+  const doneMs = charge.completed_at ? Date.parse(charge.completed_at.replace(' ', 'T') + 'Z') : NaN
+  if (isNaN(doneMs) || (Date.now() - doneMs) > 7 * 86400 * 1000) {
+    return c.json({ success: false, error: '구매 후 7일이 지나 환불할 수 없어요.' }, 400)
+  }
+
+  // 미사용(관대 정책): 현재 잔액 ≥ 구매 크레딧
+  const u = await DB.prepare('SELECT credits FROM users WHERE id=?').bind(userId).first<{ credits: number }>()
+  if (!u || u.credits < charge.credits) {
+    return c.json({ success: false, error: `크레딧을 사용하셔서 환불할 수 없어요. 미사용(잔액 ${charge.credits} 이상)일 때만 환불돼요.` }, 400)
+  }
+
+  // 원자적 선점: completed → refunded (이중환불 방지). status CHECK 제약상 중간상태 없이 직접 전이.
+  const claim = await DB.prepare("UPDATE credit_charges SET status='refunded' WHERE id=? AND status='completed'").bind(charge.id).run()
+  if (claim.meta.changes === 0) return c.json({ success: false, error: '이미 처리 중이거나 환불된 결제예요.' }, 409)
+
+  // 크레딧 회수(잔액 가드). 실패 시 선점 롤백.
+  const claw = await DB.prepare('UPDATE users SET credits = credits - ? WHERE id=? AND credits >= ?').bind(charge.credits, userId, charge.credits).run()
+  if (claw.meta.changes === 0) {
+    await DB.prepare("UPDATE credit_charges SET status='completed' WHERE id=? AND status='refunded'").bind(charge.id).run()
+    return c.json({ success: false, error: '환불 직전 크레딧이 사용되어 환불할 수 없어요.' }, 400)
+  }
+
+  // 토스 결제 취소(실제 카드 환불). 실패 시 크레딧·상태 모두 롤백(돈 안 나갔으니 원복).
+  const tossKey = c.env.TOSS_SECRET_KEY
+  const rollback = async () => {
+    await DB.prepare('UPDATE users SET credits = credits + ? WHERE id=?').bind(charge.credits, userId).run()
+    await DB.prepare("UPDATE credit_charges SET status='completed' WHERE id=? AND status='refunded'").bind(charge.id).run()
+  }
+  if (!tossKey) { await rollback(); return c.json({ success: false, error: '서버 설정 오류' }, 500) }
+  try {
+    const cancelRes = await fetch(`https://api.tosspayments.com/v1/payments/${encodeURIComponent(pgTid)}/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Basic ' + btoa(tossKey + ':'), 'Idempotency-Key': 'refund_' + pgTid },
+      body: JSON.stringify({ cancelReason: '고객 요청(미사용 크레딧 환불)' }),
+    })
+    if (!cancelRes.ok) {
+      let msg = '결제 취소에 실패했어요. 잠시 후 다시 시도하거나 고객센터로 문의해 주세요.'
+      try { const e = await cancelRes.json() as { message?: unknown }; if (typeof e?.message === 'string' && e.message.trim()) msg = e.message } catch {}
+      await rollback()
+      console.error('[Refund] 토스 취소 실패:', cancelRes.status, msg, 'pg_tid:', pgTid)
+      return c.json({ success: false, error: msg }, 400)
+    }
+  } catch (e) {
+    await rollback()
+    console.error('[Refund] 토스 취소 오류:', e, 'pg_tid:', pgTid)
+    return c.json({ success: false, error: '환불 처리 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.' }, 502)
+  }
+
+  // 성공 — 원장 기록 + 파트너 수익쉐어 되돌림
+  await DB.prepare('INSERT INTO credit_transactions (user_id,type,amount,reason,balance_after,ref_id) VALUES (?,?,?,?,(SELECT credits FROM users WHERE id=?),?)')
+    .bind(userId, 'loss', charge.credits, 'refund', userId, pgTid).run()
+  reversePartnerCommission(DB, charge.id).catch(() => {})
+
+  return c.json({ success: true, message: `${charge.credits} 크레딧 환불 완료 · ${Number(charge.amount).toLocaleString()}원이 카드로 환불돼요(카드사에 따라 수일 소요).` })
 })
 
 app.patch('/api/user/me', async (c) => {
