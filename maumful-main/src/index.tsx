@@ -1159,10 +1159,13 @@ app.post('/api/credits/refund', async (c) => {
     return c.json({ success: false, error: '환불 처리 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.' }, 502)
   }
 
-  // 성공 — 원장 기록 + 파트너 수익쉐어 되돌림
-  await DB.prepare('INSERT INTO credit_transactions (user_id,type,amount,reason,balance_after,ref_id) VALUES (?,?,?,?,(SELECT credits FROM users WHERE id=?),?)')
-    .bind(userId, 'loss', charge.credits, 'refund', userId, pgTid).run()
-  reversePartnerCommission(DB, charge.id).catch(() => {})
+  // 성공(돈 이미 환불됨) — 원장 기록 + 파트너 되돌림. 여기서 실패해도 환불은 유효하므로 성공 처리한다.
+  // ⚠️ type은 CHECK(type IN ('gain','spend'))라 'loss'가 아니라 'spend'를 써야 한다(안 그러면 INSERT가 500).
+  try {
+    await DB.prepare('INSERT INTO credit_transactions (user_id,type,amount,reason,balance_after,ref_id) VALUES (?,?,?,?,(SELECT credits FROM users WHERE id=?),?)')
+      .bind(userId, 'spend', charge.credits, 'refund', userId, pgTid).run()
+    reversePartnerCommission(DB, charge.id).catch(() => {})
+  } catch (e) { console.error('[Refund] 원장 기록 실패(환불은 완료됨):', e, 'pg_tid:', pgTid) }
 
   return c.json({ success: true, message: `${charge.credits} 크레딧 환불 완료 · ${Number(charge.amount).toLocaleString()}원이 카드로 환불돼요(카드사에 따라 수일 소요).` })
 })
@@ -4257,7 +4260,7 @@ app.post('/api/admin/payments/:id/refund', async (c) => {
     DB.prepare(`UPDATE credit_charges SET status='refunded', completed_at=CURRENT_TIMESTAMP WHERE id=?`).bind(chargeId),
     DB.prepare(`UPDATE users SET credits = credits - ? WHERE id=? AND credits >= ?`).bind(charge.credits, charge.user_id, charge.credits),
     DB.prepare(`INSERT INTO credit_transactions (user_id, type, amount, reason, balance_after, ref_id) VALUES (?,?,?,?,(SELECT credits FROM users WHERE id=?),?)`).bind(
-      charge.user_id, 'loss', charge.credits, 'admin_refund', charge.user_id, chargeId
+      charge.user_id, 'spend', charge.credits, 'admin_refund', charge.user_id, chargeId
     ),
   ])
 
