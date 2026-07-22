@@ -4540,7 +4540,7 @@ app.get('/', (c) => {
   <script async src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script async src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <!-- 토스페이먼츠 SDK (크레딧 결제) -->
-  <script src="https://js.tosspayments.com/v2/standard"></script>
+  <script src="https://js.tosspayments.com/v1"></script>
   ${googleClientId ? `<script src="https://accounts.google.com/gsi/client" async defer></script>` : ''}
   <script>window.GOOGLE_CLIENT_ID = ${JSON.stringify(googleClientId)};</script>
   ${kakaoAppKey ? `<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js" crossorigin="anonymous"></script>` : ''}

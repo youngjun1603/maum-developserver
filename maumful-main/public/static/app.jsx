@@ -5575,70 +5575,30 @@ function PsychologicalTestSystem() {
     const [billingCycle, setBillingCycle] = useS('monthly'); // 'monthly' | 'annual'
     const selPkg = pkgs.find(p => p.key === selected);
 
-    // ── 토스 결제위젯(v2) 초기화 ── 한국만(글로벌은 Stripe). gck 클라이언트키로 위젯 렌더.
-    const widgetsRef = React.useRef(null);
-    const widgetInitedRef = React.useRef(false);
-    const [widgetReady, setWidgetReady] = useS(false);
-
-    useE(() => {
-      if (!isKorea || widgetInitedRef.current) return;
-      let cancelled = false;
-      (async () => {
-        try {
-          let tries = 0;
-          while (typeof window.TossPayments !== 'function' && tries < 60) { await new Promise(r => setTimeout(r, 100)); tries++; }
-          if (typeof window.TossPayments !== 'function') { setErrMsg(t('결제 SDK 로드 실패. 새로고침(Ctrl+Shift+R) 후 다시 시도해주세요.', 'Payment SDK failed to load. Please hard-refresh.')); return; }
-          const res = await fetch('/api/payment/toss/client-key').then(r => r.json());
-          if (!res.success || !res.clientKey) { setErrMsg(res.error || t('결제 준비 실패', 'Payment prep failed')); return; }
-          if (cancelled) return;
-          const tp = window.TossPayments(res.clientKey);
-          const widgets = tp.widgets({ customerKey: window.TossPayments.ANONYMOUS });
-          widgetsRef.current = widgets;
-          widgetInitedRef.current = true;
-          await widgets.setAmount({ currency: 'KRW', value: (selPkg && selPkg.amount) || 1000 });
-          await Promise.all([
-            widgets.renderPaymentMethods({ selector: '#maum-payment-method', variantKey: 'DEFAULT' }),
-            widgets.renderAgreement({ selector: '#maum-agreement', variantKey: 'AGREEMENT' }),
-          ]);
-          if (!cancelled) setWidgetReady(true);
-        } catch (e) {
-          console.error('[Toss] 결제위젯 초기화 실패:', e);
-          setErrMsg(t('결제 위젯을 불러오지 못했어요. 새로고침 후 다시 시도해주세요.', 'Failed to load the payment widget. Please refresh.'));
-        }
-      })();
-      return () => { cancelled = true; };
-    }, []);
-
-    // 상품(금액) 변경 시 위젯 금액 갱신
-    useE(() => {
-      if (!isKorea || !widgetReady || !widgetsRef.current || !selPkg) return;
-      widgetsRef.current.setAmount({ currency: 'KRW', value: selPkg.amount }).catch(() => {});
-    }, [selected, widgetReady]);
-
     const handlePay = async () => {
       if (!currentUser) { onClose(); setView('memberLogin'); return; }
       setLoading(true); setErrMsg('');
       let lastOrderId = '';  // catch에서 토스 로그 대조용 주문번호를 쓰기 위해 밖으로 뺌
       try {
         if (isKorea) {
-          // 토스 결제위젯(v2) — 위젯이 준비돼 있어야 결제 요청 가능
-          if (!widgetsRef.current || !widgetReady) {
-            setErrMsg(t('결제 수단을 불러오는 중이에요. 잠시 후 다시 시도해주세요.', 'Payment methods are still loading. Please try again shortly.'));
-            setLoading(false); return;
-          }
+          // 토스페이먼츠 v1 결제창(카드 팝업) — 표준 클라이언트키(ck) 사용. 상점에 ck 키가 있어 원래 방식 유지.
           const res = await api.tossCheckout(selected);
           if (!res.success) { setErrMsg(res.error || t('결제 준비 실패','Payment preparation failed')); setLoading(false); return; }
           const d = res.data;
           lastOrderId = d.orderId || '';
-          // 위젯 금액을 서버가 확정한 결제금액과 정확히 일치시킨 뒤 결제 요청(금액 위조 방지의 프론트측 정합)
-          await widgetsRef.current.setAmount({ currency: 'KRW', value: d.amount });
-          await widgetsRef.current.requestPayment({
+          if (typeof window.TossPayments !== 'function') {
+            setErrMsg(t('결제 SDK 로드 실패. 페이지를 새로고침(Ctrl+Shift+R) 후 다시 시도해주세요.', 'Payment SDK failed to load. Please hard-refresh and try again.'));
+            setLoading(false); return;
+          }
+          const tossPayments = window.TossPayments(d.clientKey);
+          await tossPayments.requestPayment('카드', {
+            amount:        d.amount,
             orderId:       d.orderId,
             orderName:     d.orderName,
+            customerName:  d.customerName,
+            customerEmail: d.customerEmail,
             successUrl:    d.successUrl,
             failUrl:       d.failUrl,
-            customerEmail: d.customerEmail,
-            customerName:  d.customerName,
           });
         } else {
           // 스트라이프 — checkoutUrl로 리다이렉트
@@ -5791,18 +5751,6 @@ function PsychologicalTestSystem() {
                 </ul>
               </div>
 
-              {/* 토스 결제위젯(v2) 렌더 컨테이너 — 결제수단 선택 + 약관. 한국만 */}
-              {isKorea && (
-                <div style={{ marginBottom: 6 }}>
-                  <div id="maum-payment-method" />
-                  <div id="maum-agreement" />
-                  {!widgetReady && (
-                    <div style={{ fontSize:12, color:'#9CA3AF', textAlign:'center', padding:'14px' }}>
-                      {t('결제 수단 불러오는 중…','Loading payment methods…')}
-                    </div>
-                  )}
-                </div>
-              )}
 
             </>)}
 

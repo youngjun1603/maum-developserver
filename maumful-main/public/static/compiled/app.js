@@ -4407,53 +4407,6 @@ Visit Maumful and take the same test again to compare your progress.`));
     const [errMsg, setErrMsg] = useS("");
     const [billingCycle, setBillingCycle] = useS("monthly");
     const selPkg = pkgs.find((p) => p.key === selected);
-    const widgetsRef = React.useRef(null);
-    const widgetInitedRef = React.useRef(false);
-    const [widgetReady, setWidgetReady] = useS(false);
-    useE(() => {
-      if (!isKorea || widgetInitedRef.current) return;
-      let cancelled = false;
-      (async () => {
-        try {
-          let tries = 0;
-          while (typeof window.TossPayments !== "function" && tries < 60) {
-            await new Promise((r) => setTimeout(r, 100));
-            tries++;
-          }
-          if (typeof window.TossPayments !== "function") {
-            setErrMsg(t("\uACB0\uC81C SDK \uB85C\uB4DC \uC2E4\uD328. \uC0C8\uB85C\uACE0\uCE68(Ctrl+Shift+R) \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.", "Payment SDK failed to load. Please hard-refresh."));
-            return;
-          }
-          const res = await fetch("/api/payment/toss/client-key").then((r) => r.json());
-          if (!res.success || !res.clientKey) {
-            setErrMsg(res.error || t("\uACB0\uC81C \uC900\uBE44 \uC2E4\uD328", "Payment prep failed"));
-            return;
-          }
-          if (cancelled) return;
-          const tp = window.TossPayments(res.clientKey);
-          const widgets = tp.widgets({ customerKey: window.TossPayments.ANONYMOUS });
-          widgetsRef.current = widgets;
-          widgetInitedRef.current = true;
-          await widgets.setAmount({ currency: "KRW", value: selPkg && selPkg.amount || 1e3 });
-          await Promise.all([
-            widgets.renderPaymentMethods({ selector: "#maum-payment-method", variantKey: "DEFAULT" }),
-            widgets.renderAgreement({ selector: "#maum-agreement", variantKey: "AGREEMENT" })
-          ]);
-          if (!cancelled) setWidgetReady(true);
-        } catch (e) {
-          console.error("[Toss] \uACB0\uC81C\uC704\uC82F \uCD08\uAE30\uD654 \uC2E4\uD328:", e);
-          setErrMsg(t("\uACB0\uC81C \uC704\uC82F\uC744 \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC5B4\uC694. \uC0C8\uB85C\uACE0\uCE68 \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.", "Failed to load the payment widget. Please refresh."));
-        }
-      })();
-      return () => {
-        cancelled = true;
-      };
-    }, []);
-    useE(() => {
-      if (!isKorea || !widgetReady || !widgetsRef.current || !selPkg) return;
-      widgetsRef.current.setAmount({ currency: "KRW", value: selPkg.amount }).catch(() => {
-      });
-    }, [selected, widgetReady]);
     const handlePay = async () => {
       if (!currentUser) {
         onClose();
@@ -4465,11 +4418,6 @@ Visit Maumful and take the same test again to compare your progress.`));
       let lastOrderId = "";
       try {
         if (isKorea) {
-          if (!widgetsRef.current || !widgetReady) {
-            setErrMsg(t("\uACB0\uC81C \uC218\uB2E8\uC744 \uBD88\uB7EC\uC624\uB294 \uC911\uC774\uC5D0\uC694. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.", "Payment methods are still loading. Please try again shortly."));
-            setLoading(false);
-            return;
-          }
           const res = await api.tossCheckout(selected);
           if (!res.success) {
             setErrMsg(res.error || t("\uACB0\uC81C \uC900\uBE44 \uC2E4\uD328", "Payment preparation failed"));
@@ -4478,14 +4426,20 @@ Visit Maumful and take the same test again to compare your progress.`));
           }
           const d = res.data;
           lastOrderId = d.orderId || "";
-          await widgetsRef.current.setAmount({ currency: "KRW", value: d.amount });
-          await widgetsRef.current.requestPayment({
+          if (typeof window.TossPayments !== "function") {
+            setErrMsg(t("\uACB0\uC81C SDK \uB85C\uB4DC \uC2E4\uD328. \uD398\uC774\uC9C0\uB97C \uC0C8\uB85C\uACE0\uCE68(Ctrl+Shift+R) \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.", "Payment SDK failed to load. Please hard-refresh and try again."));
+            setLoading(false);
+            return;
+          }
+          const tossPayments = window.TossPayments(d.clientKey);
+          await tossPayments.requestPayment("\uCE74\uB4DC", {
+            amount: d.amount,
             orderId: d.orderId,
             orderName: d.orderName,
-            successUrl: d.successUrl,
-            failUrl: d.failUrl,
+            customerName: d.customerName,
             customerEmail: d.customerEmail,
-            customerName: d.customerName
+            successUrl: d.successUrl,
+            failUrl: d.failUrl
           });
         } else {
           const res = await api.prepareCharge(selected, "stripe");
@@ -4671,7 +4625,7 @@ Visit Maumful and take the same test again to compare your progress.`));
       ), isKorea && t(
         /* @__PURE__ */ React.createElement("li", null, "\uACB0\uC81C \uC2DC \uC774\uBA54\uC77C\xB7\uACB0\uC81C\uAE08\uC561\uC774 ", /* @__PURE__ */ React.createElement("strong", null, "\uD1A0\uC2A4\uD398\uC774\uBA3C\uCE20(\uC8FC)"), "\uC5D0 \uC81C\uACF5\uB429\uB2C8\uB2E4. (\uACB0\uC81C \uCC98\uB9AC \uBAA9\uC801)"),
         /* @__PURE__ */ React.createElement("li", null, "Your email and payment amount will be shared with ", /* @__PURE__ */ React.createElement("strong", null, "TossPayments"), " for processing.")
-      ), /* @__PURE__ */ React.createElement("li", null, t("\uD658\uBD88 \uBB38\uC758:", "Refund inquiries:"), " support@maumful.com"))), isKorea && /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 6 } }, /* @__PURE__ */ React.createElement("div", { id: "maum-payment-method" }), /* @__PURE__ */ React.createElement("div", { id: "maum-agreement" }), !widgetReady && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "#9CA3AF", textAlign: "center", padding: "14px" } }, t("\uACB0\uC81C \uC218\uB2E8 \uBD88\uB7EC\uC624\uB294 \uC911\u2026", "Loading payment methods\u2026")))), activeTab === "plans" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "center", marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { background: "#F3F4F6", borderRadius: 12, padding: 3, display: "inline-flex", gap: 2 } }, [["monthly", t("\uC6D4\uAC04", "Monthly")], ["annual", t("\uC5F0\uAC04 \u{1F389} 20% \uD560\uC778", "Annual \u{1F389} 20% off")]].map(([cyc, lbl]) => /* @__PURE__ */ React.createElement("button", { key: cyc, onClick: () => setBillingCycle(cyc), style: {
+      ), /* @__PURE__ */ React.createElement("li", null, t("\uD658\uBD88 \uBB38\uC758:", "Refund inquiries:"), " support@maumful.com")))), activeTab === "plans" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "center", marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { background: "#F3F4F6", borderRadius: 12, padding: 3, display: "inline-flex", gap: 2 } }, [["monthly", t("\uC6D4\uAC04", "Monthly")], ["annual", t("\uC5F0\uAC04 \u{1F389} 20% \uD560\uC778", "Annual \u{1F389} 20% off")]].map(([cyc, lbl]) => /* @__PURE__ */ React.createElement("button", { key: cyc, onClick: () => setBillingCycle(cyc), style: {
         padding: "6px 14px",
         borderRadius: 10,
         fontSize: 12,
