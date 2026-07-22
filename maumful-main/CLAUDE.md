@@ -201,14 +201,20 @@ npm run deploy:cts    # lightoflife-couple (wrangler.lightoflife.toml)
 - ⚠️ **`TOSS_WEBHOOK_SECRET`은 선택**(2026-07-21 정정). 토스 웹훅 콘솔엔 서명 시크릿/Authorization 설정란이 **없다**(실측) → 토스는 서명 헤더를 안 보낸다. 예전 코드는 이 헤더를 강제해 **라이브 웹훅이 전부 401/503으로 막혔다**. 이제 강제하지 않고 아래 이중 방어 ②(재조회)로 검증한다. 시크릿을 설정하고 URL에 심어 둔 경우엔 헤더가 올 때만 추가 대조.
 - **웹훅 이중 방어**(`/api/webhook/toss`): ① (선택) 시크릿+URL로 헤더가 오면 대조, 안 와도 통과 ② 토스 `GET /v1/payments/{paymentKey}`로 실제 결제·`totalAmount` 재확인(**진짜 검증은 여기**). **지급 근거는 요청 metadata가 아니라 DB** — `orderId`(`charge_<chargeId>_<ts>`)에서 chargeId를 파싱해 `credit_charges` 행의 user_id·credits·amount를 쓴다. 웹훅·success 모두 `UPDATE … WHERE id=? AND status='pending'` + `meta.changes`로 원자적 선점(중복 지급 방지). 위조 본문은 ②에서 막힌다(가짜 paymentKey→400, 실측). ⚠️ 웹훅 페이로드는 결제객체가 최상위/`data` 중 어디로 올지 몰라 **둘 다 파싱**(`body.data ?? body`).
 
-### 실결제 전환 체크리스트 — ✅ 마음풀 라이브 완료 (2026-07-21)
-1. ✅ `wrangler secret put TOSS_CLIENT_KEY` ← `live_ck_…` (등록됨)
-2. ✅ `wrangler secret put TOSS_SECRET_KEY` ← `live_sk_…` (등록됨)
-3. `TOSS_WEBHOOK_SECRET`은 **불필요**(위 참조 — 안 넣어도 웹훅 정상). 넣지 않음.
-4. ✅ 토스 콘솔(마음서비스 상점) 라이브 웹훅 등록: URL `https://maumful.com/api/webhook/toss`, 이벤트 `PAYMENT_STATUS_CHANGED`.
-5. ⚠️ **남은 것: 실제 소액 결제 1건으로 최종 확인**(지급·영수증·중복지급 없음·웹훅 도착). 라이브키+PAYMENT_LIVE=true라 **지금 실결제 활성 상태**.
-- **정기결제(빌링)는 별도 계약** — 승인 시 `TOSS_BILLING_KEY` 추가 + 멤버십 탭 버튼을 `🔔 오픈 알림 신청` → 결제하기로 교체(백엔드 `/api/subscription/toss/*`는 이미 구현됨). 메모리 `project_payment_roadmap`.
-- **마음풀: 실결제 활성화**(ChargeView `PAYMENT_LIVE=true`). 테스트키면 실결제 없음. (CTS는 준비중 — CTS 문서)
+### ✅ 라이브 가동 완료 (2026-07-22) — 상세는 메모리 `project_toss_payment`
+- **상점 MID = `maumfu5xcd`**(일반결제/"기존 결제창", 토스 담당자 확인). 이 상점 MID 4개 중 `link_*` 2개는 결제위젯/LinkPay(**안 씀**), `maumfu*`가 일반결제. 라이브 키 `live_ck_`/`live_sk_` 등록 완료(파일경유·마스킹).
+- **confirm 엔드포인트 = `POST /v1/payments/confirm`**(body에 `{paymentKey,orderId,amount}`, v2 규격). 시크릿키로 Basic 인증. 위젯 시도했다가 원복(상점에 표준 ck 있어 v1 카드 팝업 유지 — 재migration 금지).
+- **첫 라이브 실결제(id=30) 검증 완료**: 카드결제→승인→지급→내역, 정확히 1회 지급. 이후 셀프 환불로 취소까지 검증.
+- ⚠️ 실결제 **추가 검증은 사용자가 내일 몇 건 더**(2026-07-22 기준). 문제 시 개선된 에러표시로 `[코드]` 노출.
+- **정기결제(빌링)는 별도 계약** — `TOSS_BILLING_KEY` + 멤버십 버튼 교체(백엔드 `/api/subscription/toss/*` 구현됨). 메모리 `project_payment_roadmap`.
+- CTS는 별도(더새놀 사업자) — CTS 문서.
+
+### 고객 셀프 환불 (2026-07-22) — 상세는 메모리 `project_toss_payment`
+- `POST /api/credits/refund {pgTid}`. 프론트: 마이페이지 크레딧 내역 '구매/지급 내역'의 카드결제 건 [환불 요청] 버튼(7일 이내·completed일 때만).
+- **정책(확정)**: **전액환불만**(부분환불 없음). 미사용=현재 잔액 ≥ 구매 크레딧(관대). 전자상거래법 청약철회.
+- 흐름: 소유·7일·잔액 검증 → 외부서비스 상품 차단 → 원자적 선점(completed→refunded, status CHECK 4개라 중간상태 없음) → 크레딧 회수(잔액가드) → 토스 취소 API(`POST /v1/payments/{paymentKey}/cancel`) → 실패 시 전부 롤백 → 성공 시 원장+`reversePartnerCommission`.
+- ⚠️ **`credit_transactions.type`은 `CHECK(type IN ('gain','spend'))`** — 차감/환불 원장은 **`'spend'`**(‘loss’ 쓰면 INSERT가 CHECK 위반→500. 실사고 2026-07-22, 고객·어드민 환불 둘 다 수정). 원장 실패해도 돈 환불 후엔 성공 반환(try/catch).
+- 어드민 환불(`/api/admin/payments/:id/refund`)은 **토스 취소 없이 크레딧만 회수**(돈은 콘솔 수동) — 고객 환불과 다름.
 
 ---
 
