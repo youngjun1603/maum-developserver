@@ -1156,9 +1156,22 @@ app.post('/api/credits/refund', async (c) => {
       return c.json({ success: false, error: msg }, 400)
     }
   } catch (e) {
-    await rollback()
-    console.error('[Refund] 토스 취소 오류:', e, 'pg_tid:', pgTid)
-    return c.json({ success: false, error: '환불 처리 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.' }, 502)
+    // ⚠️ 취소요청은 던졌는데 응답이 유실됐을 수 있다 → 실제로 취소됐는지 재조회 후 판단.
+    //    이미 취소됐는데 롤백하면 "돈은 환불됐는데 크레딧 복구"(이중혜택)가 된다.
+    let actuallyCancelled = false
+    try {
+      const inq = await fetch(`https://api.tosspayments.com/v1/payments/${encodeURIComponent(pgTid)}`, {
+        headers: { 'Authorization': 'Basic ' + btoa(tossKey + ':') },
+      })
+      if (inq.ok) { const p = await inq.json() as { status?: string }; if (p?.status === 'CANCELED' || p?.status === 'PARTIAL_CANCELED') actuallyCancelled = true }
+    } catch { /* 재조회도 실패 → 미취소로 간주해 롤백(다음 재시도는 Idempotency-Key로 중복취소 안 됨) */ }
+    if (!actuallyCancelled) {
+      await rollback()
+      console.error('[Refund] 토스 취소 오류(미취소 확인) — 롤백:', e, 'pg_tid:', pgTid)
+      return c.json({ success: false, error: '환불 처리 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.' }, 502)
+    }
+    console.error('[Refund] 취소요청 응답 유실이나 실제 취소 확인 — 환불 유효 처리. pg_tid:', pgTid)
+    // 취소 확정 → 롤백하지 않고 아래 성공 처리로 진행
   }
 
   // 성공(돈 이미 환불됨) — 원장 기록 + 파트너 되돌림. 여기서 실패해도 환불은 유효하므로 성공 처리한다.
@@ -4258,15 +4271,21 @@ app.post('/api/admin/payments/:id/refund', async (c) => {
   if (!charge) return c.json({ success: false, error: '결제 내역 없음' }, 404)
   if (charge.status !== 'completed') return c.json({ success: false, error: `환불 불가 — 현재 상태: ${charge.status}` }, 400)
 
-  await DB.batch([
-    DB.prepare(`UPDATE credit_charges SET status='refunded', completed_at=CURRENT_TIMESTAMP WHERE id=?`).bind(chargeId),
-    DB.prepare(`UPDATE users SET credits = credits - ? WHERE id=? AND credits >= ?`).bind(charge.credits, charge.user_id, charge.credits),
-    DB.prepare(`INSERT INTO credit_transactions (user_id, type, amount, reason, balance_after, ref_id) VALUES (?,?,?,?,(SELECT credits FROM users WHERE id=?),?)`).bind(
-      charge.user_id, 'spend', charge.credits, 'admin_refund', charge.user_id, chargeId
-    ),
-  ])
+  // ⚠️ 원자적 선점(completed→refunded) — 동시요청·더블클릭 시 이중 회수 방지(고객 환불과 동일 패턴).
+  const claim = await DB.prepare("UPDATE credit_charges SET status='refunded', completed_at=CURRENT_TIMESTAMP WHERE id=? AND status='completed'").bind(chargeId).run()
+  if (claim.meta.changes === 0) return c.json({ success: false, error: '이미 환불됐거나 환불 불가한 상태예요.' }, 409)
 
-  return c.json({ success: true, message: `환불 처리 완료 — ${charge.credits} 크레딧 회수, ${charge.amount.toLocaleString()} ${charge.currency} 환불 필요` })
+  // 크레딧 회수(잔액 가드). 이미 사용해 회수 못 하면 선점 롤백 + 경고(카드 환불 전에 반드시 확인).
+  const claw = await DB.prepare('UPDATE users SET credits = credits - ? WHERE id=? AND credits >= ?').bind(charge.credits, charge.user_id, charge.credits).run()
+  if (claw.meta.changes === 0) {
+    await DB.prepare("UPDATE credit_charges SET status='completed' WHERE id=? AND status='refunded'").bind(chargeId).run()
+    return c.json({ success: false, error: `⚠️ 크레딧이 이미 사용되어 자동 회수할 수 없어요(잔액 부족). 카드 환불 전에 수동 확인이 필요합니다.` }, 400)
+  }
+  await DB.prepare('INSERT INTO credit_transactions (user_id, type, amount, reason, balance_after, ref_id) VALUES (?,?,?,?,(SELECT credits FROM users WHERE id=?),?)')
+    .bind(charge.user_id, 'spend', charge.credits, 'admin_refund', charge.user_id, chargeId).run()
+  reversePartnerCommission(DB, chargeId).catch(() => {})
+
+  return c.json({ success: true, message: `크레딧 회수 완료 — ${charge.credits}cr. ⚠️ 카드 환불은 토스 상점관리자에서 직접 취소하세요(${charge.amount.toLocaleString()} ${charge.currency}).` })
 })
 
 // ============================================================
