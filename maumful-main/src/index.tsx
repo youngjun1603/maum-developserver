@@ -1104,11 +1104,13 @@ app.post('/api/credits/refund', async (c) => {
   if (!pgTid) return c.json({ success: false, error: '환불할 결제를 찾을 수 없어요.' }, 400)
 
   const charge = await DB.prepare(
-    "SELECT id, credits, amount, status, completed_at FROM credit_charges WHERE pg_tid=? AND user_id=? AND pg='toss'"
-  ).bind(pgTid, userId).first<{ id: number; credits: number; amount: number; status: string; completed_at: string | null }>()
+    "SELECT id, credits, amount, status, package_key, completed_at FROM credit_charges WHERE pg_tid=? AND user_id=? AND pg='toss'"
+  ).bind(pgTid, userId).first<{ id: number; credits: number; amount: number; status: string; package_key: string; completed_at: string | null }>()
   if (!charge) return c.json({ success: false, error: '결제 내역을 찾을 수 없어요.' }, 404)
   if (charge.status === 'refunded') return c.json({ success: false, error: '이미 환불된 결제예요.' }, 400)
   if (charge.status !== 'completed') return c.json({ success: false, error: '환불할 수 없는 결제 상태예요.' }, 400)
+  // 외부 서비스 상품(수달·곁 등)은 크레딧이 아니라 외부 지급이라 셀프 환불 대상 아님(회수 로직 별도 필요). 고객센터 안내.
+  if (PACKAGES[charge.package_key]?.service) return c.json({ success: false, error: '이 상품은 고객센터(support@maumful.com)로 환불을 요청해 주세요.' }, 400)
 
   // 7일 이내 (completed_at은 UTC 'YYYY-MM-DD HH:MM:SS')
   const doneMs = charge.completed_at ? Date.parse(charge.completed_at.replace(' ', 'T') + 'Z') : NaN
