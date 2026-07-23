@@ -5569,11 +5569,11 @@ function PsychologicalTestSystem() {
     // 단품 상품 (하이브리드: 구매 시 해당 크레딧 지급, 화면은 단품으로 표기). 백엔드 PACKAGES와 키·금액 일치
     const PACKAGES_KR = [
       { key:'test_one', credits:10, amount:2000, label:t('심리검사 1회','Assessment'),      desc:t('검사 1회 + 결과 해석','1 test + report'),  badge:null },
-      { key:'ai_10',    credits:20, amount:2000, label:t('AI 상담 10회권','AI chat ×10'),    desc:t('AI 채팅 10회','10 AI chats'),            badge:t('인기','Popular') },
+      { key:'ai_10',    credits:20, amount:2900, label:t('AI 상담 10회권','AI chat ×10'),    desc:t('AI 채팅 10회','10 AI chats'),            badge:t('인기','Popular') },
       { key:'pdf_one',  credits:3,  amount:1000, label:t('PDF 결과해석','PDF report'),        desc:t('심층 해석 PDF 1회','In-depth PDF'),       badge:null },
       { key:'allinone', credits:33, amount:3900, label:t('올인원 패키지','All-in-One'),       desc:t('검사+AI 10회+PDF','Test+AI+PDF'),        badge:t('추천','Best') },
       // ── 서비스별 프리미엄 상품(마음풀 크레딧 지급 → 각 서비스에서 사용) ──
-      { key:'integrated_one', credits:20, amount:6900, label:t('통합 심층 해석 1회','Integrated Insight'), desc:t('여러 검사를 한 사람으로 종합','All tests, one deep read'), badge:t('심층','Deep') },
+      { key:'integrated_one', credits:40, amount:4500, label:t('통합 심층 해석 1회','Integrated Insight'), desc:t('여러 검사를 한 사람으로 종합','All tests, one deep read'), badge:t('심층','Deep') },
       { key:'bubu_pack10',    credits:25, amount:5900, label:t('마음부부 통역 10회팩','Maum Bubu ×10'),     desc:t('부부 대화 통역 10회','10 couple translations'),        badge:null },
       { key:'sedae_pack10',   credits:25, amount:5900, label:t('마음세대 통역팩','Maum Sedae pack'),        desc:t('부모-자녀 통역(성인)','Parent-child (adult)'),         badge:null },
       // ── 외부 서비스 상품(결제 시 각 서비스로 자동 지급 — 마음풀 크레딧 아님) ──

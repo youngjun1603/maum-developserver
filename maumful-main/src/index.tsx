@@ -1853,7 +1853,7 @@ app.post('/api/ai-analyze/integrated', async (c) => {
   // ── 무료 1회 → 이후 유료(프리미엄 프리미엄, 2026-07-18). 마스터는 무제한 무료. ──
   //   스트리밍 엔드포인트라 스트림 시작 전 선결제. upstream 실패(502) 시 환불, 무료분은 성공 시점에 소진.
   const isMasterUser = isMasterAccount(u?.email)
-  const INTEGRATED_COST = 20
+  const INTEGRATED_COST = 40
   const integratedFreeKey = `integrated_free_used:${userId}`
   const integratedUsedFree = isMasterUser ? 1 : (parseInt((await KV.get(integratedFreeKey)) || '0', 10) || 0)
   const integratedIsFree = !isMasterUser && integratedUsedFree < 1
@@ -2908,22 +2908,22 @@ ${summary ?? (counselingType === 'biblical' ? 'No test result — proceed as fai
 // ── 패키지 정의 (credits: 지급량, amount: 결제금액, currency 단위에 맞게)
 // KRW: 원 단위 / USD: 센트 단위 (Stripe 기준)
 const PACKAGES: Record<string, { credits: number; amount: number; label: string; product?: boolean; service?: 'otter' | 'gyeot'; grantType?: string }> = {
-  starter_kr:  { credits: 50,  amount: 2900,  label: '스타터' },
-  standard_kr: { credits: 120, amount: 5900,  label: '표준'   },
-  premium_kr:  { credits: 300, amount: 12900, label: '프리미엄' },
-  pro_kr:      { credits: 700, amount: 24900, label: '대용량' },
+  starter_kr:  { credits: 50,  amount: 4900,  label: '스타터' },
+  standard_kr: { credits: 120, amount: 9900,  label: '표준'   },
+  premium_kr:  { credits: 300, amount: 15000, label: '프리미엄' },
+  pro_kr:      { credits: 700, amount: 25000, label: '대용량' },
   starter_g:   { credits: 50,  amount: 299,   label: 'Starter'  },
   standard_g:  { credits: 120, amount: 599,   label: 'Standard' },
   premium_g:   { credits: 300, amount: 1299,  label: 'Premium'  },
   pro_g:       { credits: 700, amount: 2499,  label: 'Pro'      },
   // ── 단품 상품(하이브리드: 화면=상품, 백엔드=크레딧 지급). KR 상품제 ──
   test_one:  { credits: 10, amount: 2000, label: '심리검사 1회(해석 포함)', product: true },
-  ai_10:     { credits: 20, amount: 2000, label: 'AI 상담 10회권',          product: true },
+  ai_10:     { credits: 20, amount: 2900, label: 'AI 상담 10회권',          product: true },
   pdf_one:   { credits: 3,  amount: 1000, label: 'PDF 결과해석',            product: true },
   allinone:  { credits: 33, amount: 3900, label: '올인원(검사+AI10회+PDF)', product: true },
   // ── 서비스별 프리미엄 상품(모두 마음풀 users.credits 지급 → 각 서비스가 차감) ──
   //    프리미엄 포지셔닝(2026-07-18): 저가 지양. 부부·세대는 통역이 maumful 크레딧을 쓴다(세대는 성인만).
-  integrated_one: { credits: 20, amount: 6900, label: '통합 심층 해석 1회', product: true },
+  integrated_one: { credits: 40, amount: 4500, label: '통합 심층 해석 1회', product: true },
   bubu_pack10:    { credits: 25, amount: 5900, label: '마음부부 통역 10회팩', product: true },
   sedae_pack10:   { credits: 25, amount: 5900, label: '마음세대 통역팩(성인)', product: true },
   // ── 외부 서비스 상품(마음풀 판매 → 서명 grant로 수달·곁에 지급). credits=0(내부 크레딧 안 줌) ──
