@@ -5574,8 +5574,8 @@ function PsychologicalTestSystem() {
       { key:'allinone', credits:33, amount:3900, label:t('올인원 패키지','All-in-One'),       desc:t('검사+AI 10회+PDF','Test+AI+PDF'),        badge:t('추천','Best') },
       // ── 서비스별 프리미엄 상품(마음풀 크레딧 지급 → 각 서비스에서 사용) ──
       { key:'integrated_one', credits:40, amount:4500, label:t('통합 심층 해석 1회','Integrated Insight'), desc:t('여러 검사를 한 사람으로 종합','All tests, one deep read'), badge:t('심층','Deep') },
-      { key:'bubu_pack10',    credits:25, amount:5900, label:t('마음부부 통역 10회팩','Maum Bubu ×10'),     desc:t('부부 대화 통역 10회','10 couple translations'),        badge:null },
-      { key:'sedae_pack10',   credits:25, amount:5900, label:t('마음세대 통역팩','Maum Sedae pack'),        desc:t('부모-자녀 통역(성인)','Parent-child (adult)'),         badge:null },
+      { key:'bubu_pack10',    credits:25, amount:3300, label:t('마음부부 통역 10회팩','Maum Bubu ×10'),     desc:t('부부 대화 통역 10회','10 couple translations'),        badge:null },
+      { key:'sedae_pack10',   credits:25, amount:3300, label:t('마음세대 통역팩','Maum Sedae pack'),        desc:t('부모-자녀 통역(성인)','Parent-child (adult)'),         badge:null },
       // ── 외부 서비스 상품(결제 시 각 서비스로 자동 지급 — 마음풀 크레딧 아님) ──
       { key:'otter_light',  credits:0, amount:7900,  label:t('마음수달 라이트','Maumotter Light'),  desc:t('월 30세션 · 아이 마음 통역','30 sessions/mo'),   badge:null },
       { key:'otter_pro',    credits:0, amount:14900, label:t('마음수달 프로','Maumotter Pro'),      desc:t('월 100세션','100 sessions/mo'),                 badge:null },

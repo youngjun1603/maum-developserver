@@ -4413,8 +4413,8 @@ ${tx.amount} credits reclaimed and \u20A9${Number(tx.pg_amount).toLocaleString("
       { key: "allinone", credits: 33, amount: 3900, label: t("\uC62C\uC778\uC6D0 \uD328\uD0A4\uC9C0", "All-in-One"), desc: t("\uAC80\uC0AC+AI 10\uD68C+PDF", "Test+AI+PDF"), badge: t("\uCD94\uCC9C", "Best") },
       // ── 서비스별 프리미엄 상품(마음풀 크레딧 지급 → 각 서비스에서 사용) ──
       { key: "integrated_one", credits: 40, amount: 4500, label: t("\uD1B5\uD569 \uC2EC\uCE35 \uD574\uC11D 1\uD68C", "Integrated Insight"), desc: t("\uC5EC\uB7EC \uAC80\uC0AC\uB97C \uD55C \uC0AC\uB78C\uC73C\uB85C \uC885\uD569", "All tests, one deep read"), badge: t("\uC2EC\uCE35", "Deep") },
-      { key: "bubu_pack10", credits: 25, amount: 5900, label: t("\uB9C8\uC74C\uBD80\uBD80 \uD1B5\uC5ED 10\uD68C\uD329", "Maum Bubu \xD710"), desc: t("\uBD80\uBD80 \uB300\uD654 \uD1B5\uC5ED 10\uD68C", "10 couple translations"), badge: null },
-      { key: "sedae_pack10", credits: 25, amount: 5900, label: t("\uB9C8\uC74C\uC138\uB300 \uD1B5\uC5ED\uD329", "Maum Sedae pack"), desc: t("\uBD80\uBAA8-\uC790\uB140 \uD1B5\uC5ED(\uC131\uC778)", "Parent-child (adult)"), badge: null },
+      { key: "bubu_pack10", credits: 25, amount: 3300, label: t("\uB9C8\uC74C\uBD80\uBD80 \uD1B5\uC5ED 10\uD68C\uD329", "Maum Bubu \xD710"), desc: t("\uBD80\uBD80 \uB300\uD654 \uD1B5\uC5ED 10\uD68C", "10 couple translations"), badge: null },
+      { key: "sedae_pack10", credits: 25, amount: 3300, label: t("\uB9C8\uC74C\uC138\uB300 \uD1B5\uC5ED\uD329", "Maum Sedae pack"), desc: t("\uBD80\uBAA8-\uC790\uB140 \uD1B5\uC5ED(\uC131\uC778)", "Parent-child (adult)"), badge: null },
       // ── 외부 서비스 상품(결제 시 각 서비스로 자동 지급 — 마음풀 크레딧 아님) ──
       { key: "otter_light", credits: 0, amount: 7900, label: t("\uB9C8\uC74C\uC218\uB2EC \uB77C\uC774\uD2B8", "Maumotter Light"), desc: t("\uC6D4 30\uC138\uC158 \xB7 \uC544\uC774 \uB9C8\uC74C \uD1B5\uC5ED", "30 sessions/mo"), badge: null },
       { key: "otter_pro", credits: 0, amount: 14900, label: t("\uB9C8\uC74C\uC218\uB2EC \uD504\uB85C", "Maumotter Pro"), desc: t("\uC6D4 100\uC138\uC158", "100 sessions/mo"), badge: null },
