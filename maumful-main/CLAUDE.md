@@ -185,11 +185,15 @@ npm run deploy:cts    # lightoflife-couple (wrangler.lightoflife.toml)
 | AI 채팅 1회 | 2cr | 크레딧 보유 시 소진까지 무제한 |
 | AI 채팅(크레딧 없음) | 무료 | 하루 5회 |
 | PDF 분석 1회 | 3cr | 외부 검사 AI 해석 |
+| 통합 심층해석 1회 | 40cr | `INTEGRATED_COST`(2026-07-22 20→40). 첫 1회 무료 |
 
-**패키지(KRW):** 스타터 50/2,900 · 표준 120/5,900 · 프리미엄 300/12,900 · 대용량 700/24,900
+### 상품 가격 정합 (2026-07-22 A-2 개편 · 커밋 085e8b0·0242d89 · 메모리 `project_product_pricing_plan`)
+- ⚠️ **핵심 규칙: 크레딧은 공용 화폐 → "크레딧 지급 상품"은 크레딧이 많을수록 크레딧당 단가가 같거나 싸야 한다(단조 감소).** 어기면 지배당하는 **죽은 상품**이 됨(예전 통합해석·검사1회). **가격 바꿀 땐 반드시 곡선 정합 확인** + 프론트 `PACKAGES_KR`와 백엔드 `PACKAGES` **두 곳 동시**(표시=프론트, 청구=백엔드).
+- **단품(프론트 노출)**: PDF 3cr/₩1,000 · 검사1회 10cr/₩2,000 · AI10회 20cr/₩2,900 · 부부·세대팩 25cr/₩3,300 · 올인원 33cr/₩3,900 · 통합해석 40cr/₩4,500 (크레딧당 333→200→145→132→118→113 단조↓).
+- **충전팩(`PACKAGES`만·프론트 미노출)**: 스타터 50/₩4,900 · 표준 120/₩9,900 · 프리미엄 300/₩15,000 · 대용량 700/₩25,000 (98→82→50→36).
+- **수달·곁(외부 grant, credits:0·비공용)**: 곡선 무관 독립가(라이트 7,900/프로 14,900/10회팩 6,900). `/api/grant` 라이브·`MAUM_SSO_SECRET` 설정됨.
+
 **일일 제한(`src/index.tsx`):** 크레딧≥2 차감 후 무제한 / <2 무료5회(`ai_daily:{userId}:{today}` KV TTL 86400) / 비회원 평생3회(`guest_chat:{ip}`) / 마스터 무제한·무차감
-
-**향후 상품제 전환(현재 크레딧 유지):** 하이브리드(화면=상품, 백엔드=`spendCredits`/`gainCredits` 그대로). AI채팅은 상품 내장횟수. 전환 순서: ①토스 실결제 승인 후 ②마음풀·CTS 동시 변경. 착수 전 상세 설계 검토. (메모리 `project_product_pricing_plan`)
 
 ---
 
@@ -261,9 +265,9 @@ npm run deploy:cts    # lightoflife-couple (wrangler.lightoflife.toml)
 전략(사용자 확정) = **무료로 경험 → 유료 전환**, 저가 포지셔닝 지양(프리미엄 가격). ⚠️ **실결제는 토스 라이브키 등록 후** 동작(현재 테스트키 — 카탈로그·전환로직은 다 살아 있고 결제만 대기).
 
 - **마음풀 상품**(`PACKAGES` index.tsx / `ChargeView` PACKAGES_KR app.jsx):
-  - 내부(마음풀 크레딧 지급): 통합해석 ₩6,900·부부/세대 통역팩 ₩5,900. 부부·세대는 maumful `users.credits`를 차감하므로 상품=크레딧 지급.
+  - 내부(마음풀 크레딧 지급): 통합해석 40cr/₩4,500·부부/세대 통역팩 25cr/₩3,300 (2026-07-22 정합 개편, 위 "상품 가격 정합" 참조). 부부·세대는 maumful `users.credits`를 차감하므로 상품=크레딧 지급.
   - 외부(수달·곁, `service`+`grantType`·credits=0): 라이트 ₩7,900/프로 ₩14,900/10회팩 ₩6,900.
-- **무료→유료 전환**(프리미엄 프리미엄): 부부·세대 **첫 3회 무료**(KV `bubu_free_used`/`sedae_free_used`{uid}, 세대는 성인만·청소년 무료) → 크레딧 차감 → 없으면 402 `needPurchase`. 통합해석 **첫 1회 무료**(KV `integrated_free_used`)→20cr 선결제(스트리밍이라 스트림 시작 전 선결제·upstream 502 시 환불·마스터 무제한).
+- **무료→유료 전환**(프리미엄 프리미엄): 부부·세대 **첫 3회 무료**(KV `bubu_free_used`/`sedae_free_used`{uid}, 세대는 성인만·청소년 무료) → 크레딧 차감 → 없으면 402 `needPurchase`. 통합해석 **첫 1회 무료**(KV `integrated_free_used`)→**40cr** 선결제(스트리밍이라 스트림 시작 전 선결제·upstream 502 시 환불·마스터 무제한).
 - **통합결제 grant**(수달·곁은 별도 생태계라 크레딧 대신 지급 전달): 결제성공(success·webhook)→`service` 있으면 `deliverGrant`(`signSso` 서명→POST `maumotter.com`/`maumgyeot.com` `/api/grant`)→각 서비스 `verifySso`·`applyGrant`. 큐 `external_grants`(마음풀)·멱등 `external_orders`(수달곁). 재시도 `/api/admin/deliver-pending-grants`. **`MAUM_SSO_SECRET` 3곳 동일값 필수**(마음풀·수달·곁). E2E 검증 완료(지급·멱등·위조401·환불revoke). 상세=메모리 [[project_maum_unified_payment]].
 
 ## 제휴코드 수익 쉐어 정산 (2026-07-19)
