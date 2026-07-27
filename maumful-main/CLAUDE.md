@@ -273,6 +273,10 @@ npm run deploy:cts    # lightoflife-couple (wrangler.lightoflife.toml)
 ## 제휴코드 수익 쉐어 정산 (2026-07-19)
 기존 파트너 시스템(`partners.revenue_share_rate`·`credit_charges.partner_code`) 위에 **정산 원장** 추가. 결제 완료 시 `accruePartnerCommission`(비차단 `.catch`)이 `partner_commissions`에 적립 — **charge_id PK 멱등**·**적립 시점 rate 스냅샷**(율 변경돼도 과거 정산 불변)·`partners.commission_start/end`(귀속 기간). 어드민 = **메인 관리자(app.jsx) 🤝 파트너 탭 `MasterPartnerPanel`**(등록·정산 원장 조회·**CSV 다운로드**·정산완료). 개인 친구초대(`referrals` 크레딧)와 별개. 실적립은 토스 라이브 후. 메모리 `project_maumful_partner_revshare`.
 
+## 제휴 SSO 온보딩 + 진입 레이어 (검토완료·착수 향후, 2026-07-22)
+제휴처(삼아 등)에서 **이미 로그인된 유저가 배너 클릭 → 마음풀 별도 로그인 없이 자동 로그인**. **이미 구현됨**: `?p=<코드>&sso_token=` → `POST /api/auth/partner-sso`(HMAC-SHA256 서명검증·uid로 계정 매칭/자동생성·+20cr·partner_code 귀속). 토큰=`base64url(payload).base64url(HMAC(sso_secret,payloadB64))`, payload=`{uid,email?,nick?,exp}`. 파트너 등록(어드민 🤝 파트너 탭)에 **sso_secret 필수**. ⚠️ sso_token은 exp 짧게·클릭 시점 발급(고정 href 금지).
+- **진입 이원화 설계(착수 향후)**: 코어 `app.jsx` 무변경, `landing`처럼 **별도 경량 번들 진입 레이어**로 전환 화면을 붙여 빠르게 반복. 전환 레버=제휴전용 쿠폰/보너스·SSO 마찰0·단일CTA·큐레이션. **config 구동**(어드민 편집=즉시반영·A/B). 상세·와이어프레임=메모리 `project_maumful_partner_entry`. **삼아는 계약 전(사전점검)**.
+
 ## 크롤링 정책 (robots.txt, 2026-07-18)
 
 마케팅 노출 위해 **AI 검색·답변봇 부분 허용**: Google-Extended(Gemini)·OAI-SearchBot·ChatGPT-User·PerplexityBot = HTML 허용 + `/static/`(검사문항 든 JS번들)·`/api/` 차단. **AI 학습봇**(GPTBot·ClaudeBot·CCBot 등)·**스크래퍼**(Ahrefs·Semrush 등)는 전면 차단. `X-Robots-Tag`/meta에서 `noai` 제거(noimageai 유지). ⚠️ 순수 SPA라 검사화면 URL이 없다 → 실보호 대상 = 문항이 든 **`/static/` 번들**. sitemap에 `/story` 추가. 상세=메모리 [[project_maumful_crawl_policy]].
