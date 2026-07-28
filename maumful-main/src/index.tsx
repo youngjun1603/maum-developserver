@@ -599,10 +599,18 @@ app.get('/api/partner/config', async (c) => {
   const code = (c.req.query('p') ?? '').toUpperCase()
   if (!code) return c.json({ success: false, error: 'p 파라미터 필수' }, 400)
 
-  const partner = await DB.prepare(
-    "SELECT code, name, welcome_message, featured_tests, primary_color, logo_url, entry_headline, entry_subcopy, entry_benefit, entry_cta_label, entry_cta_go FROM partners WHERE code=? AND is_active=1"
-  ).bind(code).first()
-
+  let partner
+  try {
+    partner = await DB.prepare(
+      "SELECT code, name, welcome_message, featured_tests, primary_color, logo_url, entry_headline, entry_subcopy, entry_benefit, entry_cta_label, entry_cta_go FROM partners WHERE code=? AND is_active=1"
+    ).bind(code).first()
+  } catch {
+    // ⚠️ entry_* 컬럼이 아직 없는 환경(migration 0027 미적용) → 기본 컬럼만으로 폴백(회귀 방지).
+    //    entry_* 없으면 partner_entry가 파트너명 기반 기본문구로 렌더. migration 적용되면 자동 활성화.
+    partner = await DB.prepare(
+      "SELECT code, name, welcome_message, featured_tests, primary_color, logo_url FROM partners WHERE code=? AND is_active=1"
+    ).bind(code).first()
+  }
   if (!partner) return c.json({ success: false, error: '파트너를 찾을 수 없습니다.' }, 404)
   return c.json({ success: true, data: partner })
 })
