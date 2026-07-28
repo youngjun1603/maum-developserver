@@ -289,33 +289,24 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
     "button",
     {
       onClick: () => setView("landing"),
+      "aria-label": "\uB9C8\uC74C\uD480 \uD648",
       style: {
         display: "flex",
         alignItems: "center",
-        gap: 8,
         background: "none",
         border: "none",
         cursor: "pointer",
         padding: 0
       }
     },
-    /* @__PURE__ */ React.createElement("div", { style: {
-      width: 32,
-      height: 32,
-      borderRadius: 10,
-      background: "linear-gradient(135deg, #2D6A4F, #52B788)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontSize: 16
-    } }, "\u{1F33F}"),
-    /* @__PURE__ */ React.createElement("span", { style: {
-      fontFamily: "'Noto Sans KR', sans-serif",
-      fontSize: 18,
-      fontWeight: 700,
-      color: "#1A1A1A",
-      letterSpacing: "-0.3px"
-    } }, "\uB9C8\uC74C\uD480")
+    /* @__PURE__ */ React.createElement(
+      "img",
+      {
+        src: "/static/maumful-logo.png?v=1",
+        alt: "\uB9C8\uC74C\uD480 (Maumful)",
+        style: { height: 30, width: "auto", display: "block" }
+      }
+    )
   ), /* @__PURE__ */ React.createElement("div", { className: "nav-desktop-links", style: { display: "flex", alignItems: "center", gap: 2 } }, navItems.map((item) => /* @__PURE__ */ React.createElement(
     "button",
     {

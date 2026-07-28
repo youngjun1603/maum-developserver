@@ -227,22 +227,17 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
         {/* 로고 */}
         <button
           onClick={() => setView('landing')}
+          aria-label="마음풀 홈"
           style={{
-            display: 'flex', alignItems: 'center', gap: 8,
+            display: 'flex', alignItems: 'center',
             background: 'none', border: 'none', cursor: 'pointer', padding: 0,
           }}
         >
-          <div style={{
-            width: 32, height: 32, borderRadius: 10,
-            background: 'linear-gradient(135deg, #2D6A4F, #52B788)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 16,
-          }}>🌿</div>
-          <span style={{
-            fontFamily: "'Noto Sans KR', sans-serif",
-            fontSize: 18, fontWeight: 700, color: '#1A1A1A',
-            letterSpacing: '-0.3px',
-          }}>마음풀</span>
+          <img
+            src="/static/maumful-logo.png?v=1"
+            alt="마음풀 (Maumful)"
+            style={{ height: 30, width: 'auto', display: 'block' }}
+          />
         </button>
 
         {/* 데스크톱 메뉴 */}
