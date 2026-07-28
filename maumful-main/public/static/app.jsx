@@ -4668,10 +4668,12 @@ function PsychologicalTestSystem() {
   }
 
   function MasterPartnerPanel() {
+    const EMPTY_F = { code:'', name:'', revenue_share_rate:'0.2', sso_secret:'', contact_email:'', commission_start:'', commission_end:'', primary_color:'', logo_url:'', featured_tests:'', welcome_message:'', entry_headline:'', entry_subcopy:'', entry_benefit:'', entry_cta_label:'', entry_cta_go:'' };
     const [partners, setPartners] = useState(null);
     const [sel, setSel] = useState(null);
-    const [showNew, setShowNew] = useState(false);
-    const [f, setF] = useState({ code:'', name:'', revenue_share_rate:'0.2', contact_email:'', commission_start:'', commission_end:'' });
+    const [showForm, setShowForm] = useState(false);
+    const [editCode, setEditCode] = useState(null);   // null=신규 등록, 'CODE'=수정
+    const [f, setF] = useState(EMPTY_F);
     const [pmsg, setPmsg] = useState('');
     const isoD = (d) => d.toISOString().slice(0,10);
     const [from, setFrom] = useState(() => isoD(new Date(Date.now()-30*86400000)));
@@ -4682,13 +4684,34 @@ function PsychologicalTestSystem() {
     const loadPartners = async () => { try { const d = await adminFetch('/api/admin/partners'); if (d.success) setPartners(d.data||[]); } catch {} };
     React.useEffect(() => { loadPartners(); }, []);
 
-    const create = async () => {
+    const openNew = () => { setEditCode(null); setF(EMPTY_F); setPmsg(''); setShowForm(true); };
+    const openEdit = (p) => {
+      setEditCode(p.code);
+      setF({
+        code: p.code||'', name: p.name||'', revenue_share_rate: String(p.revenue_share_rate ?? 0.2),
+        sso_secret: p.sso_secret||'', contact_email: p.contact_email||'',
+        commission_start: p.commission_start||'', commission_end: p.commission_end||'',
+        primary_color: p.primary_color||'', logo_url: p.logo_url||'', featured_tests: p.featured_tests||'',
+        welcome_message: p.welcome_message||'',
+        entry_headline: p.entry_headline||'', entry_subcopy: p.entry_subcopy||'', entry_benefit: p.entry_benefit||'',
+        entry_cta_label: p.entry_cta_label||'', entry_cta_go: p.entry_cta_go||'',
+      });
+      setPmsg(''); setShowForm(true);
+      try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch {}
+    };
+    const closeForm = () => { setShowForm(false); setEditCode(null); setPmsg(''); };
+    const save = async () => {
       if (!f.code.trim() || !f.name.trim()) { setPmsg('코드·파트너명은 필수예요'); return; }
-      const body = { ...f, revenue_share_rate: Number(f.revenue_share_rate)||0, commission_start: f.commission_start||undefined, commission_end: f.commission_end||undefined };
+      const isNew = !editCode;
+      const body = {};   // 빈칸은 null로 정리(선택 필드 비우기), 숫자는 변환
+      Object.keys(EMPTY_F).forEach(k => { const v = (f[k] ?? '').toString(); body[k] = v.trim() === '' ? null : v; });
+      body.revenue_share_rate = Number(f.revenue_share_rate) || 0;
+      body.code = f.code.trim();
       try {
-        const d = await adminFetch('/api/admin/partners', { method:'POST', body: JSON.stringify(body) });
-        if (d.success) { setPmsg('파트너 등록 완료'); setShowNew(false); setF({ code:'', name:'', revenue_share_rate:'0.2', contact_email:'', commission_start:'', commission_end:'' }); loadPartners(); }
-        else setPmsg(d.error || '등록 실패');
+        const url = isNew ? '/api/admin/partners' : `/api/admin/partners/${encodeURIComponent(editCode)}`;
+        const d = await adminFetch(url, { method: isNew ? 'POST' : 'PATCH', body: JSON.stringify(body) });
+        if (d.success) { setShowForm(false); setEditCode(null); setPmsg(isNew ? '파트너 등록 완료' : '수정 완료'); loadPartners(); }
+        else setPmsg(d.error || (isNew ? '등록 실패' : '수정 실패'));
       } catch { setPmsg('네트워크 오류'); }
     };
     const loadLedger = async (code) => {
@@ -4715,20 +4738,44 @@ function PsychologicalTestSystem() {
       <div className="bg-white rounded-2xl p-5 mb-5 border-2 border-emerald-100">
         <div className="flex items-center justify-between mb-3">
           <div className="text-sm font-bold text-emerald-700">🤝 제휴 파트너 관리 {partners ? `(${partners.length}개)` : ''}</div>
-          <button onClick={() => setShowNew(v => !v)} className="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-emerald-700">{showNew ? '✕ 닫기' : '+ 파트너 등록'}</button>
+          <button onClick={() => showForm ? closeForm() : openNew()} className="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-emerald-700">{showForm ? '✕ 닫기' : '+ 파트너 등록'}</button>
         </div>
         {pmsg && <div className={`text-xs px-3 py-2 rounded-lg mb-3 ${pmsg.includes('완료') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>{pmsg}</div>}
-        {showNew && (
+        {showForm && (
           <div className="border border-gray-100 rounded-xl p-4 mb-4 bg-gray-50">
+            <div className="text-xs font-bold text-gray-600 mb-2">{editCode ? `✏️ ${editCode} 수정` : '＋ 새 파트너 등록'}</div>
             <div className="grid grid-cols-2 gap-3">
-              {[['code','파트너 코드 (영문대문자, 예: KAKAO_HEALTH)'],['name','파트너명'],['revenue_share_rate','수익쉐어율 (0~1, 예: 0.2 · 언제든 변경 가능)'],['contact_email','정산 담당자 이메일'],['commission_start','정산 귀속 시작일 (선택, YYYY-MM-DD · 비우면 무기한)'],['commission_end','정산 귀속 종료일 (선택)']].map(([k, label]) => (
-                <div key={k}>
+              {[
+                ['code','파트너 코드 (영문대문자, 예: SAMA)','text',true],
+                ['name','파트너명','text'],
+                ['revenue_share_rate','수익쉐어율 (0~1, 예: 0.2)','text'],
+                ['sso_secret','SSO 시크릿 (자동로그인용·제휴처와 공유, 없으면 비움)','text'],
+                ['contact_email','정산 담당자 이메일','text'],
+                ['commission_start','정산 귀속 시작일 (YYYY-MM-DD·비우면 무기한)','text'],
+                ['commission_end','정산 귀속 종료일 (선택)','text'],
+                ['primary_color','브랜드 색상 (예: #2D6A4F)','text'],
+                ['logo_url','로고 이미지 URL (선택)','text'],
+                ['featured_tests','추천 검사 코드 (쉼표구분, 예: PHQ9,BURNOUT)','text'],
+                ['welcome_message','환영 메시지 (로그인 후 대시보드 배너)','area'],
+                ['entry_headline','[진입화면] 헤드라인 (줄바꿈 가능·비우면 기본문구)','area'],
+                ['entry_subcopy','[진입화면] 서브 카피 (비우면 환영 메시지/기본문구)','area'],
+                ['entry_benefit','[진입화면] 제휴 전용 혜택 문구 (비우면 숨김)','text'],
+                ['entry_cta_label','[진입화면] CTA 버튼 문구 (예: 무료로 검사 시작)','text'],
+                ['entry_cta_go','[진입화면] CTA 연결 (?go= 값, 예: test:PHQ9)','text'],
+              ].map(([k, label, type, newOnly]) => (
+                <div key={k} className={type === 'area' ? 'col-span-2' : ''}>
                   <div className="text-xs text-gray-500 mb-1">{label}</div>
-                  <input value={f[k]} onChange={e => setF(o => ({ ...o, [k]: e.target.value }))} className={inp} />
+                  {type === 'area'
+                    ? <textarea value={f[k]||''} onChange={e => setF(o => ({ ...o, [k]: e.target.value }))} rows={2} className={inp + ' resize-y'} />
+                    : <input value={f[k]||''} onChange={e => setF(o => ({ ...o, [k]: e.target.value }))} disabled={!!(newOnly && editCode)} className={inp + (newOnly && editCode ? ' bg-gray-100 text-gray-400' : '')} />}
                 </div>
               ))}
             </div>
-            <button onClick={create} className="mt-3 bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-emerald-700">등록하기</button>
+            <div className="flex gap-2 mt-3">
+              <button onClick={save} className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-emerald-700">{editCode ? '수정 저장' : '등록하기'}</button>
+              <button onClick={closeForm} className="px-4 py-2 rounded-lg text-sm font-bold border border-gray-200 text-gray-500 hover:bg-gray-100">취소</button>
+            </div>
+            <div className="text-[11px] text-gray-400 mt-2">💡 진입화면 설정은 저장 즉시 <b>/p</b> 제휴 랜딩에 반영돼요(배포 불필요).</div>
           </div>
         )}
         <div className="grid md:grid-cols-[280px_1fr] gap-4 items-start">
@@ -4740,7 +4787,10 @@ function PsychologicalTestSystem() {
               <div key={p.code} onClick={() => pick(p.code)} className={`bg-white border-2 rounded-xl p-3 cursor-pointer ${sel === p.code ? 'border-emerald-500' : 'border-gray-100'}`}>
                 <div className="flex items-center justify-between mb-1">
                   <div className="font-bold text-sm">{p.name}</div>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${p.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{p.is_active ? '활성' : '비활성'}</span>
+                  <div className="flex items-center gap-1.5">
+                    <button onClick={(e) => { e.stopPropagation(); openEdit(p); }} className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-100">✏️ 수정</button>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${p.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{p.is_active ? '활성' : '비활성'}</span>
+                  </div>
                 </div>
                 <div className="text-[11px] text-gray-400 mb-1">코드: {p.code} · 쉐어 {((p.revenue_share_rate||0)*100).toFixed(0)}%</div>
                 <div className="text-[11px] text-gray-500">유입 {(p.total_users||0).toLocaleString()}명 · 매출 {won(p.total_revenue)}</div>

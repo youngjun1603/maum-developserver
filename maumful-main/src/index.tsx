@@ -6032,6 +6032,8 @@ app.get('/api/admin/partners', async (c) => {
   const rows = await DB.prepare(`
     SELECT p.code, p.name, p.revenue_share_rate, p.welcome_message,
            p.featured_tests, p.primary_color, p.contact_email, p.is_active, p.created_at,
+           p.sso_secret, p.logo_url, p.commission_start, p.commission_end,
+           p.entry_headline, p.entry_subcopy, p.entry_benefit, p.entry_cta_label, p.entry_cta_go,
            COUNT(DISTINCT u.id)  AS total_users,
            COUNT(DISTINCT cc.id) AS total_charges,
            COALESCE(SUM(cc.amount), 0) AS total_revenue
@@ -6052,7 +6054,8 @@ app.post('/api/admin/partners', async (c) => {
   if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
 
   const body = await c.req.json() as Record<string, unknown>
-  const { code, name, sso_secret, revenue_share_rate, welcome_message, featured_tests, primary_color, logo_url, contact_email, commission_start, commission_end } = body
+  const { code, name, sso_secret, revenue_share_rate, welcome_message, featured_tests, primary_color, logo_url, contact_email, commission_start, commission_end,
+          entry_headline, entry_subcopy, entry_benefit, entry_cta_label, entry_cta_go } = body
 
   if (!code || !name) return c.json({ success: false, error: 'code, name 필수' }, 400)
   const codeStr = String(code).toUpperCase().replace(/[^A-Z0-9_]/g, '')
@@ -6061,20 +6064,17 @@ app.post('/api/admin/partners', async (c) => {
   const existing = await DB.prepare("SELECT code FROM partners WHERE code=?").bind(codeStr).first()
   if (existing) return c.json({ success: false, error: '이미 존재하는 파트너 코드' }, 409)
 
+  const s = (v: unknown) => (v ? String(v) : null)
   await DB.prepare(`
-    INSERT INTO partners (code, name, sso_secret, revenue_share_rate, welcome_message, featured_tests, primary_color, logo_url, contact_email, commission_start, commission_end)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO partners (code, name, sso_secret, revenue_share_rate, welcome_message, featured_tests, primary_color, logo_url, contact_email, commission_start, commission_end, entry_headline, entry_subcopy, entry_benefit, entry_cta_label, entry_cta_go)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).bind(
     codeStr, String(name),
-    sso_secret ? String(sso_secret) : null,
+    s(sso_secret),
     Number(revenue_share_rate ?? 0),
-    welcome_message ? String(welcome_message) : null,
-    featured_tests  ? String(featured_tests)  : null,
-    primary_color   ? String(primary_color)   : null,
-    logo_url        ? String(logo_url)        : null,
-    contact_email   ? String(contact_email)   : null,
-    commission_start ? String(commission_start) : null,
-    commission_end   ? String(commission_end)   : null,
+    s(welcome_message), s(featured_tests), s(primary_color), s(logo_url), s(contact_email),
+    s(commission_start), s(commission_end),
+    s(entry_headline), s(entry_subcopy), s(entry_benefit), s(entry_cta_label), s(entry_cta_go),
   ).run()
 
   return c.json({ success: true, data: { code: codeStr } }, 201)
@@ -6088,7 +6088,7 @@ app.patch('/api/admin/partners/:code', async (c) => {
 
   const code = c.req.param('code').toUpperCase()
   const body = await c.req.json() as Record<string, unknown>
-  const allowed = ['name','sso_secret','revenue_share_rate','welcome_message','featured_tests','primary_color','logo_url','contact_email','is_active','commission_start','commission_end']
+  const allowed = ['name','sso_secret','revenue_share_rate','welcome_message','featured_tests','primary_color','logo_url','contact_email','is_active','commission_start','commission_end','entry_headline','entry_subcopy','entry_benefit','entry_cta_label','entry_cta_go']
   const sets: string[] = []
   const vals: unknown[] = []
 
