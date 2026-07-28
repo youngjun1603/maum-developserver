@@ -4734,6 +4734,36 @@ function PsychologicalTestSystem() {
       try { const d = await adminFetch('/api/admin/partner-commissions/settle', { method:'POST', body: JSON.stringify({ code: sel, from, to, ref }) }); if (d.success) { window.alert(`${d.settled}건 정산완료 처리`); loadLedger(sel); } } catch {}
     };
     const inp = "w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-400";
+    // 선택 가능한 값은 드롭다운/체크칩으로, 자유입력만 예시(placeholder) 표기
+    const TEST_OPTIONS = [['PHQ9','우울 PHQ-9'],['GAD7','불안 GAD-7'],['DASS21','우울·불안·스트레스 DASS-21'],['BIG5','성격 5요인 BIG5'],['LOST','상실 LOST'],['SCT','문장완성 SCT'],['DSI','자아분화 DSI'],['BURNOUT','번아웃 K-MBI+'],['RIASEC','직업흥미 RIASEC'],['VALUES','직업가치관']];
+    const RATE_OPTIONS = [0,0.05,0.1,0.15,0.2,0.25,0.3,0.35,0.4,0.5];
+    const COLOR_OPTIONS = [['','지정 안 함'],['#2D6A4F','마음풀 그린'],['#1E7A54','딥그린'],['#3B82F6','블루'],['#4F46E5','인디고'],['#7C3AED','퍼플'],['#EC4899','핑크'],['#F59E0B','오렌지'],['#EF4444','레드'],['#14B8A6','틸'],['#475569','슬레이트']];
+    const GO_OPTIONS = [['','설정 안 함 (코어 홈으로)'], ...TEST_OPTIONS.map(([c, l]) => ['test:' + c, l + ' 검사']), ['history','내 검사 이력'], ['counseling','상담 연결']];
+    const FIELDS = [
+      { k:'code', label:'파트너 코드 (영문 대문자)', kind:'text', ph:'SAMA', newOnly:true },
+      { k:'name', label:'파트너명', kind:'text', ph:'삼아인터내셔널' },
+      { k:'revenue_share_rate', label:'수익쉐어율', kind:'rate' },
+      { k:'sso_secret', label:'SSO 시크릿 (자동로그인용·제휴처와 공유)', kind:'text', ph:'영문·숫자 32자 이상 권장' },
+      { k:'contact_email', label:'정산 담당자 이메일', kind:'text', ph:'billing@partner.com' },
+      { k:'commission_start', label:'정산 귀속 시작일 (비우면 무기한)', kind:'date' },
+      { k:'commission_end', label:'정산 귀속 종료일 (선택)', kind:'date' },
+      { k:'primary_color', label:'브랜드 색상', kind:'color' },
+      { k:'logo_url', label:'로고 이미지 URL (선택)', kind:'text', ph:'https://partner.com/logo.png' },
+      { k:'featured_tests', label:'추천 검사 (여러 개 선택 가능)', kind:'tests', full:true },
+      { k:'welcome_message', label:'환영 메시지 (로그인 후 대시보드 배너)', kind:'area', ph:'삼아 회원님, 마음풀에 오신 걸 환영합니다 :)', full:true },
+      { k:'entry_headline', label:'[진입화면] 헤드라인 (줄바꿈 가능·비우면 기본문구)', kind:'area', ph:'삼아 회원님,\n마음풀에 오신 걸 환영해요', full:true },
+      { k:'entry_subcopy', label:'[진입화면] 서브 카피 (비우면 환영 메시지/기본문구)', kind:'area', ph:'3분 심리검사로 지금 내 마음 상태를 확인해 보세요.', full:true },
+      { k:'entry_benefit', label:'[진입화면] 제휴 전용 혜택 문구 (비우면 숨김)', kind:'text', ph:'삼아 회원 전용 무료 검사 1회' },
+      { k:'entry_cta_label', label:'[진입화면] CTA 버튼 문구', kind:'text', ph:'무료로 내 마음 검사 시작' },
+      { k:'entry_cta_go', label:'[진입화면] CTA 연결 (검사·이력 등 선택)', kind:'go' },
+    ];
+    const testSet = new Set(String(f.featured_tests || '').split(',').map(s => s.trim()).filter(Boolean));
+    const toggleTest = (code) => {
+      const next = new Set(testSet);
+      if (next.has(code)) next.delete(code); else next.add(code);
+      const ordered = TEST_OPTIONS.map(([c]) => c).filter(c => next.has(c));
+      setF(o => ({ ...o, featured_tests: ordered.join(',') }));
+    };
     return (
       <div className="bg-white rounded-2xl p-5 mb-5 border-2 border-emerald-100">
         <div className="flex items-center justify-between mb-3">
@@ -4745,31 +4775,57 @@ function PsychologicalTestSystem() {
           <div className="border border-gray-100 rounded-xl p-4 mb-4 bg-gray-50">
             <div className="text-xs font-bold text-gray-600 mb-2">{editCode ? `✏️ ${editCode} 수정` : '＋ 새 파트너 등록'}</div>
             <div className="grid grid-cols-2 gap-3">
-              {[
-                ['code','파트너 코드 (영문대문자, 예: SAMA)','text',true],
-                ['name','파트너명','text'],
-                ['revenue_share_rate','수익쉐어율 (0~1, 예: 0.2)','text'],
-                ['sso_secret','SSO 시크릿 (자동로그인용·제휴처와 공유, 없으면 비움)','text'],
-                ['contact_email','정산 담당자 이메일','text'],
-                ['commission_start','정산 귀속 시작일 (YYYY-MM-DD·비우면 무기한)','text'],
-                ['commission_end','정산 귀속 종료일 (선택)','text'],
-                ['primary_color','브랜드 색상 (예: #2D6A4F)','text'],
-                ['logo_url','로고 이미지 URL (선택)','text'],
-                ['featured_tests','추천 검사 코드 (쉼표구분, 예: PHQ9,BURNOUT)','text'],
-                ['welcome_message','환영 메시지 (로그인 후 대시보드 배너)','area'],
-                ['entry_headline','[진입화면] 헤드라인 (줄바꿈 가능·비우면 기본문구)','area'],
-                ['entry_subcopy','[진입화면] 서브 카피 (비우면 환영 메시지/기본문구)','area'],
-                ['entry_benefit','[진입화면] 제휴 전용 혜택 문구 (비우면 숨김)','text'],
-                ['entry_cta_label','[진입화면] CTA 버튼 문구 (예: 무료로 검사 시작)','text'],
-                ['entry_cta_go','[진입화면] CTA 연결 (?go= 값, 예: test:PHQ9)','text'],
-              ].map(([k, label, type, newOnly]) => (
-                <div key={k} className={type === 'area' ? 'col-span-2' : ''}>
-                  <div className="text-xs text-gray-500 mb-1">{label}</div>
-                  {type === 'area'
-                    ? <textarea value={f[k]||''} onChange={e => setF(o => ({ ...o, [k]: e.target.value }))} rows={2} className={inp + ' resize-y'} />
-                    : <input value={f[k]||''} onChange={e => setF(o => ({ ...o, [k]: e.target.value }))} disabled={!!(newOnly && editCode)} className={inp + (newOnly && editCode ? ' bg-gray-100 text-gray-400' : '')} />}
-                </div>
-              ))}
+              {FIELDS.map((fd) => {
+                const dis = !!(fd.newOnly && editCode);
+                const set = (v) => setF(o => ({ ...o, [fd.k]: v }));
+                let ctrl;
+                if (fd.kind === 'area') {
+                  ctrl = <textarea value={f[fd.k] || ''} onChange={e => set(e.target.value)} rows={2} placeholder={fd.ph} className={inp + ' resize-y'} />;
+                } else if (fd.kind === 'rate') {
+                  ctrl = (
+                    <select value={String(Number(f.revenue_share_rate) || 0)} onChange={e => set(e.target.value)} className={inp}>
+                      {RATE_OPTIONS.map(r => <option key={r} value={String(r)}>{Math.round(r * 100)}%{r === 0 ? ' (쉐어 없음)' : ''}</option>)}
+                    </select>
+                  );
+                } else if (fd.kind === 'date') {
+                  ctrl = <input type="date" value={f[fd.k] || ''} onChange={e => set(e.target.value)} className={inp} />;
+                } else if (fd.kind === 'color') {
+                  const cur = f.primary_color || '';
+                  const inList = COLOR_OPTIONS.some(([v]) => v === cur);
+                  ctrl = (
+                    <div className="flex items-center gap-2">
+                      <span className="w-8 h-9 rounded-md border border-gray-200 shrink-0" style={{ background: cur || '#ffffff' }} />
+                      <select value={cur} onChange={e => set(e.target.value)} className={inp}>
+                        {!inList && cur && <option value={cur}>{cur} (현재값)</option>}
+                        {COLOR_OPTIONS.map(([v, l]) => <option key={v || 'none'} value={v}>{l}{v ? ` ${v}` : ''}</option>)}
+                      </select>
+                    </div>
+                  );
+                } else if (fd.kind === 'go') {
+                  ctrl = (
+                    <select value={f.entry_cta_go || ''} onChange={e => set(e.target.value)} className={inp}>
+                      {GO_OPTIONS.map(([v, l]) => <option key={v || 'none'} value={v}>{l}</option>)}
+                    </select>
+                  );
+                } else if (fd.kind === 'tests') {
+                  ctrl = (
+                    <div className="flex flex-wrap gap-1.5">
+                      {TEST_OPTIONS.map(([c, l]) => {
+                        const on = testSet.has(c);
+                        return <button key={c} type="button" onClick={() => toggleTest(c)} className={`text-xs px-2.5 py-1 rounded-full border font-medium ${on ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-500 border-gray-200 hover:border-emerald-300'}`}>{on ? '✓ ' : ''}{l}</button>;
+                      })}
+                    </div>
+                  );
+                } else {
+                  ctrl = <input value={f[fd.k] || ''} onChange={e => set(e.target.value)} placeholder={fd.ph} disabled={dis} className={inp + (dis ? ' bg-gray-100 text-gray-400' : '')} />;
+                }
+                return (
+                  <div key={fd.k} className={fd.full ? 'col-span-2' : ''}>
+                    <div className="text-xs text-gray-500 mb-1">{fd.label}</div>
+                    {ctrl}
+                  </div>
+                );
+              })}
             </div>
             <div className="flex gap-2 mt-3">
               <button onClick={save} className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-emerald-700">{editCode ? '수정 저장' : '등록하기'}</button>
