@@ -600,11 +600,26 @@ app.get('/api/partner/config', async (c) => {
   if (!code) return c.json({ success: false, error: 'p 파라미터 필수' }, 400)
 
   const partner = await DB.prepare(
-    "SELECT code, name, welcome_message, featured_tests, primary_color, logo_url FROM partners WHERE code=? AND is_active=1"
-  ).bind(code).first<{ code: string; name: string; welcome_message: string | null; featured_tests: string | null; primary_color: string | null; logo_url: string | null }>()
+    "SELECT code, name, welcome_message, featured_tests, primary_color, logo_url, entry_headline, entry_subcopy, entry_benefit, entry_cta_label, entry_cta_go FROM partners WHERE code=? AND is_active=1"
+  ).bind(code).first()
 
   if (!partner) return c.json({ success: false, error: '파트너를 찾을 수 없습니다.' }, 404)
   return c.json({ success: true, data: partner })
+})
+
+// 제휴 진입 퍼널 로그 (진입→CTA→가입→결제 측정). 비로그인 허용·fire-and-forget·실패 무해.
+app.post('/api/partner/entry-log', async (c) => {
+  const { DB } = c.env
+  let b: { code?: string; event?: string; variant?: string }
+  try { b = await c.req.json() } catch { return c.json({ ok: false }, 400) }
+  const code = (b.code || '').toUpperCase().slice(0, 40)
+  const event = (b.event || '').slice(0, 30)
+  if (!code || !event) return c.json({ ok: false }, 400)
+  try {
+    await DB.prepare('INSERT INTO partner_entry_events (partner_code, event, variant) VALUES (?,?,?)')
+      .bind(code, event, b.variant ? String(b.variant).slice(0, 20) : null).run()
+  } catch { /* 테이블 없거나 실패해도 무해 */ }
+  return c.json({ ok: true })
 })
 
 // 토큰 갱신
@@ -4541,6 +4556,33 @@ app.get('/.well-known/assetlinks.json', (c) => {
     }
   ]
   return c.json(links, 200, { 'Content-Type': 'application/json' })
+})
+
+// ============================================================
+// 제휴 진입 레이어 (/p) — 경량 페이지. partner_entry.js만 로드(코어 app.js 미로드).
+// 흐름: ?p=코드&sso_token= → SSO 자동로그인 + config 전환화면 → 코어로 딥링크
+// ============================================================
+app.get('/p', (c) => {
+  const v = Date.now()
+  return c.html(`<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>마음풀 · 제휴 진입</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+  <meta name="theme-color" content="#2D6A4F">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <style>body{margin:0;-webkit-font-smoothing:antialiased}</style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="/static/compiled/partner_entry.js?v=${v}"></script>
+</body>
+</html>`)
 })
 
 // ============================================================

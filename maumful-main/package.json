@@ -7,7 +7,7 @@
     "dev:vite": "vite",
     "build": "vite build",
     "deploy:staging": "wrangler deploy --config wrangler.dev.toml",
-    "build:jsx": "npx esbuild public/static/app.jsx public/static/landing.jsx public/static/counseling.jsx public/static/counseling_admin.jsx --bundle=false --loader:.jsx=jsx --outdir=public/static/compiled --target=chrome90,firefox90,safari14",
+    "build:jsx": "npx esbuild public/static/app.jsx public/static/landing.jsx public/static/counseling.jsx public/static/counseling_admin.jsx public/static/partner_entry.jsx --bundle=false --loader:.jsx=jsx --outdir=public/static/compiled --target=chrome90,firefox90,safari14",
     "deploy": "npm run build:jsx && wrangler deploy",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "clean-port": "fuser -k 3000/tcp 2>/dev/null || true",
