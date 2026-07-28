@@ -4718,7 +4718,7 @@ function PsychologicalTestSystem() {
       const c = code || sel; if (!c) return;
       try { const d = await adminFetch(`/api/admin/partner-commissions?code=${encodeURIComponent(c)}&from=${from}&to=${to}`); if (d.success) setLedger(d.data); } catch {}
     };
-    const pick = async (code) => { setSel(code); setLedger(null); await loadLedger(code); };
+    const pick = async (code) => { setSel(code); setLedger(null); setAccounts(null); setAcctMsg(''); setAcctEmail(''); setAcctPw(''); await loadLedger(code); loadAccounts(code); };
     const downloadCsv = () => {
       if (!ledger || !(ledger.rows||[]).length) return;
       const hdr = ['결제ID','일시','회원(마스킹)','상품','결제액','쉐어율','쉐어액','통화','상태'];
@@ -4732,6 +4732,37 @@ function PsychologicalTestSystem() {
       if (!window.confirm(`${sel} · ${from}~${to}\n이 기간의 미정산 건을 '정산완료'로 표시할까요? (실제 지급은 별도)`)) return;
       const ref = window.prompt('정산 참조(선택, 예: 2026-07 이체)', '') || undefined;
       try { const d = await adminFetch('/api/admin/partner-commissions/settle', { method:'POST', body: JSON.stringify({ code: sel, from, to, ref }) }); if (d.success) { window.alert(`${d.settled}건 정산완료 처리`); loadLedger(sel); } } catch {}
+    };
+    // 👤 파트너 담당자 계정 (제휴사가 /partner 포털에 직접 로그인)
+    const [accounts, setAccounts] = useState(null);
+    const [acctEmail, setAcctEmail] = useState('');
+    const [acctPw, setAcctPw] = useState('');
+    const [acctMsg, setAcctMsg] = useState('');
+    const loadAccounts = async (code) => {
+      const cc = code || sel; if (!cc) return;
+      try { const d = await adminFetch(`/api/admin/partner-accounts?code=${encodeURIComponent(cc)}`); if (d.success) setAccounts(d.data||[]); } catch {}
+    };
+    const createAccount = async () => {
+      if (!acctEmail.trim() || !acctPw.trim()) { setAcctMsg('이메일·초기 비밀번호를 입력해 주세요'); return; }
+      if (acctPw.trim().length < 8) { setAcctMsg('비밀번호는 8자 이상이어야 해요'); return; }
+      try {
+        const d = await adminFetch('/api/admin/partner-accounts', { method:'POST', body: JSON.stringify({ code: sel, email: acctEmail.trim(), password: acctPw.trim() }) });
+        if (d.success) { setAcctMsg('계정 생성 완료 — 이메일·초기 비밀번호를 담당자에게 전달하세요'); setAcctEmail(''); setAcctPw(''); loadAccounts(sel); }
+        else setAcctMsg(d.error || '생성 실패');
+      } catch { setAcctMsg('네트워크 오류'); }
+    };
+    const toggleAccount = async (a) => {
+      try { const d = await adminFetch(`/api/admin/partner-accounts/${a.id}`, { method:'PATCH', body: JSON.stringify({ is_active: a.is_active ? 0 : 1 }) }); if (d.success) loadAccounts(sel); } catch {}
+    };
+    const resetAccountPw = async (a) => {
+      const np = window.prompt(`${a.email}\n새 비밀번호(8자 이상)를 입력하세요`, '') || '';
+      if (!np) return;
+      if (np.length < 8) { window.alert('비밀번호는 8자 이상이어야 합니다.'); return; }
+      try { const d = await adminFetch(`/api/admin/partner-accounts/${a.id}`, { method:'PATCH', body: JSON.stringify({ password: np }) }); if (d.success) window.alert('비밀번호가 재설정되었습니다. 담당자에게 전달하세요.'); } catch {}
+    };
+    const deleteAccount = async (a) => {
+      if (!window.confirm(`${a.email}\n이 담당자 계정을 삭제할까요? 되돌릴 수 없습니다.`)) return;
+      try { const d = await adminFetch(`/api/admin/partner-accounts/${a.id}`, { method:'DELETE' }); if (d.success) loadAccounts(sel); } catch {}
     };
     const inp = "w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-400";
     // 선택 가능한 값은 드롭다운/체크칩으로, 자유입력만 예시(placeholder) 표기
@@ -4867,6 +4898,38 @@ function PsychologicalTestSystem() {
                     <input type="date" value={to} onChange={e => setTo(e.target.value)} className="px-2 py-1 border border-gray-200 rounded text-xs" />
                     <button onClick={() => loadLedger(sel)} className="bg-emerald-600 text-white px-3 py-1 rounded text-xs font-bold">조회</button>
                   </div>
+                </div>
+                {/* 👤 담당자 포털 계정 — 제휴사가 /partner 에서 직접 로그인, 자기 정산만 조회 */}
+                <div className="border border-emerald-100 rounded-xl p-3 mb-4 bg-emerald-50/40">
+                  <div className="text-xs font-bold text-emerald-700 mb-2">👤 담당자 포털 계정 <span className="font-normal text-gray-400">— /partner 에서 로그인 · 이 파트너 정산만 조회</span></div>
+                  {acctMsg && <div className={`text-[11px] px-2 py-1.5 rounded mb-2 ${acctMsg.includes('완료') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>{acctMsg}</div>}
+                  <div className="flex flex-wrap items-end gap-2 mb-2">
+                    <input value={acctEmail} onChange={e => setAcctEmail(e.target.value)} placeholder="담당자 이메일" className="flex-1 min-w-[160px] px-2 py-1.5 border border-gray-200 rounded text-xs" />
+                    <input value={acctPw} onChange={e => setAcctPw(e.target.value)} placeholder="초기 비밀번호(8자+)" className="flex-1 min-w-[140px] px-2 py-1.5 border border-gray-200 rounded text-xs" />
+                    <button onClick={createAccount} className="bg-emerald-600 text-white px-3 py-1.5 rounded text-xs font-bold">계정 생성</button>
+                  </div>
+                  {accounts === null ? (
+                    <div className="text-[11px] text-gray-400">불러오는 중…</div>
+                  ) : accounts.length === 0 ? (
+                    <div className="text-[11px] text-gray-400">등록된 담당자 계정이 없습니다.</div>
+                  ) : (
+                    <div className="flex flex-col gap-1">
+                      {accounts.map(a => (
+                        <div key={a.id} className="flex items-center justify-between bg-white rounded-lg border border-gray-100 px-2.5 py-1.5">
+                          <div className="min-w-0">
+                            <span className="text-xs font-medium">{a.email}</span>
+                            <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded-full font-bold ${a.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>{a.is_active ? '활성' : '정지'}</span>
+                            {a.last_login_at && <span className="ml-2 text-[10px] text-gray-400">최근 {String(a.last_login_at).slice(0,10)}</span>}
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button onClick={() => toggleAccount(a)} className="text-[10px] px-1.5 py-0.5 rounded border border-gray-200 text-gray-500 hover:bg-gray-50">{a.is_active ? '정지' : '활성화'}</button>
+                            <button onClick={() => resetAccountPw(a)} className="text-[10px] px-1.5 py-0.5 rounded border border-gray-200 text-gray-500 hover:bg-gray-50">비번재설정</button>
+                            <button onClick={() => deleteAccount(a)} className="text-[10px] px-1.5 py-0.5 rounded border border-red-200 text-red-500 hover:bg-red-50">삭제</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 {ledger && (
                   <div>

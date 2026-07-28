@@ -4593,6 +4593,30 @@ app.get('/p', (c) => {
 </html>`)
 })
 
+// 파트너 담당자 정산 포털 (독립 경량 페이지 · 코어 미로드)
+app.get('/partner', (c) => {
+  const v = Date.now()
+  return c.html(`<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>마음풀 · 제휴 정산 포털</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+  <meta name="theme-color" content="#2D6A4F">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <style>body{margin:0;-webkit-font-smoothing:antialiased}</style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="/static/compiled/partner_portal.js?v=${v}"></script>
+</body>
+</html>`)
+})
+
 // ============================================================
 // 메인 페이지
 // ============================================================
@@ -6249,6 +6273,153 @@ app.post('/api/admin/partner-commissions/settle', async (c) => {
     "UPDATE partner_commissions SET status='settled', settled_at=datetime('now'), settlement_ref=? WHERE partner_code=? AND status='pending' AND date(created_at) >= ? AND date(created_at) <= ?"
   ).bind(ref ?? null, code.toUpperCase(), from, to).run()
   return c.json({ success: true, settled: r.meta.changes })
+})
+
+// ============================================================
+// 파트너 담당자 포털 (제휴사 담당자 전용 로그인 → 자기 정산만 조회)
+//  격리 원칙: 조회 대상 코드는 오직 토큰(typ=partner)의 pc에서만 가져온다.
+//  파트너 토큰은 sub(숫자)가 없어 고객 인증(getAuthUserId)에서 거부되고,
+//  관리자(ADMIN_SECRET)와도 분리 → 다른 파트너/전체 매출 접근 불가.
+// ============================================================
+
+// 파트너 포털 토큰 검증 → { partnerCode, accountId } | null
+async function requirePartner(c: { req: { header: (k: string) => string | undefined }, env: Bindings }): Promise<{ partnerCode: string; accountId: number } | null> {
+  const auth = c.req.header('Authorization') ?? ''
+  if (!auth.startsWith('Bearer ')) return null
+  const secret = await getJwtSecret(c.env.KV)
+  const p = await verifyJwt(auth.slice(7), secret)
+  if (!p || p.typ !== 'partner' || typeof p.pc !== 'string' || typeof p.aid !== 'number') return null
+  return { partnerCode: p.pc as string, accountId: p.aid as number }
+}
+
+// 파트너 담당자 로그인
+app.post('/api/partner-portal/login', async (c) => {
+  const { DB, KV } = c.env
+  const { email, password } = await c.req.json().catch(() => ({})) as { email?: string; password?: string }
+  if (!email || !password) return c.json({ success: false, error: '이메일과 비밀번호를 입력해 주세요.' }, 400)
+  const emailNorm = String(email).trim().toLowerCase()
+
+  // 간단 시도 제한 (이메일 기준 15분 10회)
+  const rlKey = `pp_login:${emailNorm}`
+  const tries = parseInt((await KV.get(rlKey)) || '0', 10) || 0
+  if (tries >= 10) return c.json({ success: false, error: '로그인 시도가 많습니다. 잠시 후 다시 시도해 주세요.' }, 429)
+
+  const acc = await DB.prepare(
+    'SELECT id, partner_code, password_hash, is_active FROM partner_accounts WHERE email=?'
+  ).bind(emailNorm).first() as { id: number; partner_code: string; password_hash: string; is_active: number } | null
+
+  const okPw = acc ? await verifyPassword(password, acc.password_hash) : false
+  if (!acc || !okPw || !acc.is_active) {
+    await KV.put(rlKey, String(tries + 1), { expirationTtl: 900 })
+    return c.json({ success: false, error: '이메일 또는 비밀번호가 올바르지 않거나 비활성화된 계정입니다.' }, 401)
+  }
+
+  // 파트너 자체가 비활성이면 차단
+  const partner = await DB.prepare('SELECT code, name, is_active FROM partners WHERE code=?')
+    .bind(acc.partner_code).first() as { code: string; name: string; is_active: number } | null
+  if (!partner || !partner.is_active) return c.json({ success: false, error: '연결된 제휴사가 비활성 상태입니다. 운영자에게 문의해 주세요.' }, 403)
+
+  await KV.delete(rlKey)
+  await DB.prepare("UPDATE partner_accounts SET last_login_at=datetime('now') WHERE id=?").bind(acc.id).run()
+
+  const now = Math.floor(Date.now() / 1000)
+  const secret = await getJwtSecret(KV)
+  // sub(숫자) 없음 → 고객 API에서 거부. typ=partner + pc(코드) + aid(계정)만.
+  const token = await signJwt({ typ: 'partner', pc: acc.partner_code, aid: acc.id, iat: now, exp: now + 8 * 3600 }, secret)
+  return c.json({ success: true, data: { token, partner: { code: partner.code, name: partner.name } } })
+})
+
+// 파트너 포털 내 정보(헤더용)
+app.get('/api/partner-portal/me', async (c) => {
+  const p = await requirePartner(c)
+  if (!p) return c.json({ success: false, error: '로그인이 필요합니다.' }, 401)
+  const partner = await c.env.DB.prepare('SELECT code, name FROM partners WHERE code=?').bind(p.partnerCode).first()
+  if (!partner) return c.json({ success: false, error: '제휴사를 찾을 수 없습니다.' }, 404)
+  return c.json({ success: true, data: { partner } })
+})
+
+// 파트너 정산 조회 — 코드는 토큰에서만. 최소 집계(고객 식별정보·상품 미노출).
+app.get('/api/partner-portal/commissions', async (c) => {
+  const p = await requirePartner(c)
+  if (!p) return c.json({ success: false, error: '로그인이 필요합니다.' }, 401)
+  const { DB } = c.env
+  const { from, to } = c.req.query() as Record<string, string>
+  const fromDate = from ?? new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)
+  const toDate   = to   ?? new Date().toISOString().slice(0, 10)
+  const binds = [p.partnerCode, fromDate, toDate]
+  const where = 'partner_code=? AND date(created_at) >= ? AND date(created_at) <= ?'
+  const rows = await DB.prepare(`
+    SELECT charge_id, charge_amount, rate, share_amount, currency, status, created_at, settled_at
+    FROM partner_commissions WHERE ${where} ORDER BY created_at DESC
+  `).bind(...binds).all()
+  const totals = await DB.prepare(`
+    SELECT COUNT(*) AS cnt, COALESCE(SUM(charge_amount),0) AS revenue, COALESCE(SUM(share_amount),0) AS share,
+           COALESCE(SUM(CASE WHEN status='pending' THEN share_amount ELSE 0 END),0) AS unsettled,
+           COALESCE(SUM(CASE WHEN status='settled' THEN share_amount ELSE 0 END),0) AS settled
+    FROM partner_commissions WHERE ${where}
+  `).bind(...binds).first()
+  return c.json({ success: true, data: { period: { from: fromDate, to: toDate }, totals, rows: rows.results } })
+})
+
+// ── 관리자: 파트너 담당자 계정 관리 (adminGuard) ──
+app.get('/api/admin/partner-accounts', async (c) => {
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+  const code = (c.req.query('code') || '').toUpperCase()
+  if (!code) return c.json({ success: false, error: 'code 파라미터 필수' }, 400)
+  const rows = await c.env.DB.prepare(
+    'SELECT id, partner_code, email, is_active, last_login_at, created_at FROM partner_accounts WHERE partner_code=? ORDER BY created_at DESC'
+  ).bind(code).all()
+  return c.json({ success: true, data: rows.results })
+})
+
+app.post('/api/admin/partner-accounts', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+  const { code, email, password } = await c.req.json().catch(() => ({})) as { code?: string; email?: string; password?: string }
+  const codeStr = String(code || '').toUpperCase()
+  const emailNorm = String(email || '').trim().toLowerCase()
+  if (!codeStr || !emailNorm || !password) return c.json({ success: false, error: 'code, email, password 필수' }, 400)
+  if (String(password).length < 8) return c.json({ success: false, error: '비밀번호는 8자 이상이어야 합니다.' }, 400)
+  const partner = await DB.prepare('SELECT code FROM partners WHERE code=?').bind(codeStr).first()
+  if (!partner) return c.json({ success: false, error: '존재하지 않는 파트너 코드입니다.' }, 404)
+  const dup = await DB.prepare('SELECT id FROM partner_accounts WHERE email=?').bind(emailNorm).first()
+  if (dup) return c.json({ success: false, error: '이미 등록된 이메일입니다.' }, 409)
+  const hash = await hashPassword(String(password))
+  const r = await DB.prepare(
+    'INSERT INTO partner_accounts (partner_code, email, password_hash) VALUES (?, ?, ?)'
+  ).bind(codeStr, emailNorm, hash).run()
+  return c.json({ success: true, data: { id: r.meta.last_row_id, email: emailNorm } }, 201)
+})
+
+app.patch('/api/admin/partner-accounts/:id', async (c) => {
+  const { DB } = c.env
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+  const id = parseInt(c.req.param('id'), 10)
+  if (!id) return c.json({ success: false, error: '잘못된 계정 ID' }, 400)
+  const body = await c.req.json().catch(() => ({})) as { is_active?: number | boolean; password?: string }
+  const sets: string[] = []
+  const vals: unknown[] = []
+  if (body.is_active !== undefined) { sets.push('is_active=?'); vals.push(body.is_active ? 1 : 0) }
+  if (body.password !== undefined) {
+    if (String(body.password).length < 8) return c.json({ success: false, error: '비밀번호는 8자 이상이어야 합니다.' }, 400)
+    sets.push('password_hash=?'); vals.push(await hashPassword(String(body.password)))
+  }
+  if (sets.length === 0) return c.json({ success: false, error: '변경 사항 없음' }, 400)
+  vals.push(id)
+  await DB.prepare(`UPDATE partner_accounts SET ${sets.join(',')} WHERE id=?`).bind(...vals).run()
+  return c.json({ success: true })
+})
+
+app.delete('/api/admin/partner-accounts/:id', async (c) => {
+  const denied = adminGuard(c)
+  if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
+  const id = parseInt(c.req.param('id'), 10)
+  if (!id) return c.json({ success: false, error: '잘못된 계정 ID' }, 400)
+  await c.env.DB.prepare('DELETE FROM partner_accounts WHERE id=?').bind(id).run()
+  return c.json({ success: true })
 })
 
 // ── POST /api/admin/push/reminder — 6주 재검사 알림 수동 트리거 ─
