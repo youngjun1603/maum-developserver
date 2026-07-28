@@ -272,6 +272,8 @@ npm run deploy:cts    # lightoflife-couple (wrangler.lightoflife.toml)
 
 ## 제휴코드 수익 쉐어 정산 (2026-07-19)
 기존 파트너 시스템(`partners.revenue_share_rate`·`credit_charges.partner_code`) 위에 **정산 원장** 추가. 결제 완료 시 `accruePartnerCommission`(비차단 `.catch`)이 `partner_commissions`에 적립 — **charge_id PK 멱등**·**적립 시점 rate 스냅샷**(율 변경돼도 과거 정산 불변)·`partners.commission_start/end`(귀속 기간). 어드민 = **메인 관리자(app.jsx) 🤝 파트너 탭 `MasterPartnerPanel`**(등록·정산 원장 조회·**CSV 다운로드**·정산완료). 개인 친구초대(`referrals` 크레딧)와 별개. 실적립은 토스 라이브 후. 메모리 `project_maumful_partner_revshare`.
+- **파트너 자가열람 정산 포털(2026-07-28)**: 제휴사 담당자가 `/partner`(독립 경량 번들 `partner_portal.jsx`)에서 **직접 로그인해 자기 정산만** 조회. **인증 3종째** — `partner_accounts`(migration 0028) + `POST /api/partner-portal/login` → **`{typ:'partner',pc,aid}` JWT(sub 없음)**. 가드 `requirePartner`가 조회코드를 **토큰에서만** 취함(IDOR 차단). ⚠️ 파트너 토큰은 `sub`(숫자) 없어 고객 `getAuthUserId`가 거부·관리자는 고정시크릿이라 분리 → 타 파트너/전체매출 접근 불가(E2E 실증). 최소집계(고객정보·상품 미노출). 관리자 계정 CRUD = 🤝 탭 담당자 계정 섹션.
+- ⚠️ **D1 원격 마이그레이션 트랩**: 원격 `maumful-db`는 마이그레이션 트래킹 테이블이 비어 `npx wrangler d1 migrations apply … --remote`가 **0001부터 재적용 시도→기존 스키마와 충돌 실패**. 새 마이그레이션은 **`npx wrangler d1 execute maumful-db --remote --file=migrations/00NN_*.sql`로 직접 적용**(DDL은 `IF NOT EXISTS`로 멱등하게)·영문 DDL만(한글 주석 X). limyj007 계정.
 
 ## 제휴 SSO 온보딩 + 진입 레이어 (검토완료·착수 향후, 2026-07-22)
 제휴처(삼아 등)에서 **이미 로그인된 유저가 배너 클릭 → 마음풀 별도 로그인 없이 자동 로그인**. **이미 구현됨**: `?p=<코드>&sso_token=` → `POST /api/auth/partner-sso`(HMAC-SHA256 서명검증·uid로 계정 매칭/자동생성·+20cr·partner_code 귀속). 토큰=`base64url(payload).base64url(HMAC(sso_secret,payloadB64))`, payload=`{uid,email?,nick?,exp}`. 파트너 등록(어드민 🤝 파트너 탭)에 **sso_secret 필수**. ⚠️ sso_token은 exp 짧게·클릭 시점 발급(고정 href 금지).
