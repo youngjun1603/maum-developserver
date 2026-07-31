@@ -1654,7 +1654,7 @@ function PsychologicalTestSystem() {
               try {
                 const gr = await fetch('/api/payment/grant-code?service=phyweb', { headers: api._authHeader() }).then(r => r.json());
                 if (gr.success && gr.data) {
-                  if (gr.data.code) { window.prompt('phyweb 유료 이용권 코드입니다. 복사해서 phyweb의 "이용권 코드 등록"에 붙여넣으세요:', gr.data.code); shown = true; break; }
+                  if (gr.data.code) { window.prompt('phyweb 유료 이용권 코드입니다. 복사 후 [phyweb 로그인 → 대시보드 구독 카드 → 이용권 코드 등록]에 붙여넣으세요. (이메일·마이페이지에서도 확인 가능)', gr.data.code); shown = true; break; }
                   if (gr.data.status === 'delivered') { setLoginMsg({ type: 'success', text: '✦ phyweb 유료 결제가 완료되어 자동 적용되었습니다.' }); shown = true; break; }
                 }
               } catch { /* 재시도 */ }
@@ -3832,6 +3832,7 @@ function PsychologicalTestSystem() {
         <li>결제 후 7일 초과 시, 잔여 크레딧의 10%를 위약금으로 공제 후 환불합니다. (단, 회사 귀책 사유로 인한 경우 전액 환불)</li>
         <li>무상 지급 크레딧(보너스·이벤트·추천 보상)은 환불 대상에서 제외됩니다.</li>
         <li>서비스 오류로 크레딧이 소실된 경우 동일 수량을 보상합니다.</li>
+        <li><strong>제휴 서비스(phyweb 등) 이용권 코드</strong>는 <strong>코드 미등록 시 결제일로부터 7일 이내 전액 환불</strong>이 가능하며, 해당 서비스에 <strong>코드를 등록(사용)한 후에는</strong> 「전자상거래법」 제17조 제2항 제5호에 따라 청약철회가 제한됩니다.</li>
       </ul>
       <h4 style={{fontSize:'13px',fontWeight:600,margin:'8px 0 4px'}}>④ 환불 신청 방법</h4>
       <ul>
@@ -4645,6 +4646,60 @@ function PsychologicalTestSystem() {
     );
   }
 
+  // 🎫 내 phyweb 이용권 코드 (마이페이지) — 결제화면을 놓쳐도 재확인 + 미등록 시 환불. 코드 없으면 자동 숨김.
+  function PhywebCodesCard() {
+    const [codes, setCodes] = useState(null);
+    const [copied, setCopied] = useState('');
+    const [busy, setBusy] = useState('');
+    const [msg, setMsg] = useState(null);
+    const load = () => fetch('/api/payment/my-grant-codes', { headers: api._authHeader() })
+      .then(r => r.json()).then(d => setCodes(d.success ? (d.data || []).filter(x => x.service === 'phyweb') : [])).catch(() => setCodes([]));
+    useEffect(() => { load(); }, []);
+    if (!codes || codes.length === 0) return null;
+    const planLabel = { solo:'Solo 월간', basic:'Basic 월간', professional:'Professional 월간', solo_annual:'Solo 연간', basic_annual:'Basic 연간', professional_annual:'Professional 연간' };
+    const copy = (code) => { try { navigator.clipboard.writeText(code); setCopied(code); setTimeout(() => setCopied(''), 1500); } catch {} };
+    const daysSince = (d) => d ? Math.floor((Date.now() - Date.parse(String(d).replace(' ', 'T') + 'Z')) / 86400000) : 999;
+    const refund = async (c) => {
+      if (!c.pgTid || busy) return;
+      if (!confirm(t(`phyweb 이용권 결제를 환불할까요?\n₩${Number(c.amount||0).toLocaleString('ko-KR')}이 카드로 환불됩니다.\n※ phyweb에 코드를 이미 등록하셨다면 환불되지 않습니다(등록 후 청약철회 제한).`,
+                     `Refund this phyweb license?\n₩${Number(c.amount||0).toLocaleString('ko-KR')} will be refunded.\n※ Not refundable if already redeemed on phyweb.`))) return;
+      setBusy(c.code); setMsg(null);
+      try {
+        const r = await fetch('/api/credits/refund', { method: 'POST', headers: { 'Content-Type': 'application/json', ...api._authHeader() }, body: JSON.stringify({ pgTid: c.pgTid }) });
+        const d = await r.json();
+        if (d.success) { setMsg({ type: 'success', text: t('환불이 완료되었습니다.', 'Refunded.') }); load(); }
+        else setMsg({ type: 'error', text: d.error || t('환불에 실패했습니다.', 'Refund failed.') });
+      } catch { setMsg({ type: 'error', text: t('네트워크 오류', 'Network error') }); }
+      setBusy('');
+    };
+    return (
+      <div className="bg-white rounded-2xl p-5 mb-5 border border-emerald-100">
+        <div className="text-sm font-bold text-emerald-700 mb-1">🎫 {t('phyweb 이용권 코드','phyweb License Codes')}</div>
+        <div className="text-xs text-gray-400 mb-3">{t('phyweb 로그인 → 대시보드 구독 카드 → ‘이용권 코드 등록’에 붙여넣으세요.','phyweb login → dashboard subscription card → enter under “Redeem license code”.')}</div>
+        {msg && <div className={`text-xs font-semibold mb-2 ${msg.type === 'success' ? 'text-green-600' : 'text-red-500'}`}>{msg.text}</div>}
+        <div className="flex flex-col gap-2">
+          {codes.map((c, i) => {
+            const refunded = c.chargeStatus === 'refunded';
+            const refundable = !refunded && c.chargeStatus === 'completed' && c.pgTid && daysSince(c.completedAt) <= 7;
+            return (
+              <div key={i} className="flex items-center justify-between bg-emerald-50/50 border border-emerald-100 rounded-xl px-3 py-2">
+                <div className="min-w-0">
+                  <div className={`font-mono font-bold tracking-widest truncate ${refunded ? 'text-gray-300 line-through' : 'text-gray-800'}`}>{c.code}</div>
+                  <div className="text-[11px] text-gray-400">{planLabel[c.grantType] || c.grantType}{refunded ? ` · ${t('환불됨','refunded')}` : ''}</div>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {!refunded && <button onClick={() => copy(c.code)} className="text-xs px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-bold hover:bg-emerald-700">{copied === c.code ? t('복사됨','Copied') : t('복사','Copy')}</button>}
+                  {refundable && <button onClick={() => refund(c)} disabled={busy === c.code} className="text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-50">{busy === c.code ? '...' : t('환불','Refund')}</button>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="text-[11px] text-gray-400 mt-2">{t('· 코드 미등록 시 결제일로부터 7일 이내 전액 환불 · 코드 등록 후에는 청약철회가 제한됩니다.','· Full refund within 7 days if unredeemed · restricted after redemption.')}</div>
+      </div>
+    );
+  }
+
   // 🎟️ 마스터 전용 쿠폰 발행·관리 패널 (마이페이지) — 신규
   // 🤝 제휴 파트너 관리 — 코드 발급/수익쉐어율/귀속기간 + 정산 원장 조회·CSV 다운로드
   // 공지사항 관리 — 어드민에서 등록·수정·삭제. 사용자 노출은 목록 페이지 + 중요 공지 배너.
@@ -5181,6 +5236,9 @@ function PsychologicalTestSystem() {
 
         {/* 🎟️ 쿠폰 등록 (사용자) */}
         <CouponCard />
+
+        {/* 🎫 내 phyweb 이용권 코드 (있을 때만) */}
+        <PhywebCodesCard />
 
         {/* 탭 */}
         <div className="flex gap-2 mb-5">

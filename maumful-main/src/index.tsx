@@ -3028,6 +3028,17 @@ async function deliverGrant(env: any, charge: { chargeId: number; user_id: numbe
       let code: string | null = null
       try { const j = await res.json() as any; code = j?.code ?? j?.data?.code ?? null } catch {}
       await DB.prepare("UPDATE external_grants SET status='delivered', code=COALESCE(?,code), attempts=attempts+1, delivered_at=CURRENT_TIMESTAMP WHERE order_id=?").bind(code, orderId).run()
+      // phyweb 이용권 코드는 이메일로도 발송(결제화면을 놓쳐도 확인 가능). RESEND 미설정이면 no-op.
+      if (code && pkg.service === 'phyweb' && email) {
+        const html = `<div style="font-family:'Noto Sans KR',sans-serif;max-width:480px;margin:0 auto;padding:24px">
+          <h2 style="color:#2D6A4F;margin:0 0 12px">phyweb 유료 이용권 코드</h2>
+          <p style="color:#444;font-size:14px">결제해 주셔서 감사합니다. 아래 코드를 phyweb에서 등록하시면 유료 구독이 적용됩니다.</p>
+          <div style="font-size:22px;font-weight:800;letter-spacing:2px;color:#1E2621;background:#F2F9F5;border:1px dashed #52B788;border-radius:12px;padding:16px;text-align:center;margin:16px 0">${code}</div>
+          <p style="color:#54605A;font-size:13px;line-height:1.7"><b>등록 방법</b><br>① phyweb 로그인 → ② 대시보드 구독 카드 → ③ ‘이용권 코드 등록’에 위 코드 입력</p>
+          <p style="color:#8B948D;font-size:12px">유효기간 1년 · 1회 사용 · 코드 등록 후에는 청약철회가 제한됩니다.</p>
+        </div>`
+        try { await sendEmail(env, email, '[마음풀] phyweb 유료 이용권 코드', html) } catch {}
+      }
     } else {
       await DB.prepare("UPDATE external_grants SET status='failed', attempts=attempts+1 WHERE order_id=?").bind(orderId).run()
     }
@@ -3076,6 +3087,23 @@ app.get('/api/payment/grant-code', async (c) => {
   }
   if (!row) return c.json({ success: true, data: null })
   return c.json({ success: true, data: { service: row.service, grantType: row.grant_type, code: row.code || null, status: row.status, created_at: row.created_at } })
+})
+
+// 내 외부서비스 이용권 코드 목록(마이페이지) — phyweb 등 쿠폰형. 결제화면을 놓쳐도 다시 확인 + 환불 트리거.
+app.get('/api/payment/my-grant-codes', async (c) => {
+  const userId = await getAuthUserId(c.req.raw, c.env.KV)
+  if (!userId) return c.json({ success: false, error: '로그인이 필요합니다.' }, 401)
+  const rows = await c.env.DB.prepare(
+    `SELECT eg.service, eg.grant_type, eg.code, eg.status, eg.created_at,
+            cc.pg_tid AS pg_tid, cc.amount AS charge_amount, cc.status AS charge_status, cc.completed_at
+     FROM external_grants eg
+     LEFT JOIN credit_charges cc ON eg.order_id LIKE 'mf_charge_%' AND cc.id = CAST(SUBSTR(eg.order_id, 11) AS INTEGER)
+     WHERE eg.user_id=? AND eg.code IS NOT NULL AND eg.code!='' ORDER BY eg.created_at DESC LIMIT 50`
+  ).bind(userId).all()
+  return c.json({ success: true, data: (rows.results ?? []).map((r: any) => ({
+    service: r.service, grantType: r.grant_type, code: r.code, status: r.status, created_at: r.created_at,
+    pgTid: r.pg_tid || null, amount: r.charge_amount || null, chargeStatus: r.charge_status || null, completedAt: r.completed_at || null,
+  })) })
 })
 
 // ── 구독 플랜 정의 ─────────────────────────────────────────
