@@ -652,7 +652,7 @@ app.delete('/api/account', requireAuth, async (c) => {
 });
 
 // ── 법적 고지 페이지 (개인정보·약관·탈퇴) ──
-const BIZ = '상호: 마음서비스 · 대표자: 김근혜 · 사업자등록번호: 780-31-01832 · 통신판매업 신고번호: 제 2026-서울영등포-1157 호 · 소재지: 서울특별시 영등포구 문래로26길 6(문래동3가) · 문의: limyj007@gmail.com';
+const BIZ = '상호: 마음서비스 · 대표자: 김근혜 · 사업자등록번호: 780-31-01832 · 통신판매업 신고번호: 제 2026-서울영등포-1157 호 · 소재지: 서울특별시 영등포구 문래로26길 6(문래동3가) · 문의: shine184280@gmail.com';
 const PAGE = (title: string, body: string) => `<!doctype html><html lang="ko"><head><meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/><title>${title} · 마음수달</title>
 <style>body{font-family:system-ui,-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;max-width:720px;margin:0 auto;padding:28px 20px 60px;color:#222;line-height:1.7}
@@ -677,7 +677,7 @@ app.get('/privacy', (c) => c.html(PAGE('개인정보처리방침', `
 <h2>5. 보유 및 파기</h2><p>회원 탈퇴 시 모든 개인정보를 <b>즉시 파기</b>합니다. 다만 「전자상거래 등에서의 소비자보호에 관한 법률」 등 관계 법령에 따라 보존이 필요한 경우 해당 기간 동안 보관합니다 — 계약·청약철회 기록 5년, 대금결제·재화공급 기록 5년, 소비자 불만·분쟁처리 기록 3년. 탈퇴는 <a href="/account-deletion">여기</a> 또는 앱 내에서 가능합니다.</p>
 <h2>6. 아동의 개인정보</h2><p>본 서비스는 <b>보호자(법정대리인)가 동반·운영</b>하는 서비스입니다. 만 14세 미만 아동의 개인정보는 법정대리인의 동의 하에 처리됩니다.</p>
 <h2>7. 이용자 권리</h2><p>이용자는 개인정보 열람·정정·삭제를 요청할 수 있으며, 전송 구간은 HTTPS로 암호화됩니다.</p>
-<h2>8. 개인정보보호책임자</h2><p>김근혜 · limyj007@gmail.com</p>`)));
+<h2>8. 개인정보보호책임자</h2><p>김근혜 · shine184280@gmail.com</p>`)));
 
 app.get('/terms', (c) => c.html(PAGE('이용약관', `
 <h1>마음수달 이용약관</h1><p class="muted">시행일: 2026-06-21</p>
@@ -714,11 +714,11 @@ app.get('/faq', (c) => c.html(PAGE('자주 묻는 질문', `
 <h2>이용권 코드는 어떻게 등록하나요?</h2><p>부모 화면의 '🎟️ 이용권' 칸에 구매하신 코드를 입력하고 '등록'을 누르면 즉시 적용됩니다.</p>
 <h2>이용권은 어디서 사나요?</h2><p>네이버 스마트스토어에서 구매 후 코드를 받아 등록합니다(앱 내 '구매하기'에서 스토어로 이동).</p>
 <h2>통역 1회는 무엇인가요?</h2><p>또또와의 대화 한 번(세션)이 통역 1회입니다. 가입 시 매월 무료 횟수가 제공돼요.</p>
-<h2>환불이 되나요?</h2><p>디지털 콘텐츠(코드)는 발송·등록 후 청약철회가 제한될 수 있습니다. 미사용·미발송 건은 관계 법령에 따라 환불됩니다. 문의: limyj007@gmail.com</p>
+<h2>환불이 되나요?</h2><p>디지털 콘텐츠(코드)는 발송·등록 후 청약철회가 제한될 수 있습니다. 미사용·미발송 건은 관계 법령에 따라 환불됩니다. 문의: shine184280@gmail.com</p>
 <h2>비밀번호를 잊었어요</h2><p>로그인 화면의 '비밀번호를 잊으셨나요?'에서 재설정 메일을 받을 수 있어요.</p>
 <h2>아이의 표정 영상은 저장되나요?</h2><p>아니요. 기기 내에서만 분석되고 저장·전송하지 않습니다.</p>
 <h2>회원 탈퇴는 어떻게 하나요?</h2><p>부모 화면 하단 '회원 탈퇴' 또는 <a href="/account-deletion">여기</a>에서 가능합니다.</p>
-<h2>문의</h2><p>limyj007@gmail.com</p>`)));
+<h2>문의</h2><p>shine184280@gmail.com</p>`)));
 
 app.get('/account-deletion', (c) => c.html(PAGE('회원 탈퇴', `
 <h1>마음수달 회원 탈퇴 · 계정 삭제</h1>
@@ -726,7 +726,7 @@ app.get('/account-deletion', (c) => c.html(PAGE('회원 탈퇴', `
 <p class="muted">⚠️ 마음수달 계정은 마음 시리즈 통합 로그인 계정입니다. 탈퇴하면 같은 계정의 다른 마음 서비스에서도 함께 삭제됩니다.</p>
 <div class="card"><p id="msg">로그인 상태를 확인하는 중…</p>
 <button class="btn" id="del" style="display:none" onclick="doDelete()">계정 영구 삭제</button></div>
-<p class="muted">앱 내에서도 <b>설정 → 회원 탈퇴</b>로 진행할 수 있습니다. 로그인 없이 삭제를 원하시면 limyj007@gmail.com 으로 가입 이메일과 함께 요청해 주세요.</p>
+<p class="muted">앱 내에서도 <b>설정 → 회원 탈퇴</b>로 진행할 수 있습니다. 로그인 없이 삭제를 원하시면 shine184280@gmail.com 으로 가입 이메일과 함께 요청해 주세요.</p>
 <script>var K='maumotter_token',t=localStorage.getItem(K),m=document.getElementById('msg'),d=document.getElementById('del');
 if(t){m.textContent='현재 로그인되어 있습니다. 아래 버튼으로 계정을 영구 삭제할 수 있습니다.';d.style.display='inline-block';}else{m.textContent='로그인되어 있지 않습니다. 앱에서 로그인 후 이 페이지를 다시 열어 주세요.';}
 function doDelete(){if(!confirm('정말 계정과 모든 데이터를 영구 삭제할까요? 되돌릴 수 없습니다.'))return;d.disabled=true;d.textContent='삭제 중…';
