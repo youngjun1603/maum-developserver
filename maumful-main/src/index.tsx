@@ -3037,6 +3037,31 @@ app.get('/api/payment/grant-code', async (c) => {
   return c.json({ success: true, data: { service: row.service, grantType: row.grant_type, code: row.code || null, status: row.status, created_at: row.created_at } })
 })
 
+// ⚠️⚠️ 임시 E2E 검증용(phyweb grant 스테이징) — 검증 후 반드시 제거·재배포. 랜덤 잠금키로 보호.
+app.post('/api/__tmp_phyweb_e2e', async (c) => {
+  const LOCK = 'pw_e2e_544826662f34b53ebd5ea90c2e703840f528'
+  const body = await c.req.json().catch(() => ({})) as any
+  if (body?.key !== LOCK) return c.json({ error: 'locked' }, 403)
+  const secret = (c.env as any).MAUM_SSO_SECRET
+  if (!secret) return c.json({ error: 'MAUM_SSO_SECRET 미설정' }, 503)
+  const action = String(body.action || 'grant')
+  const orderId = String(body.orderId || 'mf_e2e_' + Date.now())
+  const grantType = String(body.grantType || 'solo')
+  const payload = { email: 'e2e@maumful.test', service: 'phyweb', grantType, orderId, amount: 19900, exp: Math.floor(Date.now() / 1000) + 300 }
+  const token = await signSso(secret, payload)
+  const base = 'https://phyweb.pages.dev'
+  let res: Response
+  if (action === 'status') {
+    res = await fetch(base + '/api/grant/status?token=' + encodeURIComponent(token))
+  } else if (action === 'revoke') {
+    res = await fetch(base + '/api/grant/revoke', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) })
+  } else {
+    res = await fetch(base + '/api/grant', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) })
+  }
+  const text = await res.text()
+  return c.json({ sent: { action, orderId, grantType }, httpStatus: res.status, phyweb: text })
+})
+
 // ── 구독 플랜 정의 ─────────────────────────────────────────
 const SUBSCRIPTION_PLANS: Record<string, {
   name: string; monthlyCredits: number; price: number; currency: string
