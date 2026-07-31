@@ -2963,7 +2963,7 @@ const PACKAGES: Record<string, { credits: number; amount: number; label: string;
   phyweb_professional: { credits: 0, amount: 49900,  label: 'phyweb 상담사 Professional(1개월)', product: true, service: 'phyweb', grantType: 'professional' },
   phyweb_solo_annual:  { credits: 0, amount: 190000, label: 'phyweb 상담사 Solo(연간)',          product: true, service: 'phyweb', grantType: 'solo_annual' },
   phyweb_basic_annual: { credits: 0, amount: 250000, label: 'phyweb 상담사 Basic(연간)',         product: true, service: 'phyweb', grantType: 'basic_annual' },
-  phyweb_pro_annual:   { credits: 0, amount: 450000, label: 'phyweb 상담사 Professional(연간)',  product: true, service: 'phyweb', grantType: 'professional_annual' },
+  phyweb_professional_annual: { credits: 0, amount: 450000, label: 'phyweb 상담사 Professional(연간)', product: true, service: 'phyweb', grantType: 'professional_annual' },
 }
 // 외부 서비스 grant 수신 URL(각 워커 루트 도메인). 결제 성공 → signSso 서명 → POST /api/grant.
 const SERVICE_API: Record<string, string> = { otter: 'https://maumotter.com', gyeot: 'https://maumgyeot.com', phyweb: 'https://phyweb.pages.dev' }
