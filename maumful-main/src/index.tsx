@@ -4391,8 +4391,8 @@ app.post('/api/admin/payments/:id/refund', async (c) => {
   if (!chargeId) return c.json({ success: false, error: '유효하지 않은 chargeId' }, 400)
 
   const charge = await DB.prepare(
-    `SELECT id, user_id, credits, amount, currency, status FROM credit_charges WHERE id=?`
-  ).bind(chargeId).first<{ id:number; user_id:number; credits:number; amount:number; currency:string; status:string }>()
+    `SELECT id, user_id, credits, amount, currency, status, package_key FROM credit_charges WHERE id=?`
+  ).bind(chargeId).first<{ id:number; user_id:number; credits:number; amount:number; currency:string; status:string; package_key:string }>()
 
   if (!charge) return c.json({ success: false, error: '결제 내역 없음' }, 404)
   if (charge.status !== 'completed') return c.json({ success: false, error: `환불 불가 — 현재 상태: ${charge.status}` }, 400)
@@ -4410,6 +4410,20 @@ app.post('/api/admin/payments/:id/refund', async (c) => {
   await DB.prepare('INSERT INTO credit_transactions (user_id, type, amount, reason, balance_after, ref_id) VALUES (?,?,?,?,(SELECT credits FROM users WHERE id=?),?)')
     .bind(charge.user_id, 'spend', charge.credits, 'admin_refund', charge.user_id, chargeId).run()
   reversePartnerCommission(DB, chargeId).catch(() => {})
+
+  // phyweb 이용권 상품이면 phyweb 코드도 void(관리자 환불+수동 카드환불 후 코드가 살아있지 않도록). best-effort.
+  const admPkg = PACKAGES[charge.package_key]
+  if (admPkg?.service === 'phyweb') {
+    const ssoSecret = (c.env as any).MAUM_SSO_SECRET
+    if (ssoSecret) {
+      try {
+        const token = await signSso(ssoSecret, { service: 'phyweb', grantType: admPkg.grantType, orderId: `mf_charge_${chargeId}`, exp: Math.floor(Date.now() / 1000) + 300 })
+        const rv = await fetch('https://phyweb.pages.dev/api/grant/revoke', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) })
+        if (!rv.ok) console.error('[Admin Refund phyweb] revoke 비정상(등록됨일 수 있음):', rv.status, chargeId)
+      } catch (e) { console.error('[Admin Refund phyweb] revoke 오류:', e, chargeId) }
+    }
+    return c.json({ success: true, message: `phyweb 이용권 환불 처리 — 코드 void 시도 완료. ⚠️ 카드 환불은 토스 상점관리자에서 직접 취소하세요(${charge.amount.toLocaleString()} ${charge.currency}).` })
+  }
 
   return c.json({ success: true, message: `크레딧 회수 완료 — ${charge.credits}cr. ⚠️ 카드 환불은 토스 상점관리자에서 직접 취소하세요(${charge.amount.toLocaleString()} ${charge.currency}).` })
 })
