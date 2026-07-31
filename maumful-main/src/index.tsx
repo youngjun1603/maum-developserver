@@ -1132,13 +1132,54 @@ app.post('/api/credits/refund', async (c) => {
   if (!charge) return c.json({ success: false, error: '결제 내역을 찾을 수 없어요.' }, 404)
   if (charge.status === 'refunded') return c.json({ success: false, error: '이미 환불된 결제예요.' }, 400)
   if (charge.status !== 'completed') return c.json({ success: false, error: '환불할 수 없는 결제 상태예요.' }, 400)
-  // 외부 서비스 상품(수달·곁 등)은 크레딧이 아니라 외부 지급이라 셀프 환불 대상 아님(회수 로직 별도 필요). 고객센터 안내.
-  if (PACKAGES[charge.package_key]?.service) return c.json({ success: false, error: '이 상품은 고객센터(support@maumful.com)로 환불을 요청해 주세요.' }, 400)
+  // 외부 서비스 상품 중 수달·곁 등은 셀프 환불 대상 아님(고객센터). phyweb는 아래에서 코드 등록여부로 분기 처리.
+  const refPkg = PACKAGES[charge.package_key]
+  if (refPkg?.service && refPkg.service !== 'phyweb') return c.json({ success: false, error: '이 상품은 고객센터(support@maumful.com)로 환불을 요청해 주세요.' }, 400)
 
   // 7일 이내 (completed_at은 UTC 'YYYY-MM-DD HH:MM:SS')
   const doneMs = charge.completed_at ? Date.parse(charge.completed_at.replace(' ', 'T') + 'Z') : NaN
   if (isNaN(doneMs) || (Date.now() - doneMs) > 7 * 86400 * 1000) {
     return c.json({ success: false, error: '구매 후 7일이 지나 환불할 수 없어요.' }, 400)
+  }
+
+  // ── phyweb 이용권 상품: 코드 미등록이면 셀프환불(카드취소 + phyweb 코드 void), 등록됐으면 약관§8로 거부 ──
+  if (refPkg?.service === 'phyweb') {
+    const secret = c.env.MAUM_SSO_SECRET
+    const tossKey = c.env.TOSS_SECRET_KEY
+    if (!secret || !tossKey) return c.json({ success: false, error: '환불 설정 오류 — 고객센터(support@maumful.com)로 문의해 주세요.' }, 500)
+    const orderId = `mf_charge_${charge.id}`
+    const signTok = () => signSso(secret, { service: 'phyweb', grantType: refPkg.grantType, orderId, exp: Math.floor(Date.now() / 1000) + 300 })
+    // 1) 등록 여부 확인 — 등록됐으면 거부(청약철회 제한)
+    try {
+      const st = await fetch('https://phyweb.pages.dev/api/grant/status?token=' + encodeURIComponent(await signTok())).then(r => r.json() as any).catch(() => null)
+      if (st?.redeemed) return c.json({ success: false, error: 'phyweb에 이용권 코드를 이미 등록하셔서 환불할 수 없어요(등록 후 청약철회 제한).' }, 400)
+    } catch { /* 조회 실패 시 아래 revoke가 최종 판단(등록됐으면 revoke가 409로 거부) */ }
+    // 2) 원자적 선점
+    const claim = await DB.prepare("UPDATE credit_charges SET status='refunded' WHERE id=? AND status='completed'").bind(charge.id).run()
+    if (claim.meta.changes === 0) return c.json({ success: false, error: '이미 처리 중이거나 환불된 결제예요.' }, 409)
+    const rollback = async () => { await DB.prepare("UPDATE credit_charges SET status='completed' WHERE id=? AND status='refunded'").bind(charge.id).run() }
+    // 3) 토스 카드취소(돈 먼저 — 실패 시 깔끔히 롤백, phyweb 미변경)
+    try {
+      const cancelRes = await fetch(`https://api.tosspayments.com/v1/payments/${encodeURIComponent(pgTid)}/cancel`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Basic ' + btoa(tossKey + ':'), 'Idempotency-Key': 'refund_' + pgTid },
+        body: JSON.stringify({ cancelReason: '고객 요청(phyweb 이용권 미등록 환불)' }),
+      })
+      if (!cancelRes.ok) {
+        let msg = '결제 취소에 실패했어요. 잠시 후 다시 시도하거나 고객센터로 문의해 주세요.'
+        try { const e = await cancelRes.json() as { message?: unknown }; if (typeof e?.message === 'string' && e.message.trim()) msg = e.message } catch {}
+        await rollback(); return c.json({ success: false, error: msg }, 400)
+      }
+    } catch (e) {
+      let cancelled = false
+      try { const inq = await fetch(`https://api.tosspayments.com/v1/payments/${encodeURIComponent(pgTid)}`, { headers: { 'Authorization': 'Basic ' + btoa(tossKey + ':') } }); if (inq.ok) { const p = await inq.json() as { status?: string }; if (p?.status === 'CANCELED' || p?.status === 'PARTIAL_CANCELED') cancelled = true } } catch {}
+      if (!cancelled) { await rollback(); console.error('[Refund phyweb] 토스 취소 오류(미취소) 롤백:', e, pgTid); return c.json({ success: false, error: '결제 취소 확인에 실패했어요. 고객센터로 문의해 주세요.' }, 400) }
+    }
+    // 4) 돈 환불됨 → phyweb 코드 void(best-effort). 등록 race(409)면 로그만 남김(관리자 조정).
+    try {
+      const rv = await fetch('https://phyweb.pages.dev/api/grant/revoke', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: await signTok() }) })
+      if (!rv.ok) console.error('[Refund phyweb] revoke 비정상(등록 race 가능) order:', orderId, 'http:', rv.status)
+    } catch (e) { console.error('[Refund phyweb] revoke 오류:', e, orderId) }
+    return c.json({ success: true, refunded: true, service: 'phyweb', message: 'phyweb 이용권 결제가 환불되었습니다.' })
   }
 
   // 미사용(관대 정책): 현재 잔액 ≥ 구매 크레딧
