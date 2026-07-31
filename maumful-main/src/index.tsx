@@ -1149,11 +1149,11 @@ app.post('/api/credits/refund', async (c) => {
     if (!secret || !tossKey) return c.json({ success: false, error: '환불 설정 오류 — 고객센터(support@maumful.com)로 문의해 주세요.' }, 500)
     const orderId = `mf_charge_${charge.id}`
     const signTok = () => signSso(secret, { service: 'phyweb', grantType: refPkg.grantType, orderId, exp: Math.floor(Date.now() / 1000) + 300 })
-    // 1) 등록 여부 확인 — 등록됐으면 거부(청약철회 제한)
-    try {
-      const st = await fetch('https://phyweb.pages.dev/api/grant/status?token=' + encodeURIComponent(await signTok())).then(r => r.json() as any).catch(() => null)
-      if (st?.redeemed) return c.json({ success: false, error: 'phyweb에 이용권 코드를 이미 등록하셔서 환불할 수 없어요(등록 후 청약철회 제한).' }, 400)
-    } catch { /* 조회 실패 시 아래 revoke가 최종 판단(등록됐으면 revoke가 409로 거부) */ }
+    // 1) 등록 여부 확인 — 등록됐으면 거부(청약철회 제한). ⚠️ 확인 불가 시 환불 보류(과다환불 방지, fail-safe)
+    let st: any = null
+    try { st = await fetch('https://phyweb.pages.dev/api/grant/status?token=' + encodeURIComponent(await signTok())).then(r => r.json()).catch(() => null) } catch { st = null }
+    if (!st || st.ok !== true) return c.json({ success: false, error: '일시적으로 환불 가능 여부를 확인할 수 없어요. 잠시 후 다시 시도하거나 고객센터(support@maumful.com)로 문의해 주세요.' }, 503)
+    if (st.redeemed) return c.json({ success: false, error: 'phyweb에 이용권 코드를 이미 등록하셔서 환불할 수 없어요(등록 후 청약철회 제한).' }, 400)
     // 2) 원자적 선점
     const claim = await DB.prepare("UPDATE credit_charges SET status='refunded' WHERE id=? AND status='completed'").bind(charge.id).run()
     if (claim.meta.changes === 0) return c.json({ success: false, error: '이미 처리 중이거나 환불된 결제예요.' }, 409)
