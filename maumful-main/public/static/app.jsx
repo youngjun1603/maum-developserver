@@ -158,6 +158,27 @@ const api = {
   },
 };
 
+// 외부 서비스(phyweb 등) 상품 결제 개시 — 마음풀 토스 결제창 재사용(기존 handlePay와 동일 규격).
+// 성공 시 백엔드가 deliverGrant→해당 서비스에 지급/쿠폰코드. 기존 크레딧 결제 흐름과 독립(추가형).
+async function startExternalCheckout(packageKey) {
+  try {
+    const res = await api.tossCheckout(packageKey);
+    if (!res.success) { alert(res.error || '결제 준비에 실패했습니다.'); return; }
+    const d = res.data;
+    if (typeof window.TossPayments !== 'function') { alert('결제 SDK 로드 실패. 새로고침(Ctrl+Shift+R) 후 다시 시도해주세요.'); return; }
+    const tossPayments = window.TossPayments(d.clientKey);
+    await tossPayments.requestPayment('카드', {
+      amount: d.amount, orderId: d.orderId, orderName: d.orderName,
+      customerName: d.customerName, customerEmail: d.customerEmail,
+      successUrl: d.successUrl, failUrl: d.failUrl,
+    });
+  } catch (err) {
+    if (err?.code !== 'USER_CANCEL' && err?.code !== 'USER_CANCEL_PAYMENT') {
+      alert('결제 오류: ' + (err?.message || '알 수 없는 오류'));
+    }
+  }
+}
+
 // ============================================================
 // LocalStorage 결과 저장소 (검사 결과는 서버 미저장 원칙 유지)
 // ============================================================
@@ -1599,21 +1620,60 @@ function PsychologicalTestSystem() {
         }
       }
 
+      // ── 외부 서비스(phyweb 등) 상품 결제 진입 (?buy=phyweb:solo) ──
+      //    phyweb '유료결제하기' → 마음풀 결제창 → 성공 시 grant/쿠폰코드. 기존 흐름과 독립(추가형).
+      const buyParam = urlParams.get('buy');
+      if (buyParam && /^phyweb:[a-z_]+$/i.test(buyParam)) {
+        window.history.replaceState({}, '', '/');
+        const pkgKey = 'phyweb_' + buyParam.slice('phyweb:'.length).toLowerCase();
+        if (isAuthenticated) {
+          try { sessionStorage.setItem('phyweb_purchase_pending', '1'); } catch {}
+          startExternalCheckout(pkgKey);
+        } else {
+          try { sessionStorage.setItem('post_login_buy', pkgKey); } catch {}
+          setView('memberLogin');
+        }
+        setInitializing(false);
+        return;
+      }
+
       // 로그인 복원 후 기본 화면
       if (isAuthenticated) setView('memberDashboard');
 
       // 결제 완료 후 URL 파라미터 처리 (?payment=success|fail|cancel)
       if (paymentStatus === 'success') {
         window.history.replaceState({}, '', '/');
-        setTimeout(async () => {
-          try {
-            const r = await fetch('/api/payment/stripe/verify', { headers: api._authHeader() });
-            const d = await r.json();
-            if (d.success) setCredits(d.data.credits);
-          } catch { /* 무시 */ }
-          setLoginMsg({ type: 'success', text: '✦ 크레딧 구매가 완료되었습니다!' });
-          setTimeout(() => setLoginMsg({ type: '', text: '' }), 4000);
-        }, 1500);
+        let phywebPending = null;
+        try { phywebPending = sessionStorage.getItem('phyweb_purchase_pending'); } catch {}
+        if (phywebPending) {
+          // phyweb 등 외부 상품 결제 성공 → 쿠폰코드 조회(grant 지연 대비 재시도) 후 표시. 기존 크레딧 흐름 무영향.
+          try { sessionStorage.removeItem('phyweb_purchase_pending'); } catch {}
+          setTimeout(async () => {
+            let shown = false;
+            for (let i = 0; i < 5 && !shown; i++) {
+              try {
+                const gr = await fetch('/api/payment/grant-code?service=phyweb', { headers: api._authHeader() }).then(r => r.json());
+                if (gr.success && gr.data) {
+                  if (gr.data.code) { window.prompt('phyweb 유료 이용권 코드입니다. 복사해서 phyweb의 "이용권 코드 등록"에 붙여넣으세요:', gr.data.code); shown = true; break; }
+                  if (gr.data.status === 'delivered') { setLoginMsg({ type: 'success', text: '✦ phyweb 유료 결제가 완료되어 자동 적용되었습니다.' }); shown = true; break; }
+                }
+              } catch { /* 재시도 */ }
+              await new Promise(res => setTimeout(res, 1500));
+            }
+            if (!shown) setLoginMsg({ type: 'success', text: '✦ 결제 완료. 코드 발급이 지연되면 잠시 후 phyweb에서 확인해 주세요.' });
+            setTimeout(() => setLoginMsg({ type: '', text: '' }), 6000);
+          }, 1200);
+        } else {
+          setTimeout(async () => {
+            try {
+              const r = await fetch('/api/payment/stripe/verify', { headers: api._authHeader() });
+              const d = await r.json();
+              if (d.success) setCredits(d.data.credits);
+            } catch { /* 무시 */ }
+            setLoginMsg({ type: 'success', text: '✦ 크레딧 구매가 완료되었습니다!' });
+            setTimeout(() => setLoginMsg({ type: '', text: '' }), 4000);
+          }, 1500);
+        }
       } else if (paymentStatus === 'fail' || paymentStatus === 'cancel') {
         window.history.replaceState({}, '', '/');
         setLoginMsg({ type: 'error', text: '결제가 취소되었거나 실패했습니다.' });
@@ -1659,6 +1719,17 @@ function PsychologicalTestSystem() {
       setInitializing(false);
     })();
   }, []);
+
+  // 로그인 후 외부 상품(phyweb 등) 결제 재개 — ?buy 진입 시 미로그인이면 stash→로그인 완료 후 결제창 오픈.
+  useEffect(() => {
+    if (!currentUser) return;
+    let pk = null;
+    try { pk = sessionStorage.getItem('post_login_buy'); } catch {}
+    if (pk) {
+      try { sessionStorage.removeItem('post_login_buy'); sessionStorage.setItem('phyweb_purchase_pending', '1'); } catch {}
+      startExternalCheckout(pk);
+    }
+  }, [currentUser]);
 
   // ============================================================
   // 인증 함수

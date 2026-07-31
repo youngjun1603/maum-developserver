@@ -174,6 +174,34 @@ const api = {
     return r.json();
   }
 };
+async function startExternalCheckout(packageKey) {
+  try {
+    const res = await api.tossCheckout(packageKey);
+    if (!res.success) {
+      alert(res.error || "\uACB0\uC81C \uC900\uBE44\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
+      return;
+    }
+    const d = res.data;
+    if (typeof window.TossPayments !== "function") {
+      alert("\uACB0\uC81C SDK \uB85C\uB4DC \uC2E4\uD328. \uC0C8\uB85C\uACE0\uCE68(Ctrl+Shift+R) \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.");
+      return;
+    }
+    const tossPayments = window.TossPayments(d.clientKey);
+    await tossPayments.requestPayment("\uCE74\uB4DC", {
+      amount: d.amount,
+      orderId: d.orderId,
+      orderName: d.orderName,
+      customerName: d.customerName,
+      customerEmail: d.customerEmail,
+      successUrl: d.successUrl,
+      failUrl: d.failUrl
+    });
+  } catch (err) {
+    if ((err == null ? void 0 : err.code) !== "USER_CANCEL" && (err == null ? void 0 : err.code) !== "USER_CANCEL_PAYMENT") {
+      alert("\uACB0\uC81C \uC624\uB958: " + ((err == null ? void 0 : err.message) || "\uC54C \uC218 \uC5C6\uB294 \uC624\uB958"));
+    }
+  }
+}
 const storage = {
   get: (key) => {
     try {
@@ -1604,19 +1632,75 @@ function PsychologicalTestSystem() {
           return;
         }
       }
+      const buyParam = urlParams.get("buy");
+      if (buyParam && /^phyweb:[a-z_]+$/i.test(buyParam)) {
+        window.history.replaceState({}, "", "/");
+        const pkgKey = "phyweb_" + buyParam.slice("phyweb:".length).toLowerCase();
+        if (isAuthenticated) {
+          try {
+            sessionStorage.setItem("phyweb_purchase_pending", "1");
+          } catch {
+          }
+          startExternalCheckout(pkgKey);
+        } else {
+          try {
+            sessionStorage.setItem("post_login_buy", pkgKey);
+          } catch {
+          }
+          setView("memberLogin");
+        }
+        setInitializing(false);
+        return;
+      }
       if (isAuthenticated) setView("memberDashboard");
       if (paymentStatus === "success") {
         window.history.replaceState({}, "", "/");
-        setTimeout(async () => {
+        let phywebPending = null;
+        try {
+          phywebPending = sessionStorage.getItem("phyweb_purchase_pending");
+        } catch {
+        }
+        if (phywebPending) {
           try {
-            const r = await fetch("/api/payment/stripe/verify", { headers: api._authHeader() });
-            const d = await r.json();
-            if (d.success) setCredits(d.data.credits);
+            sessionStorage.removeItem("phyweb_purchase_pending");
           } catch {
           }
-          setLoginMsg({ type: "success", text: "\u2726 \uD06C\uB808\uB527 \uAD6C\uB9E4\uAC00 \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4!" });
-          setTimeout(() => setLoginMsg({ type: "", text: "" }), 4e3);
-        }, 1500);
+          setTimeout(async () => {
+            let shown = false;
+            for (let i = 0; i < 5 && !shown; i++) {
+              try {
+                const gr = await fetch("/api/payment/grant-code?service=phyweb", { headers: api._authHeader() }).then((r) => r.json());
+                if (gr.success && gr.data) {
+                  if (gr.data.code) {
+                    window.prompt('phyweb \uC720\uB8CC \uC774\uC6A9\uAD8C \uCF54\uB4DC\uC785\uB2C8\uB2E4. \uBCF5\uC0AC\uD574\uC11C phyweb\uC758 "\uC774\uC6A9\uAD8C \uCF54\uB4DC \uB4F1\uB85D"\uC5D0 \uBD99\uC5EC\uB123\uC73C\uC138\uC694:', gr.data.code);
+                    shown = true;
+                    break;
+                  }
+                  if (gr.data.status === "delivered") {
+                    setLoginMsg({ type: "success", text: "\u2726 phyweb \uC720\uB8CC \uACB0\uC81C\uAC00 \uC644\uB8CC\uB418\uC5B4 \uC790\uB3D9 \uC801\uC6A9\uB418\uC5C8\uC2B5\uB2C8\uB2E4." });
+                    shown = true;
+                    break;
+                  }
+                }
+              } catch {
+              }
+              await new Promise((res) => setTimeout(res, 1500));
+            }
+            if (!shown) setLoginMsg({ type: "success", text: "\u2726 \uACB0\uC81C \uC644\uB8CC. \uCF54\uB4DC \uBC1C\uAE09\uC774 \uC9C0\uC5F0\uB418\uBA74 \uC7A0\uC2DC \uD6C4 phyweb\uC5D0\uC11C \uD655\uC778\uD574 \uC8FC\uC138\uC694." });
+            setTimeout(() => setLoginMsg({ type: "", text: "" }), 6e3);
+          }, 1200);
+        } else {
+          setTimeout(async () => {
+            try {
+              const r = await fetch("/api/payment/stripe/verify", { headers: api._authHeader() });
+              const d = await r.json();
+              if (d.success) setCredits(d.data.credits);
+            } catch {
+            }
+            setLoginMsg({ type: "success", text: "\u2726 \uD06C\uB808\uB527 \uAD6C\uB9E4\uAC00 \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4!" });
+            setTimeout(() => setLoginMsg({ type: "", text: "" }), 4e3);
+          }, 1500);
+        }
       } else if (paymentStatus === "fail" || paymentStatus === "cancel") {
         window.history.replaceState({}, "", "/");
         setLoginMsg({ type: "error", text: "\uACB0\uC81C\uAC00 \uCDE8\uC18C\uB418\uC5C8\uAC70\uB098 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4." });
@@ -1658,6 +1742,22 @@ function PsychologicalTestSystem() {
       setInitializing(false);
     })();
   }, []);
+  useEffect(() => {
+    if (!currentUser) return;
+    let pk = null;
+    try {
+      pk = sessionStorage.getItem("post_login_buy");
+    } catch {
+    }
+    if (pk) {
+      try {
+        sessionStorage.removeItem("post_login_buy");
+        sessionStorage.setItem("phyweb_purchase_pending", "1");
+      } catch {
+      }
+      startExternalCheckout(pk);
+    }
+  }, [currentUser]);
   async function handleLogin(e) {
     var _a2, _b2;
     if (e) e.preventDefault();

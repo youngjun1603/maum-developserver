@@ -2930,7 +2930,7 @@ ${summary ?? (counselingType === 'biblical' ? 'No test result — proceed as fai
 // ============================================================
 // ── 패키지 정의 (credits: 지급량, amount: 결제금액, currency 단위에 맞게)
 // KRW: 원 단위 / USD: 센트 단위 (Stripe 기준)
-const PACKAGES: Record<string, { credits: number; amount: number; label: string; product?: boolean; service?: 'otter' | 'gyeot'; grantType?: string }> = {
+const PACKAGES: Record<string, { credits: number; amount: number; label: string; product?: boolean; service?: 'otter' | 'gyeot' | 'phyweb'; grantType?: string }> = {
   starter_kr:  { credits: 50,  amount: 4900,  label: '스타터' },
   standard_kr: { credits: 120, amount: 9900,  label: '표준'   },
   premium_kr:  { credits: 300, amount: 15000, label: '프리미엄' },
@@ -2956,9 +2956,17 @@ const PACKAGES: Record<string, { credits: number; amount: number; label: string;
   gyeot_light:  { credits: 0, amount: 7900,  label: '마음곁 라이트(월 30세션)',   product: true, service: 'gyeot', grantType: 'sub_light' },
   gyeot_pro:    { credits: 0, amount: 14900, label: '마음곁 프로(월 100세션)',    product: true, service: 'gyeot', grantType: 'sub_pro' },
   gyeot_pack10: { credits: 0, amount: 6900,  label: '마음곁 10회팩',              product: true, service: 'gyeot', grantType: 'pack10' },
+  // ── phyweb 상담사 구독(마음풀에서 판매 → phyweb에 grant/쿠폰코드 전달). 같은 사업자(마음서비스)라 결제창 공유 ──
+  //    grantType = phyweb planType(TOSS_PLAN_CONFIG 키와 동일). 월간=1개월 이용권(비자동갱신), 연간=1년.
+  phyweb_solo:         { credits: 0, amount: 19900,  label: 'phyweb 상담사 Solo(1개월)',         product: true, service: 'phyweb', grantType: 'solo' },
+  phyweb_basic:        { credits: 0, amount: 29900,  label: 'phyweb 상담사 Basic(1개월)',        product: true, service: 'phyweb', grantType: 'basic' },
+  phyweb_professional: { credits: 0, amount: 49900,  label: 'phyweb 상담사 Professional(1개월)', product: true, service: 'phyweb', grantType: 'professional' },
+  phyweb_solo_annual:  { credits: 0, amount: 190000, label: 'phyweb 상담사 Solo(연간)',          product: true, service: 'phyweb', grantType: 'solo_annual' },
+  phyweb_basic_annual: { credits: 0, amount: 250000, label: 'phyweb 상담사 Basic(연간)',         product: true, service: 'phyweb', grantType: 'basic_annual' },
+  phyweb_pro_annual:   { credits: 0, amount: 450000, label: 'phyweb 상담사 Professional(연간)',  product: true, service: 'phyweb', grantType: 'professional_annual' },
 }
 // 외부 서비스 grant 수신 URL(각 워커 루트 도메인). 결제 성공 → signSso 서명 → POST /api/grant.
-const SERVICE_API: Record<string, string> = { otter: 'https://maumotter.com', gyeot: 'https://maumgyeot.com' }
+const SERVICE_API: Record<string, string> = { otter: 'https://maumotter.com', gyeot: 'https://maumgyeot.com', phyweb: 'https://phyweb.pages.dev' }
 // 결제 성공분을 외부 서비스로 지급 전달. external_grants 큐에 기록 후 서명 POST. 실패해도 결제는 유지(재시도).
 async function deliverGrant(env: any, charge: { chargeId: number; user_id: number; package_key: string }): Promise<void> {
   const DB = env.DB
@@ -2975,7 +2983,10 @@ async function deliverGrant(env: any, charge: { chargeId: number; user_id: numbe
     const token = await signSso(secret, { email, service: pkg.service, grantType: pkg.grantType, orderId, amount: pkg.amount, exp: Math.floor(Date.now() / 1000) + 300 })
     const res = await fetch(`${SERVICE_API[pkg.service]}/api/grant`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) })
     if (res.ok) {
-      await DB.prepare("UPDATE external_grants SET status='delivered', attempts=attempts+1, delivered_at=CURRENT_TIMESTAMP WHERE order_id=?").bind(orderId).run()
+      // 쿠폰형 서비스(phyweb 등)는 응답 body의 code를 저장 → 결제완료 화면에서 노출. 직접적용(수달·곁)은 code 없음.
+      let code: string | null = null
+      try { const j = await res.json() as any; code = j?.code ?? j?.data?.code ?? null } catch {}
+      await DB.prepare("UPDATE external_grants SET status='delivered', code=COALESCE(?,code), attempts=attempts+1, delivered_at=CURRENT_TIMESTAMP WHERE order_id=?").bind(code, orderId).run()
     } else {
       await DB.prepare("UPDATE external_grants SET status='failed', attempts=attempts+1 WHERE order_id=?").bind(orderId).run()
     }
@@ -2996,11 +3007,34 @@ app.post('/api/admin/deliver-pending-grants', async (c) => {
     try {
       const token = await signSso(secret, { email: r.email, service: r.service, grantType: r.grant_type, orderId: r.order_id, amount: r.amount, exp: Math.floor(Date.now() / 1000) + 300 })
       const res = await fetch(`${SERVICE_API[r.service]}/api/grant`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) })
-      if (res.ok) { await c.env.DB.prepare("UPDATE external_grants SET status='delivered',attempts=attempts+1,delivered_at=CURRENT_TIMESTAMP WHERE order_id=?").bind(r.order_id).run(); delivered++ }
+      if (res.ok) { let code: string | null = null; try { const j = await res.json() as any; code = j?.code ?? j?.data?.code ?? null } catch {} await c.env.DB.prepare("UPDATE external_grants SET status='delivered',code=COALESCE(?,code),attempts=attempts+1,delivered_at=CURRENT_TIMESTAMP WHERE order_id=?").bind(code, r.order_id).run(); delivered++ }
       else { await c.env.DB.prepare("UPDATE external_grants SET status='failed',attempts=attempts+1 WHERE order_id=?").bind(r.order_id).run(); failed++ }
     } catch { await c.env.DB.prepare("UPDATE external_grants SET status='failed',attempts=attempts+1 WHERE order_id=?").bind(r.order_id).run(); failed++ }
   }
   return c.json({ ok: true, delivered, failed, scanned: (rows.results ?? []).length })
+})
+
+// 결제 후 외부 서비스 지급 상태·쿠폰코드 조회(본인 것만). phyweb 등 쿠폰형 상품 등록코드 노출용.
+//  chargeId 지정 시 그 건, 없으면 service의 최신 1건(성공 리다이렉트엔 chargeId가 없어 최신 조회 사용).
+app.get('/api/payment/grant-code', async (c) => {
+  const userId = await getAuthUserId(c.req.raw, c.env.KV)
+  if (!userId) return c.json({ success: false, error: '로그인이 필요합니다.' }, 401)
+  const chargeId = parseInt(c.req.query('chargeId') || '', 10)
+  const service = (c.req.query('service') || '').replace(/[^a-z]/gi, '')
+  let row: any = null
+  if (chargeId) {
+    row = await c.env.DB.prepare(
+      "SELECT service, grant_type, code, status, created_at FROM external_grants WHERE order_id=? AND user_id=?"
+    ).bind(`mf_charge_${chargeId}`, userId).first<any>()
+  } else if (service) {
+    row = await c.env.DB.prepare(
+      "SELECT service, grant_type, code, status, created_at FROM external_grants WHERE user_id=? AND service=? ORDER BY created_at DESC LIMIT 1"
+    ).bind(userId, service).first<any>()
+  } else {
+    return c.json({ success: false, error: 'chargeId 또는 service 필요' }, 400)
+  }
+  if (!row) return c.json({ success: true, data: null })
+  return c.json({ success: true, data: { service: row.service, grantType: row.grant_type, code: row.code || null, status: row.status, created_at: row.created_at } })
 })
 
 // ── 구독 플랜 정의 ─────────────────────────────────────────
