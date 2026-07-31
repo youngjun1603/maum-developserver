@@ -544,7 +544,7 @@ app.delete('/api/account', requireAuth, async (c) => {
 });
 
 // ── 공개 정책 페이지(Play 심사·데이터보안에 URL 제출) ──
-const BIZ = '상호: 마음서비스 · 대표자: 김근혜 · 사업자등록번호: 780-31-01832 · 통신판매업 신고번호: 제 2026-서울영등포-1157 호 · 소재지: 서울특별시 영등포구 문래로26길 6(문래동3가) · 문의: limyj007@gmail.com';
+const BIZ = '상호: 마음서비스 · 대표자: 김근혜 · 사업자등록번호: 780-31-01832 · 통신판매업 신고번호: 제 2026-서울영등포-1157 호 · 소재지: 서울특별시 영등포구 문래로26길 6(문래동3가) · 문의: shine184280@gmail.com';
 const PAGE = (title: string, body: string) => `<!doctype html><html lang="ko"><head><meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/><title>${title} · 마음곁</title>
 <style>body{font-family:system-ui,-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;max-width:720px;margin:0 auto;padding:28px 20px 60px;color:#222;line-height:1.7}
@@ -580,7 +580,7 @@ app.get('/privacy', (c) => c.html(PAGE('개인정보처리방침', `
 <h2>6. 아동</h2>
 <p>본 서비스는 만 13세 미만 아동을 대상으로 하지 않습니다.</p>
 <h2>7. 개인정보보호책임자</h2>
-<p>김근혜 · limyj007@gmail.com</p>`)));
+<p>김근혜 · shine184280@gmail.com</p>`)));
 
 app.get('/terms', (c) => c.html(PAGE('이용약관', `
 <h1>마음곁 이용약관</h1><p class="muted">시행일: 2026-06-21</p>
@@ -616,11 +616,11 @@ app.get('/faq', (c) => c.html(PAGE('자주 묻는 질문', `
 <h1>자주 묻는 질문 · 고객센터</h1>
 <h2>이용권 코드는 어떻게 등록하나요?</h2><p>홈 화면의 '🎟️ 이용권' 칸에 구매하신 코드를 입력하고 '등록'을 누르면 즉시 적용됩니다.</p>
 <h2>이용권은 어디서 사나요?</h2><p>네이버 스마트스토어에서 구매 후 코드를 받아 등록합니다(앱 내 '구매하기'에서 스토어로 이동).</p>
-<h2>환불이 되나요?</h2><p>디지털 콘텐츠(코드)는 발송·등록 후 청약철회가 제한될 수 있습니다. 미사용·미발송 건은 관계 법령에 따라 환불됩니다. 문의: limyj007@gmail.com</p>
+<h2>환불이 되나요?</h2><p>디지털 콘텐츠(코드)는 발송·등록 후 청약철회가 제한될 수 있습니다. 미사용·미발송 건은 관계 법령에 따라 환불됩니다. 문의: shine184280@gmail.com</p>
 <h2>비밀번호를 잊었어요</h2><p>로그인 화면의 '비밀번호를 잊으셨나요?'에서 재설정 메일을 받을 수 있어요.</p>
 <h2>촬영한 영상은 저장되나요?</h2><p>아니요. 통역 분석에만 잠깐 쓰이고 저장하지 않습니다.</p>
 <h2>회원 탈퇴는 어떻게 하나요?</h2><p>홈 하단 '회원 탈퇴' 또는 <a href="/account-deletion">여기</a>에서 가능합니다.</p>
-<h2>문의</h2><p>limyj007@gmail.com</p>`)));
+<h2>문의</h2><p>shine184280@gmail.com</p>`)));
 
 app.get('/account-deletion', (c) => c.html(PAGE('회원 탈퇴', `
 <h1>마음곁 회원 탈퇴 · 계정 삭제</h1>
@@ -631,7 +631,7 @@ app.get('/account-deletion', (c) => c.html(PAGE('회원 탈퇴', `
   <p id="msg">로그인 상태를 확인하는 중…</p>
   <button class="btn" id="del" style="display:none" onclick="doDelete()">계정 영구 삭제</button>
 </div>
-<p class="muted">앱 내에서도 <b>홈 화면 하단 → 회원 탈퇴</b>로 진행할 수 있습니다. 로그인 없이 삭제를 원하시면 limyj007@gmail.com 으로 가입 이메일과 함께 요청해 주세요.</p>
+<p class="muted">앱 내에서도 <b>홈 화면 하단 → 회원 탈퇴</b>로 진행할 수 있습니다. 로그인 없이 삭제를 원하시면 shine184280@gmail.com 으로 가입 이메일과 함께 요청해 주세요.</p>
 <script>
 var TOKEN_KEY='maumgyeot_token';
 var token=localStorage.getItem(TOKEN_KEY);
