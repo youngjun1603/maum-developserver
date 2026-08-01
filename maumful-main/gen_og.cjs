@@ -1,6 +1,7 @@
 const sharp = require('sharp');
 
 // 마음풀 OG 공유 카드 — 정사각 1080x1080 (카카오 썸네일 크롭 방지). 중앙 정렬.
+// 하단 브랜드 = 공식 로고(public/static/maumful-logo.png · 새싹+마음풀(Maumful) 워드마크)를 합성.
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0.3" y2="1">
@@ -38,23 +39,23 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" 
   <!-- 서브 -->
   <text x="540" y="788" font-family="Malgun Gothic" font-size="27" fill="#7A8C80" text-anchor="middle" letter-spacing="2">심리검사 · AI 상담 · 치유 게임</text>
 
-  <!-- 하단 브랜드 -->
-  <g transform="translate(540,910)">
-    <g transform="translate(-122,-8) scale(0.66)" stroke-linecap="round">
-      <path d="M0,22 L0,-6" stroke="#2D6A4F" stroke-width="6" fill="none"/>
-      <path d="M0,2 C12,-8 20,-16 32,-26 C18,-18 4,-8 0,2 Z" fill="#2D6A4F"/>
-      <path d="M0,9 C-11,1 -19,-1 -31,-12 C-16,-6 -3,-1 0,9 Z" fill="#52B788"/>
-    </g>
-    <text x="-94" y="10" font-family="Malgun Gothic" font-size="34" font-weight="bold" fill="#2D6A4F">마음풀</text>
-    <text x="14" y="8" font-family="Malgun Gothic" font-size="25" fill="#8AA092" letter-spacing="1">·  maumful.com</text>
-  </g>
+  <!-- 하단 도메인(로고는 아래에서 합성) -->
+  <text x="540" y="998" font-family="Malgun Gothic" font-size="25" fill="#8AA092" text-anchor="middle" letter-spacing="1">maumful.com</text>
 </svg>`;
 
-sharp(Buffer.from(svg))
-  .png({ compressionLevel: 9 })
-  .toFile('public/static/og-share.png')
-  .then(() => {
+const LOGO_W = 470;                       // 공식 로고 폭
+const LOGO_LEFT = Math.round((1080 - LOGO_W) / 2);
+const LOGO_TOP = 878;                     // 도메인 텍스트(y998) 위
+
+(async () => {
+  try {
+    const bg = await sharp(Buffer.from(svg)).png().toBuffer();
+    const logo = await sharp('public/static/maumful-logo.png').resize({ width: LOGO_W }).png().toBuffer();
+    await sharp(bg)
+      .composite([{ input: logo, left: LOGO_LEFT, top: LOGO_TOP }])
+      .png({ compressionLevel: 9 })
+      .toFile('public/static/og-share.png');
     const s = require('fs').statSync('public/static/og-share.png');
-    console.log('og-share.png written — ' + (s.size / 1024).toFixed(1) + 'KB (1080x1080)');
-  })
-  .catch(e => console.log('ERR', e.message));
+    console.log('og-share.png written (공식 로고 합성) — ' + (s.size / 1024).toFixed(1) + 'KB (1080x1080)');
+  } catch (e) { console.log('ERR', e.message); }
+})();

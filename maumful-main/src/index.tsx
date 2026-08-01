@@ -4772,7 +4772,7 @@ app.get('/', (c) => {
   <meta property="og:description" content="PHQ-9·Big5 등 8종 심리검사 무료 시작. 가입 즉시 20 크레딧 지급 · AI 상담 · 제휴 상담사 연결.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="${siteUrl}/">
-  <meta property="og:image" content="${siteUrl}/static/og-share.png">
+  <meta property="og:image" content="${siteUrl}/static/og-share.png?v=20260731">
   <meta property="og:image:width" content="1080">
   <meta property="og:image:height" content="1080">
   <meta property="og:image:alt" content="마음풀 — 마음의 무게를 가볍게">
@@ -4783,7 +4783,7 @@ app.get('/', (c) => {
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="마음풀 — 온라인 심리검사 & AI 마음 상담">
   <meta name="twitter:description" content="PHQ-9·Big5 등 8종 심리검사. 가입 즉시 20 크레딧 무료.">
-  <meta name="twitter:image" content="${siteUrl}/static/og-share.png">
+  <meta name="twitter:image" content="${siteUrl}/static/og-share.png?v=20260731">
 
   <!-- JSON-LD 구조화 데이터 -->
   <script type="application/ld+json">{
