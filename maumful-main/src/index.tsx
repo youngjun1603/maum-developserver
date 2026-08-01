@@ -4751,7 +4751,7 @@ app.get('/', (c) => {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>마음풀 — 온라인 심리검사 & AI 마음 상담</title>
-  <meta name="description" content="PHQ-9·GAD-7·Big5 등 8종 심리검사를 무료로 시작하세요. AI 상담으로 내 마음을 더 깊이 이해하고, 제휴 상담사와 직접 연결됩니다.">
+  <meta name="description" content="PHQ-9·GAD-7·Big5 등 10종 심리검사를 무료로 시작하세요. AI 상담으로 내 마음을 더 깊이 이해하고, 제휴 상담사와 직접 연결됩니다.">
   <meta name="keywords" content="심리검사,PHQ-9,GAD-7,BIG5,우울자가진단,불안검사,번아웃,온라인심리상담,AI상담,마음건강">
   <meta name="robots" content="index, follow, noimageai">
   <link rel="canonical" href="${siteUrl}/">
@@ -4769,7 +4769,7 @@ app.get('/', (c) => {
 
   <!-- Open Graph (SNS 공유) -->
   <meta property="og:title" content="마음풀 — 온라인 심리검사 & AI 마음 상담">
-  <meta property="og:description" content="PHQ-9·Big5 등 8종 심리검사 무료 시작. 가입 즉시 20 크레딧 지급 · AI 상담 · 제휴 상담사 연결.">
+  <meta property="og:description" content="PHQ-9·Big5 등 10종 심리검사 무료 시작. 가입 즉시 20 크레딧 지급 · AI 상담 · 제휴 상담사 연결.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="${siteUrl}/">
   <meta property="og:image" content="${siteUrl}/static/og-share.png?v=20260731">
@@ -4782,7 +4782,7 @@ app.get('/', (c) => {
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="마음풀 — 온라인 심리검사 & AI 마음 상담">
-  <meta name="twitter:description" content="PHQ-9·Big5 등 8종 심리검사. 가입 즉시 20 크레딧 무료.">
+  <meta name="twitter:description" content="PHQ-9·Big5 등 10종 심리검사. 가입 즉시 20 크레딧 무료.">
   <meta name="twitter:image" content="${siteUrl}/static/og-share.png?v=20260731">
 
   <!-- JSON-LD 구조화 데이터 -->
@@ -4803,7 +4803,7 @@ app.get('/', (c) => {
         "url": "${siteUrl}",
         "applicationCategory": "HealthApplication",
         "operatingSystem": "Web",
-        "description": "PHQ-9·GAD-7·Big5 등 8종 심리검사와 AI 상담 서비스",
+        "description": "PHQ-9·GAD-7·Big5 등 10종 심리검사와 AI 상담 서비스",
         "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW", "description": "가입 즉시 20 크레딧 무료 지급" },
         "featureList": ["PHQ-9 우울 자가점검","GAD-7 불안 검사","BIG5 성격검사","DASS-21","번아웃 검사","AI 상담","제휴 상담사 연결"]
       },
@@ -4848,7 +4848,7 @@ app.get('/', (c) => {
     <!-- SEO 폴백: JS 미실행 크롤러용 핵심 콘텐츠 (React 마운트 시 대체됨) -->
     <noscript>
       <h1>마음풀 — 온라인 심리검사 & AI 마음 상담</h1>
-      <p>PHQ-9·GAD-7·Big5 등 8종 심리검사를 무료로 시작하세요. AI 상담으로 내 마음을 더 깊이 이해하고, 제휴 상담사와 직접 연결됩니다.</p>
+      <p>PHQ-9·GAD-7·Big5 등 10종 심리검사를 무료로 시작하세요. AI 상담으로 내 마음을 더 깊이 이해하고, 제휴 상담사와 직접 연결됩니다.</p>
       <h2>주요 서비스</h2>
       <ul>
         <li>심리검사 — PHQ-9 우울 자가점검, GAD-7 불안 검사, DASS-21, Big5 성격검사, 번아웃 검사</li>
