@@ -308,7 +308,7 @@ function EntitlementCard({ token }) {
       : hist.map((h,i)=>html`<div key=${i} class="muted" style=${{fontSize:12,padding:'3px 0',borderTop:i?'1px solid #F0EBE3':'none'}}>${(h.created_at||'').slice(0,10)} · ${TYPE_LABEL[h.type]||h.type} · <span style=${{fontFamily:'monospace'}}>${h.code}</span></div>`)}</div>`}
     <div style=${{marginTop:12,paddingTop:12,borderTop:'1px solid #ECE6DD'}}>
       <div class="muted" style=${{fontSize:12,marginBottom:6}}>🛒 이용권 구매 (스마트스토어)</div>
-      <div class="muted" style=${{fontSize:13,lineHeight:1.7,color:'var(--ink)'}}>라이트 30일·월 30회 4,900원 · 프로 30일·월 100회 9,900원 · 회차권 10회(60일) 4,900원</div>
+      <div class="muted" style=${{fontSize:13,lineHeight:1.7,color:'var(--ink)'}}>라이트 30일·월 30회 7,900원 · 프로 30일·월 100회 14,900원 · 회차권 10회(60일) 6,900원</div>
       ${STORE_URL
         ? html`<a href=${STORE_URL} target="_blank" rel="noopener noreferrer" class="btn" style=${{display:'block',textAlign:'center',textDecoration:'none',marginTop:10}}>스마트스토어에서 구매하기 →</a>`
         : html`<div class="muted" style=${{fontSize:12,marginTop:8}}>스토어 오픈 준비 중이에요. 구매 후 받은 코드를 위에 등록하시면 됩니다.</div>`}
