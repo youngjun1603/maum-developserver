@@ -6062,10 +6062,21 @@ function PsychologicalTestSystem() {
                       )}
                     </div>
                   </div>
-                  <div style={{ marginTop:6, fontSize:11, color:'#9CA3AF' }}>
-                    {t(`구매 후 잔액: ✦ ${credits + selPkg.credits} 크레딧 · 검사 ${Math.floor((credits + selPkg.credits) / 10)}회 가능`,
-                       `After purchase: ✦ ${credits + selPkg.credits} cr · ${Math.floor((credits + selPkg.credits) / 10)} assessments`)}
-                  </div>
+                  {(selPkg.key.startsWith('otter_') || selPkg.key.startsWith('gyeot_')) ? (() => {
+                    const svc = selPkg.key.startsWith('otter_') ? t('마음수달','Maumotter') : t('마음곁','Maumgyeot');
+                    return (
+                      <div style={{ marginTop:6, fontSize:11, color:'#6B7280', lineHeight:1.7 }}>
+                        🎫 {t(`${svc} 이용권이에요. 결제 후 `, `${svc} pass. After payment, if your `)}
+                        <b style={{ color:'#2D6A4F' }}>{t('가입 이메일 = 마음풀 결제 이메일', 'signup email = payment email')}</b>
+                        {t(`일 때 ${svc} 계정에 자동 적용돼요.`, `, it's auto-applied to your ${svc} account.`)}
+                      </div>
+                    );
+                  })() : (
+                    <div style={{ marginTop:6, fontSize:11, color:'#9CA3AF' }}>
+                      {t(`구매 후 잔액: ✦ ${credits + selPkg.credits} 크레딧 · 검사 ${Math.floor((credits + selPkg.credits) / 10)}회 가능`,
+                         `After purchase: ✦ ${credits + selPkg.credits} cr · ${Math.floor((credits + selPkg.credits) / 10)} assessments`)}
+                    </div>
+                  )}
                 </div>
               )}
 
