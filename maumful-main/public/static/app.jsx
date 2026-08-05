@@ -1606,6 +1606,12 @@ function PsychologicalTestSystem() {
         } else if (goKind === 'test' && goArg) {
           const k = goArg.toUpperCase();
           if (['PHQ9','GAD7','DASS21','BIG5','LOST','SCT','DSI','BURNOUT','RIASEC','VALUES'].includes(k)) goView = 'startTest:' + k;
+        } else if (goKind === 'charge') {
+          // 마음수달·곁 등 외부 서비스에서 "마음풀에서 구매하기" → 상품 구매 화면 바로 열기
+          if (isAuthenticated) { setView('memberDashboard'); setShowChargeView(true); }
+          else { try { sessionStorage.setItem('post_login_charge', '1'); } catch {} setView('memberLogin'); }
+          setInitializing(false);
+          return;
         }
         if (goView) {
           if (goKind === 'history') setMyPageTab('history');
@@ -1728,6 +1734,13 @@ function PsychologicalTestSystem() {
     if (pk) {
       try { sessionStorage.removeItem('post_login_buy'); sessionStorage.setItem('phyweb_purchase_pending', '1'); } catch {}
       startExternalCheckout(pk);
+      return;
+    }
+    let charge = null;
+    try { charge = sessionStorage.getItem('post_login_charge'); } catch {}
+    if (charge) {
+      try { sessionStorage.removeItem('post_login_charge'); } catch {}
+      setShowChargeView(true);
     }
   }, [currentUser]);
 

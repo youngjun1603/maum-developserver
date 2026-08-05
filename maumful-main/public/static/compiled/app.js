@@ -1619,6 +1619,19 @@ function PsychologicalTestSystem() {
         } else if (goKind === "test" && goArg) {
           const k = goArg.toUpperCase();
           if (["PHQ9", "GAD7", "DASS21", "BIG5", "LOST", "SCT", "DSI", "BURNOUT", "RIASEC", "VALUES"].includes(k)) goView = "startTest:" + k;
+        } else if (goKind === "charge") {
+          if (isAuthenticated) {
+            setView("memberDashboard");
+            setShowChargeView(true);
+          } else {
+            try {
+              sessionStorage.setItem("post_login_charge", "1");
+            } catch {
+            }
+            setView("memberLogin");
+          }
+          setInitializing(false);
+          return;
         }
         if (goView) {
           if (goKind === "history") setMyPageTab("history");
@@ -1756,6 +1769,19 @@ function PsychologicalTestSystem() {
       } catch {
       }
       startExternalCheckout(pk);
+      return;
+    }
+    let charge = null;
+    try {
+      charge = sessionStorage.getItem("post_login_charge");
+    } catch {
+    }
+    if (charge) {
+      try {
+        sessionStorage.removeItem("post_login_charge");
+      } catch {
+      }
+      setShowChargeView(true);
     }
   }, [currentUser]);
   async function handleLogin(e) {
