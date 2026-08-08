@@ -2207,7 +2207,7 @@ function PsychologicalTestSystem() {
       setPushStatus('subscribed');
     } catch (e) {
       if (e.name === 'NotAllowedError') { setPushStatus('denied'); }
-      else { alert('알림 구독 중 오류가 발생했어요: ' + e.message); }
+      else { console.error('알림 구독 오류:', e); showToast(t('알림 구독 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.','Could not update notifications. Please try again.'), 'error'); }
     }
   }
 
@@ -6651,10 +6651,10 @@ function PsychologicalTestSystem() {
       const fileName = `SCT_Report_${sessionData.sessionId}_${new Date().getTime()}.pdf`;
       doc.save(fileName);
       console.log('✅ SRCI PDF 생성 완료:', fileName);
-      alert('✅ SCT PDF downloaded successfully!');
+      showToast(t('SRCI 결과 PDF를 저장했어요.','SRCI report PDF saved.'), 'success');
     } catch (error) {
       console.error('❌ PDF 생성 실패:', error);
-      alert('❌ PDF generation failed: ' + error.message);
+      showToast(t('PDF 생성에 실패했어요. 잠시 후 다시 시도해 주세요.','PDF generation failed. Please try again.'), 'error');
     }
   }
 
@@ -6843,10 +6843,10 @@ function PsychologicalTestSystem() {
       const fileName = `DSI_Report_${sessionData.sessionId}_${new Date().getTime()}.pdf`;
       doc.save(fileName);
       console.log('✅ SDRI PDF 생성 완료:', fileName);
-      alert('✅ DSI PDF downloaded successfully!');
+      showToast(t('SDRI 결과 PDF를 저장했어요.','SDRI report PDF saved.'), 'success');
     } catch (error) {
       console.error('❌ PDF 생성 실패:', error);
-      alert('❌ PDF generation failed: ' + error.message);
+      showToast(t('PDF 생성에 실패했어요. 잠시 후 다시 시도해 주세요.','PDF generation failed. Please try again.'), 'error');
     }
   }
 
@@ -7115,7 +7115,7 @@ function PsychologicalTestSystem() {
         api._fetch('/api/chat/mood-log', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ moodScore: moodScore2, testType }) }).catch(() => {});
       }
     } catch(e) {
-      setChatError(e.message || 'AI 채팅 중 오류가 발생했습니다.');
+      setChatError((console.error('[ai-chat]', e), t('답변을 가져오지 못했어요. 잠시 후 다시 시도해 주세요.','Could not get a response. Please try again.')));
       setChatMessages(prev => prev.filter(m => m.id !== assistantId));
     } finally {
       setChatStreaming(false);
@@ -7449,7 +7449,7 @@ function PsychologicalTestSystem() {
                           processStream();
                         })
                         .catch(e => {
-                          setChatError(e.message || t('AI 채팅 중 오류가 발생했습니다.','An error occurred during AI chat.'));
+                          setChatError((console.error('[ai-chat]', e), t('답변을 가져오지 못했어요. 잠시 후 다시 시도해 주세요.','Could not get a response. Please try again.')));
                           setChatMessages(prev => prev.filter(m => m.id !== assistantId));
                           setChatStreaming(false);
                         });
@@ -7624,7 +7624,7 @@ function PsychologicalTestSystem() {
                           processStream();
                         })
                         .catch(e => {
-                          setChatError(e.message || 'AI 채팅 중 오류가 발생했습니다.');
+                          setChatError((console.error('[ai-chat]', e), t('답변을 가져오지 못했어요. 잠시 후 다시 시도해 주세요.','Could not get a response. Please try again.')));
                           setChatMessages(prev => prev.filter(m => m.id !== assistantId));
                           setChatStreaming(false);
                         });
@@ -7739,7 +7739,7 @@ function PsychologicalTestSystem() {
                           processStream();
                         })
                         .catch(e => {
-                          setChatError(e.message || 'AI 채팅 중 오류가 발생했습니다.');
+                          setChatError((console.error('[ai-chat]', e), t('답변을 가져오지 못했어요. 잠시 후 다시 시도해 주세요.','Could not get a response. Please try again.')));
                           setChatMessages(prev => prev.filter(m => m.id !== assistantId));
                           setChatStreaming(false);
                         });
@@ -8429,7 +8429,8 @@ function PsychologicalTestSystem() {
       }
       if (full.trim()) saveReportData(testType, responses, full);   // 📄 리포트용 저장(실패해도 UX 무영향)
     } catch (e) {
-      setAiError(p => ({ ...p, [key]: e.message || "AI 분석 중 오류가 발생했습니다." }));
+      console.error('[ai-analyze]', e);
+      setAiError(p => ({ ...p, [key]: t('AI 분석 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.','AI analysis failed. Please try again.') }));
     } finally {
       setAiLoading(p => ({ ...p, [key]: false }));
     }
@@ -8559,7 +8560,8 @@ function PsychologicalTestSystem() {
         }
       }
     } catch (e) {
-      setIntegratedErr(e.message || t('AI 분석 중 오류가 발생했습니다.', 'An error occurred during analysis.'));
+      console.error('[integrated-analyze]', e);
+      setIntegratedErr(t('통합 분석 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.', 'Integrated analysis failed. Please try again.'));
     } finally {
       setIntegratedLoading(false);
     }

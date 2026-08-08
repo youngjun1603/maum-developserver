@@ -2354,22 +2354,25 @@ FOLLOWUP:["PHQ9","GAD7"]
       }),
     })
   } catch (e: unknown) {
+    console.error('[analyze-pdf] AI 연결 오류:', e)   // 기술 상세는 서버 로그로만
     await gainCredits(DB, userId, PDF_COST, 'pdf_analyze_refund')
-    return c.json({ error: 'AI 연결 오류: ' + String(e) }, 500)
+    return c.json({ error: 'AI 분석이 일시적으로 지연되고 있어요. 잠시 후 다시 시도해 주세요. (사용하신 크레딧은 자동 환불됐어요)' }, 500)
   }
 
   if (!aiRes.ok) {
     const errText = await aiRes.text().catch(() => '(응답 없음)')
+    console.error('[analyze-pdf] upstream', aiRes.status, errText.slice(0, 300))
     await gainCredits(DB, userId, PDF_COST, 'pdf_analyze_refund')
-    return c.json({ error: `AI 분석 실패 (${aiRes.status}): ${errText.slice(0, 200)}` }, 500)
+    return c.json({ error: 'AI 분석에 실패했어요. 잠시 후 다시 시도해 주세요. (사용하신 크레딧은 자동 환불됐어요)' }, 500)
   }
 
   let aiJson: { content: Array<{ text: string }> }
   try {
     aiJson = await aiRes.json() as { content: Array<{ text: string }> }
   } catch (e: unknown) {
+    console.error('[analyze-pdf] 응답 파싱 오류:', e)
     await gainCredits(DB, userId, PDF_COST, 'pdf_analyze_refund')
-    return c.json({ error: 'AI 응답 파싱 오류: ' + String(e) }, 500)
+    return c.json({ error: 'AI 응답을 처리하지 못했어요. 잠시 후 다시 시도해 주세요. (사용하신 크레딧은 자동 환불됐어요)' }, 500)
   }
   const rawText = aiJson.content?.[0]?.text || ''
 
@@ -2569,7 +2572,8 @@ JSON만 반환하세요. 형식:
 
     return c.json({ success: true, ...result, cached: false })
   } catch (e: unknown) {
-    return c.json({ success: false, error: (e as Error)?.message || '플랜 생성 실패' }, 500)
+    console.error('[cbt-plan] 생성 오류:', e)
+    return c.json({ success: false, error: '플랜을 만들지 못했어요. 잠시 후 다시 시도해 주세요.' }, 500)
   }
 })
 
@@ -3665,8 +3669,8 @@ app.post('/api/payment/stripe/checkout', async (c) => {
 
     if (!sessionRes.ok) {
       const err = await sessionRes.json() as { error: { message: string } }
-      console.error('[Stripe] 세션 생성 실패:', err)
-      return c.json({ success: false, error: err.error?.message || 'Stripe 오류' }, 502)
+      console.error('[Stripe] 세션 생성 실패:', err)   // 기술 상세는 서버 로그로만
+      return c.json({ success: false, error: 'Could not start the payment. Please try again in a moment.' }, 502)
     }
 
     const session = await sessionRes.json() as { id: string; url: string }

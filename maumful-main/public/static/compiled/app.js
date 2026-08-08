@@ -2297,7 +2297,8 @@ function PsychologicalTestSystem() {
       if (e.name === "NotAllowedError") {
         setPushStatus("denied");
       } else {
-        alert("\uC54C\uB9BC \uAD6C\uB3C5 \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC5B4\uC694: " + e.message);
+        console.error("\uC54C\uB9BC \uAD6C\uB3C5 \uC624\uB958:", e);
+        showToast(t("\uC54C\uB9BC \uAD6C\uB3C5 \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC5B4\uC694. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.", "Could not update notifications. Please try again."), "error");
       }
     }
   }
@@ -5500,10 +5501,10 @@ ${tx.amount} credits reclaimed and \u20A9${Number(tx.pg_amount).toLocaleString("
       const fileName = `SCT_Report_${sessionData.sessionId}_${(/* @__PURE__ */ new Date()).getTime()}.pdf`;
       doc.save(fileName);
       console.log("\u2705 SRCI PDF \uC0DD\uC131 \uC644\uB8CC:", fileName);
-      alert("\u2705 SCT PDF downloaded successfully!");
+      showToast(t("SRCI \uACB0\uACFC PDF\uB97C \uC800\uC7A5\uD588\uC5B4\uC694.", "SRCI report PDF saved."), "success");
     } catch (error) {
       console.error("\u274C PDF \uC0DD\uC131 \uC2E4\uD328:", error);
-      alert("\u274C PDF generation failed: " + error.message);
+      showToast(t("PDF \uC0DD\uC131\uC5D0 \uC2E4\uD328\uD588\uC5B4\uC694. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.", "PDF generation failed. Please try again."), "error");
     }
   }
   async function generateDsiPdf(sessionData) {
@@ -5645,10 +5646,10 @@ ${tx.amount} credits reclaimed and \u20A9${Number(tx.pg_amount).toLocaleString("
       const fileName = `DSI_Report_${sessionData.sessionId}_${(/* @__PURE__ */ new Date()).getTime()}.pdf`;
       doc.save(fileName);
       console.log("\u2705 SDRI PDF \uC0DD\uC131 \uC644\uB8CC:", fileName);
-      alert("\u2705 DSI PDF downloaded successfully!");
+      showToast(t("SDRI \uACB0\uACFC PDF\uB97C \uC800\uC7A5\uD588\uC5B4\uC694.", "SDRI report PDF saved."), "success");
     } catch (error) {
       console.error("\u274C PDF \uC0DD\uC131 \uC2E4\uD328:", error);
-      alert("\u274C PDF generation failed: " + error.message);
+      showToast(t("PDF \uC0DD\uC131\uC5D0 \uC2E4\uD328\uD588\uC5B4\uC694. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.", "PDF generation failed. Please try again."), "error");
     }
   }
   function copyLink(linkId) {
@@ -5893,7 +5894,7 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
         });
       }
     } catch (e) {
-      setChatError(e.message || "AI \uCC44\uD305 \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
+      setChatError((console.error("[ai-chat]", e), t("\uB2F5\uBCC0\uC744 \uAC00\uC838\uC624\uC9C0 \uBABB\uD588\uC5B4\uC694. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.", "Could not get a response. Please try again.")));
       setChatMessages((prev) => prev.filter((m) => m.id !== assistantId));
     } finally {
       setChatStreaming(false);
@@ -6225,7 +6226,7 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
             }
             processStream();
           }).catch((e) => {
-            setChatError(e.message || t("AI \uCC44\uD305 \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.", "An error occurred during AI chat."));
+            setChatError((console.error("[ai-chat]", e), t("\uB2F5\uBCC0\uC744 \uAC00\uC838\uC624\uC9C0 \uBABB\uD588\uC5B4\uC694. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.", "Could not get a response. Please try again.")));
             setChatMessages((prev) => prev.filter((m) => m.id !== assistantId));
             setChatStreaming(false);
           });
@@ -6335,7 +6336,7 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
                 }
                 processStream();
               }).catch((e2) => {
-                setChatError(e2.message || "AI \uCC44\uD305 \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
+                setChatError((console.error("[ai-chat]", e2), t("\uB2F5\uBCC0\uC744 \uAC00\uC838\uC624\uC9C0 \uBABB\uD588\uC5B4\uC694. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.", "Could not get a response. Please try again.")));
                 setChatMessages((prev) => prev.filter((m) => m.id !== assistantId));
                 setChatStreaming(false);
               });
@@ -6457,7 +6458,7 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
               }
               processStream();
             }).catch((e) => {
-              setChatError(e.message || "AI \uCC44\uD305 \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.");
+              setChatError((console.error("[ai-chat]", e), t("\uB2F5\uBCC0\uC744 \uAC00\uC838\uC624\uC9C0 \uBABB\uD588\uC5B4\uC694. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.", "Could not get a response. Please try again.")));
               setChatMessages((prev) => prev.filter((m) => m.id !== assistantId));
               setChatStreaming(false);
             });
@@ -7128,7 +7129,8 @@ AI \uBD84\uC11D \uAE30\uB2A5\uC774 \uC911\uB2E8\uB429\uB2C8\uB2E4.`)) return;
       }
       if (full.trim()) saveReportData(testType, responses, full);
     } catch (e) {
-      setAiError((p) => ({ ...p, [key]: e.message || "AI \uBD84\uC11D \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4." }));
+      console.error("[ai-analyze]", e);
+      setAiError((p) => ({ ...p, [key]: t("AI \uBD84\uC11D \uC911 \uBB38\uC81C\uAC00 \uC0DD\uACBC\uC5B4\uC694. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.", "AI analysis failed. Please try again.") }));
     } finally {
       setAiLoading((p) => ({ ...p, [key]: false }));
     }
@@ -7262,7 +7264,8 @@ AI \uBD84\uC11D \uAE30\uB2A5\uC774 \uC911\uB2E8\uB429\uB2C8\uB2E4.`)) return;
         }
       }
     } catch (e) {
-      setIntegratedErr(e.message || t("AI \uBD84\uC11D \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.", "An error occurred during analysis."));
+      console.error("[integrated-analyze]", e);
+      setIntegratedErr(t("\uD1B5\uD569 \uBD84\uC11D \uC911 \uBB38\uC81C\uAC00 \uC0DD\uACBC\uC5B4\uC694. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.", "Integrated analysis failed. Please try again."));
     } finally {
       setIntegratedLoading(false);
     }
