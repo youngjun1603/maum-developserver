@@ -30,6 +30,30 @@ const AI_LIMIT_KEY = "ai_chat_used_v2";
 const AI_GUEST_TOTAL = 3;
 const AI_GUEST_KEY = "maumful_guest_ai_total";
 const AI_DISCLAIMER = "\u26A0\uFE0F \uC774 \uBD84\uC11D\uC740 AI\uAC00 \uC0DD\uC131\uD55C \uCC38\uACE0 \uC815\uBCF4\uC785\uB2C8\uB2E4. \uC758\uD559\uC801 \uC9C4\uB2E8\uC774\uB098 \uCE58\uB8CC\uB97C \uB300\uCCB4\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4. \uC2EC\uB9AC\uC801 \uC5B4\uB824\uC6C0\uC774 \uC9C0\uC18D\uB41C\uB2E4\uBA74 \uBC18\uB4DC\uC2DC \uC804\uBB38\uAC00\uC640 \uC0C1\uB2F4\uD558\uC138\uC694.";
+const toastBus = {
+  _subs: /* @__PURE__ */ new Set(),
+  subscribe(fn) {
+    toastBus._subs.add(fn);
+    return () => toastBus._subs.delete(fn);
+  },
+  emit(t) {
+    toastBus._subs.forEach((fn) => {
+      try {
+        fn(t);
+      } catch {
+      }
+    });
+  }
+};
+let _toastSeq = 0;
+function showToast(text, type = "info", duration = 3200) {
+  if (!text) return;
+  toastBus.emit({ id: ++_toastSeq, text: String(text), type, duration });
+}
+try {
+  if (typeof window !== "undefined") window.showToast = showToast;
+} catch {
+}
 const api = {
   // 인증 헤더 반환
   _authHeader() {
@@ -1718,7 +1742,7 @@ function PsychologicalTestSystem() {
             sessionStorage.setItem("phyweb_purchase_pending", "1");
           } catch {
           }
-          startExternalCheckout(pkgKey, { onNotify: (type, text) => setLoginMsg({ type, text }) });
+          startExternalCheckout(pkgKey, { onNotify: (type, text) => showToast(text, type || "info") });
         } else {
           try {
             sessionStorage.setItem("post_login_buy", pkgKey);
@@ -1832,7 +1856,7 @@ function PsychologicalTestSystem() {
         sessionStorage.setItem("phyweb_purchase_pending", "1");
       } catch {
       }
-      startExternalCheckout(pk, { onNotify: (type, text) => setLoginMsg({ type, text }) });
+      startExternalCheckout(pk, { onNotify: (type, text) => showToast(text, type || "info") });
       return;
     }
     let charge = null;
@@ -2784,8 +2808,7 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
       onClick: () => {
         try {
           navigator.clipboard.writeText(grantCode);
-          setLoginMsg({ type: "success", text: t("\uCF54\uB4DC\uB97C \uBCF5\uC0AC\uD588\uC5B4\uC694.", "Code copied.") });
-          setTimeout(() => setLoginMsg({ type: "", text: "" }), 2500);
+          showToast(t("\uCF54\uB4DC\uB97C \uBCF5\uC0AC\uD588\uC5B4\uC694.", "Code copied."), "success");
         } catch {
         }
       },
@@ -7845,7 +7868,7 @@ AI \uBD84\uC11D \uAE30\uB2A5\uC774 \uC911\uB2E8\uB429\uB2C8\uB2E4.`)) return;
       } catch {
         if (navigator.share) navigator.share({ title: t("\uB9C8\uC74C\uD480 \uAC80\uC0AC \uACB0\uACFC", "Maumful Result"), text }).catch(() => {
         });
-        else (_a2 = navigator.clipboard) == null ? void 0 : _a2.writeText(text).then(() => alert("\uD074\uB9BD\uBCF4\uB4DC\uC5D0 \uBCF5\uC0AC\uB410\uC5B4\uC694!")).catch(() => {
+        else (_a2 = navigator.clipboard) == null ? void 0 : _a2.writeText(text).then(() => showToast(t("\uD074\uB9BD\uBCF4\uB4DC\uC5D0 \uBCF5\uC0AC\uB410\uC5B4\uC694!", "Copied to clipboard!"), "success")).catch(() => {
         });
       }
     }
@@ -7853,7 +7876,7 @@ AI \uBD84\uC11D \uAE30\uB2A5\uC774 \uC911\uB2E8\uB429\uB2C8\uB2E4.`)) return;
       var _a2;
       if (navigator.share) navigator.share({ title: t("\uB9C8\uC74C\uD480 \uAC80\uC0AC \uACB0\uACFC", "Maumful Result"), text }).catch(() => {
       });
-      else (_a2 = navigator.clipboard) == null ? void 0 : _a2.writeText(text).then(() => alert(t("\uD074\uB9BD\uBCF4\uB4DC\uC5D0 \uBCF5\uC0AC\uB410\uC5B4\uC694!", "Copied to clipboard!"))).catch(() => {
+      else (_a2 = navigator.clipboard) == null ? void 0 : _a2.writeText(text).then(() => showToast(t("\uD074\uB9BD\uBCF4\uB4DC\uC5D0 \uBCF5\uC0AC\uB410\uC5B4\uC694!", "Copied to clipboard!"), "success")).catch(() => {
       });
     }
     return /* @__PURE__ */ React.createElement("div", { className: "mt-3 flex justify-end gap-2" }, /* @__PURE__ */ React.createElement(
@@ -9491,8 +9514,60 @@ function SessionList({ sessions, onView }) {
     )) : /* @__PURE__ */ React.createElement("span", { className: "text-xs text-red-600 font-semibold px-2 py-1" }, "\uC0AD\uC81C\uB428"))));
   })))));
 }
+function ToastHost() {
+  const [toasts, setToasts] = React.useState([]);
+  React.useEffect(() => {
+    return toastBus.subscribe((t) => {
+      setToasts((prev) => [...prev, t]);
+      setTimeout(() => setToasts((prev) => prev.filter((x) => x.id !== t.id)), t.duration || 3200);
+    });
+  }, []);
+  if (!toasts.length) return null;
+  const skin = (type) => type === "error" ? { bg: "#FEF2F2", bd: "#FECACA", fg: "#991B1B", ic: "\u26A0\uFE0F" } : type === "success" ? { bg: "#F0FDF4", bd: "#BBF7D0", fg: "#166534", ic: "\u2705" } : { bg: "#F8FAFC", bd: "#E2E8F0", fg: "#334155", ic: "\u{1F4AC}" };
+  return /* @__PURE__ */ React.createElement("div", { style: {
+    position: "fixed",
+    top: 16,
+    left: "50%",
+    transform: "translateX(-50%)",
+    zIndex: 99999,
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+    width: "min(92vw,400px)",
+    pointerEvents: "none"
+  } }, toasts.map((t) => {
+    const c = skin(t.type);
+    return /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        key: t.id,
+        onClick: () => setToasts((prev) => prev.filter((x) => x.id !== t.id)),
+        style: {
+          background: c.bg,
+          border: `1px solid ${c.bd}`,
+          color: c.fg,
+          borderRadius: 12,
+          padding: "11px 14px",
+          fontSize: 13.5,
+          fontWeight: 600,
+          boxShadow: "0 8px 24px rgba(0,0,0,0.14)",
+          display: "flex",
+          alignItems: "flex-start",
+          gap: 8,
+          pointerEvents: "auto",
+          cursor: "pointer",
+          fontFamily: "'Noto Sans KR',sans-serif",
+          lineHeight: 1.5,
+          animation: "none"
+        }
+      },
+      /* @__PURE__ */ React.createElement("span", { style: { flexShrink: 0 } }, c.ic),
+      /* @__PURE__ */ React.createElement("span", { style: { minWidth: 0 } }, t.text)
+    );
+  }));
+}
 function AppWithDebug() {
-  return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(PsychologicalTestSystem, null), /* @__PURE__ */ React.createElement(MasterDebugOverlay, null));
+  return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(PsychologicalTestSystem, null), /* @__PURE__ */ React.createElement(MasterDebugOverlay, null), /* @__PURE__ */ React.createElement(ToastHost, null));
 }
 function MasterDebugOverlay() {
   const [open, setOpen] = React.useState(false);

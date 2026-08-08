@@ -23,6 +23,23 @@ const AI_GUEST_KEY    = 'maumful_guest_ai_total';    // localStorage 키 (비회
 const AI_DISCLAIMER   = '⚠️ 이 분석은 AI가 생성한 참고 정보입니다. 의학적 진단이나 치료를 대체하지 않습니다. 심리적 어려움이 지속된다면 반드시 전문가와 상담하세요.';
 
 // ============================================================
+// 전역 토스트 — 어느 view에서도 뜨는 알림. 컴포넌트 밖(모듈 함수·api)에서도 showToast() 호출 가능.
+// ToastHost가 최상위(AppWithDebug)에 상시 마운트되어 버스를 구독한다. alert() 대체용 토대.
+// ============================================================
+const toastBus = {
+  _subs: new Set(),
+  subscribe(fn) { toastBus._subs.add(fn); return () => toastBus._subs.delete(fn); },
+  emit(t) { toastBus._subs.forEach(fn => { try { fn(t); } catch {} }); },
+};
+let _toastSeq = 0;
+// type: 'info' | 'success' | 'error'
+function showToast(text, type = 'info', duration = 3200) {
+  if (!text) return;
+  toastBus.emit({ id: ++_toastSeq, text: String(text), type, duration });
+}
+try { if (typeof window !== 'undefined') window.showToast = showToast; } catch {}   // QA·디버깅용 전역 핸들
+
+// ============================================================
 // B2C API 헬퍼 — 모든 인증 요청에 Bearer 토큰 자동 주입
 // ============================================================
 const api = {
@@ -1674,7 +1691,7 @@ function PsychologicalTestSystem() {
         const pkgKey = 'phyweb_' + buyParam.slice('phyweb:'.length).toLowerCase();
         if (isAuthenticated) {
           try { sessionStorage.setItem('phyweb_purchase_pending', '1'); } catch {}
-          startExternalCheckout(pkgKey, { onNotify: (type, text) => setLoginMsg({ type, text }) });
+          startExternalCheckout(pkgKey, { onNotify: (type, text) => showToast(text, type || 'info') });
         } else {
           try { sessionStorage.setItem('post_login_buy', pkgKey); } catch {}
           setView('memberLogin');
@@ -1773,7 +1790,7 @@ function PsychologicalTestSystem() {
     try { pk = sessionStorage.getItem('post_login_buy'); } catch {}
     if (pk) {
       try { sessionStorage.removeItem('post_login_buy'); sessionStorage.setItem('phyweb_purchase_pending', '1'); } catch {}
-      startExternalCheckout(pk, { onNotify: (type, text) => setLoginMsg({ type, text }) });
+      startExternalCheckout(pk, { onNotify: (type, text) => showToast(text, type || 'info') });
       return;
     }
     let charge = null;
@@ -2749,7 +2766,7 @@ function PsychologicalTestSystem() {
           <div className="text-lg font-bold tracking-widest text-green-800 select-all break-all">{grantCode}</div>
         </div>
         <button
-          onClick={() => { try { navigator.clipboard.writeText(grantCode); setLoginMsg({ type: 'success', text: t('코드를 복사했어요.', 'Code copied.') }); setTimeout(() => setLoginMsg({ type: '', text: '' }), 2500); } catch {} }}
+          onClick={() => { try { navigator.clipboard.writeText(grantCode); showToast(t('코드를 복사했어요.', 'Code copied.'), 'success'); } catch {} }}
           className="w-full bg-green-700 text-white py-3 rounded-xl font-bold hover:bg-green-800 transition mb-2"
         >{t('코드 복사', 'Copy code')}</button>
         <div className="text-[11px] text-gray-400 text-center mb-3 leading-relaxed">{t('등록 위치: phyweb 로그인 → 대시보드 구독 카드 → 이용권 코드 등록', 'Register at: phyweb → Dashboard → Subscription card → Enter pass code')}</div>
@@ -9326,13 +9343,13 @@ function PsychologicalTestSystem() {
       } catch {
         // Canvas 실패 시 텍스트 공유 fallback
         if (navigator.share) navigator.share({ title: t('마음풀 검사 결과','Maumful Result'), text }).catch(() => {});
-        else navigator.clipboard?.writeText(text).then(() => alert('클립보드에 복사됐어요!')).catch(() => {});
+        else navigator.clipboard?.writeText(text).then(() => showToast(t('클립보드에 복사됐어요!','Copied to clipboard!'), 'success')).catch(() => {});
       }
     }
 
     function shareText() {
       if (navigator.share) navigator.share({ title: t('마음풀 검사 결과','Maumful Result'), text }).catch(() => {});
-      else navigator.clipboard?.writeText(text).then(() => alert(t('클립보드에 복사됐어요!','Copied to clipboard!'))).catch(() => {});
+      else navigator.clipboard?.writeText(text).then(() => showToast(t('클립보드에 복사됐어요!','Copied to clipboard!'), 'success')).catch(() => {});
     }
 
     return (
@@ -12518,11 +12535,47 @@ function SessionList({ sessions, onView }) {
 
 
 // ── 마스터 전용 에러 뷰어 래퍼 (모든 뷰 위에 z-index:9999 overlay) ──
+// 전역 토스트 렌더러 — 최상위에 상시 마운트되어 toastBus를 구독. 모든 view에서 알림 노출.
+function ToastHost() {
+  const [toasts, setToasts] = React.useState([]);
+  React.useEffect(() => {
+    return toastBus.subscribe((t) => {
+      setToasts(prev => [...prev, t]);
+      setTimeout(() => setToasts(prev => prev.filter(x => x.id !== t.id)), t.duration || 3200);
+    });
+  }, []);
+  if (!toasts.length) return null;
+  const skin = (type) => type === 'error'
+      ? { bg:'#FEF2F2', bd:'#FECACA', fg:'#991B1B', ic:'⚠️' }
+    : type === 'success'
+      ? { bg:'#F0FDF4', bd:'#BBF7D0', fg:'#166534', ic:'✅' }
+      : { bg:'#F8FAFC', bd:'#E2E8F0', fg:'#334155', ic:'💬' };
+  return (
+    <div style={{ position:'fixed', top:16, left:'50%', transform:'translateX(-50%)', zIndex:99999,
+      display:'flex', flexDirection:'column', gap:8, width:'min(92vw,400px)', pointerEvents:'none' }}>
+      {toasts.map(t => {
+        const c = skin(t.type);
+        return (
+          <div key={t.id} onClick={() => setToasts(prev => prev.filter(x => x.id !== t.id))}
+            style={{ background:c.bg, border:`1px solid ${c.bd}`, color:c.fg, borderRadius:12,
+              padding:'11px 14px', fontSize:13.5, fontWeight:600, boxShadow:'0 8px 24px rgba(0,0,0,0.14)',
+              display:'flex', alignItems:'flex-start', gap:8, pointerEvents:'auto', cursor:'pointer',
+              fontFamily:"'Noto Sans KR',sans-serif", lineHeight:1.5, animation:'none' }}>
+            <span style={{ flexShrink:0 }}>{c.ic}</span>
+            <span style={{ minWidth:0 }}>{t.text}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function AppWithDebug() {
   return (
     <>
       <PsychologicalTestSystem />
       <MasterDebugOverlay />
+      <ToastHost />
     </>
   );
 }
