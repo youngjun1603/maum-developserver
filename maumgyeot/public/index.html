@@ -293,9 +293,9 @@ function EntitlementCard({ token }) {
   return html`<div class="card">
     <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
       <b>🎟️ 이용권</b>
-      ${ent && html`<span class="pill">${planLabel} · 남은 통역 ${ent.totalRemaining}회</span>`}
+      ${ent && html`<span class="pill">${ent.master ? '마스터 · 무제한 🐾' : planLabel + ' · 남은 통역 ' + ent.totalRemaining + '회'}</span>`}
     </div>
-    ${ent && html`<div class="muted" style=${{marginTop:6,fontSize:12}}>이번 달 ${ent.used}/${ent.monthlyAllowance}회 사용${ent.packRemaining?` · 회차권 ${ent.packRemaining}회`:''}${ent.subActive?` · 구독 ~${(ent.subExpires||'').slice(0,10)}`:''}</div>`}
+    ${ent && !ent.master && html`<div class="muted" style=${{marginTop:6,fontSize:12}}>이번 달 ${ent.used}/${ent.monthlyAllowance}회 사용${ent.packRemaining?` · 회차권 ${ent.packRemaining}회`:''}${ent.subActive?` · 구독 ~${(ent.subExpires||'').slice(0,10)}`:''}</div>`}
     <div style=${{display:'flex',gap:8,marginTop:10}}>
       <input class="field" style=${{margin:0,flex:1}} placeholder="이용권 코드 입력" value=${code} onInput=${e=>setCode(e.target.value)} onKeyDown=${e=>{if(e.key==='Enter')redeem();}} />
       <button class="btn" style=${{width:'auto',padding:'12px 16px'}} disabled=${busy||!code.trim()} onClick=${redeem}>등록</button>

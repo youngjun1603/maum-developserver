@@ -81,6 +81,12 @@ const ym = () => { const d = new Date(); return `${d.getUTCFullYear()}${String(d
 const nowIso = () => new Date().toISOString();
 const addDays = (days: number) => new Date(Date.now() + days * 86400000).toISOString();
 
+// 마스터 계정(무제한·쿼터/레이트리밋 면제) — 이메일 화이트리스트
+const MASTER_EMAILS = ['limyj007@gmail.com'];
+async function isMasterUid(env: Bindings, uid: number): Promise<boolean> {
+  try { const u = await getUser(env.AUTH_DB, uid); return !!u && MASTER_EMAILS.includes(String((u as any).email || '').toLowerCase()); } catch { return false; }
+}
+
 async function getEntitlement(env: Bindings, uid: number) {
   const now = nowIso(); const m = ym();
   const sub = await env.DB.prepare('SELECT plan,monthly_quota,expires_at FROM subscriptions WHERE maum_user_id=?').bind(uid).first<any>();
@@ -291,8 +297,9 @@ app.get('/api/behavior', (c) => {
 // ── 관찰 → 통역 ──
 app.post('/api/observe', requireAuth, async (c) => {
   const uid = c.get('uid');
-  // 남용·버스트 방지(유저당 분당 8회)
-  if (!(await checkRateLimit(c.env.KV, `observe:${uid}`, 8, 60))) return c.json({ error: '요청이 너무 잦아요. 잠시 후 다시 시도해주세요.' }, 429);
+  const master = await isMasterUid(c.env, uid);
+  // 남용·버스트 방지(유저당 분당 8회) — 마스터 면제
+  if (!master && !(await checkRateLimit(c.env.KV, `observe:${uid}`, 8, 60))) return c.json({ error: '요청이 너무 잦아요. 잠시 후 다시 시도해주세요.' }, 429);
   const { pet_id, signals, context, media_note, frames } = await c.req.json().catch(() => ({}));
   if (typeof context === 'string' && context.length > 2000) return c.json({ error: '맥락이 너무 길어요(2000자 이내)' }, 413);
   const pet = await c.env.DB.prepare('SELECT * FROM pets WHERE id=? AND maum_user_id=?').bind(pet_id, uid).first<any>();
@@ -300,8 +307,8 @@ app.post('/api/observe', requireAuth, async (c) => {
   const species = pet.species === 'dog' ? 'dog' : 'cat';
   const codes: string[] = Array.isArray(signals) ? signals : [];
   const realAttempt = codes.length > 0 || (Array.isArray(frames) && frames.length > 0) || (context && String(context).length > 1);
-  // 실제 통역 시도일 때만 쿼터 차감(무료월→구독→회차권). 한도 초과 시 402.
-  if (realAttempt) {
+  // 실제 통역 시도일 때만 쿼터 차감(무료월→구독→회차권). 한도 초과 시 402. 마스터는 면제.
+  if (realAttempt && !master) {
     const q = await consumeQuota(c.env, uid);
     if (!q.ok) return c.json({ error: '이번 달 통역 횟수를 모두 사용했어요. 이용권 코드를 등록하면 더 이용할 수 있어요.', code: 'QUOTA' }, 402);
   }
@@ -334,7 +341,10 @@ app.post('/api/observe/guest', async (c) => {
 });
 
 // ── 이용권(쿼터) 조회 + 쿠폰 등록 ──
-app.get('/api/entitlement', requireAuth, async (c) => c.json({ entitlement: await getEntitlement(c.env, c.get('uid')) }));
+app.get('/api/entitlement', requireAuth, async (c) => {
+  if (await isMasterUid(c.env, c.get('uid'))) return c.json({ entitlement: { plan: 'master', subActive: false, subExpires: null, freeMonthly: 999999, monthlyAllowance: 999999, used: 0, monthlyRemaining: 999999, packRemaining: 0, totalRemaining: 999999, master: true } });
+  return c.json({ entitlement: await getEntitlement(c.env, c.get('uid')) });
+});
 
 // 이용 내역(영수증·이용권 등록 이력)
 app.get('/api/history', requireAuth, async (c) => {
