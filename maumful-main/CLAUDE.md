@@ -54,9 +54,12 @@ npx wrangler secret put ANTHROPIC_API_KEY      # 시크릿
 
 ### maumful-main (메인 플랫폼)
 ```bash
-npm run build:jsx   # → public/static/compiled/{app,landing,counseling,counseling_admin}.js
+npm run build:jsx     # → public/static/compiled/{app,landing,counseling,counseling_admin,partner_entry,partner_portal}.js
+npm run build:css     # → public/static/tailwind.css (Tailwind 정적 빌드)
+npm run build:assets  # 위 둘 다(deploy에 포함)
 ```
 - 4개 파일 모두 **일반 `<script>`로 동일 전역 스코프** 공유 → 전역 `const` 이름 충돌 시 `SyntaxError`. (예: counseling.jsx·counseling_admin.jsx 동일명 변수 → 한쪽 rename)
+- ⚠️ **Tailwind는 CDN이 아니라 정적 빌드**(2026-08-08, `cdn.tailwindcss.com` 제거·`/static/tailwind.css` `<link>`). `tailwind.config.js` content가 `public/static/*.jsx`+`compiled`+`src/index.tsx`를 스캔한다. **새 클래스(특히 arbitrary value `text-[..]`·동적 색상)를 추가하면 반드시 `npm run build:css`로 `tailwind.css`를 재생성·커밋**해야 서빙된다(안 하면 그 클래스만 스타일 누락). 컴파일본처럼 `tailwind.css`도 레포에 커밋해 서빙(Cloudflare 빌드스텝 없음). 색상 계열은 config `safelist`로 보험.
 
 ### maumgame-main / cts-game-main (치유 게임)
 ```bash
