@@ -479,7 +479,8 @@ app.post('/api/tts', requireAuth, async (c) => {
   const speak = (model: string, withInstr: boolean) => fetch(`${OPENAI_GATEWAY}/audio/speech`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${c.env.OPENAI_API_KEY}` },
-    body: JSON.stringify({ model, voice, input: t, response_format: 'mp3', speed: 1.0, ...(withInstr ? { instructions } : {}) }),
+    // gpt-4o-mini-tts는 speed 미지원(톤은 instructions로) → speed 보내면 400. tts-1 폴백만 speed 사용.
+    body: JSON.stringify({ model, voice, input: t, response_format: 'mp3', ...(withInstr ? { instructions } : { speed: 1.0 }) }),
   });
   try {
     let res = await speak('gpt-4o-mini-tts', true);   // 톤 지시 가능 모델 우선
