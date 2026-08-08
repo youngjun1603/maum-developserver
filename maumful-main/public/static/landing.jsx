@@ -422,7 +422,7 @@ function MfSnsHeroBtn({ tl }) {
     if (!k.isInitialized()) k.init(window.KAKAO_APP_KEY);
     k.Share.sendDefault({
       objectType: 'feed',
-      content: { title: '마음풀 — 심리검사 · AI상담 · 치유게임', description: '마음의 무게를 가볍게.', imageUrl: window.location.origin + '/static/og-share.png?v=20260731', link: { mobileWebUrl: window.location.origin, webUrl: window.location.origin } },
+      content: { title: '마음풀 — 마음을 읽어 전하는 서비스', description: '심리검사로 나를, 커플·부부·세대·아이의 마음은 관계 통역으로 읽어 전해요.', imageUrl: window.location.origin + '/static/og-share.png?v=20260731', link: { mobileWebUrl: window.location.origin, webUrl: window.location.origin } },
       buttons: [{ title: tl('무료로 시작하기', 'Get Started'), link: { mobileWebUrl: window.location.origin, webUrl: window.location.origin } }],
     });
   };
@@ -439,14 +439,14 @@ function MfSnsFooter({ tl }) {
   const { useState: useS } = React;
   const [cp, setCp] = useS(false);
   const url = window.location.origin;
-  const ttl = '마음풀 — 심리검사 · AI상담 · 치유게임';
+  const ttl = '마음풀 — 마음을 읽어 전하는 서비스';
   const enc = encodeURIComponent;
   const pop = u => window.open(u, '_blank', 'width=600,height=500,noopener,noreferrer');
   const cpy = () => navigator.clipboard.writeText(url).then(() => { setCp(true); setTimeout(() => setCp(false), 2500); });
   const kakao = () => {
     const k = window.Kakao; if (!k) return;
     if (!k.isInitialized()) k.init(window.KAKAO_APP_KEY);
-    k.Share.sendDefault({ objectType: 'feed', content: { title: ttl, description: '마음의 무게를 가볍게.', imageUrl: url + '/static/og-share.png?v=20260731', link: { mobileWebUrl: url, webUrl: url } }, buttons: [{ title: tl('무료로 시작하기', 'Get Started'), link: { mobileWebUrl: url, webUrl: url } }] });
+    k.Share.sendDefault({ objectType: 'feed', content: { title: ttl, description: '심리검사로 나를, 커플·부부·세대·아이의 마음은 관계 통역으로 읽어 전해요.', imageUrl: url + '/static/og-share.png?v=20260731', link: { mobileWebUrl: url, webUrl: url } }, buttons: [{ title: tl('무료로 시작하기', 'Get Started'), link: { mobileWebUrl: url, webUrl: url } }] });
   };
   const S = { width: 20, height: 20, flexShrink: 0 };
   const IG = 'linear-gradient(45deg,#f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%)';

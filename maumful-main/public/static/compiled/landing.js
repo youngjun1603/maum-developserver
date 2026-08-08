@@ -532,7 +532,7 @@ function MfSnsHeroBtn({ tl }) {
     if (!k.isInitialized()) k.init(window.KAKAO_APP_KEY);
     k.Share.sendDefault({
       objectType: "feed",
-      content: { title: "\uB9C8\uC74C\uD480 \u2014 \uC2EC\uB9AC\uAC80\uC0AC \xB7 AI\uC0C1\uB2F4 \xB7 \uCE58\uC720\uAC8C\uC784", description: "\uB9C8\uC74C\uC758 \uBB34\uAC8C\uB97C \uAC00\uBCCD\uAC8C.", imageUrl: window.location.origin + "/static/og-share.png?v=20260731", link: { mobileWebUrl: window.location.origin, webUrl: window.location.origin } },
+      content: { title: "\uB9C8\uC74C\uD480 \u2014 \uB9C8\uC74C\uC744 \uC77D\uC5B4 \uC804\uD558\uB294 \uC11C\uBE44\uC2A4", description: "\uC2EC\uB9AC\uAC80\uC0AC\uB85C \uB098\uB97C, \uCEE4\uD50C\xB7\uBD80\uBD80\xB7\uC138\uB300\xB7\uC544\uC774\uC758 \uB9C8\uC74C\uC740 \uAD00\uACC4 \uD1B5\uC5ED\uC73C\uB85C \uC77D\uC5B4 \uC804\uD574\uC694.", imageUrl: window.location.origin + "/static/og-share.png?v=20260731", link: { mobileWebUrl: window.location.origin, webUrl: window.location.origin } },
       buttons: [{ title: tl("\uBB34\uB8CC\uB85C \uC2DC\uC791\uD558\uAE30", "Get Started"), link: { mobileWebUrl: window.location.origin, webUrl: window.location.origin } }]
     });
   };
@@ -543,7 +543,7 @@ function MfSnsFooter({ tl }) {
   const { useState: useS } = React;
   const [cp, setCp] = useS(false);
   const url = window.location.origin;
-  const ttl = "\uB9C8\uC74C\uD480 \u2014 \uC2EC\uB9AC\uAC80\uC0AC \xB7 AI\uC0C1\uB2F4 \xB7 \uCE58\uC720\uAC8C\uC784";
+  const ttl = "\uB9C8\uC74C\uD480 \u2014 \uB9C8\uC74C\uC744 \uC77D\uC5B4 \uC804\uD558\uB294 \uC11C\uBE44\uC2A4";
   const enc = encodeURIComponent;
   const pop = (u) => window.open(u, "_blank", "width=600,height=500,noopener,noreferrer");
   const cpy = () => navigator.clipboard.writeText(url).then(() => {
@@ -554,7 +554,7 @@ function MfSnsFooter({ tl }) {
     const k = window.Kakao;
     if (!k) return;
     if (!k.isInitialized()) k.init(window.KAKAO_APP_KEY);
-    k.Share.sendDefault({ objectType: "feed", content: { title: ttl, description: "\uB9C8\uC74C\uC758 \uBB34\uAC8C\uB97C \uAC00\uBCCD\uAC8C.", imageUrl: url + "/static/og-share.png?v=20260731", link: { mobileWebUrl: url, webUrl: url } }, buttons: [{ title: tl("\uBB34\uB8CC\uB85C \uC2DC\uC791\uD558\uAE30", "Get Started"), link: { mobileWebUrl: url, webUrl: url } }] });
+    k.Share.sendDefault({ objectType: "feed", content: { title: ttl, description: "\uC2EC\uB9AC\uAC80\uC0AC\uB85C \uB098\uB97C, \uCEE4\uD50C\xB7\uBD80\uBD80\xB7\uC138\uB300\xB7\uC544\uC774\uC758 \uB9C8\uC74C\uC740 \uAD00\uACC4 \uD1B5\uC5ED\uC73C\uB85C \uC77D\uC5B4 \uC804\uD574\uC694.", imageUrl: url + "/static/og-share.png?v=20260731", link: { mobileWebUrl: url, webUrl: url } }, buttons: [{ title: tl("\uBB34\uB8CC\uB85C \uC2DC\uC791\uD558\uAE30", "Get Started"), link: { mobileWebUrl: url, webUrl: url } }] });
   };
   const S = { width: 20, height: 20, flexShrink: 0 };
   const IG = "linear-gradient(45deg,#f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%)";
