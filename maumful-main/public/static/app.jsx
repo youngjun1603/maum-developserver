@@ -1672,7 +1672,9 @@ function PsychologicalTestSystem() {
         }
         if (goView) {
           if (goKind === 'history') setMyPageTab('history');
-          if (isAuthenticated) {
+          // 무료 검사(PHQ9·GAD7)는 게스트도 로그인 없이 바로 시작 — startTest: 핸들러가 게스트 무료검사 흐름을 처리(제휴 배너 전환 마찰 0). 유료·history는 로그인 유지.
+          const isFreeTestGo = goKind === 'test' && goArg && FREE_TESTS.includes(goArg.toUpperCase());
+          if (isAuthenticated || isFreeTestGo) {
             setView(goView);
           } else {
             sessionStorage.setItem('post_login_view', goView);

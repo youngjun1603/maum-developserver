@@ -1723,7 +1723,8 @@ function PsychologicalTestSystem() {
         }
         if (goView) {
           if (goKind === "history") setMyPageTab("history");
-          if (isAuthenticated) {
+          const isFreeTestGo = goKind === "test" && goArg && FREE_TESTS.includes(goArg.toUpperCase());
+          if (isAuthenticated || isFreeTestGo) {
             setView(goView);
           } else {
             sessionStorage.setItem("post_login_view", goView);
