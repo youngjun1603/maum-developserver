@@ -4792,6 +4792,69 @@ ${tx.amount} credits reclaimed and \u20A9${Number(tx.pg_amount).toLocaleString("
     const [errMsg, setErrMsg] = useS("");
     const [billingCycle, setBillingCycle] = useS("monthly");
     const selPkg = pkgs.find((p) => p.key === selected);
+    const SERVICE_GROUPS = [
+      { id: "maumful", emoji: "\u{1F9E0}", title: t("\uB9C8\uC74C\uD480", "Maumful"), sub: t("\uC2EC\uB9AC\uAC80\uC0AC \xB7 AI \uC0C1\uB2F4 \xB7 \uD574\uC11D", "Tests \xB7 AI \xB7 Insight"), keys: ["test_one", "ai_10", "pdf_one", "allinone", "integrated_one"] },
+      { id: "bubu", emoji: "\u{1F4AC}", title: t("\uB9C8\uC74C\uBD80\uBD80", "Maum Bubu"), sub: t("\uBD80\uBD80 \uB300\uD654 \uD1B5\uC5ED", "Couple talk"), keys: ["bubu_pack10", "bubu_pack20", "bubu_pack40"] },
+      { id: "sedae", emoji: "\u{1F33F}", title: t("\uB9C8\uC74C\uC138\uB300", "Maum Sedae"), sub: t("\uBD80\uBAA8-\uC790\uB140 \uD1B5\uC5ED(\uC131\uC778)", "Parent-child"), keys: ["sedae_pack10", "sedae_pack20", "sedae_pack40"] },
+      { id: "otter", emoji: "\u{1F9A6}", title: t("\uB9C8\uC74C\uC218\uB2EC", "Maumotter"), sub: t("\uC544\uC774 \uB9C8\uC74C \uD1B5\uC5ED", "Child emotions"), keys: ["otter_light", "otter_pro", "otter_pack10"] },
+      { id: "gyeot", emoji: "\u{1F43E}", title: t("\uB9C8\uC74C\uACC1", "Maumgyeot"), sub: t("\uBC18\uB824\uB3D9\uBB3C \uD1B5\uC5ED", "Pet behavior"), keys: ["gyeot_light", "gyeot_pro", "gyeot_pack10"] }
+    ];
+    const pkgByKey = Object.fromEntries(pkgs.map((p) => [p.key, p]));
+    const renderPkgCard = (pkg) => {
+      if (!pkg) return null;
+      const isSel = selected === pkg.key;
+      const perCredit = isKorea ? Math.round(pkg.amount / pkg.credits) + "\uC6D0/cr" : "$" + (pkg.amount / pkg.credits).toFixed(2) + "/cr";
+      return /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          key: pkg.key,
+          onClick: () => setSelected(pkg.key),
+          style: {
+            position: "relative",
+            padding: "12px",
+            border: "2px solid",
+            borderColor: isSel ? "#2D6A4F" : "rgba(0,0,0,0.1)",
+            borderRadius: 13,
+            cursor: "pointer",
+            background: isSel ? "#F0FAF4" : "white",
+            textAlign: "left",
+            transition: "all 0.15s",
+            fontFamily: F
+          }
+        },
+        pkg.badge && /* @__PURE__ */ React.createElement("div", { style: {
+          position: "absolute",
+          top: -8,
+          right: 8,
+          background: isSel ? "#2D6A4F" : "#F59E0B",
+          color: "white",
+          fontSize: 9,
+          fontWeight: 800,
+          padding: "2px 7px",
+          borderRadius: 20
+        } }, pkg.badge),
+        isKorea ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: {
+          fontSize: 12.5,
+          fontWeight: 800,
+          color: isSel ? "#2D6A4F" : "#374151",
+          marginBottom: 3
+        } }, pkg.label), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "#6B7280", marginBottom: 8, minHeight: 30, lineHeight: 1.35 } }, pkg.desc), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 18, fontWeight: 800, color: isSel ? "#2D6A4F" : "#111" } }, fmt(pkg.amount))) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: {
+          fontSize: 12,
+          fontWeight: 700,
+          color: isSel ? "#2D6A4F" : "#374151",
+          marginBottom: 3
+        } }, pkg.label), /* @__PURE__ */ React.createElement("div", { style: {
+          fontSize: 20,
+          fontWeight: 800,
+          color: isSel ? "#2D6A4F" : "#111"
+        } }, "\u2726 ", pkg.credits), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "#6B7280", marginTop: 1 } }, perCredit), /* @__PURE__ */ React.createElement("div", { style: {
+          fontSize: 14,
+          fontWeight: 700,
+          color: isSel ? "#2D6A4F" : "#374151",
+          marginTop: 5
+        } }, fmt(pkg.amount)))
+      );
+    };
     const handlePay = async () => {
       if (!currentUser) {
         onClose();
@@ -4927,60 +4990,21 @@ ${tx.amount} credits reclaimed and \u20A9${Number(tx.pg_amount).toLocaleString("
           }
         },
         label
-      ))), /* @__PURE__ */ React.createElement("div", { style: { padding: "20px 24px 24px", maxHeight: "65vh", overflowY: "auto" } }, activeTab === "credits" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: "#374151", marginBottom: 12 } }, t(isKorea ? "\uC0C1\uD488 \uC120\uD0DD" : "\uD328\uD0A4\uC9C0 \uC120\uD0DD", isKorea ? "Select a Product" : "Select a Package")), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9, marginBottom: 18 } }, pkgs.map((pkg) => {
-        const isSel = selected === pkg.key;
-        const perCredit = isKorea ? Math.round(pkg.amount / pkg.credits) + "\uC6D0/cr" : "$" + (pkg.amount / pkg.credits).toFixed(2) + "/cr";
-        return /* @__PURE__ */ React.createElement(
-          "button",
-          {
-            key: pkg.key,
-            onClick: () => setSelected(pkg.key),
-            style: {
-              position: "relative",
-              padding: "12px",
-              border: "2px solid",
-              borderColor: isSel ? "#2D6A4F" : "rgba(0,0,0,0.1)",
-              borderRadius: 13,
-              cursor: "pointer",
-              background: isSel ? "#F0FAF4" : "white",
-              textAlign: "left",
-              transition: "all 0.15s",
-              fontFamily: F
-            }
-          },
-          pkg.badge && /* @__PURE__ */ React.createElement("div", { style: {
-            position: "absolute",
-            top: -8,
-            right: 8,
-            background: isSel ? "#2D6A4F" : "#F59E0B",
-            color: "white",
-            fontSize: 9,
-            fontWeight: 800,
-            padding: "2px 7px",
-            borderRadius: 20
-          } }, pkg.badge),
-          isKorea ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: {
-            fontSize: 12.5,
-            fontWeight: 800,
-            color: isSel ? "#2D6A4F" : "#374151",
-            marginBottom: 3
-          } }, pkg.label), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "#6B7280", marginBottom: 8, minHeight: 30, lineHeight: 1.35 } }, pkg.desc), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 18, fontWeight: 800, color: isSel ? "#2D6A4F" : "#111" } }, fmt(pkg.amount))) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: {
-            fontSize: 12,
-            fontWeight: 700,
-            color: isSel ? "#2D6A4F" : "#374151",
-            marginBottom: 3
-          } }, pkg.label), /* @__PURE__ */ React.createElement("div", { style: {
-            fontSize: 20,
-            fontWeight: 800,
-            color: isSel ? "#2D6A4F" : "#111"
-          } }, "\u2726 ", pkg.credits), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "#6B7280", marginTop: 1 } }, perCredit), /* @__PURE__ */ React.createElement("div", { style: {
-            fontSize: 14,
-            fontWeight: 700,
-            color: isSel ? "#2D6A4F" : "#374151",
-            marginTop: 5
-          } }, fmt(pkg.amount)))
-        );
-      })), selPkg && /* @__PURE__ */ React.createElement("div", { style: {
+      ))), /* @__PURE__ */ React.createElement("div", { style: { padding: "20px 24px 24px", maxHeight: "65vh", overflowY: "auto" } }, activeTab === "credits" && /* @__PURE__ */ React.createElement(React.Fragment, null, isKorea ? (
+        // 서비스별 섹션 구분 — 각 서비스 헤더 아래 해당 상품만 그리드로.
+        SERVICE_GROUPS.map((g) => {
+          const items = g.keys.map((k) => pkgByKey[k]).filter(Boolean);
+          if (!items.length) return null;
+          return /* @__PURE__ */ React.createElement("div", { key: g.id, style: { marginBottom: 16 } }, /* @__PURE__ */ React.createElement("div", { style: {
+            display: "flex",
+            alignItems: "baseline",
+            gap: 6,
+            marginBottom: 9,
+            paddingBottom: 6,
+            borderBottom: "1px solid #EEF2F0"
+          } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 15 } }, g.emoji), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13.5, fontWeight: 800, color: "#2D6A4F" } }, g.title), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: "#9CA3AF" } }, g.sub)), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9 } }, items.map(renderPkgCard)));
+        })
+      ) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: "#374151", marginBottom: 12 } }, t("\uD328\uD0A4\uC9C0 \uC120\uD0DD", "Select a Package")), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9, marginBottom: 18 } }, pkgs.map(renderPkgCard))), selPkg && /* @__PURE__ */ React.createElement("div", { style: {
         background: "#F9FAFB",
         borderRadius: 12,
         padding: "12px 16px",

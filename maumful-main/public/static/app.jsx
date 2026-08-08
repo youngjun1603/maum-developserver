@@ -5915,6 +5915,51 @@ function PsychologicalTestSystem() {
     const [billingCycle, setBillingCycle] = useS('monthly'); // 'monthly' | 'annual'
     const selPkg = pkgs.find(p => p.key === selected);
 
+    // 서비스별 상품 그룹(한국 상품제 전용) — 이용자가 서비스 단위로 상품을 고르게 구분.
+    const SERVICE_GROUPS = [
+      { id:'maumful', emoji:'🧠', title:t('마음풀','Maumful'),    sub:t('심리검사 · AI 상담 · 해석','Tests · AI · Insight'), keys:['test_one','ai_10','pdf_one','allinone','integrated_one'] },
+      { id:'bubu',    emoji:'💬', title:t('마음부부','Maum Bubu'),  sub:t('부부 대화 통역','Couple talk'),                     keys:['bubu_pack10','bubu_pack20','bubu_pack40'] },
+      { id:'sedae',   emoji:'🌿', title:t('마음세대','Maum Sedae'), sub:t('부모-자녀 통역(성인)','Parent-child'),               keys:['sedae_pack10','sedae_pack20','sedae_pack40'] },
+      { id:'otter',   emoji:'🦦', title:t('마음수달','Maumotter'),  sub:t('아이 마음 통역','Child emotions'),                   keys:['otter_light','otter_pro','otter_pack10'] },
+      { id:'gyeot',   emoji:'🐾', title:t('마음곁','Maumgyeot'),    sub:t('반려동물 통역','Pet behavior'),                      keys:['gyeot_light','gyeot_pro','gyeot_pack10'] },
+    ];
+    const pkgByKey = Object.fromEntries(pkgs.map(p => [p.key, p]));
+    const renderPkgCard = (pkg) => {
+      if (!pkg) return null;
+      const isSel = selected === pkg.key;
+      const perCredit = isKorea
+        ? Math.round(pkg.amount / pkg.credits) + '원/cr'
+        : ('$' + (pkg.amount / pkg.credits).toFixed(2) + '/cr');
+      return (
+        <button key={pkg.key} onClick={() => setSelected(pkg.key)}
+          style={{ position:'relative', padding:'12px', border:'2px solid',
+            borderColor: isSel ? '#2D6A4F' : 'rgba(0,0,0,0.1)',
+            borderRadius:13, cursor:'pointer', background: isSel ? '#F0FAF4' : 'white',
+            textAlign:'left', transition:'all 0.15s', fontFamily:F }}>
+          {pkg.badge && (
+            <div style={{ position:'absolute', top:-8, right:8,
+              background: isSel ? '#2D6A4F' : '#F59E0B',
+              color:'white', fontSize:9, fontWeight:800,
+              padding:'2px 7px', borderRadius:20 }}>{pkg.badge}</div>
+          )}
+          {isKorea ? (<>
+            <div style={{ fontSize:12.5, fontWeight:800, color: isSel ? '#2D6A4F' : '#374151',
+              marginBottom:3 }}>{pkg.label}</div>
+            <div style={{ fontSize:11, color:'#6B7280', marginBottom:8, minHeight:30, lineHeight:1.35 }}>{pkg.desc}</div>
+            <div style={{ fontSize:18, fontWeight:800, color: isSel ? '#2D6A4F' : '#111' }}>{fmt(pkg.amount)}</div>
+          </>) : (<>
+            <div style={{ fontSize:12, fontWeight:700, color: isSel ? '#2D6A4F' : '#374151',
+              marginBottom:3 }}>{pkg.label}</div>
+            <div style={{ fontSize:20, fontWeight:800,
+              color: isSel ? '#2D6A4F' : '#111' }}>✦ {pkg.credits}</div>
+            <div style={{ fontSize:11, color:'#6B7280', marginTop:1 }}>{perCredit}</div>
+            <div style={{ fontSize:14, fontWeight:700, color: isSel ? '#2D6A4F' : '#374151',
+              marginTop:5 }}>{fmt(pkg.amount)}</div>
+          </>)}
+        </button>
+      );
+    };
+
     const handlePay = async () => {
       if (!currentUser) { onClose(); setView('memberLogin'); return; }
       setLoading(true); setErrMsg('');
@@ -6012,43 +6057,31 @@ function PsychologicalTestSystem() {
 
             {/* ── 크레딧 충전 탭 ── */}
             {activeTab === 'credits' && (<>
-              <div style={{ fontSize:13, fontWeight:700, color:'#374151', marginBottom:12 }}>{t(isKorea?'상품 선택':'패키지 선택', isKorea?'Select a Product':'Select a Package')}</div>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:9, marginBottom:18 }}>
-                {pkgs.map(pkg => {
-                  const isSel = selected === pkg.key;
-                  const perCredit = isKorea
-                    ? Math.round(pkg.amount / pkg.credits) + '원/cr'
-                    : ('$' + (pkg.amount / pkg.credits).toFixed(2) + '/cr');
+              {isKorea ? (
+                // 서비스별 섹션 구분 — 각 서비스 헤더 아래 해당 상품만 그리드로.
+                SERVICE_GROUPS.map(g => {
+                  const items = g.keys.map(k => pkgByKey[k]).filter(Boolean);
+                  if (!items.length) return null;
                   return (
-                    <button key={pkg.key} onClick={() => setSelected(pkg.key)}
-                      style={{ position:'relative', padding:'12px', border:'2px solid',
-                        borderColor: isSel ? '#2D6A4F' : 'rgba(0,0,0,0.1)',
-                        borderRadius:13, cursor:'pointer', background: isSel ? '#F0FAF4' : 'white',
-                        textAlign:'left', transition:'all 0.15s', fontFamily:F }}>
-                      {pkg.badge && (
-                        <div style={{ position:'absolute', top:-8, right:8,
-                          background: isSel ? '#2D6A4F' : '#F59E0B',
-                          color:'white', fontSize:9, fontWeight:800,
-                          padding:'2px 7px', borderRadius:20 }}>{pkg.badge}</div>
-                      )}
-                      {isKorea ? (<>
-                        <div style={{ fontSize:12.5, fontWeight:800, color: isSel ? '#2D6A4F' : '#374151',
-                          marginBottom:3 }}>{pkg.label}</div>
-                        <div style={{ fontSize:11, color:'#6B7280', marginBottom:8, minHeight:30, lineHeight:1.35 }}>{pkg.desc}</div>
-                        <div style={{ fontSize:18, fontWeight:800, color: isSel ? '#2D6A4F' : '#111' }}>{fmt(pkg.amount)}</div>
-                      </>) : (<>
-                        <div style={{ fontSize:12, fontWeight:700, color: isSel ? '#2D6A4F' : '#374151',
-                          marginBottom:3 }}>{pkg.label}</div>
-                        <div style={{ fontSize:20, fontWeight:800,
-                          color: isSel ? '#2D6A4F' : '#111' }}>✦ {pkg.credits}</div>
-                        <div style={{ fontSize:11, color:'#6B7280', marginTop:1 }}>{perCredit}</div>
-                        <div style={{ fontSize:14, fontWeight:700, color: isSel ? '#2D6A4F' : '#374151',
-                          marginTop:5 }}>{fmt(pkg.amount)}</div>
-                      </>)}
-                    </button>
+                    <div key={g.id} style={{ marginBottom:16 }}>
+                      <div style={{ display:'flex', alignItems:'baseline', gap:6, marginBottom:9,
+                        paddingBottom:6, borderBottom:'1px solid #EEF2F0' }}>
+                        <span style={{ fontSize:15 }}>{g.emoji}</span>
+                        <span style={{ fontSize:13.5, fontWeight:800, color:'#2D6A4F' }}>{g.title}</span>
+                        <span style={{ fontSize:11, color:'#9CA3AF' }}>{g.sub}</span>
+                      </div>
+                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:9 }}>
+                        {items.map(renderPkgCard)}
+                      </div>
+                    </div>
                   );
-                })}
-              </div>
+                })
+              ) : (<>
+                <div style={{ fontSize:13, fontWeight:700, color:'#374151', marginBottom:12 }}>{t('패키지 선택','Select a Package')}</div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:9, marginBottom:18 }}>
+                  {pkgs.map(renderPkgCard)}
+                </div>
+              </>)}
               {selPkg && (
                 <div style={{ background:'#F9FAFB', borderRadius:12, padding:'12px 16px',
                   marginBottom:10, border:'1px solid rgba(0,0,0,0.07)' }}>
