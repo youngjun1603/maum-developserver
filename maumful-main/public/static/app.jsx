@@ -3488,8 +3488,8 @@ function PsychologicalTestSystem() {
         </div>
 
         <div className="bg-green-50 rounded-xl p-4 mb-6">
-          <p className="text-sm font-semibold text-green-800">✦ {t("가입 보너스 10 크레딧 지급 완료!","Signup bonus of 10 credits applied!")}</p>
-          <p className="text-xs text-green-600 mt-1">{t("심리검사 1회 + AI 채팅 2회를 무료로 이용할 수 있어요","Use 1 assessment + 2 AI chats for free")}</p>
+          <p className="text-sm font-semibold text-green-800">✦ {t("가입 보너스 20 크레딧 지급 완료!","Signup bonus of 20 credits applied!")}</p>
+          <p className="text-xs text-green-600 mt-1">{t("심리검사 2회 또는 AI 상담 10회를 무료로 이용할 수 있어요 (PHQ-9·GAD-7는 별도 무료)","Use 2 assessments or 10 AI chats free (PHQ-9·GAD-7 always free)")}</p>
         </div>
 
         <button onClick={() => { loadTestHistory(); setView('memberDashboard'); }}
@@ -7329,7 +7329,7 @@ function PsychologicalTestSystem() {
                   <p className="text-xs text-gray-400 mt-1">{t('상담 전략, 해석 방법, 활용 방안 등을 질문하세요','Ask about counseling strategies, interpretation, and how to apply results')}</p>
                   {!isLoggedIn && (
                     <p className="text-xs text-blue-500 mt-2 font-semibold">
-                      {t(`💬 무료 체험 ${AI_LIMIT_FREE}회 · 가입하면 더 많이 이용 가능`,`💬 ${AI_LIMIT_FREE} free sessions · Sign up for more`)}
+                      {t(`💬 무료 체험 ${AI_GUEST_TOTAL}회 · 가입하면 더 많이 이용 가능`,`💬 ${AI_GUEST_TOTAL} free sessions · Sign up for more`)}
                     </p>
                   )}
                 </div>

@@ -402,12 +402,19 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
           )}
         </div>
       )}
-      {/* 성경구절 띠 — 메뉴 하단 (요한복음 3:16) */}
-      <div style={{ background: '#f4faf6', borderTop: '1px solid rgba(45,106,79,0.10)', padding: '7px 20px', textAlign: 'center' }}>
-        <span style={{ fontSize: 13, color: '#2d6a4f', lineHeight: 1.6, fontStyle: 'italic' }}>
-          John 3:16 "For this is how God loved the world: He gave his one and only Son, so that everyone who believes in him will not perish but have eternal life."
-        </span>
-      </div>
+      {/* 성경구절 띠 — 메뉴 하단 (요한복음 3:16). B2B/제휴 진입(?p= 또는 파트너 컨텍스트)에선 종교색 배제 위해 숨김, 일반 방문자는 유지 */}
+      {(() => {
+        try {
+          const isPartner = !!(new URLSearchParams(location.search).get('p') || sessionStorage.getItem('maumful_partner_cfg'));
+          return !isPartner;
+        } catch { return true; }
+      })() && (
+        <div style={{ background: '#f4faf6', borderTop: '1px solid rgba(45,106,79,0.10)', padding: '7px 20px', textAlign: 'center' }}>
+          <span style={{ fontSize: 13, color: '#2d6a4f', lineHeight: 1.6, fontStyle: 'italic' }}>
+            John 3:16 "For this is how God loved the world: He gave his one and only Son, so that everyone who believes in him will not perish but have eternal life."
+          </span>
+        </div>
+      )}
     </nav>
   );
 }
@@ -1242,8 +1249,8 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
             }} />
 
             {[
-              { step: '01', icon: '📋', title: tl('회원가입', 'Sign Up'), desc: tl('이메일로 30초 만에 가입. 즉시 20 크레딧 지급됩니다.', 'Sign up with email in 30 seconds. Receive 20 credits instantly.'), note: tl('검사 4회 + AI채팅 5회 무료', '4 tests + 5 AI chats free') },
-              { step: '02', icon: '🔍', title: tl('검사 선택 & 수행', 'Pick & Take a Test'), desc: tl('8가지 검사 중 원하는 것을 선택. 질문에 솔직하게 답하세요.', 'Choose from 10 assessments. Answer the questions honestly.'), note: tl('최소 5분이면 완료', 'Done in as little as 5 min') },
+              { step: '01', icon: '📋', title: tl('회원가입', 'Sign Up'), desc: tl('이메일로 30초 만에 가입. 즉시 20 크레딧 지급됩니다.', 'Sign up with email in 30 seconds. Receive 20 credits instantly.'), note: tl('무료검사 2종 + 20 크레딧', '2 free tests + 20 credits') },
+              { step: '02', icon: '🔍', title: tl('검사 선택 & 수행', 'Pick & Take a Test'), desc: tl('10가지 검사 중 원하는 것을 선택. 질문에 솔직하게 답하세요.', 'Choose from 10 assessments. Answer the questions honestly.'), note: tl('최소 5분이면 완료', 'Done in as little as 5 min') },
               { step: '03', icon: '💬', title: tl('AI와 결과 상담', 'AI Result Counseling'), desc: tl('검사 완료 즉시 AI 상담사와 대화로 결과를 분석합니다.', 'Right after your test, analyze your results through conversation with an AI counselor.'), note: tl('내 언어로 쉽게 이해', 'Understand in plain language') },
             ].map((s, i) => (
               <div key={s.step} style={{ padding: '0 32px', textAlign: 'center', position: 'relative', zIndex: 1 }}>

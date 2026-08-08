@@ -523,7 +523,14 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
       }
     },
     tl("\uBB34\uB8CC \uC2DC\uC791", "Get Started")
-  ))), /* @__PURE__ */ React.createElement("div", { style: { background: "#f4faf6", borderTop: "1px solid rgba(45,106,79,0.10)", padding: "7px 20px", textAlign: "center" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: "#2d6a4f", lineHeight: 1.6, fontStyle: "italic" } }, 'John 3:16 "For this is how God loved the world: He gave his one and only Son, so that everyone who believes in him will not perish but have eternal life."')));
+  ))), (() => {
+    try {
+      const isPartner = !!(new URLSearchParams(location.search).get("p") || sessionStorage.getItem("maumful_partner_cfg"));
+      return !isPartner;
+    } catch {
+      return true;
+    }
+  })() && /* @__PURE__ */ React.createElement("div", { style: { background: "#f4faf6", borderTop: "1px solid rgba(45,106,79,0.10)", padding: "7px 20px", textAlign: "center" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: "#2d6a4f", lineHeight: 1.6, fontStyle: "italic" } }, 'John 3:16 "For this is how God loved the world: He gave his one and only Son, so that everyone who believes in him will not perish but have eternal life."')));
 }
 function MfSnsHeroBtn({ tl }) {
   const share = () => {
@@ -1394,8 +1401,8 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
     background: "linear-gradient(90deg, #B7E4C7, #52B788, #B7E4C7)",
     zIndex: 0
   } }), [
-    { step: "01", icon: "\u{1F4CB}", title: tl("\uD68C\uC6D0\uAC00\uC785", "Sign Up"), desc: tl("\uC774\uBA54\uC77C\uB85C 30\uCD08 \uB9CC\uC5D0 \uAC00\uC785. \uC989\uC2DC 20 \uD06C\uB808\uB527 \uC9C0\uAE09\uB429\uB2C8\uB2E4.", "Sign up with email in 30 seconds. Receive 20 credits instantly."), note: tl("\uAC80\uC0AC 4\uD68C + AI\uCC44\uD305 5\uD68C \uBB34\uB8CC", "4 tests + 5 AI chats free") },
-    { step: "02", icon: "\u{1F50D}", title: tl("\uAC80\uC0AC \uC120\uD0DD & \uC218\uD589", "Pick & Take a Test"), desc: tl("8\uAC00\uC9C0 \uAC80\uC0AC \uC911 \uC6D0\uD558\uB294 \uAC83\uC744 \uC120\uD0DD. \uC9C8\uBB38\uC5D0 \uC194\uC9C1\uD558\uAC8C \uB2F5\uD558\uC138\uC694.", "Choose from 10 assessments. Answer the questions honestly."), note: tl("\uCD5C\uC18C 5\uBD84\uC774\uBA74 \uC644\uB8CC", "Done in as little as 5 min") },
+    { step: "01", icon: "\u{1F4CB}", title: tl("\uD68C\uC6D0\uAC00\uC785", "Sign Up"), desc: tl("\uC774\uBA54\uC77C\uB85C 30\uCD08 \uB9CC\uC5D0 \uAC00\uC785. \uC989\uC2DC 20 \uD06C\uB808\uB527 \uC9C0\uAE09\uB429\uB2C8\uB2E4.", "Sign up with email in 30 seconds. Receive 20 credits instantly."), note: tl("\uBB34\uB8CC\uAC80\uC0AC 2\uC885 + 20 \uD06C\uB808\uB527", "2 free tests + 20 credits") },
+    { step: "02", icon: "\u{1F50D}", title: tl("\uAC80\uC0AC \uC120\uD0DD & \uC218\uD589", "Pick & Take a Test"), desc: tl("10\uAC00\uC9C0 \uAC80\uC0AC \uC911 \uC6D0\uD558\uB294 \uAC83\uC744 \uC120\uD0DD. \uC9C8\uBB38\uC5D0 \uC194\uC9C1\uD558\uAC8C \uB2F5\uD558\uC138\uC694.", "Choose from 10 assessments. Answer the questions honestly."), note: tl("\uCD5C\uC18C 5\uBD84\uC774\uBA74 \uC644\uB8CC", "Done in as little as 5 min") },
     { step: "03", icon: "\u{1F4AC}", title: tl("AI\uC640 \uACB0\uACFC \uC0C1\uB2F4", "AI Result Counseling"), desc: tl("\uAC80\uC0AC \uC644\uB8CC \uC989\uC2DC AI \uC0C1\uB2F4\uC0AC\uC640 \uB300\uD654\uB85C \uACB0\uACFC\uB97C \uBD84\uC11D\uD569\uB2C8\uB2E4.", "Right after your test, analyze your results through conversation with an AI counselor."), note: tl("\uB0B4 \uC5B8\uC5B4\uB85C \uC27D\uAC8C \uC774\uD574", "Understand in plain language") }
   ].map((s, i) => /* @__PURE__ */ React.createElement("div", { key: s.step, style: { padding: "0 32px", textAlign: "center", position: "relative", zIndex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: {
     width: 64,
