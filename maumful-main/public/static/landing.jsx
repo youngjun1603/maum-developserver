@@ -98,6 +98,7 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
   const { useState: useS, useEffect: useE } = React;
   const [scrolled, setScrolled]   = useS(false);
   const [mobileOpen, setMobileOpen] = useS(false);
+  const [seriesOpen, setSeriesOpen] = useS(false);
   const tl = (ko, en) => lang === 'en' ? en : ko;
 
   useE(() => {
@@ -106,15 +107,20 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  // 코어 메뉴(1차). 심리검사는 '내 검사'로 — 로그인 후 대시보드 진입 의미 명확화.
   const navItems = [
     { label: tl('검사 소개',  'Assessments'),    view: 'testsIntro' },
     { label: tl('심리검사',   'My Tests'),        view: 'memberDashboard', guestView: 'testsIntro' },
     { label: tl('AI 상담',   'AI Counseling'),   view: 'aiCounsel',       requireLogin: true },
     { label: tl('마음 게임',  'Healing Games'),   view: 'gameIntro', isGame: true },
-    { label: tl('마음커플',   'Maumful Couple'),  view: 'couple',    isCouple: true },
-    { label: tl('마음수달',   'Maumotter'),       isOtter: true },
-    { label: tl('마음부부',   'Maumful Bubu'),    isBubu: true },
-    { label: tl('마음세대',   'Maumful Sedae'),   isSedae: true },
+  ];
+  // 마음 시리즈(2차) — 관계·정서 통역 서비스를 단일 드롭다운으로(발견성·정리). 곁 포함(강등 해소).
+  const seriesItems = [
+    { emoji: '💕', label: tl('마음커플', 'Maumful Couple'), desc: tl('파트너와 심리 궁합', 'Couple compatibility'), isCouple: true },
+    { emoji: '🦦', label: tl('마음수달', 'Maumotter'),      desc: tl('아이의 속마음 통역', 'Child feelings'),        isOtter: true },
+    { emoji: '🐾', label: tl('마음곁',   'Maumgyeot'),      desc: tl('반려동물 마음 통역', 'Pet behavior'),          isGyeot: true },
+    { emoji: '💬', label: tl('마음부부', 'Maumful Bubu'),   desc: tl('부부 대화 통역', 'Couple dialogue'),           isBubu: true },
+    { emoji: '🌿', label: tl('마음세대', 'Maumful Sedae'),  desc: tl('부모·자녀 마음 통역', 'Parent-child'),         isSedae: true },
   ];
 
   const handleNavClick = (item) => {
@@ -146,6 +152,11 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
           const token = localStorage.getItem('access_token') || '';
           window.open(`${coupleBase}${token ? '?t=' + encodeURIComponent(token) : ''}`, '_blank', 'noopener noreferrer');
         });
+      return;
+    }
+    // 마음곁: 별개 생태계·로그인 SSO 수신부 미구현 → 일반 링크로 이동(추후 곁에 SSO 추가 시 수달 패턴)
+    if (item.isGyeot) {
+      window.open('https://maumgyeot.com', '_blank', 'noopener noreferrer');
       return;
     }
     // 마음수달: 별개 서비스. 로그인 상태면 SSO 단일로그인, 미로그인이면 maumotter.com으로 그냥 이동(마음풀 로그인 강제 X)
@@ -260,6 +271,52 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
               {item.label}
             </button>
           ))}
+          {/* 마음 시리즈 드롭다운 */}
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setSeriesOpen(o => !o)}
+              style={{
+                background: seriesOpen ? '#F0FAF4' : 'none', border: 'none', cursor: 'pointer',
+                padding: '8px 14px', borderRadius: 8, fontSize: 14, fontWeight: 400,
+                color: seriesOpen ? '#2D6A4F' : '#5A5A5A', fontFamily: "'Noto Sans KR', sans-serif",
+                display: 'flex', alignItems: 'center', gap: 4, transition: 'all 0.15s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#F0FAF4'; e.currentTarget.style.color = '#2D6A4F'; }}
+              onMouseLeave={e => { if (!seriesOpen) { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#5A5A5A'; } }}
+            >
+              {tl('마음 시리즈', 'Maum Series')} <span style={{ fontSize: 10 }}>▾</span>
+            </button>
+            {seriesOpen && (
+              <>
+                <div onClick={() => setSeriesOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 1000 }} />
+                <div style={{
+                  position: 'absolute', right: 0, top: '100%', marginTop: 6, width: 248,
+                  background: 'white', borderRadius: 12, boxShadow: '0 10px 34px rgba(0,0,0,0.14)',
+                  border: '1px solid rgba(0,0,0,0.06)', padding: 6, zIndex: 1001,
+                }}>
+                  {seriesItems.map(s => (
+                    <button
+                      key={s.label}
+                      onClick={() => { setSeriesOpen(false); handleNavClick(s); }}
+                      style={{
+                        display: 'flex', alignItems: 'flex-start', gap: 10, width: '100%', textAlign: 'left',
+                        background: 'none', border: 'none', cursor: 'pointer', padding: '9px 10px', borderRadius: 8,
+                        fontFamily: "'Noto Sans KR', sans-serif",
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = '#F0FAF4'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
+                    >
+                      <span style={{ fontSize: 18, lineHeight: 1.2 }}>{s.emoji}</span>
+                      <span style={{ minWidth: 0 }}>
+                        <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#1A1A1A' }}>{s.label}</span>
+                        <span style={{ display: 'block', fontSize: 11, color: '#9CA3AF' }}>{s.desc}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* 우측 액션 버튼 */}
@@ -378,6 +435,26 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
               {item.label}
             </button>
           ))}
+          {/* 마음 시리즈 — 모바일 서브섹션 */}
+          <div style={{ paddingTop: 10, marginTop: 4 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: '0.4px', marginBottom: 2 }}>{tl('마음 시리즈', 'MAUM SERIES')}</div>
+            {seriesItems.map(s => (
+              <button
+                key={s.label}
+                onClick={() => handleNavClick(s)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left',
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  padding: '11px 0', borderBottom: '1px solid rgba(0,0,0,0.05)',
+                  fontFamily: "'Noto Sans KR', sans-serif",
+                }}
+              >
+                <span style={{ fontSize: 17 }}>{s.emoji}</span>
+                <span style={{ fontSize: 15, color: '#1A1A1A' }}>{s.label}</span>
+                <span style={{ fontSize: 11, color: '#9CA3AF' }}>· {s.desc}</span>
+              </button>
+            ))}
+          </div>
           {!isLoggedIn && (
             <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
               <button

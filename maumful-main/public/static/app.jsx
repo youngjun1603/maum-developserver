@@ -362,6 +362,7 @@ function PsychologicalTestSystem() {
   const [creditTxns, setCreditTxns]       = useState([]);
   const [showCreditModal, setShowCreditModal] = useState(false);   // 크레딧 부족 모달
   const [grantCode, setGrantCode] = useState(null);                // 외부(phyweb) 이용권 코드 발급 표시
+  const [seriesMenuOpen, setSeriesMenuOpen] = useState(false);     // 헤더 '마음 시리즈' 드롭다운
   const [showChargeView, setShowChargeView]   = useState(false);   // 충전 화면
   const [pendingTestAfterCharge, setPendingTestAfterCharge] = useState(null); // 충전 후 자동 재시작할 검사
 
@@ -2118,6 +2119,11 @@ function PsychologicalTestSystem() {
       }
     } catch {}
     window.open('https://sedae.maumful.com', '_blank', 'noopener noreferrer');
+  }
+
+  // 마음곁(반려동물 통역) 진입 — 별개 생태계. 곁엔 아직 로그인 SSO 수신부가 없어 일반 링크로 연다(추후 곁에 SSO 추가 시 수달 패턴 적용).
+  function openMaumGyeot() {
+    window.open('https://maumgyeot.com', '_blank', 'noopener noreferrer');
   }
 
   // ============================================================
@@ -4199,37 +4205,41 @@ function PsychologicalTestSystem() {
             </button>
             <div className="flex items-center gap-0.5 sm:gap-1">
               <CreditBadge />
-              {/* 마음 시리즈 진입 (마음풀 하위 서비스 — 접두어 생략, 로고 컬러로 구분) */}
-              {/* 마음 게임: 로그인 상태면 JWT SSO로 자동 연동 */}
+              {/* 마음 게임: 코어 기능 — 상시 노출(로그인 시 JWT SSO 자동 연동) */}
               <button onClick={() => openMaumGame()}
                 className="text-gray-500 hover:text-green-700 text-sm px-1.5 py-1.5 rounded-lg hover:bg-green-50 transition flex items-center gap-1 whitespace-nowrap"
                 title="마음 게임 — 별도 로그인 없이 바로 이동">
                 🎮 <span className="hidden md:inline">{t("게임","Games")}</span>
               </button>
-              {/* 마음커플 */}
-              <button onClick={() => openMaumCouple()}
-                className="text-gray-500 hover:text-rose-600 text-sm px-1.5 py-1.5 rounded-lg hover:bg-rose-50 transition flex items-center gap-1 whitespace-nowrap"
-                title="마음커플 — 파트너와 심리 궁합 분석">
-                💕 <span className="hidden md:inline">{t("커플","Couple")}</span>
-              </button>
-              {/* 마음수달 */}
-              <button onClick={() => openMaumOtter()}
-                className="text-gray-500 hover:text-sky-600 text-sm px-1.5 py-1.5 rounded-lg hover:bg-sky-50 transition flex items-center gap-1 whitespace-nowrap"
-                title="마음수달 — 아이의 속마음 통역">
-                🦦 <span className="hidden md:inline">{t("수달","Otter")}</span>
-              </button>
-              {/* 마음부부 */}
-              <button onClick={() => openMaumBubu()}
-                className="text-gray-500 hover:text-emerald-700 text-sm px-1.5 py-1.5 rounded-lg hover:bg-emerald-50 transition flex items-center gap-1 whitespace-nowrap"
-                title="마음부부 — 부부 대화 통역">
-                💬 <span className="hidden md:inline">{t("부부","Bubu")}</span>
-              </button>
-              {/* 마음세대 */}
-              <button onClick={() => openMaumSedae()}
-                className="text-gray-500 hover:text-emerald-700 text-sm px-1.5 py-1.5 rounded-lg hover:bg-emerald-50 transition flex items-center gap-1 whitespace-nowrap"
-                title="마음세대 — 부모·자녀 마음 통역">
-                🌿 <span className="hidden md:inline">{t("세대","Sedae")}</span>
-              </button>
+              {/* 마음 시리즈 — 커플·수달·곁·부부·세대를 단일 드롭다운으로(발견성·정리) */}
+              <div className="relative">
+                <button onClick={() => setSeriesMenuOpen(o => !o)}
+                  className="text-gray-500 hover:text-emerald-700 text-sm px-1.5 py-1.5 rounded-lg hover:bg-emerald-50 transition flex items-center gap-1 whitespace-nowrap"
+                  title={t("마음 시리즈 — 관계·정서 통역 서비스","Maum Series")}>
+                  🌿 <span className="hidden md:inline">{t("시리즈","Series")}</span> <span className="text-[10px]">▾</span>
+                </button>
+                {seriesMenuOpen && (<>
+                  <div className="fixed inset-0 z-20" onClick={() => setSeriesMenuOpen(false)} />
+                  <div className="absolute right-0 mt-1 w-60 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-30">
+                    {[
+                      { emoji:'💕', label:t('마음커플','Maumful Couple'), desc:t('파트너와 심리 궁합','Couple compatibility'), on:() => openMaumCouple() },
+                      { emoji:'🦦', label:t('마음수달','Maumotter'),      desc:t('아이의 속마음 통역','Child feelings'),      on:() => openMaumOtter() },
+                      { emoji:'🐾', label:t('마음곁','Maumgyeot'),        desc:t('반려동물 마음 통역','Pet behavior'),        on:() => openMaumGyeot() },
+                      { emoji:'💬', label:t('마음부부','Maumful Bubu'),   desc:t('부부 대화 통역','Couple dialogue'),         on:() => openMaumBubu() },
+                      { emoji:'🌿', label:t('마음세대','Maumful Sedae'),  desc:t('부모·자녀 마음 통역','Parent-child'),       on:() => openMaumSedae() },
+                    ].map(s => (
+                      <button key={s.label} onClick={() => { setSeriesMenuOpen(false); s.on(); }}
+                        className="w-full text-left px-3 py-2 hover:bg-emerald-50 transition flex items-start gap-2.5">
+                        <span className="text-lg leading-none mt-0.5">{s.emoji}</span>
+                        <span className="min-w-0">
+                          <span className="block text-sm font-semibold text-gray-800">{s.label}</span>
+                          <span className="block text-[11px] text-gray-400">{s.desc}</span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </>)}
+              </div>
               <button onClick={() => setView('myPage')} className="text-gray-500 hover:text-gray-700 text-sm px-1.5 py-1.5 rounded-lg hover:bg-gray-100 transition flex items-center gap-1 whitespace-nowrap">
                 👤 <span className="hidden sm:inline">{currentUser?.nickname || t('내 정보','My Info')}</span>
               </button>
@@ -4256,6 +4266,37 @@ function PsychologicalTestSystem() {
               <button onClick={() => dismissNotice(n.id)} className="text-amber-400 hover:text-amber-700 text-sm shrink-0" title={t('닫기','Dismiss')}>✕</button>
             </div>
           ))}
+          {/* ── 다음 한 걸음: Primary CTA (신규=무료검사 시작 / 재방문=AI 상담 이어가기) — 주경로 명확화 ── */}
+          <div className="mb-5 rounded-2xl p-5 text-white" style={{ background: 'linear-gradient(135deg,#2D6A4F,#40916C)' }}>
+            {testHistory.length === 0 ? (
+              <>
+                <div className="text-xs font-semibold opacity-80 mb-1">🌿 {t('마음풀이 처음이시죠?','New to Maumful?')}</div>
+                <div className="text-lg font-bold mb-1">{t('무료 검사로 3분 만에 시작해요','Start free in 3 minutes')}</div>
+                <div className="text-xs opacity-80 mb-3">{t('PHQ-9 우울 자가점검 · 크레딧 차감 없음','PHQ-9 depression check · no credits used')}</div>
+                <button onClick={() => startSelectedTest('PHQ9')}
+                  className="bg-white text-green-800 font-bold px-5 py-2.5 rounded-xl text-sm hover:bg-green-50 transition">
+                  {t('무료 검사 시작하기 →','Start free test →')}
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="text-xs font-semibold opacity-80 mb-1">👋 {t('다시 오셨네요','Welcome back')}</div>
+                <div className="text-lg font-bold mb-1">{t('이어서 마음을 돌봐요','Pick up where you left off')}</div>
+                <div className="text-xs opacity-80 mb-3">{t('AI 상담사와 결과를 이야기하거나 새 검사를 해보세요','Talk through your results with AI, or take a new test')}</div>
+                <div className="flex gap-2 flex-wrap">
+                  <button onClick={() => setView('aiCounsel')}
+                    className="bg-white text-green-800 font-bold px-4 py-2.5 rounded-xl text-sm hover:bg-green-50 transition">
+                    💬 {t('AI 상담 이어가기','Continue AI counseling')}
+                  </button>
+                  <a href="#test-list"
+                    className="bg-white/15 text-white font-semibold px-4 py-2.5 rounded-xl text-sm hover:bg-white/25 transition inline-flex items-center">
+                    📋 {t('새 검사 하기','New test')}
+                  </a>
+                </div>
+              </>
+            )}
+          </div>
+
           {/* 모바일: 검사 목록 빠른 이동 */}
           <div className="sm:hidden flex justify-end mb-3">
             <a href="#test-list"

@@ -491,6 +491,7 @@ function PsychologicalTestSystem() {
   const [creditTxns, setCreditTxns] = useState([]);
   const [showCreditModal, setShowCreditModal] = useState(false);
   const [grantCode, setGrantCode] = useState(null);
+  const [seriesMenuOpen, setSeriesMenuOpen] = useState(false);
   const [showChargeView, setShowChargeView] = useState(false);
   const [pendingTestAfterCharge, setPendingTestAfterCharge] = useState(null);
   const [loginMsg, setLoginMsg] = useState({ type: "", text: "" });
@@ -2197,6 +2198,9 @@ function PsychologicalTestSystem() {
     }
     window.open("https://sedae.maumful.com", "_blank", "noopener noreferrer");
   }
+  function openMaumGyeot() {
+    window.open("https://maumgyeot.com", "_blank", "noopener noreferrer");
+  }
   async function loadTestHistory() {
     try {
       const r = await api.getTestHistory();
@@ -3665,43 +3669,36 @@ Visit Maumful and take the same test again to compare your progress.`));
       },
       "\u{1F3AE} ",
       /* @__PURE__ */ React.createElement("span", { className: "hidden md:inline" }, t("\uAC8C\uC784", "Games"))
-    ), /* @__PURE__ */ React.createElement(
+    ), /* @__PURE__ */ React.createElement("div", { className: "relative" }, /* @__PURE__ */ React.createElement(
       "button",
       {
-        onClick: () => openMaumCouple(),
-        className: "text-gray-500 hover:text-rose-600 text-sm px-1.5 py-1.5 rounded-lg hover:bg-rose-50 transition flex items-center gap-1 whitespace-nowrap",
-        title: "\uB9C8\uC74C\uCEE4\uD50C \u2014 \uD30C\uD2B8\uB108\uC640 \uC2EC\uB9AC \uAD81\uD569 \uBD84\uC11D"
-      },
-      "\u{1F495} ",
-      /* @__PURE__ */ React.createElement("span", { className: "hidden md:inline" }, t("\uCEE4\uD50C", "Couple"))
-    ), /* @__PURE__ */ React.createElement(
-      "button",
-      {
-        onClick: () => openMaumOtter(),
-        className: "text-gray-500 hover:text-sky-600 text-sm px-1.5 py-1.5 rounded-lg hover:bg-sky-50 transition flex items-center gap-1 whitespace-nowrap",
-        title: "\uB9C8\uC74C\uC218\uB2EC \u2014 \uC544\uC774\uC758 \uC18D\uB9C8\uC74C \uD1B5\uC5ED"
-      },
-      "\u{1F9A6} ",
-      /* @__PURE__ */ React.createElement("span", { className: "hidden md:inline" }, t("\uC218\uB2EC", "Otter"))
-    ), /* @__PURE__ */ React.createElement(
-      "button",
-      {
-        onClick: () => openMaumBubu(),
+        onClick: () => setSeriesMenuOpen((o) => !o),
         className: "text-gray-500 hover:text-emerald-700 text-sm px-1.5 py-1.5 rounded-lg hover:bg-emerald-50 transition flex items-center gap-1 whitespace-nowrap",
-        title: "\uB9C8\uC74C\uBD80\uBD80 \u2014 \uBD80\uBD80 \uB300\uD654 \uD1B5\uC5ED"
-      },
-      "\u{1F4AC} ",
-      /* @__PURE__ */ React.createElement("span", { className: "hidden md:inline" }, t("\uBD80\uBD80", "Bubu"))
-    ), /* @__PURE__ */ React.createElement(
-      "button",
-      {
-        onClick: () => openMaumSedae(),
-        className: "text-gray-500 hover:text-emerald-700 text-sm px-1.5 py-1.5 rounded-lg hover:bg-emerald-50 transition flex items-center gap-1 whitespace-nowrap",
-        title: "\uB9C8\uC74C\uC138\uB300 \u2014 \uBD80\uBAA8\xB7\uC790\uB140 \uB9C8\uC74C \uD1B5\uC5ED"
+        title: t("\uB9C8\uC74C \uC2DC\uB9AC\uC988 \u2014 \uAD00\uACC4\xB7\uC815\uC11C \uD1B5\uC5ED \uC11C\uBE44\uC2A4", "Maum Series")
       },
       "\u{1F33F} ",
-      /* @__PURE__ */ React.createElement("span", { className: "hidden md:inline" }, t("\uC138\uB300", "Sedae"))
-    ), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("myPage"), className: "text-gray-500 hover:text-gray-700 text-sm px-1.5 py-1.5 rounded-lg hover:bg-gray-100 transition flex items-center gap-1 whitespace-nowrap" }, "\u{1F464} ", /* @__PURE__ */ React.createElement("span", { className: "hidden sm:inline" }, (currentUser == null ? void 0 : currentUser.nickname) || t("\uB0B4 \uC815\uBCF4", "My Info"))), /* @__PURE__ */ React.createElement(
+      /* @__PURE__ */ React.createElement("span", { className: "hidden md:inline" }, t("\uC2DC\uB9AC\uC988", "Series")),
+      " ",
+      /* @__PURE__ */ React.createElement("span", { className: "text-[10px]" }, "\u25BE")
+    ), seriesMenuOpen && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 z-20", onClick: () => setSeriesMenuOpen(false) }), /* @__PURE__ */ React.createElement("div", { className: "absolute right-0 mt-1 w-60 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-30" }, [
+      { emoji: "\u{1F495}", label: t("\uB9C8\uC74C\uCEE4\uD50C", "Maumful Couple"), desc: t("\uD30C\uD2B8\uB108\uC640 \uC2EC\uB9AC \uAD81\uD569", "Couple compatibility"), on: () => openMaumCouple() },
+      { emoji: "\u{1F9A6}", label: t("\uB9C8\uC74C\uC218\uB2EC", "Maumotter"), desc: t("\uC544\uC774\uC758 \uC18D\uB9C8\uC74C \uD1B5\uC5ED", "Child feelings"), on: () => openMaumOtter() },
+      { emoji: "\u{1F43E}", label: t("\uB9C8\uC74C\uACC1", "Maumgyeot"), desc: t("\uBC18\uB824\uB3D9\uBB3C \uB9C8\uC74C \uD1B5\uC5ED", "Pet behavior"), on: () => openMaumGyeot() },
+      { emoji: "\u{1F4AC}", label: t("\uB9C8\uC74C\uBD80\uBD80", "Maumful Bubu"), desc: t("\uBD80\uBD80 \uB300\uD654 \uD1B5\uC5ED", "Couple dialogue"), on: () => openMaumBubu() },
+      { emoji: "\u{1F33F}", label: t("\uB9C8\uC74C\uC138\uB300", "Maumful Sedae"), desc: t("\uBD80\uBAA8\xB7\uC790\uB140 \uB9C8\uC74C \uD1B5\uC5ED", "Parent-child"), on: () => openMaumSedae() }
+    ].map((s) => /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        key: s.label,
+        onClick: () => {
+          setSeriesMenuOpen(false);
+          s.on();
+        },
+        className: "w-full text-left px-3 py-2 hover:bg-emerald-50 transition flex items-start gap-2.5"
+      },
+      /* @__PURE__ */ React.createElement("span", { className: "text-lg leading-none mt-0.5" }, s.emoji),
+      /* @__PURE__ */ React.createElement("span", { className: "min-w-0" }, /* @__PURE__ */ React.createElement("span", { className: "block text-sm font-semibold text-gray-800" }, s.label), /* @__PURE__ */ React.createElement("span", { className: "block text-[11px] text-gray-400" }, s.desc))
+    ))))), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("myPage"), className: "text-gray-500 hover:text-gray-700 text-sm px-1.5 py-1.5 rounded-lg hover:bg-gray-100 transition flex items-center gap-1 whitespace-nowrap" }, "\u{1F464} ", /* @__PURE__ */ React.createElement("span", { className: "hidden sm:inline" }, (currentUser == null ? void 0 : currentUser.nickname) || t("\uB0B4 \uC815\uBCF4", "My Info"))), /* @__PURE__ */ React.createElement(
       "button",
       {
         onClick: () => {
@@ -3712,7 +3709,30 @@ Visit Maumful and take the same test again to compare your progress.`));
         className: "text-gray-400 hover:text-gray-600 text-xs px-1.5 py-1.5 rounded-lg hover:bg-gray-100 transition"
       },
       "\u{1F510}"
-    )))), /* @__PURE__ */ React.createElement("main", { className: "max-w-2xl mx-auto px-4 py-6" }, (notices || []).filter((n) => n.is_important && !noticeDismissed.includes(n.id)).slice(0, 1).map((n) => /* @__PURE__ */ React.createElement("div", { key: n.id, className: "mb-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-3" }, /* @__PURE__ */ React.createElement("span", { className: "text-lg leading-none mt-0.5" }, "\u{1F4E2}"), /* @__PURE__ */ React.createElement("div", { className: "min-w-0 flex-1" }, /* @__PURE__ */ React.createElement("div", { className: "text-sm font-bold text-amber-900" }, n.title), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-amber-800 mt-1 whitespace-pre-wrap leading-relaxed line-clamp-3" }, n.content), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("notices"), className: "text-xs font-semibold text-amber-700 underline mt-1.5 hover:text-amber-900" }, t("\uACF5\uC9C0 \uC804\uCCB4 \uBCF4\uAE30", "View all notices"))), /* @__PURE__ */ React.createElement("button", { onClick: () => dismissNotice(n.id), className: "text-amber-400 hover:text-amber-700 text-sm shrink-0", title: t("\uB2EB\uAE30", "Dismiss") }, "\u2715"))), /* @__PURE__ */ React.createElement("div", { className: "sm:hidden flex justify-end mb-3" }, /* @__PURE__ */ React.createElement(
+    )))), /* @__PURE__ */ React.createElement("main", { className: "max-w-2xl mx-auto px-4 py-6" }, (notices || []).filter((n) => n.is_important && !noticeDismissed.includes(n.id)).slice(0, 1).map((n) => /* @__PURE__ */ React.createElement("div", { key: n.id, className: "mb-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-3" }, /* @__PURE__ */ React.createElement("span", { className: "text-lg leading-none mt-0.5" }, "\u{1F4E2}"), /* @__PURE__ */ React.createElement("div", { className: "min-w-0 flex-1" }, /* @__PURE__ */ React.createElement("div", { className: "text-sm font-bold text-amber-900" }, n.title), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-amber-800 mt-1 whitespace-pre-wrap leading-relaxed line-clamp-3" }, n.content), /* @__PURE__ */ React.createElement("button", { onClick: () => setView("notices"), className: "text-xs font-semibold text-amber-700 underline mt-1.5 hover:text-amber-900" }, t("\uACF5\uC9C0 \uC804\uCCB4 \uBCF4\uAE30", "View all notices"))), /* @__PURE__ */ React.createElement("button", { onClick: () => dismissNotice(n.id), className: "text-amber-400 hover:text-amber-700 text-sm shrink-0", title: t("\uB2EB\uAE30", "Dismiss") }, "\u2715"))), /* @__PURE__ */ React.createElement("div", { className: "mb-5 rounded-2xl p-5 text-white", style: { background: "linear-gradient(135deg,#2D6A4F,#40916C)" } }, testHistory.length === 0 ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "text-xs font-semibold opacity-80 mb-1" }, "\u{1F33F} ", t("\uB9C8\uC74C\uD480\uC774 \uCC98\uC74C\uC774\uC2DC\uC8E0?", "New to Maumful?")), /* @__PURE__ */ React.createElement("div", { className: "text-lg font-bold mb-1" }, t("\uBB34\uB8CC \uAC80\uC0AC\uB85C 3\uBD84 \uB9CC\uC5D0 \uC2DC\uC791\uD574\uC694", "Start free in 3 minutes")), /* @__PURE__ */ React.createElement("div", { className: "text-xs opacity-80 mb-3" }, t("PHQ-9 \uC6B0\uC6B8 \uC790\uAC00\uC810\uAC80 \xB7 \uD06C\uB808\uB527 \uCC28\uAC10 \uC5C6\uC74C", "PHQ-9 depression check \xB7 no credits used")), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        onClick: () => startSelectedTest2("PHQ9"),
+        className: "bg-white text-green-800 font-bold px-5 py-2.5 rounded-xl text-sm hover:bg-green-50 transition"
+      },
+      t("\uBB34\uB8CC \uAC80\uC0AC \uC2DC\uC791\uD558\uAE30 \u2192", "Start free test \u2192")
+    )) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "text-xs font-semibold opacity-80 mb-1" }, "\u{1F44B} ", t("\uB2E4\uC2DC \uC624\uC168\uB124\uC694", "Welcome back")), /* @__PURE__ */ React.createElement("div", { className: "text-lg font-bold mb-1" }, t("\uC774\uC5B4\uC11C \uB9C8\uC74C\uC744 \uB3CC\uBD10\uC694", "Pick up where you left off")), /* @__PURE__ */ React.createElement("div", { className: "text-xs opacity-80 mb-3" }, t("AI \uC0C1\uB2F4\uC0AC\uC640 \uACB0\uACFC\uB97C \uC774\uC57C\uAE30\uD558\uAC70\uB098 \uC0C8 \uAC80\uC0AC\uB97C \uD574\uBCF4\uC138\uC694", "Talk through your results with AI, or take a new test")), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2 flex-wrap" }, /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        onClick: () => setView("aiCounsel"),
+        className: "bg-white text-green-800 font-bold px-4 py-2.5 rounded-xl text-sm hover:bg-green-50 transition"
+      },
+      "\u{1F4AC} ",
+      t("AI \uC0C1\uB2F4 \uC774\uC5B4\uAC00\uAE30", "Continue AI counseling")
+    ), /* @__PURE__ */ React.createElement(
+      "a",
+      {
+        href: "#test-list",
+        className: "bg-white/15 text-white font-semibold px-4 py-2.5 rounded-xl text-sm hover:bg-white/25 transition inline-flex items-center"
+      },
+      "\u{1F4CB} ",
+      t("\uC0C8 \uAC80\uC0AC \uD558\uAE30", "New test")
+    )))), /* @__PURE__ */ React.createElement("div", { className: "sm:hidden flex justify-end mb-3" }, /* @__PURE__ */ React.createElement(
       "a",
       {
         href: "#test-list",

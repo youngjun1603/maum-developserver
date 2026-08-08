@@ -166,6 +166,7 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
   const { useState: useS, useEffect: useE } = React;
   const [scrolled, setScrolled] = useS(false);
   const [mobileOpen, setMobileOpen] = useS(false);
+  const [seriesOpen, setSeriesOpen] = useS(false);
   const tl = (ko, en) => lang === "en" ? en : ko;
   useE(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -176,11 +177,14 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
     { label: tl("\uAC80\uC0AC \uC18C\uAC1C", "Assessments"), view: "testsIntro" },
     { label: tl("\uC2EC\uB9AC\uAC80\uC0AC", "My Tests"), view: "memberDashboard", guestView: "testsIntro" },
     { label: tl("AI \uC0C1\uB2F4", "AI Counseling"), view: "aiCounsel", requireLogin: true },
-    { label: tl("\uB9C8\uC74C \uAC8C\uC784", "Healing Games"), view: "gameIntro", isGame: true },
-    { label: tl("\uB9C8\uC74C\uCEE4\uD50C", "Maumful Couple"), view: "couple", isCouple: true },
-    { label: tl("\uB9C8\uC74C\uC218\uB2EC", "Maumotter"), isOtter: true },
-    { label: tl("\uB9C8\uC74C\uBD80\uBD80", "Maumful Bubu"), isBubu: true },
-    { label: tl("\uB9C8\uC74C\uC138\uB300", "Maumful Sedae"), isSedae: true }
+    { label: tl("\uB9C8\uC74C \uAC8C\uC784", "Healing Games"), view: "gameIntro", isGame: true }
+  ];
+  const seriesItems = [
+    { emoji: "\u{1F495}", label: tl("\uB9C8\uC74C\uCEE4\uD50C", "Maumful Couple"), desc: tl("\uD30C\uD2B8\uB108\uC640 \uC2EC\uB9AC \uAD81\uD569", "Couple compatibility"), isCouple: true },
+    { emoji: "\u{1F9A6}", label: tl("\uB9C8\uC74C\uC218\uB2EC", "Maumotter"), desc: tl("\uC544\uC774\uC758 \uC18D\uB9C8\uC74C \uD1B5\uC5ED", "Child feelings"), isOtter: true },
+    { emoji: "\u{1F43E}", label: tl("\uB9C8\uC74C\uACC1", "Maumgyeot"), desc: tl("\uBC18\uB824\uB3D9\uBB3C \uB9C8\uC74C \uD1B5\uC5ED", "Pet behavior"), isGyeot: true },
+    { emoji: "\u{1F4AC}", label: tl("\uB9C8\uC74C\uBD80\uBD80", "Maumful Bubu"), desc: tl("\uBD80\uBD80 \uB300\uD654 \uD1B5\uC5ED", "Couple dialogue"), isBubu: true },
+    { emoji: "\u{1F33F}", label: tl("\uB9C8\uC74C\uC138\uB300", "Maumful Sedae"), desc: tl("\uBD80\uBAA8\xB7\uC790\uB140 \uB9C8\uC74C \uD1B5\uC5ED", "Parent-child"), isSedae: true }
   ];
   const handleNavClick = (item) => {
     setMobileOpen(false);
@@ -210,6 +214,10 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
         const token = localStorage.getItem("access_token") || "";
         window.open(`${coupleBase}${token ? "?t=" + encodeURIComponent(token) : ""}`, "_blank", "noopener noreferrer");
       });
+      return;
+    }
+    if (item.isGyeot) {
+      window.open("https://maumgyeot.com", "_blank", "noopener noreferrer");
       return;
     }
     if (item.isOtter) {
@@ -334,7 +342,82 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
       }
     },
     item.label
-  ))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, isLoggedIn ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(
+  )), /* @__PURE__ */ React.createElement("div", { style: { position: "relative" } }, /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: () => setSeriesOpen((o) => !o),
+      style: {
+        background: seriesOpen ? "#F0FAF4" : "none",
+        border: "none",
+        cursor: "pointer",
+        padding: "8px 14px",
+        borderRadius: 8,
+        fontSize: 14,
+        fontWeight: 400,
+        color: seriesOpen ? "#2D6A4F" : "#5A5A5A",
+        fontFamily: "'Noto Sans KR', sans-serif",
+        display: "flex",
+        alignItems: "center",
+        gap: 4,
+        transition: "all 0.15s"
+      },
+      onMouseEnter: (e) => {
+        e.currentTarget.style.background = "#F0FAF4";
+        e.currentTarget.style.color = "#2D6A4F";
+      },
+      onMouseLeave: (e) => {
+        if (!seriesOpen) {
+          e.currentTarget.style.background = "none";
+          e.currentTarget.style.color = "#5A5A5A";
+        }
+      }
+    },
+    tl("\uB9C8\uC74C \uC2DC\uB9AC\uC988", "Maum Series"),
+    " ",
+    /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10 } }, "\u25BE")
+  ), seriesOpen && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { onClick: () => setSeriesOpen(false), style: { position: "fixed", inset: 0, zIndex: 1e3 } }), /* @__PURE__ */ React.createElement("div", { style: {
+    position: "absolute",
+    right: 0,
+    top: "100%",
+    marginTop: 6,
+    width: 248,
+    background: "white",
+    borderRadius: 12,
+    boxShadow: "0 10px 34px rgba(0,0,0,0.14)",
+    border: "1px solid rgba(0,0,0,0.06)",
+    padding: 6,
+    zIndex: 1001
+  } }, seriesItems.map((s) => /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      key: s.label,
+      onClick: () => {
+        setSeriesOpen(false);
+        handleNavClick(s);
+      },
+      style: {
+        display: "flex",
+        alignItems: "flex-start",
+        gap: 10,
+        width: "100%",
+        textAlign: "left",
+        background: "none",
+        border: "none",
+        cursor: "pointer",
+        padding: "9px 10px",
+        borderRadius: 8,
+        fontFamily: "'Noto Sans KR', sans-serif"
+      },
+      onMouseEnter: (e) => {
+        e.currentTarget.style.background = "#F0FAF4";
+      },
+      onMouseLeave: (e) => {
+        e.currentTarget.style.background = "none";
+      }
+    },
+    /* @__PURE__ */ React.createElement("span", { style: { fontSize: 18, lineHeight: 1.2 } }, s.emoji),
+    /* @__PURE__ */ React.createElement("span", { style: { minWidth: 0 } }, /* @__PURE__ */ React.createElement("span", { style: { display: "block", fontSize: 14, fontWeight: 600, color: "#1A1A1A" } }, s.label), /* @__PURE__ */ React.createElement("span", { style: { display: "block", fontSize: 11, color: "#9CA3AF" } }, s.desc))
+  )))))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, isLoggedIn ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(
     "button",
     {
       onClick: () => setView("memberDashboard"),
@@ -482,7 +565,29 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
       }
     },
     item.label
-  )), !isLoggedIn && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 16 } }, /* @__PURE__ */ React.createElement(
+  )), /* @__PURE__ */ React.createElement("div", { style: { paddingTop: 10, marginTop: 4 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: "0.4px", marginBottom: 2 } }, tl("\uB9C8\uC74C \uC2DC\uB9AC\uC988", "MAUM SERIES")), seriesItems.map((s) => /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      key: s.label,
+      onClick: () => handleNavClick(s),
+      style: {
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        width: "100%",
+        textAlign: "left",
+        background: "none",
+        border: "none",
+        cursor: "pointer",
+        padding: "11px 0",
+        borderBottom: "1px solid rgba(0,0,0,0.05)",
+        fontFamily: "'Noto Sans KR', sans-serif"
+      }
+    },
+    /* @__PURE__ */ React.createElement("span", { style: { fontSize: 17 } }, s.emoji),
+    /* @__PURE__ */ React.createElement("span", { style: { fontSize: 15, color: "#1A1A1A" } }, s.label),
+    /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: "#9CA3AF" } }, "\xB7 ", s.desc)
+  ))), !isLoggedIn && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 16 } }, /* @__PURE__ */ React.createElement(
     "button",
     {
       onClick: () => {
