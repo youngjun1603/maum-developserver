@@ -4935,7 +4935,7 @@ ${tx.amount} credits reclaimed and \u20A9${Number(tx.pg_amount).toLocaleString("
       /* @__PURE__ */ React.createElement("div", { style: {
         background: "white",
         borderRadius: 22,
-        maxWidth: 420,
+        maxWidth: 640,
         width: "100%",
         boxShadow: "0 24px 64px rgba(0,0,0,0.22)",
         overflow: "hidden",
@@ -4990,7 +4990,7 @@ ${tx.amount} credits reclaimed and \u20A9${Number(tx.pg_amount).toLocaleString("
           }
         },
         label
-      ))), /* @__PURE__ */ React.createElement("div", { style: { padding: "20px 24px 24px", maxHeight: "65vh", overflowY: "auto" } }, activeTab === "credits" && /* @__PURE__ */ React.createElement(React.Fragment, null, isKorea ? (
+      ))), /* @__PURE__ */ React.createElement("div", { style: { padding: "20px 24px 24px", maxHeight: "72vh", overflowY: "auto" } }, activeTab === "credits" && /* @__PURE__ */ React.createElement(React.Fragment, null, isKorea ? (
         // 서비스별 섹션 구분 — 각 서비스 헤더 아래 해당 상품만 그리드로.
         SERVICE_GROUPS.map((g) => {
           const items = g.keys.map((k) => pkgByKey[k]).filter(Boolean);
@@ -5002,9 +5002,9 @@ ${tx.amount} credits reclaimed and \u20A9${Number(tx.pg_amount).toLocaleString("
             marginBottom: 9,
             paddingBottom: 6,
             borderBottom: "1px solid #EEF2F0"
-          } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 15 } }, g.emoji), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13.5, fontWeight: 800, color: "#2D6A4F" } }, g.title), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: "#9CA3AF" } }, g.sub)), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9 } }, items.map(renderPkgCard)));
+          } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 15 } }, g.emoji), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13.5, fontWeight: 800, color: "#2D6A4F" } }, g.title), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: "#9CA3AF" } }, g.sub)), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 9 } }, items.map(renderPkgCard)));
         })
-      ) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: "#374151", marginBottom: 12 } }, t("\uD328\uD0A4\uC9C0 \uC120\uD0DD", "Select a Package")), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9, marginBottom: 18 } }, pkgs.map(renderPkgCard))), selPkg && /* @__PURE__ */ React.createElement("div", { style: {
+      ) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: "#374151", marginBottom: 12 } }, t("\uD328\uD0A4\uC9C0 \uC120\uD0DD", "Select a Package")), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 9, marginBottom: 18 } }, pkgs.map(renderPkgCard))), selPkg && /* @__PURE__ */ React.createElement("div", { style: {
         background: "#F9FAFB",
         borderRadius: 12,
         padding: "12px 16px",

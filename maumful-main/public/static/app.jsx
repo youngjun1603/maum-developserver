@@ -6014,7 +6014,7 @@ function PsychologicalTestSystem() {
       <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:1000,
         display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
         onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-        <div style={{ background:'white', borderRadius:22, maxWidth:420, width:'100%',
+        <div style={{ background:'white', borderRadius:22, maxWidth:640, width:'100%',
           boxShadow:'0 24px 64px rgba(0,0,0,0.22)', overflow:'hidden', fontFamily:F,
           display:'flex', flexDirection:'column', maxHeight:'92vh' }}>
 
@@ -6053,7 +6053,7 @@ function PsychologicalTestSystem() {
             ))}
           </div>
 
-          <div style={{ padding:'20px 24px 24px', maxHeight:'65vh', overflowY:'auto' }}>
+          <div style={{ padding:'20px 24px 24px', maxHeight:'72vh', overflowY:'auto' }}>
 
             {/* ── 크레딧 충전 탭 ── */}
             {activeTab === 'credits' && (<>
@@ -6070,7 +6070,7 @@ function PsychologicalTestSystem() {
                         <span style={{ fontSize:13.5, fontWeight:800, color:'#2D6A4F' }}>{g.title}</span>
                         <span style={{ fontSize:11, color:'#9CA3AF' }}>{g.sub}</span>
                       </div>
-                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:9 }}>
+                      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(140px, 1fr))', gap:9 }}>
                         {items.map(renderPkgCard)}
                       </div>
                     </div>
@@ -6078,7 +6078,7 @@ function PsychologicalTestSystem() {
                 })
               ) : (<>
                 <div style={{ fontSize:13, fontWeight:700, color:'#374151', marginBottom:12 }}>{t('패키지 선택','Select a Package')}</div>
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:9, marginBottom:18 }}>
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(140px, 1fr))', gap:9, marginBottom:18 }}>
                   {pkgs.map(renderPkgCard)}
                 </div>
               </>)}
