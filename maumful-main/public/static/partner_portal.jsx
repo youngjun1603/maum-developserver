@@ -59,7 +59,7 @@ function Login({ onDone }) {
           className="w-full py-2.5 rounded-lg font-bold text-white text-sm" style={{ background: BRAND, opacity: busy ? 0.6 : 1 }}>
           {busy ? '확인 중…' : '로그인'}
         </button>
-        <div className="text-[11px] text-gray-400 mt-4 text-center">계정은 마음풀 운영자가 발급합니다. 문의: 담당 운영자</div>
+        <div className="text-xs text-gray-500 mt-4 text-center">계정은 마음풀 운영자가 발급합니다. 문의: 담당 운영자</div>
       </form>
     </div>
   );
@@ -114,12 +114,12 @@ function Dashboard({ partner, onLogout }) {
       <div className="max-w-3xl mx-auto px-5 py-6">
         {/* 기간 선택 */}
         <div className="flex items-center gap-2 flex-wrap mb-4">
-          <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="px-2 py-1.5 border border-gray-200 rounded text-sm" />
+          <input type="date" value={from} onChange={e => setFrom(e.target.value)} aria-label="조회 시작일" className="px-3 py-2 border border-gray-200 rounded text-sm" />
           <span className="text-gray-400">~</span>
-          <input type="date" value={to} onChange={e => setTo(e.target.value)} className="px-2 py-1.5 border border-gray-200 rounded text-sm" />
-          <button onClick={load} className="text-white px-3 py-1.5 rounded text-sm font-bold" style={{ background: BRAND }}>조회</button>
+          <input type="date" value={to} onChange={e => setTo(e.target.value)} aria-label="조회 종료일" className="px-3 py-2 border border-gray-200 rounded text-sm" />
+          <button onClick={load} className="text-white px-3 py-2 rounded text-sm font-bold" style={{ background: BRAND }}>조회</button>
           <button onClick={downloadCsv} disabled={!rows.length}
-            className={`px-3 py-1.5 rounded text-sm font-bold ${rows.length ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-400'}`}>⬇ CSV</button>
+            className={`px-3 py-2 rounded text-sm font-bold ${rows.length ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-400'}`}>⬇ CSV</button>
         </div>
 
         {err && <div className="text-xs bg-red-50 text-red-600 rounded-lg px-3 py-2 mb-3">{err}</div>}
@@ -134,7 +134,7 @@ function Dashboard({ partner, onLogout }) {
               ['정산예정', won(t.unsettled), '#C2691A'],
             ].map(([label, val, col]) => (
               <div key={label} className="bg-white rounded-xl border border-gray-100 px-4 py-3">
-                <div className="text-[11px] text-gray-400 mb-1">{label}</div>
+                <div className="text-xs text-gray-500 mb-1">{label}</div>
                 <div className="font-extrabold text-base" style={{ color: col }}>{val}</div>
               </div>
             ))}
@@ -152,7 +152,7 @@ function Dashboard({ partner, onLogout }) {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-[11px] text-gray-400 bg-gray-50">
+                  <tr className="text-xs text-gray-500 bg-gray-50">
                     <th className="text-left font-medium px-4 py-2">거래번호</th>
                     <th className="text-left font-medium px-4 py-2">일시</th>
                     <th className="text-right font-medium px-4 py-2">결제액</th>
@@ -170,7 +170,7 @@ function Dashboard({ partner, onLogout }) {
                       <td className="px-4 py-2 text-right text-gray-500">{Math.round((r.rate || 0) * 100)}%</td>
                       <td className="px-4 py-2 text-right font-bold" style={{ color: BRAND }}>{won(r.share_amount)}</td>
                       <td className="px-4 py-2 text-center">
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${r.status === 'settled' ? 'bg-green-100 text-green-700' : r.status === 'reversed' ? 'bg-gray-100 text-gray-400' : 'bg-amber-100 text-amber-700'}`}>{statusKo(r.status)}</span>
+                        <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${r.status === 'settled' ? 'bg-green-100 text-green-700' : r.status === 'reversed' ? 'bg-gray-100 text-gray-400' : 'bg-amber-100 text-amber-700'}`}>{statusKo(r.status)}</span>
                       </td>
                     </tr>
                   ))}
@@ -179,7 +179,7 @@ function Dashboard({ partner, onLogout }) {
             </div>
           )}
         </div>
-        <div className="text-[11px] text-gray-400 mt-3">· 금액은 확정된 유효구매 기준이며, 환불 발생 시 자동 반영됩니다. · 실제 지급 여부는 상태(정산완료)로 확인하세요.</div>
+        <div className="text-xs text-gray-500 mt-3">· 금액은 확정된 유효구매 기준이며, 환불 발생 시 자동 반영됩니다. · 실제 지급 여부는 상태(정산완료)로 확인하세요.</div>
       </div>
     </div>
   );

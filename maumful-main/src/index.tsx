@@ -4710,7 +4710,7 @@ app.get('/p', (c) => {
   <link rel="stylesheet" href="/static/tailwind.css?v=${v}">
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <style>body{margin:0;-webkit-font-smoothing:antialiased}</style>
+  <style>body{margin:0;-webkit-font-smoothing:antialiased;word-break:keep-all}:focus-visible{outline:2px solid #2D6A4F;outline-offset:2px}</style>
 </head>
 <body>
   <div id="root"></div>
@@ -4734,7 +4734,7 @@ app.get('/partner', (c) => {
   <link rel="stylesheet" href="/static/tailwind.css?v=${v}">
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <style>body{margin:0;-webkit-font-smoothing:antialiased}</style>
+  <style>body{margin:0;-webkit-font-smoothing:antialiased;word-break:keep-all}:focus-visible{outline:2px solid #2D6A4F;outline-offset:2px}</style>
 </head>
 <body>
   <div id="root"></div>

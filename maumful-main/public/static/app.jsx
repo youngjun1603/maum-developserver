@@ -3331,10 +3331,10 @@ function PsychologicalTestSystem() {
           ) : null
         } />
         <div className="space-y-3 mb-5">
-          <input id="login-email" type="email" placeholder={t("이메일","Email")} autoComplete="email"
+          <input id="login-email" type="email" aria-label={t("이메일","Email")} placeholder={t("이메일","Email")} autoComplete="email"
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm"
             onKeyDown={e => e.key === 'Enter' && document.getElementById('login-pw').focus()} />
-          <input id="login-pw" type="password" placeholder={t("비밀번호 (8자 이상)","Password (min. 8 chars)")} autoComplete="current-password"
+          <input id="login-pw" type="password" aria-label={t("비밀번호","Password")} placeholder={t("비밀번호 (8자 이상)","Password (min. 8 chars)")} autoComplete="current-password"
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm"
             onKeyDown={e => e.key === 'Enter' && handleLogin()} />
         </div>
@@ -3410,10 +3410,10 @@ function PsychologicalTestSystem() {
         </div>
         <Msg msg={formMsg} />
         <div className="space-y-3 mb-5">
-          <input type="email" placeholder={t("이메일","Email")} value={signupForm.email}
+          <input type="email" aria-label={t("이메일","Email")} placeholder={t("이메일","Email")} value={signupForm.email}
             onChange={e => setSignupForm(p => ({ ...p, email: e.target.value }))}
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm" />
-          <input type="text" placeholder={t("닉네임 (AI 상담에서 이름으로 불려요)","Nickname (used in AI sessions)")} value={signupForm.nickname}
+          <input type="text" aria-label={t("닉네임","Nickname")} placeholder={t("닉네임 (AI 상담에서 이름으로 불려요)","Nickname (used in AI sessions)")} value={signupForm.nickname}
             onChange={e => setSignupForm(p => ({ ...p, nickname: e.target.value }))}
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm" />
           {/* 성별 */}
@@ -3427,23 +3427,23 @@ function PsychologicalTestSystem() {
             ))}
           </div>
           {/* 연령대 */}
-          <select value={signupForm.age_range} onChange={e => setSignupForm(p => ({ ...p, age_range: e.target.value }))}
+          <select aria-label={t('연령대','Age range')} value={signupForm.age_range} onChange={e => setSignupForm(p => ({ ...p, age_range: e.target.value }))}
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm text-gray-600 bg-white">
             <option value="">{t('연령대 선택 (선택)','Age range (optional)')}</option>
             {['10대','20대','30대','40대','50대','60대이상'].map(a => <option key={a} value={a}>{a}</option>)}
           </select>
           {/* 핸드폰번호 */}
-          <input type="tel" placeholder={t("핸드폰번호 (선택) — 010-1234-5678","Phone (optional) — 010-1234-5678")}
+          <input type="tel" aria-label={t("핸드폰번호","Phone")} placeholder={t("핸드폰번호 (선택) — 010-1234-5678","Phone (optional) — 010-1234-5678")}
             value={signupForm.phone}
             onChange={e => {
               const v = e.target.value.replace(/[^\d-]/g,'');
               setSignupForm(p => ({ ...p, phone: v }));
             }}
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm" />
-          <input type="password" placeholder={t("비밀번호 (8자 이상)","Password (min. 8 chars)")} value={signupForm.password}
+          <input type="password" aria-label={t("비밀번호","Password")} placeholder={t("비밀번호 (8자 이상)","Password (min. 8 chars)")} value={signupForm.password}
             onChange={e => setSignupForm(p => ({ ...p, password: e.target.value }))}
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm" />
-          <input type="password" placeholder={t("비밀번호 확인","Confirm password")} value={signupForm.pwConfirm}
+          <input type="password" aria-label={t("비밀번호 확인","Confirm password")} placeholder={t("비밀번호 확인","Confirm password")} value={signupForm.pwConfirm}
             onChange={e => setSignupForm(p => ({ ...p, pwConfirm: e.target.value }))}
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm"
             onKeyDown={e => e.key === 'Enter' && handleSignup()} />
@@ -3820,7 +3820,8 @@ function PsychologicalTestSystem() {
 
       <h3>4. 개인정보 처리 위탁 및 국외 이전</h3>
       <p><strong>국내 위탁</strong></p>
-      <table style={{width:'100%', borderCollapse:'collapse', fontSize:'12px', marginBottom:'8px'}}>
+      <div style={{overflowX:'auto', WebkitOverflowScrolling:'touch'}}>
+      <table style={{width:'100%', borderCollapse:'collapse', fontSize:'13px', minWidth:'520px', marginBottom:'8px'}}>
         <thead>
           <tr style={{background:'#F9FAFB'}}>
             <th style={{border:'1px solid #E5E7EB', padding:'6px 8px', textAlign:'left'}}>수탁업체</th>
@@ -3838,8 +3839,10 @@ function PsychologicalTestSystem() {
           </tr>
         </tbody>
       </table>
+      </div>
       <p><strong>국외 이전 (개인정보 보호법 제28조의8)</strong></p>
-      <table style={{width:'100%', borderCollapse:'collapse', fontSize:'12px', marginBottom:'8px'}}>
+      <div style={{overflowX:'auto', WebkitOverflowScrolling:'touch'}}>
+      <table style={{width:'100%', borderCollapse:'collapse', fontSize:'13px', minWidth:'520px', marginBottom:'8px'}}>
         <thead>
           <tr style={{background:'#F9FAFB'}}>
             <th style={{border:'1px solid #E5E7EB', padding:'6px 8px', textAlign:'left'}}>업체 (국가)</th>
@@ -3869,6 +3872,7 @@ function PsychologicalTestSystem() {
           </tr>
         </tbody>
       </table>
+      </div>
       <p style={{color:'#dc2626', fontSize:'13px'}}>※ 이용자는 국외 이전에 동의하지 않을 권리가 있으나, 미동의 시 해당 서비스(AI 상담 등) 이용이 불가합니다.</p>
 
       <h3>5. 자동화된 의사결정</h3>
@@ -6163,7 +6167,7 @@ function PsychologicalTestSystem() {
                 <div style={{ fontSize:28, fontWeight:800 }}>✦ {credits}</div>
                 <div style={{ fontSize:12, opacity:0.75, marginTop:2 }}>{t("크레딧","credits")}</div>
               </div>
-              <button onClick={onClose}
+              <button onClick={onClose} aria-label={t('닫기','Close')}
                 style={{ background:'rgba(255,255,255,0.2)', border:'none', borderRadius:8,
                   width:32, height:32, cursor:'pointer', color:'white', fontSize:18, display:'flex',
                   alignItems:'center', justifyContent:'center' }}>×</button>
@@ -8843,7 +8847,7 @@ function PsychologicalTestSystem() {
               {/* 헤더 */}
               <div className="sticky top-0 bg-white border-b border-gray-100 px-5 py-4 flex items-center justify-between rounded-t-3xl sm:rounded-t-2xl">
                 <h3 className="font-bold text-gray-800 text-base">📥 외부 검사 결과</h3>
-                <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+                <button onClick={closeModal} aria-label={t('닫기','Close')} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
               </div>
               {/* 탭 */}
               <div className="flex border-b border-gray-100 px-5 pt-3">
