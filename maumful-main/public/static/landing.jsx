@@ -95,10 +95,11 @@ const COLOR_MAP = {
 // props: { setView, isLoggedIn, currentUser, credits }
 // ============================================================
 function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang, onLangToggle }) {
-  const { useState: useS, useEffect: useE } = React;
+  const { useState: useS, useEffect: useE, useRef: useR } = React;
   const [scrolled, setScrolled]   = useS(false);
   const [mobileOpen, setMobileOpen] = useS(false);
   const [seriesOpen, setSeriesOpen] = useS(false);
+  const seriesRef = useR(null);
   const tl = (ko, en) => lang === 'en' ? en : ko;
 
   useE(() => {
@@ -106,6 +107,14 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  // 시리즈 드롭다운 바깥클릭 닫기 — nav의 backdrop-filter가 fixed 오버레이를 가두므로 document 리스너로 처리(뷰포트 전역 감지)
+  useE(() => {
+    if (!seriesOpen) return;
+    const onDoc = (e) => { if (seriesRef.current && !seriesRef.current.contains(e.target)) setSeriesOpen(false); };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [seriesOpen]);
 
   // 코어 메뉴(1차). 심리검사는 '내 검사'로 — 로그인 후 대시보드 진입 의미 명확화.
   const navItems = [
@@ -272,7 +281,7 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
             </button>
           ))}
           {/* 마음 시리즈 드롭다운 */}
-          <div style={{ position: 'relative' }}>
+          <div ref={seriesRef} style={{ position: 'relative' }}>
             <button
               onClick={() => setSeriesOpen(o => !o)}
               style={{
@@ -288,7 +297,6 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
             </button>
             {seriesOpen && (
               <>
-                <div onClick={() => setSeriesOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 1000 }} />
                 <div style={{
                   position: 'absolute', right: 0, top: '100%', marginTop: 6, width: 248,
                   background: 'white', borderRadius: 12, boxShadow: '0 10px 34px rgba(0,0,0,0.14)',

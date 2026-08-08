@@ -100,7 +100,7 @@ const api = {
       const { data } = await res.json();
       tokenStore.setTokens(data.accessToken, null);
       return true;
-    } catch { tokenStore.clear(); return false; }
+    } catch { return false; }   // 네트워크 오류=일시적: 토큰 유지(재시도 가능). 서버 거부(!res.ok)일 때만 clear+세션만료 발화 — 블립 강제 로그아웃 방지
   },
 
   // ── 인증 ──────────────────────────────────────────────────
@@ -189,14 +189,13 @@ const api = {
 // 성공 시 백엔드가 deliverGrant→해당 서비스에 지급/쿠폰코드. 기존 크레딧 결제 흐름과 독립(추가형).
 async function startExternalCheckout(packageKey, opts = {}) {
   // opts.onNotify(type, text): 인라인 안내(브라우저 alert 대체). 미전달 시 콘솔로만.
-  const notify = (type, text) => { try { opts.onNotify ? opts.onNotify(type, text) : (type === 'error' && console.error(text)); } catch {} };
+  // 에러만 토스트로 안내(로딩 토스트는 자동소멸형이라 부적합·잔상 방지). 성공 시 토스 팝업이 곧 뜨는 게 피드백.
+  const notify = (type, text) => { try { if (type !== 'error' || !text) return; opts.onNotify ? opts.onNotify('error', text) : console.error(text); } catch {} };
   try {
-    notify('loading', '결제창을 준비하고 있어요…');
     const res = await api.tossCheckout(packageKey);
     if (!res.success) { notify('error', res.error || '결제 준비에 실패했어요. 잠시 후 다시 시도해 주세요.'); return; }
     const d = res.data;
     if (typeof window.TossPayments !== 'function') { notify('error', '결제 모듈 로드에 실패했어요. 새로고침(Ctrl+Shift+R) 후 다시 시도해 주세요.'); return; }
-    notify('', '');   // 결제창 열림 → 준비 안내 제거
     const tossPayments = window.TossPayments(d.clientKey);
     await tossPayments.requestPayment('카드', {
       amount: d.amount, orderId: d.orderId, orderName: d.orderName,
@@ -206,8 +205,6 @@ async function startExternalCheckout(packageKey, opts = {}) {
   } catch (err) {
     if (err?.code !== 'USER_CANCEL' && err?.code !== 'USER_CANCEL_PAYMENT') {
       notify('error', '결제 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.');
-    } else {
-      notify('', '');   // 사용자 취소 → 안내 제거
     }
   }
 }
@@ -2614,17 +2611,12 @@ function PsychologicalTestSystem() {
 
     try {
       await api.ensureToken();   // ⚠️ 만료 토큰이면 서버가 게스트로 강등→429. 전송 전 갱신.
-      // 갱신 실패로 세션이 만료됐으면(로그인 상태인데 유효 토큰 없음) 결제유도 대신 재로그인 안내
-      if (isLoggedIn) {
-        const at = tokenStore.getAccess();
-        let expired = !at;
-        if (at) { try { const p = JSON.parse(atob(at.split('.')[1])); expired = !!(p.exp && p.exp <= Math.floor(Date.now() / 1000)); } catch {} }
-        if (expired) {
-          setChatMessages(prev => prev.filter(m => m.id !== assistantId));
-          setChatStreaming(false);
-          api._fireSessionExpired();
-          return;
-        }
+      // 세션이 죽었으면(토큰이 clear됨=서버가 리프레시 거부) 결제유도 대신 재로그인. 시계 스큐·네트워크 블립 오탐 방지 위해 토큰 존재만 확인(exp 디코드 의존 제거).
+      if (isLoggedIn && !tokenStore.getAccess()) {
+        setChatMessages(prev => prev.filter(m => m.id !== assistantId));
+        setChatStreaming(false);
+        api._fireSessionExpired();
+        return;
       }
       const history = [...chatMessages.filter(m => m.content && m.content.trim() && !m.streaming), userMsg].map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content.trim() }));
       const res     = await fetch('/api/ai-chat', {
@@ -7042,17 +7034,12 @@ function PsychologicalTestSystem() {
 
     try {
       await api.ensureToken();   // ⚠️ 만료 토큰이면 서버가 게스트로 강등→429. 전송 전 갱신.
-      // 갱신 실패로 세션이 만료됐으면(로그인 상태인데 유효 토큰 없음) 결제유도 대신 재로그인 안내
-      if (isLoggedIn) {
-        const at = tokenStore.getAccess();
-        let expired = !at;
-        if (at) { try { const p = JSON.parse(atob(at.split('.')[1])); expired = !!(p.exp && p.exp <= Math.floor(Date.now() / 1000)); } catch {} }
-        if (expired) {
-          setChatMessages(prev => prev.filter(m => m.id !== assistantId));
-          setChatStreaming(false);
-          api._fireSessionExpired();
-          return;
-        }
+      // 세션이 죽었으면(토큰이 clear됨=서버가 리프레시 거부) 결제유도 대신 재로그인. 시계 스큐·네트워크 블립 오탐 방지 위해 토큰 존재만 확인(exp 디코드 의존 제거).
+      if (isLoggedIn && !tokenStore.getAccess()) {
+        setChatMessages(prev => prev.filter(m => m.id !== assistantId));
+        setChatStreaming(false);
+        api._fireSessionExpired();
+        return;
       }
       const history = [...chatMessages.filter(m => m.content && m.content.trim() && !m.streaming), userMsg].map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content.trim() }));
       const res = await fetch('/api/ai-chat', {

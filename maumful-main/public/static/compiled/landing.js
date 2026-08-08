@@ -163,16 +163,25 @@ const COLOR_MAP = {
   gold: { bar: "#D97706", bg: "#FEF3C7", text: "#92400E" }
 };
 function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang, onLangToggle }) {
-  const { useState: useS, useEffect: useE } = React;
+  const { useState: useS, useEffect: useE, useRef: useR } = React;
   const [scrolled, setScrolled] = useS(false);
   const [mobileOpen, setMobileOpen] = useS(false);
   const [seriesOpen, setSeriesOpen] = useS(false);
+  const seriesRef = useR(null);
   const tl = (ko, en) => lang === "en" ? en : ko;
   useE(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+  useE(() => {
+    if (!seriesOpen) return;
+    const onDoc = (e) => {
+      if (seriesRef.current && !seriesRef.current.contains(e.target)) setSeriesOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [seriesOpen]);
   const navItems = [
     { label: tl("\uAC80\uC0AC \uC18C\uAC1C", "Assessments"), view: "testsIntro" },
     { label: tl("\uC2EC\uB9AC\uAC80\uC0AC", "My Tests"), view: "memberDashboard", guestView: "testsIntro" },
@@ -342,7 +351,7 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
       }
     },
     item.label
-  )), /* @__PURE__ */ React.createElement("div", { style: { position: "relative" } }, /* @__PURE__ */ React.createElement(
+  )), /* @__PURE__ */ React.createElement("div", { ref: seriesRef, style: { position: "relative" } }, /* @__PURE__ */ React.createElement(
     "button",
     {
       onClick: () => setSeriesOpen((o) => !o),
@@ -375,7 +384,7 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
     tl("\uB9C8\uC74C \uC2DC\uB9AC\uC988", "Maum Series"),
     " ",
     /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10 } }, "\u25BE")
-  ), seriesOpen && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { onClick: () => setSeriesOpen(false), style: { position: "fixed", inset: 0, zIndex: 1e3 } }), /* @__PURE__ */ React.createElement("div", { style: {
+  ), seriesOpen && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: {
     position: "absolute",
     right: 0,
     top: "100%",

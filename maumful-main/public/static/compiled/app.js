@@ -118,7 +118,6 @@ const api = {
       tokenStore.setTokens(data.accessToken, null);
       return true;
     } catch {
-      tokenStore.clear();
       return false;
     }
   },
@@ -218,12 +217,12 @@ const api = {
 async function startExternalCheckout(packageKey, opts = {}) {
   const notify = (type, text) => {
     try {
-      opts.onNotify ? opts.onNotify(type, text) : type === "error" && console.error(text);
+      if (type !== "error" || !text) return;
+      opts.onNotify ? opts.onNotify("error", text) : console.error(text);
     } catch {
     }
   };
   try {
-    notify("loading", "\uACB0\uC81C\uCC3D\uC744 \uC900\uBE44\uD558\uACE0 \uC788\uC5B4\uC694\u2026");
     const res = await api.tossCheckout(packageKey);
     if (!res.success) {
       notify("error", res.error || "\uACB0\uC81C \uC900\uBE44\uC5D0 \uC2E4\uD328\uD588\uC5B4\uC694. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.");
@@ -234,7 +233,6 @@ async function startExternalCheckout(packageKey, opts = {}) {
       notify("error", "\uACB0\uC81C \uBAA8\uB4C8 \uB85C\uB4DC\uC5D0 \uC2E4\uD328\uD588\uC5B4\uC694. \uC0C8\uB85C\uACE0\uCE68(Ctrl+Shift+R) \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.");
       return;
     }
-    notify("", "");
     const tossPayments = window.TossPayments(d.clientKey);
     await tossPayments.requestPayment("\uCE74\uB4DC", {
       amount: d.amount,
@@ -248,8 +246,6 @@ async function startExternalCheckout(packageKey, opts = {}) {
   } catch (err) {
     if ((err == null ? void 0 : err.code) !== "USER_CANCEL" && (err == null ? void 0 : err.code) !== "USER_CANCEL_PAYMENT") {
       notify("error", "\uACB0\uC81C \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC5B4\uC694. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.");
-    } else {
-      notify("", "");
     }
   }
 }
@@ -2677,22 +2673,11 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
     setChatMessages((prev) => [...prev, { role: "assistant", content: "", id: assistantId, streaming: true }]);
     try {
       await api.ensureToken();
-      if (isLoggedIn) {
-        const at = tokenStore.getAccess();
-        let expired = !at;
-        if (at) {
-          try {
-            const p = JSON.parse(atob(at.split(".")[1]));
-            expired = !!(p.exp && p.exp <= Math.floor(Date.now() / 1e3));
-          } catch {
-          }
-        }
-        if (expired) {
-          setChatMessages((prev) => prev.filter((m) => m.id !== assistantId));
-          setChatStreaming(false);
-          api._fireSessionExpired();
-          return;
-        }
+      if (isLoggedIn && !tokenStore.getAccess()) {
+        setChatMessages((prev) => prev.filter((m) => m.id !== assistantId));
+        setChatStreaming(false);
+        api._fireSessionExpired();
+        return;
       }
       const history = [...chatMessages.filter((m) => m.content && m.content.trim() && !m.streaming), userMsg].map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: m.content.trim() }));
       const res = await fetch("/api/ai-chat", {
@@ -5822,22 +5807,11 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
     setChatMessages((prev) => [...prev, { role: "assistant", content: "", id: assistantId, streaming: true }]);
     try {
       await api.ensureToken();
-      if (isLoggedIn) {
-        const at = tokenStore.getAccess();
-        let expired = !at;
-        if (at) {
-          try {
-            const p = JSON.parse(atob(at.split(".")[1]));
-            expired = !!(p.exp && p.exp <= Math.floor(Date.now() / 1e3));
-          } catch {
-          }
-        }
-        if (expired) {
-          setChatMessages((prev) => prev.filter((m) => m.id !== assistantId));
-          setChatStreaming(false);
-          api._fireSessionExpired();
-          return;
-        }
+      if (isLoggedIn && !tokenStore.getAccess()) {
+        setChatMessages((prev) => prev.filter((m) => m.id !== assistantId));
+        setChatStreaming(false);
+        api._fireSessionExpired();
+        return;
       }
       const history = [...chatMessages.filter((m) => m.content && m.content.trim() && !m.streaming), userMsg].map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: m.content.trim() }));
       const res = await fetch("/api/ai-chat", {
