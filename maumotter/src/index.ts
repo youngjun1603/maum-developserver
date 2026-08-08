@@ -468,18 +468,23 @@ app.post('/api/tts', requireAuth, async (c) => {
   const { text, buddy } = await c.req.json().catch(() => ({}));
   const t = String(text || '').replace(/[*#`_~>]/g, '').trim().slice(0, 500);
   if (!t) return c.json({ error: '내용이 없어요' }, 400);
-  const voice = (buddy === 'lala' || buddy === '라라') ? 'nova' : 'shimmer'; // 또또=차분(shimmer)/라라=발랄(nova)
-  const hashBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(voice + '|' + t));
+  // 아이 친화 음성: 또또=따뜻한 이야기꾼(fable)/라라=발랄·밝은(nova). 둘 다 tts-1 폴백에서도 유효.
+  const voice = (buddy === 'lala' || buddy === '라라') ? 'nova' : 'fable';
+  // gpt-4o-mini-tts는 톤을 지시문으로 조절 가능 → 어린아이에게 상냥·친근한 수달 친구 톤
+  const instructions = '따뜻하고 다정하며 친근한 목소리로, 어린 아이에게 말하는 상냥하고 장난기 있는 수달 친구처럼 말해요. 부드럽고 안심시키는 밝은 톤으로, 너무 빠르지 않게, 무섭거나 딱딱하지 않게.';
+  const hashBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('v2|' + voice + '|' + t)); // v2: 음색/모델 변경으로 옛 캐시 무효화
   const key = 'ttscache:' + [...new Uint8Array(hashBuf)].map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 40);
   const cached = await c.env.KV.get(key, 'arrayBuffer');
   if (cached) return new Response(cached, { headers: { 'content-type': 'audio/mpeg', 'cache-control': 'public, max-age=86400' } });
+  const speak = (model: string, withInstr: boolean) => fetch(`${OPENAI_GATEWAY}/audio/speech`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${c.env.OPENAI_API_KEY}` },
+    body: JSON.stringify({ model, voice, input: t, response_format: 'mp3', speed: 1.0, ...(withInstr ? { instructions } : {}) }),
+  });
   try {
-    const res = await fetch(`${OPENAI_GATEWAY}/audio/speech`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${c.env.OPENAI_API_KEY}` },
-      body: JSON.stringify({ model: 'tts-1', voice, input: t, response_format: 'mp3', speed: 1.0 }),
-    });
-    if (!res.ok) { await logError(c.env, 'tts', 'openai ' + res.status + ' ' + (await res.text()).slice(0, 150)); return c.json({ error: '음성 생성 실패' }, 502); }
+    let res = await speak('gpt-4o-mini-tts', true);   // 톤 지시 가능 모델 우선
+    if (!res.ok) { await logError(c.env, 'tts', 'gpt-4o-mini-tts ' + res.status + ' ' + (await res.text()).slice(0, 120)); res = await speak('tts-1', false); }  // 실패 시 tts-1 폴백(무영향)
+    if (!res.ok) { await logError(c.env, 'tts', 'tts-1 ' + res.status + ' ' + (await res.text()).slice(0, 150)); return c.json({ error: '음성 생성 실패' }, 502); }
     const buf = await res.arrayBuffer();
     await c.env.KV.put(key, buf, { expirationTtl: 30 * 86400 }).catch(() => {});
     return new Response(buf, { headers: { 'content-type': 'audio/mpeg', 'cache-control': 'public, max-age=86400' } });
