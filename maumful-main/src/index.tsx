@@ -4768,8 +4768,8 @@ app.get('/', (c) => {
   <link rel="apple-touch-icon" href="/static/icon-192.png">
 
   <!-- Open Graph (SNS 공유) -->
-  <meta property="og:title" content="마음풀 — 온라인 심리검사 & AI 마음 상담">
-  <meta property="og:description" content="PHQ-9·Big5 등 10종 심리검사 무료 시작. 가입 즉시 20 크레딧 지급 · AI 상담 · 제휴 상담사 연결.">
+  <meta property="og:title" content="마음풀 — 마음을 읽어 전하는 심리검사·관계 통역">
+  <meta property="og:description" content="심리검사로 나를, 커플·부부·세대·아이의 마음은 관계 통역으로 읽어 전해요. 10종 심리검사·AI 상담 무료 시작.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="${siteUrl}/">
   <meta property="og:image" content="${siteUrl}/static/og-share.png?v=20260731">
@@ -4781,8 +4781,8 @@ app.get('/', (c) => {
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="마음풀 — 온라인 심리검사 & AI 마음 상담">
-  <meta name="twitter:description" content="PHQ-9·Big5 등 10종 심리검사. 가입 즉시 20 크레딧 무료.">
+  <meta name="twitter:title" content="마음풀 — 마음을 읽어 전하는 심리검사·관계 통역">
+  <meta name="twitter:description" content="심리검사로 나를, 커플·부부·세대·아이의 마음은 관계 통역으로. 10종 무료 시작.">
   <meta name="twitter:image" content="${siteUrl}/static/og-share.png?v=20260731">
 
   <!-- JSON-LD 구조화 데이터 -->
