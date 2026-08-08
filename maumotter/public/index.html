@@ -317,7 +317,7 @@ function ChildChat({ token, child, onEnd, onBack }) {
         recRef.current=rec; }
       manualStopRef.current=false; try{ rec.start(); }catch{} setListening(true);
     }catch{ setListening(false); } }
-  function stopListen(){ manualStopRef.current=true; try{recRef.current&&recRef.current.stop();}catch{} setListening(false); }
+  function stopListen(){ manualStopRef.current=true; try{clearTimeout(sendTimerRef.current);}catch{} bufRef.current=''; try{recRef.current&&recRef.current.stop();}catch{} setListening(false); }
 
   // 표정 카메라 — 프레임은 기기 안에서만 분석, 원본 미저장·미전송. 종료 시 요약 텍스트만 통역에 보조.
   async function startCam(){ if(camOn||camLoading) return; setCamLoading(true);
