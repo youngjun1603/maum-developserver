@@ -181,10 +181,10 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
   ];
   const seriesItems = [
     { emoji: "\u{1F495}", label: tl("\uB9C8\uC74C\uCEE4\uD50C", "Maumful Couple"), desc: tl("\uD30C\uD2B8\uB108\uC640 \uC2EC\uB9AC \uAD81\uD569", "Couple compatibility"), isCouple: true },
-    { emoji: "\u{1F9A6}", label: tl("\uB9C8\uC74C\uC218\uB2EC", "Maumotter"), desc: tl("\uC544\uC774\uC758 \uC18D\uB9C8\uC74C \uD1B5\uC5ED", "Child feelings"), isOtter: true },
-    { emoji: "\u{1F43E}", label: tl("\uB9C8\uC74C\uACC1", "Maumgyeot"), desc: tl("\uBC18\uB824\uB3D9\uBB3C \uB9C8\uC74C \uD1B5\uC5ED", "Pet behavior"), isGyeot: true },
-    { emoji: "\u{1F4AC}", label: tl("\uB9C8\uC74C\uBD80\uBD80", "Maumful Bubu"), desc: tl("\uBD80\uBD80 \uB300\uD654 \uD1B5\uC5ED", "Couple dialogue"), isBubu: true },
-    { emoji: "\u{1F33F}", label: tl("\uB9C8\uC74C\uC138\uB300", "Maumful Sedae"), desc: tl("\uBD80\uBAA8\xB7\uC790\uB140 \uB9C8\uC74C \uD1B5\uC5ED", "Parent-child"), isSedae: true }
+    { emoji: "\u{1F9A6}", label: tl("\uB9C8\uC74C\uC218\uB2EC", "Maumotter"), desc: tl("\uC544\uC774 \uC18D\uB9C8\uC74C \uC77D\uAE30", "Child feelings"), isOtter: true },
+    { emoji: "\u{1F43E}", label: tl("\uB9C8\uC74C\uACC1", "Maumgyeot"), desc: tl("\uBC18\uB824\uB3D9\uBB3C \uB9C8\uC74C \uC77D\uAE30", "Pet behavior"), isGyeot: true },
+    { emoji: "\u{1F4AC}", label: tl("\uB9C8\uC74C\uBD80\uBD80", "Maumful Bubu"), desc: tl("\uBD80\uBD80 \uB300\uD654 \uC18D\uB9C8\uC74C \uC77D\uAE30", "Couple dialogue"), isBubu: true },
+    { emoji: "\u{1F33F}", label: tl("\uB9C8\uC74C\uC138\uB300", "Maumful Sedae"), desc: tl("\uBD80\uBAA8\xB7\uC790\uB140 \uB9C8\uC74C \uC77D\uAE30", "Parent-child"), isSedae: true }
   ];
   const handleNavClick = (item) => {
     setMobileOpen(false);

@@ -4240,10 +4240,10 @@ function PsychologicalTestSystem() {
                   <div className="absolute right-0 mt-1 w-60 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-30">
                     {[
                       { emoji:'💕', label:t('마음커플','Maumful Couple'), desc:t('파트너와 심리 궁합','Couple compatibility'), on:() => openMaumCouple() },
-                      { emoji:'🦦', label:t('마음수달','Maumotter'),      desc:t('아이의 속마음 통역','Child feelings'),      on:() => openMaumOtter() },
-                      { emoji:'🐾', label:t('마음곁','Maumgyeot'),        desc:t('반려동물 마음 통역','Pet behavior'),        on:() => openMaumGyeot() },
-                      { emoji:'💬', label:t('마음부부','Maumful Bubu'),   desc:t('부부 대화 통역','Couple dialogue'),         on:() => openMaumBubu() },
-                      { emoji:'🌿', label:t('마음세대','Maumful Sedae'),  desc:t('부모·자녀 마음 통역','Parent-child'),       on:() => openMaumSedae() },
+                      { emoji:'🦦', label:t('마음수달','Maumotter'),      desc:t('아이 속마음 읽기','Child feelings'),        on:() => openMaumOtter() },
+                      { emoji:'🐾', label:t('마음곁','Maumgyeot'),        desc:t('반려동물 마음 읽기','Pet behavior'),        on:() => openMaumGyeot() },
+                      { emoji:'💬', label:t('마음부부','Maumful Bubu'),   desc:t('부부 대화 속마음 읽기','Couple dialogue'),  on:() => openMaumBubu() },
+                      { emoji:'🌿', label:t('마음세대','Maumful Sedae'),  desc:t('부모·자녀 마음 읽기','Parent-child'),       on:() => openMaumSedae() },
                     ].map(s => (
                       <button key={s.label} onClick={() => { setSeriesMenuOpen(false); s.on(); }}
                         className="w-full text-left px-3 py-2 hover:bg-emerald-50 transition flex items-start gap-2.5">
@@ -5833,7 +5833,7 @@ function PsychologicalTestSystem() {
               <p className="font-semibold text-gray-700 text-sm mb-2">{t("친구 초대 코드 입력","Enter a friend's invite code")}</p>
               <div className="flex gap-2">
                 <input
-                  type="text" placeholder={t("PSY코드 입력","Enter PSY code")}
+                  type="text" placeholder={t("초대 코드 입력 (예: PSY…)","Invite code (e.g. PSY…)")}
                   value={referralInput}
                   onChange={e => setReferralInput(e.target.value.toUpperCase())}
                   className="flex-1 px-4 py-2.5 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm font-mono"
@@ -6020,19 +6020,19 @@ function PsychologicalTestSystem() {
       { key:'allinone', credits:33, amount:3900, label:t('올인원 패키지','All-in-One'),       desc:t('검사+AI 10회+PDF','Test+AI+PDF'),        badge:t('추천','Best') },
       // ── 서비스별 프리미엄 상품(마음풀 크레딧 지급 → 각 서비스에서 사용) ──
       { key:'integrated_one', credits:40, amount:4500, label:t('통합 심층 해석 1회','Integrated Insight'), desc:t('여러 검사를 한 사람으로 종합','All tests, one deep read'), badge:t('심층','Deep') },
-      { key:'bubu_pack10',    credits:25,  amount:3300, label:t('마음부부 통역 10회팩','Maum Bubu ×10'),     desc:t('부부 대화 통역 10회 · 회당 330원','10 translations'),   badge:null },
-      { key:'bubu_pack20',    credits:50,  amount:4900, label:t('마음부부 통역 20회팩','Maum Bubu ×20'),     desc:t('20회 · 회당 245원(26%↓)','20 · save 26%'),             badge:t('인기','Popular') },
-      { key:'bubu_pack40',    credits:100, amount:8900, label:t('마음부부 통역 40회팩','Maum Bubu ×40'),     desc:t('40회 · 회당 222원(33%↓)','40 · save 33%'),             badge:t('알뜰','Value') },
-      { key:'sedae_pack10',   credits:25,  amount:3300, label:t('마음세대 통역 10회팩','Maum Sedae ×10'),    desc:t('부모-자녀 통역 10회(성인)','10 · adult'),               badge:null },
-      { key:'sedae_pack20',   credits:50,  amount:4900, label:t('마음세대 통역 20회팩','Maum Sedae ×20'),    desc:t('20회 · 회당 245원(26%↓)','20 · save 26%'),             badge:t('인기','Popular') },
-      { key:'sedae_pack40',   credits:100, amount:8900, label:t('마음세대 통역 40회팩','Maum Sedae ×40'),    desc:t('40회 · 회당 222원(33%↓)','40 · save 33%'),             badge:t('알뜰','Value') },
+      { key:'bubu_pack10',    credits:25,  amount:3300, label:t('마음부부 10회팩','Maum Bubu ×10'),     desc:t('대화 속마음 읽기 10회 · 회당 330원','10 reads · ₩330 each'), badge:null },
+      { key:'bubu_pack20',    credits:50,  amount:4900, label:t('마음부부 20회팩','Maum Bubu ×20'),     desc:t('20회 · 회당 245원 (26%↓)','20 reads · save 26%'),           badge:t('인기','Popular') },
+      { key:'bubu_pack40',    credits:100, amount:8900, label:t('마음부부 40회팩','Maum Bubu ×40'),     desc:t('40회 · 회당 222원 (33%↓)','40 reads · save 33%'),           badge:t('알뜰','Value') },
+      { key:'sedae_pack10',   credits:25,  amount:3300, label:t('마음세대 10회팩','Maum Sedae ×10'),    desc:t('부모·자녀 마음 읽기 10회 (성인)','10 reads · adult'),         badge:null },
+      { key:'sedae_pack20',   credits:50,  amount:4900, label:t('마음세대 20회팩','Maum Sedae ×20'),    desc:t('20회 · 회당 245원 (26%↓)','20 reads · save 26%'),           badge:t('인기','Popular') },
+      { key:'sedae_pack40',   credits:100, amount:8900, label:t('마음세대 40회팩','Maum Sedae ×40'),    desc:t('40회 · 회당 222원 (33%↓)','40 reads · save 33%'),           badge:t('알뜰','Value') },
       // ── 외부 서비스 상품(결제 시 각 서비스로 자동 지급 — 마음풀 크레딧 아님) ──
-      { key:'otter_light',  credits:0, amount:7900,  label:t('마음수달 라이트','Maumotter Light'),  desc:t('월 30세션 · 아이 마음 통역','30 sessions/mo'),   badge:null },
-      { key:'otter_pro',    credits:0, amount:14900, label:t('마음수달 프로','Maumotter Pro'),      desc:t('월 100세션','100 sessions/mo'),                 badge:null },
-      { key:'otter_pack10', credits:0, amount:6900,  label:t('마음수달 10회팩','Maumotter ×10'),    desc:t('10회 · 60일','10 sessions · 60d'),              badge:null },
-      { key:'gyeot_light',  credits:0, amount:7900,  label:t('마음곁 라이트','Maumgyeot Light'),    desc:t('월 30세션 · 반려동물 통역','30 sessions/mo'),   badge:null },
-      { key:'gyeot_pro',    credits:0, amount:14900, label:t('마음곁 프로','Maumgyeot Pro'),        desc:t('월 100세션','100 sessions/mo'),                 badge:null },
-      { key:'gyeot_pack10', credits:0, amount:6900,  label:t('마음곁 10회팩','Maumgyeot ×10'),      desc:t('10회 · 60일','10 sessions · 60d'),              badge:null },
+      { key:'otter_light',  credits:0, amount:7900,  label:t('마음수달 라이트','Maumotter Light'),  desc:t('매달 30회 · 아이 속마음 읽기','30 reads/mo'),   badge:null },
+      { key:'otter_pro',    credits:0, amount:14900, label:t('마음수달 프로','Maumotter Pro'),      desc:t('매달 100회','100 reads/mo'),                   badge:null },
+      { key:'otter_pack10', credits:0, amount:6900,  label:t('마음수달 10회팩','Maumotter ×10'),    desc:t('10회 · 60일 이내','10 reads · within 60d'),     badge:null },
+      { key:'gyeot_light',  credits:0, amount:7900,  label:t('마음곁 라이트','Maumgyeot Light'),    desc:t('매달 30회 · 반려동물 마음 읽기','30 reads/mo'), badge:null },
+      { key:'gyeot_pro',    credits:0, amount:14900, label:t('마음곁 프로','Maumgyeot Pro'),        desc:t('매달 100회','100 reads/mo'),                   badge:null },
+      { key:'gyeot_pack10', credits:0, amount:6900,  label:t('마음곁 10회팩','Maumgyeot ×10'),      desc:t('10회 · 60일 이내','10 reads · within 60d'),     badge:null },
     ];
     const PACKAGES_GLOBAL = [
       { key:'starter_g',  credits:50,  amount:2.99,  label:'Starter',  badge:null },
@@ -6053,10 +6053,10 @@ function PsychologicalTestSystem() {
     // 서비스별 상품 그룹(한국 상품제 전용) — 이용자가 서비스 단위로 상품을 고르게 구분.
     const SERVICE_GROUPS = [
       { id:'maumful', emoji:'🧠', title:t('마음풀','Maumful'),    sub:t('심리검사 · AI 상담 · 해석','Tests · AI · Insight'), keys:['test_one','ai_10','pdf_one','allinone','integrated_one'] },
-      { id:'bubu',    emoji:'💬', title:t('마음부부','Maum Bubu'),  sub:t('부부 대화 통역','Couple talk'),                     keys:['bubu_pack10','bubu_pack20','bubu_pack40'] },
-      { id:'sedae',   emoji:'🌿', title:t('마음세대','Maum Sedae'), sub:t('부모-자녀 통역(성인)','Parent-child'),               keys:['sedae_pack10','sedae_pack20','sedae_pack40'] },
-      { id:'otter',   emoji:'🦦', title:t('마음수달','Maumotter'),  sub:t('아이 마음 통역','Child emotions'),                   keys:['otter_light','otter_pro','otter_pack10'] },
-      { id:'gyeot',   emoji:'🐾', title:t('마음곁','Maumgyeot'),    sub:t('반려동물 통역','Pet behavior'),                      keys:['gyeot_light','gyeot_pro','gyeot_pack10'] },
+      { id:'bubu',    emoji:'💬', title:t('마음부부','Maum Bubu'),  sub:t('부부 대화 속마음 읽기','Couple dialogue'),           keys:['bubu_pack10','bubu_pack20','bubu_pack40'] },
+      { id:'sedae',   emoji:'🌿', title:t('마음세대','Maum Sedae'), sub:t('부모·자녀 마음 읽기(성인)','Parent-child'),          keys:['sedae_pack10','sedae_pack20','sedae_pack40'] },
+      { id:'otter',   emoji:'🦦', title:t('마음수달','Maumotter'),  sub:t('아이 속마음 읽기','Child emotions'),                 keys:['otter_light','otter_pro','otter_pack10'] },
+      { id:'gyeot',   emoji:'🐾', title:t('마음곁','Maumgyeot'),    sub:t('반려동물 마음 읽기','Pet behavior'),                 keys:['gyeot_light','gyeot_pro','gyeot_pack10'] },
     ];
     const pkgByKey = Object.fromEntries(pkgs.map(p => [p.key, p]));
     const renderPkgCard = (pkg) => {

@@ -3706,10 +3706,10 @@ Visit Maumful and take the same test again to compare your progress.`));
       /* @__PURE__ */ React.createElement("span", { className: "text-[10px]" }, "\u25BE")
     ), seriesMenuOpen && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 z-20", onClick: () => setSeriesMenuOpen(false) }), /* @__PURE__ */ React.createElement("div", { className: "absolute right-0 mt-1 w-60 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-30" }, [
       { emoji: "\u{1F495}", label: t("\uB9C8\uC74C\uCEE4\uD50C", "Maumful Couple"), desc: t("\uD30C\uD2B8\uB108\uC640 \uC2EC\uB9AC \uAD81\uD569", "Couple compatibility"), on: () => openMaumCouple() },
-      { emoji: "\u{1F9A6}", label: t("\uB9C8\uC74C\uC218\uB2EC", "Maumotter"), desc: t("\uC544\uC774\uC758 \uC18D\uB9C8\uC74C \uD1B5\uC5ED", "Child feelings"), on: () => openMaumOtter() },
-      { emoji: "\u{1F43E}", label: t("\uB9C8\uC74C\uACC1", "Maumgyeot"), desc: t("\uBC18\uB824\uB3D9\uBB3C \uB9C8\uC74C \uD1B5\uC5ED", "Pet behavior"), on: () => openMaumGyeot() },
-      { emoji: "\u{1F4AC}", label: t("\uB9C8\uC74C\uBD80\uBD80", "Maumful Bubu"), desc: t("\uBD80\uBD80 \uB300\uD654 \uD1B5\uC5ED", "Couple dialogue"), on: () => openMaumBubu() },
-      { emoji: "\u{1F33F}", label: t("\uB9C8\uC74C\uC138\uB300", "Maumful Sedae"), desc: t("\uBD80\uBAA8\xB7\uC790\uB140 \uB9C8\uC74C \uD1B5\uC5ED", "Parent-child"), on: () => openMaumSedae() }
+      { emoji: "\u{1F9A6}", label: t("\uB9C8\uC74C\uC218\uB2EC", "Maumotter"), desc: t("\uC544\uC774 \uC18D\uB9C8\uC74C \uC77D\uAE30", "Child feelings"), on: () => openMaumOtter() },
+      { emoji: "\u{1F43E}", label: t("\uB9C8\uC74C\uACC1", "Maumgyeot"), desc: t("\uBC18\uB824\uB3D9\uBB3C \uB9C8\uC74C \uC77D\uAE30", "Pet behavior"), on: () => openMaumGyeot() },
+      { emoji: "\u{1F4AC}", label: t("\uB9C8\uC74C\uBD80\uBD80", "Maumful Bubu"), desc: t("\uBD80\uBD80 \uB300\uD654 \uC18D\uB9C8\uC74C \uC77D\uAE30", "Couple dialogue"), on: () => openMaumBubu() },
+      { emoji: "\u{1F33F}", label: t("\uB9C8\uC74C\uC138\uB300", "Maumful Sedae"), desc: t("\uBD80\uBAA8\xB7\uC790\uB140 \uB9C8\uC74C \uC77D\uAE30", "Parent-child"), on: () => openMaumSedae() }
     ].map((s) => /* @__PURE__ */ React.createElement(
       "button",
       {
@@ -4763,7 +4763,7 @@ ${tx.amount} credits reclaimed and \u20A9${Number(tx.pg_amount).toLocaleString("
     "input",
     {
       type: "text",
-      placeholder: t("PSY\uCF54\uB4DC \uC785\uB825", "Enter PSY code"),
+      placeholder: t("\uCD08\uB300 \uCF54\uB4DC \uC785\uB825 (\uC608: PSY\u2026)", "Invite code (e.g. PSY\u2026)"),
       value: referralInput,
       onChange: (e) => setReferralInput(e.target.value.toUpperCase()),
       className: "flex-1 px-4 py-2.5 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 text-sm font-mono"
@@ -4912,19 +4912,19 @@ ${tx.amount} credits reclaimed and \u20A9${Number(tx.pg_amount).toLocaleString("
       { key: "allinone", credits: 33, amount: 3900, label: t("\uC62C\uC778\uC6D0 \uD328\uD0A4\uC9C0", "All-in-One"), desc: t("\uAC80\uC0AC+AI 10\uD68C+PDF", "Test+AI+PDF"), badge: t("\uCD94\uCC9C", "Best") },
       // ── 서비스별 프리미엄 상품(마음풀 크레딧 지급 → 각 서비스에서 사용) ──
       { key: "integrated_one", credits: 40, amount: 4500, label: t("\uD1B5\uD569 \uC2EC\uCE35 \uD574\uC11D 1\uD68C", "Integrated Insight"), desc: t("\uC5EC\uB7EC \uAC80\uC0AC\uB97C \uD55C \uC0AC\uB78C\uC73C\uB85C \uC885\uD569", "All tests, one deep read"), badge: t("\uC2EC\uCE35", "Deep") },
-      { key: "bubu_pack10", credits: 25, amount: 3300, label: t("\uB9C8\uC74C\uBD80\uBD80 \uD1B5\uC5ED 10\uD68C\uD329", "Maum Bubu \xD710"), desc: t("\uBD80\uBD80 \uB300\uD654 \uD1B5\uC5ED 10\uD68C \xB7 \uD68C\uB2F9 330\uC6D0", "10 translations"), badge: null },
-      { key: "bubu_pack20", credits: 50, amount: 4900, label: t("\uB9C8\uC74C\uBD80\uBD80 \uD1B5\uC5ED 20\uD68C\uD329", "Maum Bubu \xD720"), desc: t("20\uD68C \xB7 \uD68C\uB2F9 245\uC6D0(26%\u2193)", "20 \xB7 save 26%"), badge: t("\uC778\uAE30", "Popular") },
-      { key: "bubu_pack40", credits: 100, amount: 8900, label: t("\uB9C8\uC74C\uBD80\uBD80 \uD1B5\uC5ED 40\uD68C\uD329", "Maum Bubu \xD740"), desc: t("40\uD68C \xB7 \uD68C\uB2F9 222\uC6D0(33%\u2193)", "40 \xB7 save 33%"), badge: t("\uC54C\uB730", "Value") },
-      { key: "sedae_pack10", credits: 25, amount: 3300, label: t("\uB9C8\uC74C\uC138\uB300 \uD1B5\uC5ED 10\uD68C\uD329", "Maum Sedae \xD710"), desc: t("\uBD80\uBAA8-\uC790\uB140 \uD1B5\uC5ED 10\uD68C(\uC131\uC778)", "10 \xB7 adult"), badge: null },
-      { key: "sedae_pack20", credits: 50, amount: 4900, label: t("\uB9C8\uC74C\uC138\uB300 \uD1B5\uC5ED 20\uD68C\uD329", "Maum Sedae \xD720"), desc: t("20\uD68C \xB7 \uD68C\uB2F9 245\uC6D0(26%\u2193)", "20 \xB7 save 26%"), badge: t("\uC778\uAE30", "Popular") },
-      { key: "sedae_pack40", credits: 100, amount: 8900, label: t("\uB9C8\uC74C\uC138\uB300 \uD1B5\uC5ED 40\uD68C\uD329", "Maum Sedae \xD740"), desc: t("40\uD68C \xB7 \uD68C\uB2F9 222\uC6D0(33%\u2193)", "40 \xB7 save 33%"), badge: t("\uC54C\uB730", "Value") },
+      { key: "bubu_pack10", credits: 25, amount: 3300, label: t("\uB9C8\uC74C\uBD80\uBD80 10\uD68C\uD329", "Maum Bubu \xD710"), desc: t("\uB300\uD654 \uC18D\uB9C8\uC74C \uC77D\uAE30 10\uD68C \xB7 \uD68C\uB2F9 330\uC6D0", "10 reads \xB7 \u20A9330 each"), badge: null },
+      { key: "bubu_pack20", credits: 50, amount: 4900, label: t("\uB9C8\uC74C\uBD80\uBD80 20\uD68C\uD329", "Maum Bubu \xD720"), desc: t("20\uD68C \xB7 \uD68C\uB2F9 245\uC6D0 (26%\u2193)", "20 reads \xB7 save 26%"), badge: t("\uC778\uAE30", "Popular") },
+      { key: "bubu_pack40", credits: 100, amount: 8900, label: t("\uB9C8\uC74C\uBD80\uBD80 40\uD68C\uD329", "Maum Bubu \xD740"), desc: t("40\uD68C \xB7 \uD68C\uB2F9 222\uC6D0 (33%\u2193)", "40 reads \xB7 save 33%"), badge: t("\uC54C\uB730", "Value") },
+      { key: "sedae_pack10", credits: 25, amount: 3300, label: t("\uB9C8\uC74C\uC138\uB300 10\uD68C\uD329", "Maum Sedae \xD710"), desc: t("\uBD80\uBAA8\xB7\uC790\uB140 \uB9C8\uC74C \uC77D\uAE30 10\uD68C (\uC131\uC778)", "10 reads \xB7 adult"), badge: null },
+      { key: "sedae_pack20", credits: 50, amount: 4900, label: t("\uB9C8\uC74C\uC138\uB300 20\uD68C\uD329", "Maum Sedae \xD720"), desc: t("20\uD68C \xB7 \uD68C\uB2F9 245\uC6D0 (26%\u2193)", "20 reads \xB7 save 26%"), badge: t("\uC778\uAE30", "Popular") },
+      { key: "sedae_pack40", credits: 100, amount: 8900, label: t("\uB9C8\uC74C\uC138\uB300 40\uD68C\uD329", "Maum Sedae \xD740"), desc: t("40\uD68C \xB7 \uD68C\uB2F9 222\uC6D0 (33%\u2193)", "40 reads \xB7 save 33%"), badge: t("\uC54C\uB730", "Value") },
       // ── 외부 서비스 상품(결제 시 각 서비스로 자동 지급 — 마음풀 크레딧 아님) ──
-      { key: "otter_light", credits: 0, amount: 7900, label: t("\uB9C8\uC74C\uC218\uB2EC \uB77C\uC774\uD2B8", "Maumotter Light"), desc: t("\uC6D4 30\uC138\uC158 \xB7 \uC544\uC774 \uB9C8\uC74C \uD1B5\uC5ED", "30 sessions/mo"), badge: null },
-      { key: "otter_pro", credits: 0, amount: 14900, label: t("\uB9C8\uC74C\uC218\uB2EC \uD504\uB85C", "Maumotter Pro"), desc: t("\uC6D4 100\uC138\uC158", "100 sessions/mo"), badge: null },
-      { key: "otter_pack10", credits: 0, amount: 6900, label: t("\uB9C8\uC74C\uC218\uB2EC 10\uD68C\uD329", "Maumotter \xD710"), desc: t("10\uD68C \xB7 60\uC77C", "10 sessions \xB7 60d"), badge: null },
-      { key: "gyeot_light", credits: 0, amount: 7900, label: t("\uB9C8\uC74C\uACC1 \uB77C\uC774\uD2B8", "Maumgyeot Light"), desc: t("\uC6D4 30\uC138\uC158 \xB7 \uBC18\uB824\uB3D9\uBB3C \uD1B5\uC5ED", "30 sessions/mo"), badge: null },
-      { key: "gyeot_pro", credits: 0, amount: 14900, label: t("\uB9C8\uC74C\uACC1 \uD504\uB85C", "Maumgyeot Pro"), desc: t("\uC6D4 100\uC138\uC158", "100 sessions/mo"), badge: null },
-      { key: "gyeot_pack10", credits: 0, amount: 6900, label: t("\uB9C8\uC74C\uACC1 10\uD68C\uD329", "Maumgyeot \xD710"), desc: t("10\uD68C \xB7 60\uC77C", "10 sessions \xB7 60d"), badge: null }
+      { key: "otter_light", credits: 0, amount: 7900, label: t("\uB9C8\uC74C\uC218\uB2EC \uB77C\uC774\uD2B8", "Maumotter Light"), desc: t("\uB9E4\uB2EC 30\uD68C \xB7 \uC544\uC774 \uC18D\uB9C8\uC74C \uC77D\uAE30", "30 reads/mo"), badge: null },
+      { key: "otter_pro", credits: 0, amount: 14900, label: t("\uB9C8\uC74C\uC218\uB2EC \uD504\uB85C", "Maumotter Pro"), desc: t("\uB9E4\uB2EC 100\uD68C", "100 reads/mo"), badge: null },
+      { key: "otter_pack10", credits: 0, amount: 6900, label: t("\uB9C8\uC74C\uC218\uB2EC 10\uD68C\uD329", "Maumotter \xD710"), desc: t("10\uD68C \xB7 60\uC77C \uC774\uB0B4", "10 reads \xB7 within 60d"), badge: null },
+      { key: "gyeot_light", credits: 0, amount: 7900, label: t("\uB9C8\uC74C\uACC1 \uB77C\uC774\uD2B8", "Maumgyeot Light"), desc: t("\uB9E4\uB2EC 30\uD68C \xB7 \uBC18\uB824\uB3D9\uBB3C \uB9C8\uC74C \uC77D\uAE30", "30 reads/mo"), badge: null },
+      { key: "gyeot_pro", credits: 0, amount: 14900, label: t("\uB9C8\uC74C\uACC1 \uD504\uB85C", "Maumgyeot Pro"), desc: t("\uB9E4\uB2EC 100\uD68C", "100 reads/mo"), badge: null },
+      { key: "gyeot_pack10", credits: 0, amount: 6900, label: t("\uB9C8\uC74C\uACC1 10\uD68C\uD329", "Maumgyeot \xD710"), desc: t("10\uD68C \xB7 60\uC77C \uC774\uB0B4", "10 reads \xB7 within 60d"), badge: null }
     ];
     const PACKAGES_GLOBAL = [
       { key: "starter_g", credits: 50, amount: 2.99, label: "Starter", badge: null },
@@ -4942,10 +4942,10 @@ ${tx.amount} credits reclaimed and \u20A9${Number(tx.pg_amount).toLocaleString("
     const selPkg = pkgs.find((p) => p.key === selected);
     const SERVICE_GROUPS = [
       { id: "maumful", emoji: "\u{1F9E0}", title: t("\uB9C8\uC74C\uD480", "Maumful"), sub: t("\uC2EC\uB9AC\uAC80\uC0AC \xB7 AI \uC0C1\uB2F4 \xB7 \uD574\uC11D", "Tests \xB7 AI \xB7 Insight"), keys: ["test_one", "ai_10", "pdf_one", "allinone", "integrated_one"] },
-      { id: "bubu", emoji: "\u{1F4AC}", title: t("\uB9C8\uC74C\uBD80\uBD80", "Maum Bubu"), sub: t("\uBD80\uBD80 \uB300\uD654 \uD1B5\uC5ED", "Couple talk"), keys: ["bubu_pack10", "bubu_pack20", "bubu_pack40"] },
-      { id: "sedae", emoji: "\u{1F33F}", title: t("\uB9C8\uC74C\uC138\uB300", "Maum Sedae"), sub: t("\uBD80\uBAA8-\uC790\uB140 \uD1B5\uC5ED(\uC131\uC778)", "Parent-child"), keys: ["sedae_pack10", "sedae_pack20", "sedae_pack40"] },
-      { id: "otter", emoji: "\u{1F9A6}", title: t("\uB9C8\uC74C\uC218\uB2EC", "Maumotter"), sub: t("\uC544\uC774 \uB9C8\uC74C \uD1B5\uC5ED", "Child emotions"), keys: ["otter_light", "otter_pro", "otter_pack10"] },
-      { id: "gyeot", emoji: "\u{1F43E}", title: t("\uB9C8\uC74C\uACC1", "Maumgyeot"), sub: t("\uBC18\uB824\uB3D9\uBB3C \uD1B5\uC5ED", "Pet behavior"), keys: ["gyeot_light", "gyeot_pro", "gyeot_pack10"] }
+      { id: "bubu", emoji: "\u{1F4AC}", title: t("\uB9C8\uC74C\uBD80\uBD80", "Maum Bubu"), sub: t("\uBD80\uBD80 \uB300\uD654 \uC18D\uB9C8\uC74C \uC77D\uAE30", "Couple dialogue"), keys: ["bubu_pack10", "bubu_pack20", "bubu_pack40"] },
+      { id: "sedae", emoji: "\u{1F33F}", title: t("\uB9C8\uC74C\uC138\uB300", "Maum Sedae"), sub: t("\uBD80\uBAA8\xB7\uC790\uB140 \uB9C8\uC74C \uC77D\uAE30(\uC131\uC778)", "Parent-child"), keys: ["sedae_pack10", "sedae_pack20", "sedae_pack40"] },
+      { id: "otter", emoji: "\u{1F9A6}", title: t("\uB9C8\uC74C\uC218\uB2EC", "Maumotter"), sub: t("\uC544\uC774 \uC18D\uB9C8\uC74C \uC77D\uAE30", "Child emotions"), keys: ["otter_light", "otter_pro", "otter_pack10"] },
+      { id: "gyeot", emoji: "\u{1F43E}", title: t("\uB9C8\uC74C\uACC1", "Maumgyeot"), sub: t("\uBC18\uB824\uB3D9\uBB3C \uB9C8\uC74C \uC77D\uAE30", "Pet behavior"), keys: ["gyeot_light", "gyeot_pro", "gyeot_pack10"] }
     ];
     const pkgByKey = Object.fromEntries(pkgs.map((p) => [p.key, p]));
     const renderPkgCard = (pkg) => {

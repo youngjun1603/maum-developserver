@@ -117,10 +117,10 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
   // 마음 시리즈(2차) — 관계·정서 통역 서비스를 단일 드롭다운으로(발견성·정리). 곁 포함(강등 해소).
   const seriesItems = [
     { emoji: '💕', label: tl('마음커플', 'Maumful Couple'), desc: tl('파트너와 심리 궁합', 'Couple compatibility'), isCouple: true },
-    { emoji: '🦦', label: tl('마음수달', 'Maumotter'),      desc: tl('아이의 속마음 통역', 'Child feelings'),        isOtter: true },
-    { emoji: '🐾', label: tl('마음곁',   'Maumgyeot'),      desc: tl('반려동물 마음 통역', 'Pet behavior'),          isGyeot: true },
-    { emoji: '💬', label: tl('마음부부', 'Maumful Bubu'),   desc: tl('부부 대화 통역', 'Couple dialogue'),           isBubu: true },
-    { emoji: '🌿', label: tl('마음세대', 'Maumful Sedae'),  desc: tl('부모·자녀 마음 통역', 'Parent-child'),         isSedae: true },
+    { emoji: '🦦', label: tl('마음수달', 'Maumotter'),      desc: tl('아이 속마음 읽기', 'Child feelings'),          isOtter: true },
+    { emoji: '🐾', label: tl('마음곁',   'Maumgyeot'),      desc: tl('반려동물 마음 읽기', 'Pet behavior'),          isGyeot: true },
+    { emoji: '💬', label: tl('마음부부', 'Maumful Bubu'),   desc: tl('부부 대화 속마음 읽기', 'Couple dialogue'),     isBubu: true },
+    { emoji: '🌿', label: tl('마음세대', 'Maumful Sedae'),  desc: tl('부모·자녀 마음 읽기', 'Parent-child'),         isSedae: true },
   ];
 
   const handleNavClick = (item) => {
