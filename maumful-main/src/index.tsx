@@ -4703,7 +4703,7 @@ app.get('/p', (c) => {
   <meta name="robots" content="noindex, nofollow">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
   <meta name="theme-color" content="#2D6A4F">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/tailwind.css?v=${v}">
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <style>body{margin:0;-webkit-font-smoothing:antialiased}</style>
@@ -4727,7 +4727,7 @@ app.get('/partner', (c) => {
   <meta name="robots" content="noindex, nofollow">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
   <meta name="theme-color" content="#2D6A4F">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/tailwind.css?v=${v}">
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <style>body{margin:0;-webkit-font-smoothing:antialiased}</style>
@@ -4830,7 +4830,7 @@ app.get('/', (c) => {
 
   <link rel="stylesheet" href="/static/style.css?v=${v}">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/tailwind.css?v=${v}">
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <!-- jsPDF: PDF 내보내기 전용, async 로드로 초기 렌더 블로킹 방지 -->
