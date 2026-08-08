@@ -2988,8 +2988,13 @@ const PACKAGES: Record<string, { credits: number; amount: number; label: string;
   // ── 서비스별 프리미엄 상품(모두 마음풀 users.credits 지급 → 각 서비스가 차감) ──
   //    프리미엄 포지셔닝(2026-07-18): 저가 지양. 부부·세대는 통역이 maumful 크레딧을 쓴다(세대는 성인만).
   integrated_one: { credits: 40, amount: 4500, label: '통합 심층 해석 1회', product: true },
-  bubu_pack10:    { credits: 25, amount: 3300, label: '마음부부 통역 10회팩', product: true },
-  sedae_pack10:   { credits: 25, amount: 3300, label: '마음세대 통역팩(성인)', product: true },
+  //   3단계 회차팩(공용 크레딧 곡선 단조감소: 132→98→89 /cr). 회당 평균 2.5cr → 10/20/40회.
+  bubu_pack10:    { credits: 25,  amount: 3300, label: '마음부부 통역 10회팩(라이트)', product: true },
+  bubu_pack20:    { credits: 50,  amount: 4900, label: '마음부부 통역 20회팩(스탠다드)', product: true },
+  bubu_pack40:    { credits: 100, amount: 8900, label: '마음부부 통역 40회팩(프로)', product: true },
+  sedae_pack10:   { credits: 25,  amount: 3300, label: '마음세대 통역 10회팩(라이트·성인)', product: true },
+  sedae_pack20:   { credits: 50,  amount: 4900, label: '마음세대 통역 20회팩(스탠다드·성인)', product: true },
+  sedae_pack40:   { credits: 100, amount: 8900, label: '마음세대 통역 40회팩(프로·성인)', product: true },
   // ── 외부 서비스 상품(마음풀 판매 → 서명 grant로 수달·곁에 지급). credits=0(내부 크레딧 안 줌) ──
   otter_light:  { credits: 0, amount: 7900,  label: '마음수달 라이트(월 30세션)', product: true, service: 'otter', grantType: 'sub_light' },
   otter_pro:    { credits: 0, amount: 14900, label: '마음수달 프로(월 100세션)',  product: true, service: 'otter', grantType: 'sub_pro' },
