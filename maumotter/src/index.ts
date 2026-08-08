@@ -91,6 +91,8 @@ const PACK: Record<string, { count: number; days: number }> = { pack10: { count:
 const ym = () => { const d = new Date(); return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}`; };
 const nowIso = () => new Date().toISOString();
 const addDays = (days: number) => new Date(Date.now() + days * 86400000).toISOString();
+const MASTER_EMAILS = ['limyj007@gmail.com'];   // 오너 마스터 계정 — 무제한(쿼터·레이트리밋 면제)
+async function isMasterUid(env: Bindings, uid: number): Promise<boolean> { try { const u = await getUser(env.AUTH_DB, uid); return !!u && MASTER_EMAILS.includes(String(u.email || '').toLowerCase()); } catch { return false; } }
 
 async function getEntitlement(env: Bindings, uid: number) {
   const now = nowIso(); const m = ym();
@@ -341,10 +343,12 @@ app.post('/api/session/start', requireAuth, async (c) => {
   const { child_id, buddy } = await c.req.json().catch(() => ({}));
   const child = await c.env.DB.prepare('SELECT * FROM children WHERE id=? AND maum_user_id=?').bind(child_id, c.get('uid')).first<any>();
   if (!child) return c.json({ error: '아이를 찾을 수 없어요' }, 404);
-  // 남용 방지 + 통역(세션) 1회 쿼터 차감(무료월→구독→회차권). 한도 초과 시 402.
-  if (!(await checkRateLimit(c.env.KV, `session:${c.get('uid')}`, 12, 3600))) return c.json({ error: '잠시 후 다시 시도해주세요.' }, 429);
-  const q = await consumeQuota(c.env, c.get('uid'));
-  if (!q.ok) return c.json({ error: '이번 달 통역(세션) 횟수를 모두 사용했어요. 이용권 코드를 등록하면 더 이용할 수 있어요.', code: 'QUOTA' }, 402);
+  // 남용 방지 + 통역(세션) 1회 쿼터 차감(무료월→구독→회차권). 한도 초과 시 402. 마스터는 면제.
+  if (!(await isMasterUid(c.env, c.get('uid')))) {
+    if (!(await checkRateLimit(c.env.KV, `session:${c.get('uid')}`, 12, 3600))) return c.json({ error: '잠시 후 다시 시도해주세요.' }, 429);
+    const q = await consumeQuota(c.env, c.get('uid'));
+    if (!q.ok) return c.json({ error: '이번 달 통역(세션) 횟수를 모두 사용했어요. 이용권 코드를 등록하면 더 이용할 수 있어요.', code: 'QUOTA' }, 402);
+  }
   const B = (buddy === 'lala' || buddy === '라라') ? '라라' : '또또';   // 클라이언트는 ASCII 키('lala'/'otto') 전송
   const r = await c.env.DB.prepare('INSERT INTO sessions (child_id,maum_user_id,buddy) VALUES (?,?,?)').bind(child_id, c.get('uid'), B).run();
   const sid = r.meta.last_row_id as number;
@@ -451,7 +455,10 @@ app.get('/api/reports/:id', requireAuth, async (c) => {
 });
 
 // ── 이용권(쿼터) 조회 + 쿠폰 등록 ──
-app.get('/api/entitlement', requireAuth, async (c) => c.json({ entitlement: await getEntitlement(c.env, c.get('uid')) }));
+app.get('/api/entitlement', requireAuth, async (c) => {
+  if (await isMasterUid(c.env, c.get('uid'))) return c.json({ entitlement: { freeMonthly: 999999, monthlyAllowance: 999999, used: 0, monthlyRemaining: 999999, packRemaining: 0, totalRemaining: 999999, master: true } });
+  return c.json({ entitlement: await getEntitlement(c.env, c.get('uid')) });
+});
 
 // 이용 내역(영수증·이용권 등록 이력)
 app.get('/api/history', requireAuth, async (c) => {
