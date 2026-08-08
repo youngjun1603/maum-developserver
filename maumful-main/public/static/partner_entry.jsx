@@ -28,6 +28,7 @@ function PartnerEntry() {
   const [status, setStatus] = useState('loading'); // loading | ready | redirect
   const [cfg, setCfg] = useState(null);
   const [ssoDone, setSsoDone] = useState(false);
+  const [ssoFailed, setSsoFailed] = useState(false); // sso_token 왔으나 만료·오류로 자동로그인 실패
 
   useEffect(() => {
     (async () => {
@@ -49,7 +50,8 @@ function PartnerEntry() {
             body: JSON.stringify({ partnerCode: code, ssoToken }),
           }).then(res => res.json());
           if (r.success && r.data) { saveLogin(r.data.accessToken, r.data.refreshToken, r.data.user); setSsoDone(true); }
-        } catch {}
+          else { setSsoFailed(true); }
+        } catch { setSsoFailed(true); }
       }
 
       // 파트너 미등록 → 그냥 코어로 (배너 오작동 방지)
@@ -98,6 +100,11 @@ function PartnerEntry() {
         {ssoDone && (
           <div className="text-xs font-semibold mt-3" style={{ color: brand }}>
             ✓ 이미 {name} 계정으로 로그인됨 · 별도 가입 없이 바로 이용
+          </div>
+        )}
+        {ssoFailed && !ssoDone && (
+          <div className="text-xs mt-3 rounded-lg px-3 py-2" style={{ background: '#FEF3E2', color: '#A85B12', border: '1px solid #F4D9AE' }}>
+            자동 로그인이 만료되었어요. 아래에서 계속하거나 {name}에서 다시 눌러 접속해 주세요.
           </div>
         )}
 

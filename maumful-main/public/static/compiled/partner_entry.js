@@ -24,6 +24,7 @@ function PartnerEntry() {
   const [status, setStatus] = useState("loading");
   const [cfg, setCfg] = useState(null);
   const [ssoDone, setSsoDone] = useState(false);
+  const [ssoFailed, setSsoFailed] = useState(false);
   useEffect(() => {
     (async () => {
       if (!code) {
@@ -50,8 +51,11 @@ function PartnerEntry() {
           if (r.success && r.data) {
             saveLogin(r.data.accessToken, r.data.refreshToken, r.data.user);
             setSsoDone(true);
+          } else {
+            setSsoFailed(true);
           }
         } catch {
+          setSsoFailed(true);
         }
       }
       if (!c) {
@@ -81,7 +85,7 @@ function PartnerEntry() {
     location.href = target ? `/?go=${encodeURIComponent(target)}` : "/";
   };
   const F = "'Noto Sans KR',sans-serif";
-  return /* @__PURE__ */ React.createElement("div", { className: "min-h-screen flex flex-col", style: { background: "#F3F6F2", fontFamily: F } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 px-5 py-3", style: { background: brand + "14", borderBottom: `1px solid ${brand}22` } }, cfg.logo_url ? /* @__PURE__ */ React.createElement("img", { src: cfg.logo_url, alt: name, className: "h-6 object-contain" }) : /* @__PURE__ */ React.createElement("span", { className: "font-bold text-sm", style: { color: brand } }, name), /* @__PURE__ */ React.createElement("span", { style: { color: "#B7C0B9" } }, "\xD7"), /* @__PURE__ */ React.createElement("span", { className: "font-extrabold text-sm", style: { color: "#2D6A4F" } }, "\u{1F33F} \uB9C8\uC74C\uD480")), /* @__PURE__ */ React.createElement("div", { className: "flex-1 w-full max-w-md mx-auto px-6 py-8 flex flex-col" }, /* @__PURE__ */ React.createElement("div", { className: "text-xs font-semibold mb-2", style: { color: brand } }, name, " \uD68C\uC6D0 \uC804\uC6A9"), /* @__PURE__ */ React.createElement("h1", { className: "text-2xl font-extrabold leading-snug whitespace-pre-line", style: { color: "#1E2621" } }, headline), /* @__PURE__ */ React.createElement("p", { className: "text-sm mt-3 leading-relaxed", style: { color: "#54605A" } }, subcopy), ssoDone && /* @__PURE__ */ React.createElement("div", { className: "text-xs font-semibold mt-3", style: { color: brand } }, "\u2713 \uC774\uBBF8 ", name, " \uACC4\uC815\uC73C\uB85C \uB85C\uADF8\uC778\uB428 \xB7 \uBCC4\uB3C4 \uAC00\uC785 \uC5C6\uC774 \uBC14\uB85C \uC774\uC6A9"), benefit && /* @__PURE__ */ React.createElement(
+  return /* @__PURE__ */ React.createElement("div", { className: "min-h-screen flex flex-col", style: { background: "#F3F6F2", fontFamily: F } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 px-5 py-3", style: { background: brand + "14", borderBottom: `1px solid ${brand}22` } }, cfg.logo_url ? /* @__PURE__ */ React.createElement("img", { src: cfg.logo_url, alt: name, className: "h-6 object-contain" }) : /* @__PURE__ */ React.createElement("span", { className: "font-bold text-sm", style: { color: brand } }, name), /* @__PURE__ */ React.createElement("span", { style: { color: "#B7C0B9" } }, "\xD7"), /* @__PURE__ */ React.createElement("span", { className: "font-extrabold text-sm", style: { color: "#2D6A4F" } }, "\u{1F33F} \uB9C8\uC74C\uD480")), /* @__PURE__ */ React.createElement("div", { className: "flex-1 w-full max-w-md mx-auto px-6 py-8 flex flex-col" }, /* @__PURE__ */ React.createElement("div", { className: "text-xs font-semibold mb-2", style: { color: brand } }, name, " \uD68C\uC6D0 \uC804\uC6A9"), /* @__PURE__ */ React.createElement("h1", { className: "text-2xl font-extrabold leading-snug whitespace-pre-line", style: { color: "#1E2621" } }, headline), /* @__PURE__ */ React.createElement("p", { className: "text-sm mt-3 leading-relaxed", style: { color: "#54605A" } }, subcopy), ssoDone && /* @__PURE__ */ React.createElement("div", { className: "text-xs font-semibold mt-3", style: { color: brand } }, "\u2713 \uC774\uBBF8 ", name, " \uACC4\uC815\uC73C\uB85C \uB85C\uADF8\uC778\uB428 \xB7 \uBCC4\uB3C4 \uAC00\uC785 \uC5C6\uC774 \uBC14\uB85C \uC774\uC6A9"), ssoFailed && !ssoDone && /* @__PURE__ */ React.createElement("div", { className: "text-xs mt-3 rounded-lg px-3 py-2", style: { background: "#FEF3E2", color: "#A85B12", border: "1px solid #F4D9AE" } }, "\uC790\uB3D9 \uB85C\uADF8\uC778\uC774 \uB9CC\uB8CC\uB418\uC5C8\uC5B4\uC694. \uC544\uB798\uC5D0\uC11C \uACC4\uC18D\uD558\uAC70\uB098 ", name, "\uC5D0\uC11C \uB2E4\uC2DC \uB20C\uB7EC \uC811\uC18D\uD574 \uC8FC\uC138\uC694."), benefit && /* @__PURE__ */ React.createElement(
     "div",
     {
       className: "mt-5 rounded-xl px-4 py-3 text-sm font-bold",

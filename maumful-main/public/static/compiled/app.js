@@ -5,6 +5,10 @@ const tokenStore = {
   setTokens: (a, r) => {
     localStorage.setItem("access_token", a);
     if (r) localStorage.setItem("refresh_token", r);
+    try {
+      api._expiredFired = false;
+    } catch {
+    }
   },
   clear: () => {
     localStorage.removeItem("access_token");
@@ -59,6 +63,18 @@ const api = {
     }
     if (needsRefresh) await this.refreshToken();
   },
+  // 세션 만료 알림 훅 — App이 등록(setIsLoggedIn(false)+재로그인 안내). 리프레시 토큰까지 만료돼
+  // 세션이 실제로 죽었을 때만 1회 발화(동시 401 다발에도 중복 안내 방지). 로그인/갱신 성공 시 리셋.
+  onSessionExpired: null,
+  _expiredFired: false,
+  _fireSessionExpired() {
+    if (api._expiredFired) return;
+    api._expiredFired = true;
+    try {
+      api.onSessionExpired && api.onSessionExpired();
+    } catch {
+    }
+  },
   // 토큰 갱신
   async refreshToken() {
     const refresh = tokenStore.getRefresh();
@@ -71,6 +87,7 @@ const api = {
       });
       if (!res.ok) {
         tokenStore.clear();
+        api._fireSessionExpired();
         return false;
       }
       const { data } = await res.json();
@@ -174,18 +191,26 @@ const api = {
     return r.json();
   }
 };
-async function startExternalCheckout(packageKey) {
+async function startExternalCheckout(packageKey, opts = {}) {
+  const notify = (type, text) => {
+    try {
+      opts.onNotify ? opts.onNotify(type, text) : type === "error" && console.error(text);
+    } catch {
+    }
+  };
   try {
+    notify("loading", "\uACB0\uC81C\uCC3D\uC744 \uC900\uBE44\uD558\uACE0 \uC788\uC5B4\uC694\u2026");
     const res = await api.tossCheckout(packageKey);
     if (!res.success) {
-      alert(res.error || "\uACB0\uC81C \uC900\uBE44\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
+      notify("error", res.error || "\uACB0\uC81C \uC900\uBE44\uC5D0 \uC2E4\uD328\uD588\uC5B4\uC694. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.");
       return;
     }
     const d = res.data;
     if (typeof window.TossPayments !== "function") {
-      alert("\uACB0\uC81C SDK \uB85C\uB4DC \uC2E4\uD328. \uC0C8\uB85C\uACE0\uCE68(Ctrl+Shift+R) \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.");
+      notify("error", "\uACB0\uC81C \uBAA8\uB4C8 \uB85C\uB4DC\uC5D0 \uC2E4\uD328\uD588\uC5B4\uC694. \uC0C8\uB85C\uACE0\uCE68(Ctrl+Shift+R) \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.");
       return;
     }
+    notify("", "");
     const tossPayments = window.TossPayments(d.clientKey);
     await tossPayments.requestPayment("\uCE74\uB4DC", {
       amount: d.amount,
@@ -198,7 +223,9 @@ async function startExternalCheckout(packageKey) {
     });
   } catch (err) {
     if ((err == null ? void 0 : err.code) !== "USER_CANCEL" && (err == null ? void 0 : err.code) !== "USER_CANCEL_PAYMENT") {
-      alert("\uACB0\uC81C \uC624\uB958: " + ((err == null ? void 0 : err.message) || "\uC54C \uC218 \uC5C6\uB294 \uC624\uB958"));
+      notify("error", "\uACB0\uC81C \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC5B4\uC694. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.");
+    } else {
+      notify("", "");
     }
   }
 }
@@ -326,13 +353,20 @@ function GoogleSignInBtn({ onLogin, btnText = "signin_with" }) {
   }, []);
   return /* @__PURE__ */ React.createElement("div", { ref, className: "w-full", style: { minHeight: 44 } });
 }
-function KakaoLoginBtn({ onLogin }) {
+function KakaoLoginBtn({ onLogin, onError }) {
   const handleClick = async () => {
     if (!window.KAKAO_APP_KEY) return;
     try {
       const { url } = await fetch("/api/auth/kakao/url").then((r) => r.json());
-      if (!url) return;
+      if (!url) {
+        onError && onError("failed");
+        return;
+      }
       const popup = window.open(url, "kakao_login", "width=500,height=640,top=100,left=200");
+      if (!popup) {
+        onError && onError("popup_blocked");
+        return;
+      }
       const handler = (e) => {
         var _a, _b;
         if (e.origin !== window.location.origin) return;
@@ -342,6 +376,7 @@ function KakaoLoginBtn({ onLogin }) {
         } else if (((_b = e.data) == null ? void 0 : _b.type) === "kakao_error") {
           window.removeEventListener("message", handler);
           console.error("\uCE74\uCE74\uC624 \uB85C\uADF8\uC778 \uC624\uB958:", e.data.error);
+          onError && onError("failed");
         }
       };
       window.addEventListener("message", handler);
@@ -352,6 +387,7 @@ function KakaoLoginBtn({ onLogin }) {
         }
       }, 500);
     } catch {
+      onError && onError("failed");
     }
   };
   if (!window.KAKAO_APP_KEY) return null;
@@ -379,13 +415,20 @@ function KakaoLoginBtn({ onLogin }) {
     "\uCE74\uCE74\uC624\uB85C \uACC4\uC18D\uD558\uAE30"
   );
 }
-function NaverLoginBtn({ onLogin }) {
+function NaverLoginBtn({ onLogin, onError }) {
   const handleClick = async () => {
     if (!window.NAVER_CLIENT_ID) return;
     try {
       const { url } = await fetch("/api/auth/naver/url").then((r) => r.json());
-      if (!url) return;
+      if (!url) {
+        onError && onError("failed");
+        return;
+      }
       const popup = window.open(url, "naver_login", "width=500,height=640,top=100,left=200");
+      if (!popup) {
+        onError && onError("popup_blocked");
+        return;
+      }
       const handler = (e) => {
         var _a, _b;
         if (e.origin !== window.location.origin) return;
@@ -395,6 +438,7 @@ function NaverLoginBtn({ onLogin }) {
         } else if (((_b = e.data) == null ? void 0 : _b.type) === "naver_error") {
           window.removeEventListener("message", handler);
           console.error("\uB124\uC774\uBC84 \uB85C\uADF8\uC778 \uC624\uB958:", e.data.error);
+          onError && onError("failed");
         }
       };
       window.addEventListener("message", handler);
@@ -405,6 +449,7 @@ function NaverLoginBtn({ onLogin }) {
         }
       }, 500);
     } catch {
+      onError && onError("failed");
     }
   };
   if (!window.NAVER_CLIENT_ID) return null;
@@ -445,6 +490,7 @@ function PsychologicalTestSystem() {
   const [credits, setCredits] = useState(0);
   const [creditTxns, setCreditTxns] = useState([]);
   const [showCreditModal, setShowCreditModal] = useState(false);
+  const [grantCode, setGrantCode] = useState(null);
   const [showChargeView, setShowChargeView] = useState(false);
   const [pendingTestAfterCharge, setPendingTestAfterCharge] = useState(null);
   const [loginMsg, setLoginMsg] = useState({ type: "", text: "" });
@@ -1261,6 +1307,17 @@ function PsychologicalTestSystem() {
     };
   }, [view, notices]);
   useEffect(() => {
+    api.onSessionExpired = () => {
+      tokenStore.clear();
+      setIsLoggedIn(false);
+      setView("memberLogin");
+      setLoginMsg({ type: "error", text: t("\uC138\uC158\uC774 \uB9CC\uB8CC\uB418\uC5C8\uC5B4\uC694. \uB2E4\uC2DC \uB85C\uADF8\uC778\uD574 \uC8FC\uC138\uC694.", "Your session has expired. Please sign in again.") });
+    };
+    return () => {
+      api.onSessionExpired = null;
+    };
+  }, []);
+  useEffect(() => {
     if (!view.startsWith("partnerTest:")) return;
     const key = view.split(":")[1];
     if (key === "BIG5") setView("big5Test");
@@ -1541,6 +1598,7 @@ function PsychologicalTestSystem() {
         } catch {
         }
         if (ssoToken && !isAuthenticated) {
+          let ssoOk = false;
           try {
             const r = await fetch("/api/auth/partner-sso", {
               method: "POST",
@@ -1556,8 +1614,13 @@ function PsychologicalTestSystem() {
               setCredits(user.credits);
               setIsLoggedIn(true);
               isAuthenticated = true;
+              ssoOk = true;
             }
           } catch {
+          }
+          if (!ssoOk) {
+            setLoginMsg({ type: "error", text: t("\uC790\uB3D9 \uB85C\uADF8\uC778\uC774 \uB9CC\uB8CC\uB418\uC5C8\uC5B4\uC694. \uB2E4\uC2DC \uB85C\uADF8\uC778\uD558\uC2DC\uAC70\uB098 \uC81C\uD734\uCC98\uC5D0\uC11C \uB2E4\uC2DC \uB20C\uB7EC \uC811\uC18D\uD574 \uC8FC\uC138\uC694.", "Auto sign-in expired. Please sign in again, or re-open the link from the partner site.") });
+            setView("memberLogin");
           }
         }
       }
@@ -1654,7 +1717,7 @@ function PsychologicalTestSystem() {
             sessionStorage.setItem("phyweb_purchase_pending", "1");
           } catch {
           }
-          startExternalCheckout(pkgKey);
+          startExternalCheckout(pkgKey, { onNotify: (type, text) => setLoginMsg({ type, text }) });
         } else {
           try {
             sessionStorage.setItem("post_login_buy", pkgKey);
@@ -1685,7 +1748,7 @@ function PsychologicalTestSystem() {
                 const gr = await fetch("/api/payment/grant-code?service=phyweb", { headers: api._authHeader() }).then((r) => r.json());
                 if (gr.success && gr.data) {
                   if (gr.data.code) {
-                    window.prompt("phyweb \uC720\uB8CC \uC774\uC6A9\uAD8C \uCF54\uB4DC\uC785\uB2C8\uB2E4. \uBCF5\uC0AC \uD6C4 [phyweb \uB85C\uADF8\uC778 \u2192 \uB300\uC2DC\uBCF4\uB4DC \uAD6C\uB3C5 \uCE74\uB4DC \u2192 \uC774\uC6A9\uAD8C \uCF54\uB4DC \uB4F1\uB85D]\uC5D0 \uBD99\uC5EC\uB123\uC73C\uC138\uC694. (\uC774\uBA54\uC77C\xB7\uB9C8\uC774\uD398\uC774\uC9C0\uC5D0\uC11C\uB3C4 \uD655\uC778 \uAC00\uB2A5)", gr.data.code);
+                    setGrantCode(gr.data.code);
                     shown = true;
                     break;
                   }
@@ -1768,7 +1831,7 @@ function PsychologicalTestSystem() {
         sessionStorage.setItem("phyweb_purchase_pending", "1");
       } catch {
       }
-      startExternalCheckout(pk);
+      startExternalCheckout(pk, { onNotify: (type, text) => setLoginMsg({ type, text }) });
       return;
     }
     let charge = null;
@@ -2584,6 +2647,23 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
     setChatMessages((prev) => [...prev, { role: "assistant", content: "", id: assistantId, streaming: true }]);
     try {
       await api.ensureToken();
+      if (isLoggedIn) {
+        const at = tokenStore.getAccess();
+        let expired = !at;
+        if (at) {
+          try {
+            const p = JSON.parse(atob(at.split(".")[1]));
+            expired = !!(p.exp && p.exp <= Math.floor(Date.now() / 1e3));
+          } catch {
+          }
+        }
+        if (expired) {
+          setChatMessages((prev) => prev.filter((m) => m.id !== assistantId));
+          setChatStreaming(false);
+          api._fireSessionExpired();
+          return;
+        }
+      }
       const history = [...chatMessages.filter((m) => m.content && m.content.trim() && !m.streaming), userMsg].map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: m.content.trim() }));
       const res = await fetch("/api/ai-chat", {
         method: "POST",
@@ -2691,6 +2771,30 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
       className: "w-full bg-gray-100 text-gray-600 py-3 rounded-xl font-semibold hover:bg-gray-200 transition"
     },
     t("\uB098\uC911\uC5D0", "Later")
+  )));
+  const GrantCodeModal = () => !grantCode ? null : /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4", onClick: (e) => {
+    if (e.target === e.currentTarget) setGrantCode(null);
+  } }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl shadow-2xl p-7 w-full max-w-sm" }, /* @__PURE__ */ React.createElement("div", { className: "text-center mb-4" }, /* @__PURE__ */ React.createElement("div", { className: "text-4xl mb-2" }, "\u{1F3AB}"), /* @__PURE__ */ React.createElement("h2", { className: "text-lg font-bold text-gray-800 mb-1" }, t("phyweb \uC774\uC6A9\uAD8C \uCF54\uB4DC\uAC00 \uBC1C\uAE09\uB418\uC5C8\uC5B4\uC694", "Your phyweb pass code is ready")), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-500" }, t("\uC544\uB798 \uCF54\uB4DC\uB97C \uBCF5\uC0AC\uD574 phyweb\uC5D0\uC11C \uB4F1\uB85D\uD558\uC138\uC694. \uC774\uBA54\uC77C\xB7\uB9C8\uC774\uD398\uC774\uC9C0\uC5D0\uC11C\uB3C4 \uD655\uC778\uD560 \uC218 \uC788\uC5B4\uC694.", "Copy the code below and register it on phyweb. Also available in your email and My Page."))), /* @__PURE__ */ React.createElement("div", { className: "bg-gray-50 border-2 border-dashed border-green-300 rounded-xl p-4 mb-3 text-center" }, /* @__PURE__ */ React.createElement("div", { className: "text-lg font-bold tracking-widest text-green-800 select-all break-all" }, grantCode)), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: () => {
+        try {
+          navigator.clipboard.writeText(grantCode);
+          setLoginMsg({ type: "success", text: t("\uCF54\uB4DC\uB97C \uBCF5\uC0AC\uD588\uC5B4\uC694.", "Code copied.") });
+          setTimeout(() => setLoginMsg({ type: "", text: "" }), 2500);
+        } catch {
+        }
+      },
+      className: "w-full bg-green-700 text-white py-3 rounded-xl font-bold hover:bg-green-800 transition mb-2"
+    },
+    t("\uCF54\uB4DC \uBCF5\uC0AC", "Copy code")
+  ), /* @__PURE__ */ React.createElement("div", { className: "text-[11px] text-gray-400 text-center mb-3 leading-relaxed" }, t("\uB4F1\uB85D \uC704\uCE58: phyweb \uB85C\uADF8\uC778 \u2192 \uB300\uC2DC\uBCF4\uB4DC \uAD6C\uB3C5 \uCE74\uB4DC \u2192 \uC774\uC6A9\uAD8C \uCF54\uB4DC \uB4F1\uB85D", "Register at: phyweb \u2192 Dashboard \u2192 Subscription card \u2192 Enter pass code")), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: () => setGrantCode(null),
+      className: "w-full bg-gray-100 text-gray-600 py-2.5 rounded-xl font-semibold hover:bg-gray-200 transition"
+    },
+    t("\uB2EB\uAE30", "Close")
   )));
   const SignupVerifyModal = () => !signupVerifyEmail ? null : /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 bg-black/40 flex items-center justify-center z-[60] p-4", onClick: () => setSignupVerifyEmail(null) }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl p-7 max-w-sm w-full text-center shadow-2xl", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React.createElement("div", { className: "text-5xl mb-3" }, "\u{1F4E7}"), /* @__PURE__ */ React.createElement("h3", { className: "text-lg font-bold text-gray-800 mb-2" }, t("\uC774\uBA54\uC77C \uC778\uC99D\uC774 \uD544\uC694\uD574\uC694", "Verify your email")), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-gray-600 leading-relaxed mb-1" }, t(/* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("span", { className: "font-bold text-emerald-700 break-all" }, signupVerifyEmail), " \uB85C", /* @__PURE__ */ React.createElement("br", null), "\uC778\uC99D \uBA54\uC77C\uC744 \uBCF4\uB0C8\uC5B4\uC694."), /* @__PURE__ */ React.createElement(React.Fragment, null, "We sent a verification email to", /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("span", { className: "font-bold text-emerald-700 break-all" }, signupVerifyEmail), "."))), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-gray-700 font-semibold leading-relaxed mb-1" }, t("\uBA54\uC77C \uC18D \uB9C1\uD06C\uB97C \uB20C\uB7EC \uC778\uC99D\uC744 \uC644\uB8CC\uD574\uC57C \uAC00\uC785\uC774 \uC644\uB8CC\uB3FC\uC694.", "Click the link in the email to complete your sign-up.")), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-400 mb-5" }, t("\uBA54\uC77C\uC774 \uC548 \uBCF4\uC774\uBA74 \uC2A4\uD338\uD568\uB3C4 \uD655\uC778\uD574 \uC8FC\uC138\uC694.", "If you don't see it, please check your spam folder.")), /* @__PURE__ */ React.createElement("button", { onClick: async () => {
     setFormMsg({ type: "loading", text: t("\uC7AC\uBC1C\uC1A1 \uC911...", "Resending...") });
@@ -3104,7 +3208,7 @@ Visit Maumful and take the same test again to compare your progress.`));
       className: "w-full bg-green-700 text-white py-3 rounded-xl font-bold hover:bg-green-800 transition mb-4 text-base"
     },
     t("\uB85C\uADF8\uC778", "Sign In")
-  ), (window.KAKAO_APP_KEY || window.GOOGLE_CLIENT_ID || window.NAVER_CLIENT_ID) && /* @__PURE__ */ React.createElement("div", { className: "space-y-2 mb-4" }, window.KAKAO_APP_KEY && /* @__PURE__ */ React.createElement(KakaoLoginBtn, { onLogin: handleKakaoLogin }), window.NAVER_CLIENT_ID && /* @__PURE__ */ React.createElement(NaverLoginBtn, { onLogin: handleNaverLogin }), window.GOOGLE_CLIENT_ID && /* @__PURE__ */ React.createElement(GoogleSignInBtn, { onLogin: handleGoogleLogin, btnText: "signin_with" })), /* @__PURE__ */ React.createElement("div", { className: "relative mb-4" }, /* @__PURE__ */ React.createElement("div", { className: "absolute inset-0 flex items-center" }, /* @__PURE__ */ React.createElement("div", { className: "w-full border-t border-gray-200" })), /* @__PURE__ */ React.createElement("div", { className: "relative flex justify-center" }, /* @__PURE__ */ React.createElement("span", { className: "px-3 bg-white text-gray-400 text-xs" }, t("\uB610\uB294", "or")))), /* @__PURE__ */ React.createElement(
+  ), (window.KAKAO_APP_KEY || window.GOOGLE_CLIENT_ID || window.NAVER_CLIENT_ID) && /* @__PURE__ */ React.createElement("div", { className: "space-y-2 mb-4" }, window.KAKAO_APP_KEY && /* @__PURE__ */ React.createElement(KakaoLoginBtn, { onLogin: handleKakaoLogin, onError: (code) => setLoginMsg({ type: "error", text: code === "popup_blocked" ? t("\uD31D\uC5C5\uC774 \uCC28\uB2E8\uB418\uC5C8\uC5B4\uC694. \uBE0C\uB77C\uC6B0\uC800\uC5D0\uC11C \uD31D\uC5C5\uC744 \uD5C8\uC6A9\uD55C \uB4A4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.", "Popup was blocked. Please allow popups and try again.") : t("\uC18C\uC15C \uB85C\uADF8\uC778\uC5D0 \uC2E4\uD328\uD588\uC5B4\uC694. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.", "Social sign-in failed. Please try again.") }) }), window.NAVER_CLIENT_ID && /* @__PURE__ */ React.createElement(NaverLoginBtn, { onLogin: handleNaverLogin, onError: (code) => setLoginMsg({ type: "error", text: code === "popup_blocked" ? t("\uD31D\uC5C5\uC774 \uCC28\uB2E8\uB418\uC5C8\uC5B4\uC694. \uBE0C\uB77C\uC6B0\uC800\uC5D0\uC11C \uD31D\uC5C5\uC744 \uD5C8\uC6A9\uD55C \uB4A4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.", "Popup was blocked. Please allow popups and try again.") : t("\uC18C\uC15C \uB85C\uADF8\uC778\uC5D0 \uC2E4\uD328\uD588\uC5B4\uC694. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.", "Social sign-in failed. Please try again.") }) }), window.GOOGLE_CLIENT_ID && /* @__PURE__ */ React.createElement(GoogleSignInBtn, { onLogin: handleGoogleLogin, btnText: "signin_with" })), /* @__PURE__ */ React.createElement("div", { className: "relative mb-4" }, /* @__PURE__ */ React.createElement("div", { className: "absolute inset-0 flex items-center" }, /* @__PURE__ */ React.createElement("div", { className: "w-full border-t border-gray-200" })), /* @__PURE__ */ React.createElement("div", { className: "relative flex justify-center" }, /* @__PURE__ */ React.createElement("span", { className: "px-3 bg-white text-gray-400 text-xs" }, t("\uB610\uB294", "or")))), /* @__PURE__ */ React.createElement(
     "button",
     {
       onClick: () => setView("memberSignup"),
@@ -3293,7 +3397,7 @@ Visit Maumful and take the same test again to compare your progress.`));
       className: "w-full bg-green-700 text-white py-3 rounded-xl font-bold hover:bg-green-800 transition mb-4"
     },
     t("\uAC00\uC785\uD558\uAE30", "Sign Up")
-  ), (window.KAKAO_APP_KEY || window.GOOGLE_CLIENT_ID || window.NAVER_CLIENT_ID) && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "relative mb-4" }, /* @__PURE__ */ React.createElement("div", { className: "absolute inset-0 flex items-center" }, /* @__PURE__ */ React.createElement("div", { className: "w-full border-t border-gray-200" })), /* @__PURE__ */ React.createElement("div", { className: "relative flex justify-center" }, /* @__PURE__ */ React.createElement("span", { className: "px-3 bg-white text-gray-400 text-xs" }, t("\uB610\uB294 \uC18C\uC15C \uACC4\uC815\uC73C\uB85C \uC2DC\uC791", "or continue with social")))), /* @__PURE__ */ React.createElement("div", { className: "space-y-2" }, window.KAKAO_APP_KEY && /* @__PURE__ */ React.createElement(KakaoLoginBtn, { onLogin: handleKakaoLogin }), window.NAVER_CLIENT_ID && /* @__PURE__ */ React.createElement(NaverLoginBtn, { onLogin: handleNaverLogin }), window.GOOGLE_CLIENT_ID && /* @__PURE__ */ React.createElement(GoogleSignInBtn, { onLogin: handleGoogleLogin, btnText: "signup_with" })))));
+  ), (window.KAKAO_APP_KEY || window.GOOGLE_CLIENT_ID || window.NAVER_CLIENT_ID) && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "relative mb-4" }, /* @__PURE__ */ React.createElement("div", { className: "absolute inset-0 flex items-center" }, /* @__PURE__ */ React.createElement("div", { className: "w-full border-t border-gray-200" })), /* @__PURE__ */ React.createElement("div", { className: "relative flex justify-center" }, /* @__PURE__ */ React.createElement("span", { className: "px-3 bg-white text-gray-400 text-xs" }, t("\uB610\uB294 \uC18C\uC15C \uACC4\uC815\uC73C\uB85C \uC2DC\uC791", "or continue with social")))), /* @__PURE__ */ React.createElement("div", { className: "space-y-2" }, window.KAKAO_APP_KEY && /* @__PURE__ */ React.createElement(KakaoLoginBtn, { onLogin: handleKakaoLogin, onError: (code) => setFormMsg({ type: "error", text: code === "popup_blocked" ? t("\uD31D\uC5C5\uC774 \uCC28\uB2E8\uB418\uC5C8\uC5B4\uC694. \uBE0C\uB77C\uC6B0\uC800\uC5D0\uC11C \uD31D\uC5C5\uC744 \uD5C8\uC6A9\uD55C \uB4A4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.", "Popup was blocked. Please allow popups and try again.") : t("\uC18C\uC15C \uB85C\uADF8\uC778\uC5D0 \uC2E4\uD328\uD588\uC5B4\uC694. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.", "Social sign-in failed. Please try again.") }) }), window.NAVER_CLIENT_ID && /* @__PURE__ */ React.createElement(NaverLoginBtn, { onLogin: handleNaverLogin, onError: (code) => setFormMsg({ type: "error", text: code === "popup_blocked" ? t("\uD31D\uC5C5\uC774 \uCC28\uB2E8\uB418\uC5C8\uC5B4\uC694. \uBE0C\uB77C\uC6B0\uC800\uC5D0\uC11C \uD31D\uC5C5\uC744 \uD5C8\uC6A9\uD55C \uB4A4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.", "Popup was blocked. Please allow popups and try again.") : t("\uC18C\uC15C \uB85C\uADF8\uC778\uC5D0 \uC2E4\uD328\uD588\uC5B4\uC694. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.", "Social sign-in failed. Please try again.") }) }), window.GOOGLE_CLIENT_ID && /* @__PURE__ */ React.createElement(GoogleSignInBtn, { onLogin: handleGoogleLogin, btnText: "signup_with" })))));
   if (isLoggedIn && view === "memberOnboarding") return /* @__PURE__ */ React.createElement("div", { className: "min-h-screen bg-gradient-to-br from-slate-50 to-green-100 flex items-center justify-center p-4" }, /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md" }, /* @__PURE__ */ React.createElement("div", { className: "text-center mb-7" }, /* @__PURE__ */ React.createElement("div", { className: "text-5xl mb-3" }, "\u{1F33F}"), /* @__PURE__ */ React.createElement("h2", { className: "text-2xl font-bold text-gray-800" }, t(`\uD658\uC601\uD569\uB2C8\uB2E4, ${(currentUser == null ? void 0 : currentUser.nickname) || "\uD68C\uC6D0"}\uB2D8!`, `Welcome, ${(currentUser == null ? void 0 : currentUser.nickname) || "member"}!`)), /* @__PURE__ */ React.createElement("p", { className: "text-sm text-gray-400 mt-2" }, t(/* @__PURE__ */ React.createElement(React.Fragment, null, "\uB9C8\uC74C\uD480\uC744 \uC2DC\uC791\uD558\uAE30 \uC804\uC5D0", /* @__PURE__ */ React.createElement("br", null), "AI \uC0C1\uB2F4 \uD574\uC11D \uBC29\uC2DD\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694"), /* @__PURE__ */ React.createElement(React.Fragment, null, "Before you start", /* @__PURE__ */ React.createElement("br", null), "choose how AI interprets your results")))), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-400 text-center mb-3" }, t("\uAC80\uC0AC \uACB0\uACFC\uB97C \uC5B4\uB5A4 \uAD00\uC810\uC73C\uB85C \uD574\uC11D\uD560\uAE4C\uC694?", "How should we interpret your results?")), /* @__PURE__ */ React.createElement("div", { className: "grid gap-3 mb-6" }, [
     {
       mode: "psychological",
@@ -3856,7 +3960,7 @@ Visit Maumful and take the same test again to compare your progress.`));
         "\u{1F504} ",
         t(`${daysSince}\uC77C \uD6C4 \uC7AC\uAC80\uC0AC\uB85C \uBCC0\uD654 \uD655\uC778\uD558\uAE30`, `Retest after ${daysSince} days to track your progress`)
       ));
-    }))), /* @__PURE__ */ React.createElement("div", { className: "mt-8 pt-5 border-t border-gray-100 text-center" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setView("notices"), className: "text-xs text-gray-400 hover:text-green-700 transition" }, "\u{1F4E2} ", t("\uACF5\uC9C0\uC0AC\uD56D", "Notices")))), /* @__PURE__ */ React.createElement(CreditModal, null), /* @__PURE__ */ React.createElement(AiLimitModal, null), /* @__PURE__ */ React.createElement(SignupVerifyModal, null), /* @__PURE__ */ React.createElement(CookieBanner, null), showChargeView && /* @__PURE__ */ React.createElement(ChargeView, { onClose: async () => {
+    }))), /* @__PURE__ */ React.createElement("div", { className: "mt-8 pt-5 border-t border-gray-100 text-center" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setView("notices"), className: "text-xs text-gray-400 hover:text-green-700 transition" }, "\u{1F4E2} ", t("\uACF5\uC9C0\uC0AC\uD56D", "Notices")))), /* @__PURE__ */ React.createElement(GrantCodeModal, null), /* @__PURE__ */ React.createElement(CreditModal, null), /* @__PURE__ */ React.createElement(AiLimitModal, null), /* @__PURE__ */ React.createElement(SignupVerifyModal, null), /* @__PURE__ */ React.createElement(CookieBanner, null), showChargeView && /* @__PURE__ */ React.createElement(ChargeView, { onClose: async () => {
       setShowChargeView(false);
       await refreshCredits();
       if (pendingTestAfterCharge) {
@@ -5664,6 +5768,23 @@ Axes: ${axisText}` : `LOST \uD589\uB3D9\uC720\uD615: ${r.typeCode} (${(_c2 = r.t
     setChatMessages((prev) => [...prev, { role: "assistant", content: "", id: assistantId, streaming: true }]);
     try {
       await api.ensureToken();
+      if (isLoggedIn) {
+        const at = tokenStore.getAccess();
+        let expired = !at;
+        if (at) {
+          try {
+            const p = JSON.parse(atob(at.split(".")[1]));
+            expired = !!(p.exp && p.exp <= Math.floor(Date.now() / 1e3));
+          } catch {
+          }
+        }
+        if (expired) {
+          setChatMessages((prev) => prev.filter((m) => m.id !== assistantId));
+          setChatStreaming(false);
+          api._fireSessionExpired();
+          return;
+        }
+      }
       const history = [...chatMessages.filter((m) => m.content && m.content.trim() && !m.streaming), userMsg].map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: m.content.trim() }));
       const res = await fetch("/api/ai-chat", {
         method: "POST",

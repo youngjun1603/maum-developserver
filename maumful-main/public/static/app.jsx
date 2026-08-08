@@ -6,7 +6,7 @@ const { useState, useEffect, useRef, useCallback } = React;
 const tokenStore = {
   getAccess:   ()  => localStorage.getItem('access_token'),
   getRefresh:  ()  => localStorage.getItem('refresh_token'),
-  setTokens:   (a, r) => { localStorage.setItem('access_token', a); if (r) localStorage.setItem('refresh_token', r); },
+  setTokens:   (a, r) => { localStorage.setItem('access_token', a); if (r) localStorage.setItem('refresh_token', r); try { api._expiredFired = false; } catch {} },
   clear:       ()  => { localStorage.removeItem('access_token'); localStorage.removeItem('refresh_token'); localStorage.removeItem('current_user'); },
   getUser:     ()  => { try { return JSON.parse(localStorage.getItem('current_user') || 'null'); } catch { return null; } },
   setUser:     (u) => localStorage.setItem('current_user', JSON.stringify(u)),
@@ -59,6 +59,16 @@ const api = {
     if (needsRefresh) await this.refreshToken();
   },
 
+  // 세션 만료 알림 훅 — App이 등록(setIsLoggedIn(false)+재로그인 안내). 리프레시 토큰까지 만료돼
+  // 세션이 실제로 죽었을 때만 1회 발화(동시 401 다발에도 중복 안내 방지). 로그인/갱신 성공 시 리셋.
+  onSessionExpired: null,
+  _expiredFired: false,
+  _fireSessionExpired() {
+    if (api._expiredFired) return;
+    api._expiredFired = true;
+    try { api.onSessionExpired && api.onSessionExpired(); } catch {}
+  },
+
   // 토큰 갱신
   async refreshToken() {
     const refresh = tokenStore.getRefresh();
@@ -69,7 +79,7 @@ const api = {
         headers: { 'Content-Type': 'application/json', ...api._authHeader() },
         body: JSON.stringify({ refreshToken: refresh }),
       });
-      if (!res.ok) { tokenStore.clear(); return false; }
+      if (!res.ok) { tokenStore.clear(); api._fireSessionExpired(); return false; }
       const { data } = await res.json();
       tokenStore.setTokens(data.accessToken, null);
       return true;
@@ -160,12 +170,16 @@ const api = {
 
 // 외부 서비스(phyweb 등) 상품 결제 개시 — 마음풀 토스 결제창 재사용(기존 handlePay와 동일 규격).
 // 성공 시 백엔드가 deliverGrant→해당 서비스에 지급/쿠폰코드. 기존 크레딧 결제 흐름과 독립(추가형).
-async function startExternalCheckout(packageKey) {
+async function startExternalCheckout(packageKey, opts = {}) {
+  // opts.onNotify(type, text): 인라인 안내(브라우저 alert 대체). 미전달 시 콘솔로만.
+  const notify = (type, text) => { try { opts.onNotify ? opts.onNotify(type, text) : (type === 'error' && console.error(text)); } catch {} };
   try {
+    notify('loading', '결제창을 준비하고 있어요…');
     const res = await api.tossCheckout(packageKey);
-    if (!res.success) { alert(res.error || '결제 준비에 실패했습니다.'); return; }
+    if (!res.success) { notify('error', res.error || '결제 준비에 실패했어요. 잠시 후 다시 시도해 주세요.'); return; }
     const d = res.data;
-    if (typeof window.TossPayments !== 'function') { alert('결제 SDK 로드 실패. 새로고침(Ctrl+Shift+R) 후 다시 시도해주세요.'); return; }
+    if (typeof window.TossPayments !== 'function') { notify('error', '결제 모듈 로드에 실패했어요. 새로고침(Ctrl+Shift+R) 후 다시 시도해 주세요.'); return; }
+    notify('', '');   // 결제창 열림 → 준비 안내 제거
     const tossPayments = window.TossPayments(d.clientKey);
     await tossPayments.requestPayment('카드', {
       amount: d.amount, orderId: d.orderId, orderName: d.orderName,
@@ -174,7 +188,9 @@ async function startExternalCheckout(packageKey) {
     });
   } catch (err) {
     if (err?.code !== 'USER_CANCEL' && err?.code !== 'USER_CANCEL_PAYMENT') {
-      alert('결제 오류: ' + (err?.message || '알 수 없는 오류'));
+      notify('error', '결제 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.');
+    } else {
+      notify('', '');   // 사용자 취소 → 안내 제거
     }
   }
 }
@@ -249,13 +265,14 @@ function GoogleSignInBtn({ onLogin, btnText = 'signin_with' }) {
 }
 
 // 카카오 로그인 버튼 (App 외부에 정의해야 Hook 규칙 준수)
-function KakaoLoginBtn({ onLogin }) {
+function KakaoLoginBtn({ onLogin, onError }) {
   const handleClick = async () => {
     if (!window.KAKAO_APP_KEY) return;
     try {
       const { url } = await fetch('/api/auth/kakao/url').then(r => r.json());
-      if (!url) return;
+      if (!url) { onError && onError('failed'); return; }
       const popup = window.open(url, 'kakao_login', 'width=500,height=640,top=100,left=200');
+      if (!popup) { onError && onError('popup_blocked'); return; }   // 팝업 차단됨
       const handler = (e) => {
         if (e.origin !== window.location.origin) return;
         if (e.data?.type === 'kakao_login') {
@@ -264,11 +281,12 @@ function KakaoLoginBtn({ onLogin }) {
         } else if (e.data?.type === 'kakao_error') {
           window.removeEventListener('message', handler);
           console.error('카카오 로그인 오류:', e.data.error);
+          onError && onError('failed');
         }
       };
       window.addEventListener('message', handler);
       const timer = setInterval(() => { if (popup?.closed) { clearInterval(timer); window.removeEventListener('message', handler); } }, 500);
-    } catch {}
+    } catch { onError && onError('failed'); }
   };
   if (!window.KAKAO_APP_KEY) return null;
   return (
@@ -285,13 +303,14 @@ function KakaoLoginBtn({ onLogin }) {
 }
 
 // 네이버 로그인 버튼 (App 외부에 정의 — Hook 규칙 준수)
-function NaverLoginBtn({ onLogin }) {
+function NaverLoginBtn({ onLogin, onError }) {
   const handleClick = async () => {
     if (!window.NAVER_CLIENT_ID) return;
     try {
       const { url } = await fetch('/api/auth/naver/url').then(r => r.json());
-      if (!url) return;
+      if (!url) { onError && onError('failed'); return; }
       const popup = window.open(url, 'naver_login', 'width=500,height=640,top=100,left=200');
+      if (!popup) { onError && onError('popup_blocked'); return; }   // 팝업 차단됨
       const handler = (e) => {
         if (e.origin !== window.location.origin) return;
         if (e.data?.type === 'naver_login') {
@@ -300,11 +319,12 @@ function NaverLoginBtn({ onLogin }) {
         } else if (e.data?.type === 'naver_error') {
           window.removeEventListener('message', handler);
           console.error('네이버 로그인 오류:', e.data.error);
+          onError && onError('failed');
         }
       };
       window.addEventListener('message', handler);
       const timer = setInterval(() => { if (popup?.closed) { clearInterval(timer); window.removeEventListener('message', handler); } }, 500);
-    } catch {}
+    } catch { onError && onError('failed'); }
   };
   if (!window.NAVER_CLIENT_ID) return null;
   return (
@@ -341,6 +361,7 @@ function PsychologicalTestSystem() {
   const [credits, setCredits]             = useState(0);
   const [creditTxns, setCreditTxns]       = useState([]);
   const [showCreditModal, setShowCreditModal] = useState(false);   // 크레딧 부족 모달
+  const [grantCode, setGrantCode] = useState(null);                // 외부(phyweb) 이용권 코드 발급 표시
   const [showChargeView, setShowChargeView]   = useState(false);   // 충전 화면
   const [pendingTestAfterCharge, setPendingTestAfterCharge] = useState(null); // 충전 후 자동 재시작할 검사
 
@@ -1227,6 +1248,17 @@ function PsychologicalTestSystem() {
     return () => { alive = false; };
   }, [view, notices]);
 
+  // 세션 만료(리프레시 토큰까지 만료) 시 재로그인 유도 — 결제유도 등 엉뚱한 안내 방지. api._fireSessionExpired가 호출.
+  useEffect(() => {
+    api.onSessionExpired = () => {
+      tokenStore.clear();
+      setIsLoggedIn(false);
+      setView('memberLogin');
+      setLoginMsg({ type: 'error', text: t('세션이 만료되었어요. 다시 로그인해 주세요.','Your session has expired. Please sign in again.') });
+    };
+    return () => { api.onSessionExpired = null; };
+  }, []);
+
   useEffect(() => {
     if (!view.startsWith('partnerTest:')) return;
     const key = view.split(':')[1];
@@ -1520,6 +1552,7 @@ function PsychologicalTestSystem() {
 
         if (ssoToken && !isAuthenticated) {
           // 파트너 SSO 자동 로그인
+          let ssoOk = false;
           try {
             const r = await fetch('/api/auth/partner-sso', {
               method: 'POST',
@@ -1535,8 +1568,14 @@ function PsychologicalTestSystem() {
               setCredits(user.credits);
               setIsLoggedIn(true);
               isAuthenticated = true;
+              ssoOk = true;
             }
-          } catch { /* SSO 실패 시 일반 랜딩으로 진행 */ }
+          } catch { /* 아래에서 안내 */ }
+          // 제휴처가 sso_token을 보냈으나 만료·서명오류로 자동 로그인 실패 → 무음 대신 안내 + 로그인 유도
+          if (!ssoOk) {
+            setLoginMsg({ type: 'error', text: t('자동 로그인이 만료되었어요. 다시 로그인하시거나 제휴처에서 다시 눌러 접속해 주세요.','Auto sign-in expired. Please sign in again, or re-open the link from the partner site.') });
+            setView('memberLogin');
+          }
         }
       }
 
@@ -1634,7 +1673,7 @@ function PsychologicalTestSystem() {
         const pkgKey = 'phyweb_' + buyParam.slice('phyweb:'.length).toLowerCase();
         if (isAuthenticated) {
           try { sessionStorage.setItem('phyweb_purchase_pending', '1'); } catch {}
-          startExternalCheckout(pkgKey);
+          startExternalCheckout(pkgKey, { onNotify: (type, text) => setLoginMsg({ type, text }) });
         } else {
           try { sessionStorage.setItem('post_login_buy', pkgKey); } catch {}
           setView('memberLogin');
@@ -1660,7 +1699,7 @@ function PsychologicalTestSystem() {
               try {
                 const gr = await fetch('/api/payment/grant-code?service=phyweb', { headers: api._authHeader() }).then(r => r.json());
                 if (gr.success && gr.data) {
-                  if (gr.data.code) { window.prompt('phyweb 유료 이용권 코드입니다. 복사 후 [phyweb 로그인 → 대시보드 구독 카드 → 이용권 코드 등록]에 붙여넣으세요. (이메일·마이페이지에서도 확인 가능)', gr.data.code); shown = true; break; }
+                  if (gr.data.code) { setGrantCode(gr.data.code); shown = true; break; }
                   if (gr.data.status === 'delivered') { setLoginMsg({ type: 'success', text: '✦ phyweb 유료 결제가 완료되어 자동 적용되었습니다.' }); shown = true; break; }
                 }
               } catch { /* 재시도 */ }
@@ -1733,7 +1772,7 @@ function PsychologicalTestSystem() {
     try { pk = sessionStorage.getItem('post_login_buy'); } catch {}
     if (pk) {
       try { sessionStorage.removeItem('post_login_buy'); sessionStorage.setItem('phyweb_purchase_pending', '1'); } catch {}
-      startExternalCheckout(pk);
+      startExternalCheckout(pk, { onNotify: (type, text) => setLoginMsg({ type, text }) });
       return;
     }
     let charge = null;
@@ -2550,6 +2589,18 @@ function PsychologicalTestSystem() {
 
     try {
       await api.ensureToken();   // ⚠️ 만료 토큰이면 서버가 게스트로 강등→429. 전송 전 갱신.
+      // 갱신 실패로 세션이 만료됐으면(로그인 상태인데 유효 토큰 없음) 결제유도 대신 재로그인 안내
+      if (isLoggedIn) {
+        const at = tokenStore.getAccess();
+        let expired = !at;
+        if (at) { try { const p = JSON.parse(atob(at.split('.')[1])); expired = !!(p.exp && p.exp <= Math.floor(Date.now() / 1000)); } catch {} }
+        if (expired) {
+          setChatMessages(prev => prev.filter(m => m.id !== assistantId));
+          setChatStreaming(false);
+          api._fireSessionExpired();
+          return;
+        }
+      }
       const history = [...chatMessages.filter(m => m.content && m.content.trim() && !m.streaming), userMsg].map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content.trim() }));
       const res     = await fetch('/api/ai-chat', {
         method:  'POST',
@@ -2675,6 +2726,31 @@ function PsychologicalTestSystem() {
           onClick={() => setShowCreditModal(false)}
           className="w-full bg-gray-100 text-gray-600 py-3 rounded-xl font-semibold hover:bg-gray-200 transition"
         >{t('나중에', 'Later')}</button>
+      </div>
+    </div>
+  );
+
+  // ── 외부(phyweb) 이용권 코드 발급 모달 — window.prompt 대체(복사 버튼) ──
+  const GrantCodeModal = () => !grantCode ? null : (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={e => { if (e.target === e.currentTarget) setGrantCode(null); }}>
+      <div className="bg-white rounded-2xl shadow-2xl p-7 w-full max-w-sm">
+        <div className="text-center mb-4">
+          <div className="text-4xl mb-2">🎫</div>
+          <h2 className="text-lg font-bold text-gray-800 mb-1">{t('phyweb 이용권 코드가 발급되었어요', 'Your phyweb pass code is ready')}</h2>
+          <p className="text-xs text-gray-500">{t('아래 코드를 복사해 phyweb에서 등록하세요. 이메일·마이페이지에서도 확인할 수 있어요.', 'Copy the code below and register it on phyweb. Also available in your email and My Page.')}</p>
+        </div>
+        <div className="bg-gray-50 border-2 border-dashed border-green-300 rounded-xl p-4 mb-3 text-center">
+          <div className="text-lg font-bold tracking-widest text-green-800 select-all break-all">{grantCode}</div>
+        </div>
+        <button
+          onClick={() => { try { navigator.clipboard.writeText(grantCode); setLoginMsg({ type: 'success', text: t('코드를 복사했어요.', 'Code copied.') }); setTimeout(() => setLoginMsg({ type: '', text: '' }), 2500); } catch {} }}
+          className="w-full bg-green-700 text-white py-3 rounded-xl font-bold hover:bg-green-800 transition mb-2"
+        >{t('코드 복사', 'Copy code')}</button>
+        <div className="text-[11px] text-gray-400 text-center mb-3 leading-relaxed">{t('등록 위치: phyweb 로그인 → 대시보드 구독 카드 → 이용권 코드 등록', 'Register at: phyweb → Dashboard → Subscription card → Enter pass code')}</div>
+        <button
+          onClick={() => setGrantCode(null)}
+          className="w-full bg-gray-100 text-gray-600 py-2.5 rounded-xl font-semibold hover:bg-gray-200 transition"
+        >{t('닫기', 'Close')}</button>
       </div>
     </div>
   );
@@ -3243,8 +3319,8 @@ function PsychologicalTestSystem() {
         </button>
         {(window.KAKAO_APP_KEY || window.GOOGLE_CLIENT_ID || window.NAVER_CLIENT_ID) && (
           <div className="space-y-2 mb-4">
-            {window.KAKAO_APP_KEY && <KakaoLoginBtn onLogin={handleKakaoLogin} />}
-            {window.NAVER_CLIENT_ID && <NaverLoginBtn onLogin={handleNaverLogin} />}
+            {window.KAKAO_APP_KEY && <KakaoLoginBtn onLogin={handleKakaoLogin} onError={(code) => setLoginMsg({ type:'error', text: code==='popup_blocked' ? t('팝업이 차단되었어요. 브라우저에서 팝업을 허용한 뒤 다시 시도해 주세요.','Popup was blocked. Please allow popups and try again.') : t('소셜 로그인에 실패했어요. 잠시 후 다시 시도해 주세요.','Social sign-in failed. Please try again.') })} />}
+            {window.NAVER_CLIENT_ID && <NaverLoginBtn onLogin={handleNaverLogin} onError={(code) => setLoginMsg({ type:'error', text: code==='popup_blocked' ? t('팝업이 차단되었어요. 브라우저에서 팝업을 허용한 뒤 다시 시도해 주세요.','Popup was blocked. Please allow popups and try again.') : t('소셜 로그인에 실패했어요. 잠시 후 다시 시도해 주세요.','Social sign-in failed. Please try again.') })} />}
             {window.GOOGLE_CLIENT_ID && <GoogleSignInBtn onLogin={handleGoogleLogin} btnText="signin_with" />}
           </div>
         )}
@@ -3440,8 +3516,8 @@ function PsychologicalTestSystem() {
               <div className="relative flex justify-center"><span className="px-3 bg-white text-gray-400 text-xs">{t("또는 소셜 계정으로 시작","or continue with social")}</span></div>
             </div>
             <div className="space-y-2">
-              {window.KAKAO_APP_KEY && <KakaoLoginBtn onLogin={handleKakaoLogin} />}
-              {window.NAVER_CLIENT_ID && <NaverLoginBtn onLogin={handleNaverLogin} />}
+              {window.KAKAO_APP_KEY && <KakaoLoginBtn onLogin={handleKakaoLogin} onError={(code) => setFormMsg({ type:'error', text: code==='popup_blocked' ? t('팝업이 차단되었어요. 브라우저에서 팝업을 허용한 뒤 다시 시도해 주세요.','Popup was blocked. Please allow popups and try again.') : t('소셜 로그인에 실패했어요. 잠시 후 다시 시도해 주세요.','Social sign-in failed. Please try again.') })} />}
+              {window.NAVER_CLIENT_ID && <NaverLoginBtn onLogin={handleNaverLogin} onError={(code) => setFormMsg({ type:'error', text: code==='popup_blocked' ? t('팝업이 차단되었어요. 브라우저에서 팝업을 허용한 뒤 다시 시도해 주세요.','Popup was blocked. Please allow popups and try again.') : t('소셜 로그인에 실패했어요. 잠시 후 다시 시도해 주세요.','Social sign-in failed. Please try again.') })} />}
               {window.GOOGLE_CLIENT_ID && <GoogleSignInBtn onLogin={handleGoogleLogin} btnText="signup_with" />}
             </div>
           </>
@@ -4594,6 +4670,7 @@ function PsychologicalTestSystem() {
           </div>
         </main>
 
+        <GrantCodeModal />
         <CreditModal />
         <AiLimitModal />
         <SignupVerifyModal />
@@ -6901,6 +6978,18 @@ function PsychologicalTestSystem() {
 
     try {
       await api.ensureToken();   // ⚠️ 만료 토큰이면 서버가 게스트로 강등→429. 전송 전 갱신.
+      // 갱신 실패로 세션이 만료됐으면(로그인 상태인데 유효 토큰 없음) 결제유도 대신 재로그인 안내
+      if (isLoggedIn) {
+        const at = tokenStore.getAccess();
+        let expired = !at;
+        if (at) { try { const p = JSON.parse(atob(at.split('.')[1])); expired = !!(p.exp && p.exp <= Math.floor(Date.now() / 1000)); } catch {} }
+        if (expired) {
+          setChatMessages(prev => prev.filter(m => m.id !== assistantId));
+          setChatStreaming(false);
+          api._fireSessionExpired();
+          return;
+        }
+      }
       const history = [...chatMessages.filter(m => m.content && m.content.trim() && !m.streaming), userMsg].map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content.trim() }));
       const res = await fetch('/api/ai-chat', {
         method: 'POST',
