@@ -1652,6 +1652,83 @@ function buildAnalysisPrompt(req: AnalyzeRequest): string {
   if (lang === 'en') return ctx + NL + NL + 'Assessment: ' + req.testType + NL + 'Results: ' + JSON.stringify(r, null, 2) + NL + fmt
   return ctx + NL + NL + '검사: ' + req.testType + NL + '결과: ' + JSON.stringify(r, null, 2) + NL + fmt
 }
+// ============================================================
+// 🛟 위기 하드 브레이크 (안전 가드는 프롬프트가 아니라 코드로 강제 — feedback_safety_guard_in_code)
+//   검사 점수로 위기 신호를 결정론적으로 판정하고, 위기 시에만 해석 스트림 끝에
+//   위기자원 블록을 "코드가" 덧붙인다(AI가 안내를 누락해도 반드시 노출). 신호 없으면 무동작=기존 동일.
+// ============================================================
+function isCrisisScore(
+  testType: string,
+  score: number | null,
+  level: string | null,
+  result: Record<string, unknown> | null,
+  items?: Array<{ score: number }>,
+): boolean {
+  const sev = (l: string | null) => !!l && /심각|고도|중증|severe/i.test(l)
+  if (testType === 'PHQ9') {
+    // 9번 문항(자살사고)에 조금이라도('며칠' 이상) 응답 → 임상 표준상 최우선 위기신호
+    if (items && items.length >= 9 && Number(items[8]?.score) >= 1) return true
+    if (score != null && score >= 20) return true      // 고도 우울
+    if (sev(level)) return true
+  }
+  if (testType === 'GAD7') {
+    if (score != null && score >= 15) return true      // 심각 불안
+    if (sev(level)) return true
+  }
+  if (testType === 'DASS21') {
+    const dep = result?.depression as { score?: number; level?: string } | undefined
+    if (dep && Number(dep.score) >= 21) return true     // DASS-21 우울 심각
+    if (dep && sev(dep.level ?? null)) return true
+    if (sev(level)) return true
+  }
+  return false
+}
+
+// 단일 해석(/api/ai-analyze) 요청 본문에서 위기 판정 — responses에 문항 배열이 옴
+function crisisFromAnalyze(body: AnalyzeRequest): boolean {
+  const r = body.responses || {}
+  if (body.testType === 'PHQ9') {
+    const items = (r.items as Array<{ score: number }>) ?? []
+    return isCrisisScore('PHQ9', (r.total as number) ?? null, (r.level as string) ?? null, null, items)
+  }
+  if (body.testType === 'GAD7') return isCrisisScore('GAD7', (r.total as number) ?? null, (r.level as string) ?? null, null)
+  if (body.testType === 'DASS21') return isCrisisScore('DASS21', null, (r.level as string) ?? null, { depression: r.depression })
+  return false
+}
+
+// 통합 해석(/api/ai-analyze/integrated) — 저장된 test_history 메타(점수·레벨)만 사용. 문항 배열 없음 → 총점 기준.
+function crisisFromIntegrated(tests: IntegratedTest[]): boolean {
+  return tests.some((t) => isCrisisScore(t.testType, t.score, t.level, t.result))
+}
+
+// 위기자원 블록(코드 생성) — 진단·처방 없이, 24시간 긴급자원으로 연결. 프론트 pre-wrap이라 마크다운 금지.
+function buildCrisisBlock(lang: string): string {
+  if (lang === 'en') {
+    return '\n\n[Immediate Support]\n' +
+      "If things feel overwhelming right now, please know you don't have to carry this alone. Support is available any time, day or night.\n" +
+      '· 988 Suicide & Crisis Lifeline (call or text 988)\n' +
+      'You matter, and reaching out is a sign of strength.'
+  }
+  return '\n\n[긴급 도움말]\n' +
+    '지금 많이 힘드시다면, 그 마음을 혼자 감당하지 않으셔도 괜찮아요. 24시간 언제든 곁에서 이야기를 들어줄 곳이 있어요.\n' +
+    '· 자살예방 상담전화 109 (24시간)\n' +
+    '· 정신건강 위기상담 1577-0199\n' +
+    '지금 이 순간의 당신이 소중합니다. 연락하는 것은 약함이 아니라 용기예요.'
+}
+
+// 업스트림 SSE를 그대로 흘려보내고, 스트림이 끝날 때 위기자원 블록을 합성 델타로 1개 덧붙인다.
+//   프론트는 content_block_delta의 delta.text만 누적하므로, 해석 끝에 위기자원이 반드시 렌더된다.
+function appendCrisisSse(upstreamBody: ReadableStream<Uint8Array>, crisisText: string): ReadableStream<Uint8Array> {
+  const enc = new TextEncoder()
+  return upstreamBody.pipeThrough(new TransformStream<Uint8Array, Uint8Array>({
+    transform(chunk, controller) { controller.enqueue(chunk) },   // 업스트림 청크는 무변경 통과
+    flush(controller) {
+      const payload = JSON.stringify({ type: 'content_block_delta', delta: { type: 'text_delta', text: crisisText } })
+      controller.enqueue(enc.encode('data: ' + payload + '\n\n'))
+    },
+  }))
+}
+
 app.post('/api/ai-analyze', async (c) => {
   const { DB, KV } = c.env
 
@@ -1706,7 +1783,10 @@ app.post('/api/ai-analyze', async (c) => {
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   }
-  return new Response(upstream.body, { headers: sseHeaders })
+  // 🛟 위기 하드 브레이크 — 위기 신호가 있을 때만 위기자원을 코드로 덧붙인다(없으면 기존 스트림 그대로).
+  const crisisText = crisisFromAnalyze(body) ? buildCrisisBlock(body.lang ?? 'ko') : ''
+  const outBody = crisisText && upstream.body ? appendCrisisSse(upstream.body, crisisText) : upstream.body
+  return new Response(outBody, { headers: sseHeaders })
 })
 
 // ============================================================
@@ -1955,7 +2035,10 @@ app.post('/api/ai-analyze/integrated', async (c) => {
     return c.json({ error: 'AI 서비스 오류 (' + upstream.status + ')' }, 502)
   }
   if (integratedIsFree) c.executionCtx.waitUntil(KV.put(integratedFreeKey, '1'))   // 무료 1회 소진(스트림 시작 성공)
-  return new Response(upstream.body, {
+  // 🛟 위기 하드 브레이크 — 통합 대상 검사 중 위기 신호가 있으면 위기자원을 코드로 덧붙인다(없으면 기존 그대로).
+  const crisisTextInt = crisisFromIntegrated(tests) ? buildCrisisBlock(lang) : ''
+  const outBodyInt = crisisTextInt && upstream.body ? appendCrisisSse(upstream.body, crisisTextInt) : upstream.body
+  return new Response(outBodyInt, {
     headers: {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
