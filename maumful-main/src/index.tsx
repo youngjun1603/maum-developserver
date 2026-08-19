@@ -1664,11 +1664,15 @@ function isCrisisScore(
   result: Record<string, unknown> | null,
   items?: Array<{ score: number }>,
 ): boolean {
-  const sev = (l: string | null) => !!l && /심각|고도|중증|severe/i.test(l)
+  // 심각도 레벨 판정 — 실제 앱 레벨 문자열과 일치시킴(app.jsx: "전문 지원 필요"=Severe,
+  //   "적극적 지원 필요"=Moderately/Extremely Severe). "지원 필요"(Moderate)·"관리 필요"는 제외.
+  //   영어("Severe"/"Moderately Severe"/"Extremely Severe")도 /severe/i로 포함.
+  const sev = (l: string | null) => !!l && /전문\s*지원\s*필요|적극적\s*지원\s*필요|severe/i.test(l)
   if (testType === 'PHQ9') {
-    // 9번 문항(자살사고)에 조금이라도('며칠' 이상) 응답 → 임상 표준상 최우선 위기신호
+    // 9번 문항(자살사고)에 조금이라도('며칠' 이상) 응답 → 임상 표준상 최우선 위기신호(단일 해석 경로)
     if (items && items.length >= 9 && Number(items[8]?.score) >= 1) return true
-    if (score != null && score >= 20) return true      // 고도 우울
+    if (score != null && score >= 20) return true      // 고도 우울(총점 기준)
+    // ⚠️ 통합해석은 문항 배열이 없다(결과 서버 미저장 원칙). 대신 레벨로 총점≥15(적극적 지원 필요)까지 커버.
     if (sev(level)) return true
   }
   if (testType === 'GAD7') {
