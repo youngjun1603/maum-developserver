@@ -1314,16 +1314,8 @@ function PartnerMomentsSection() {
     }).finally(() => setLoading(false));
   }, []);
   if (loading || !data?.hasPartner) return null;
-  const { partnerName, moodEntries = [], gratEntries = [] } = data;
-  if (moodEntries.length === 0 && gratEntries.length === 0) return null;
-  function fmtTime(iso) {
-    const d = new Date(iso);
-    const now = /* @__PURE__ */ new Date();
-    const diff = Math.floor((now - d) / 6e4);
-    if (diff < 60) return tl(`${diff}\uBD84 \uC804`, `${diff}m ago`);
-    if (diff < 1440) return tl(`${Math.floor(diff / 60)}\uC2DC\uAC04 \uC804`, `${Math.floor(diff / 60)}h ago`);
-    return tl(`${Math.floor(diff / 1440)}\uC77C \uC804`, `${Math.floor(diff / 1440)}d ago`);
-  }
+  const { partnerName, moodCount = 0, gratCount = 0 } = data;
+  if (moodCount === 0 && gratCount === 0) return null;
   return /* @__PURE__ */ React.createElement("div", { style: {
     borderRadius: 20,
     overflow: "hidden",
@@ -1346,31 +1338,15 @@ function PartnerMomentsSection() {
         textAlign: "left"
       }
     },
-    /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 18 } }, "\u{1F495}"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, fontWeight: 700, color: C.dark } }, partnerName, tl("\uB2D8\uC758 \uB9C8\uC74C \uC77C\uAE30", "'s Heart Diary"))),
+    /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 18 } }, "\u{1F495}"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, fontWeight: 700, color: C.dark } }, partnerName, tl("\uB2D8\uC758 \uB9C8\uC74C \uB3CC\uBD04", "'s Self-Care"))),
     /* @__PURE__ */ React.createElement("span", { style: { fontSize: 18, color: C.muted } }, open ? "\u25B2" : "\u25BC")
-  ), open && /* @__PURE__ */ React.createElement("div", { style: { padding: "0 20px 20px" } }, moodEntries.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginBottom: gratEntries.length > 0 ? 16 : 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: C.muted, marginBottom: 10 } }, "\u{1F3A8} ", tl("\uCD5C\uADFC 7\uC77C \uAC10\uC815", "Emotions: Last 7 Days")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, moodEntries.map((entry, i) => {
-    const em = MOOD_LABELS[entry.emotion] || { emoji: "\u{1F4AD}", label: entry.emotion || "?", color: C.muted };
-    const stars = entry.intensity ? "\u2B50".repeat(Math.min(5, entry.intensity)) : "";
-    return /* @__PURE__ */ React.createElement("div", { key: i, style: {
-      display: "flex",
-      alignItems: "flex-start",
-      gap: 10,
-      padding: "10px 12px",
-      borderRadius: 12,
-      background: "#FAF5FC",
-      border: `1px solid ${em.color}22`
-    } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 24, flexShrink: 0 } }, em.emoji), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6, marginBottom: 2 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, fontWeight: 700, color: em.color } }, em.label), stars && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11 } }, stars)), entry.note && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.dark, fontStyle: "italic", lineHeight: 1.5 } }, '"', entry.note, '"')), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: C.muted, flexShrink: 0 } }, fmtTime(entry.created_at)));
-  }))), gratEntries.length > 0 && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: C.muted, marginBottom: 10 } }, "\u2B50 ", tl("\uCD5C\uADFC \uAC10\uC0AC \uC77C\uAE30", "Recent Gratitude Diary")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, gratEntries.map((entry, i) => {
-    const answers = entry.answers || {};
-    const answerTexts = Object.values(answers).filter(Boolean);
-    if (answerTexts.length === 0) return null;
-    return /* @__PURE__ */ React.createElement("div", { key: i, style: {
-      padding: "12px 14px",
-      borderRadius: 12,
-      background: "rgba(255,224,138,0.06)",
-      border: "1px solid rgba(255,224,138,0.3)"
-    } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: C.muted, marginBottom: 6 } }, fmtTime(entry.created_at)), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 4 } }, answerTexts.slice(0, 2).map((text, j) => /* @__PURE__ */ React.createElement("div", { key: j, style: { fontSize: 12, color: C.dark, lineHeight: 1.5 } }, "\u2726 ", text)), answerTexts.length > 2 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, "+", answerTexts.length - 2, tl("\uAC1C \uB354", " more"))));
-  })))));
+  ), open && /* @__PURE__ */ React.createElement("div", { style: { padding: "0 20px 20px" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: C.dark, lineHeight: 1.6 } }, tl(
+    `\uCD5C\uADFC 7\uC77C \uB3D9\uC548 ${partnerName}\uB2D8\uC774 \uAC10\uC815\uC744 ${moodCount}\uBC88 \uB3CC\uC544\uBCF4\uACE0, \uAC10\uC0AC\uD55C \uC21C\uAC04\uC744 ${gratCount}\uBC88 \uC801\uC5C8\uC5B4\uC694.`,
+    `In the last 7 days, ${partnerName} checked in with their feelings ${moodCount} time(s) and noted ${gratCount} moment(s) of gratitude.`
+  )), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { flex: 1, textAlign: "center", padding: "12px 8px", borderRadius: 12, background: "#FAF5FC" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 22, fontWeight: 800, color: C.dark } }, moodCount), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 2 } }, "\u{1F3A8} ", tl("\uAC10\uC815 \uAE30\uB85D", "Mood check-ins"))), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, textAlign: "center", padding: "12px 8px", borderRadius: 12, background: "rgba(255,224,138,0.12)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 22, fontWeight: 800, color: C.dark } }, gratCount), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 2 } }, "\u2B50 ", tl("\uAC10\uC0AC \uC77C\uAE30", "Gratitude notes")))), /* @__PURE__ */ React.createElement("div", { style: { marginTop: 12, fontSize: 11, color: C.muted, lineHeight: 1.5 } }, tl(
+    "\uAE30\uB85D\uC758 \uB0B4\uC6A9\uC740 \uC11C\uB85C\uC758 \uC0AC\uC0DD\uD65C\uC744 \uC704\uD574 \uACF5\uC720\uB418\uC9C0 \uC54A\uC544\uC694. \uD30C\uD2B8\uB108\uAC00 \uC2A4\uC2A4\uB85C\uB97C \uB3CC\uBCF4\uACE0 \uC788\uB2E4\uB294 \uC2E0\uD638\uB9CC \uC804\uD574\uB4DC\uB824\uC694.",
+    "The contents stay private. We only let you know your partner has been caring for themselves."
+  ))));
 }
 const ANNIVERSARY_KEY = "couple_first_date";
 function AnniversaryView({ onBack }) {

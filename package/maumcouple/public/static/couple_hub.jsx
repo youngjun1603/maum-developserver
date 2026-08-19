@@ -1358,17 +1358,9 @@ function PartnerMomentsSection() {
 
   if (loading || !data?.hasPartner) return null;
 
-  const { partnerName, moodEntries = [], gratEntries = [] } = data;
-  if (moodEntries.length === 0 && gratEntries.length === 0) return null;
-
-  function fmtTime(iso) {
-    const d = new Date(iso);
-    const now = new Date();
-    const diff = Math.floor((now - d) / 60000);
-    if (diff < 60) return tl(`${diff}분 전`, `${diff}m ago`);
-    if (diff < 1440) return tl(`${Math.floor(diff / 60)}시간 전`, `${Math.floor(diff / 60)}h ago`);
-    return tl(`${Math.floor(diff / 1440)}일 전`, `${Math.floor(diff / 1440)}d ago`);
-  }
+  // ⚠️ 파트너 감정 "내용"은 표시하지 않는다 — 활동 횟수(신호)만 노출(백엔드도 내용 미반환).
+  const { partnerName, moodCount = 0, gratCount = 0 } = data;
+  if (moodCount === 0 && gratCount === 0) return null;
 
   return (
     <div style={{
@@ -1387,7 +1379,7 @@ function PartnerMomentsSection() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 18 }}>💕</span>
           <span style={{ fontSize: 14, fontWeight: 700, color: C.dark }}>
-            {partnerName}{tl('님의 마음 일기', '\'s Heart Diary')}
+            {partnerName}{tl('님의 마음 돌봄', '\'s Self-Care')}
           </span>
         </div>
         <span style={{ fontSize: 18, color: C.muted }}>{open ? '▲' : '▼'}</span>
@@ -1396,77 +1388,27 @@ function PartnerMomentsSection() {
       {open && (
         <div style={{ padding: '0 20px 20px' }}>
 
-          {/* 감정 타임라인 */}
-          {moodEntries.length > 0 && (
-            <div style={{ marginBottom: gratEntries.length > 0 ? 16 : 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, marginBottom: 10 }}>
-                🎨 {tl('최근 7일 감정', 'Emotions: Last 7 Days')}
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {moodEntries.map((entry, i) => {
-                  const em = MOOD_LABELS[entry.emotion] || { emoji: '💭', label: entry.emotion || '?', color: C.muted };
-                  const stars = entry.intensity ? '⭐'.repeat(Math.min(5, entry.intensity)) : '';
-                  return (
-                    <div key={i} style={{
-                      display: 'flex', alignItems: 'flex-start', gap: 10,
-                      padding: '10px 12px', borderRadius: 12,
-                      background: '#FAF5FC', border: `1px solid ${em.color}22`,
-                    }}>
-                      <span style={{ fontSize: 24, flexShrink: 0 }}>{em.emoji}</span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                          <span style={{ fontSize: 13, fontWeight: 700, color: em.color }}>{em.label}</span>
-                          {stars && <span style={{ fontSize: 11 }}>{stars}</span>}
-                        </div>
-                        {entry.note && (
-                          <div style={{ fontSize: 12, color: C.dark, fontStyle: 'italic', lineHeight: 1.5 }}>
-                            "{entry.note}"
-                          </div>
-                        )}
-                      </div>
-                      <div style={{ fontSize: 10, color: C.muted, flexShrink: 0 }}>
-                        {fmtTime(entry.created_at)}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+          {/* 파트너의 감정 "내용"은 공유하지 않는다(사생활 보호). 활동 신호(횟수)만 표시. */}
+          <div style={{ fontSize: 13, color: C.dark, lineHeight: 1.6 }}>
+            {tl(
+              `최근 7일 동안 ${partnerName}님이 감정을 ${moodCount}번 돌아보고, 감사한 순간을 ${gratCount}번 적었어요.`,
+              `In the last 7 days, ${partnerName} checked in with their feelings ${moodCount} time(s) and noted ${gratCount} moment(s) of gratitude.`
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+            <div style={{ flex: 1, textAlign: 'center', padding: '12px 8px', borderRadius: 12, background: '#FAF5FC' }}>
+              <div style={{ fontSize: 22, fontWeight: 800, color: C.dark }}>{moodCount}</div>
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>🎨 {tl('감정 기록', 'Mood check-ins')}</div>
             </div>
-          )}
-
-          {/* 감사 일기 */}
-          {gratEntries.length > 0 && (
-            <div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, marginBottom: 10 }}>
-                ⭐ {tl('최근 감사 일기', 'Recent Gratitude Diary')}
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {gratEntries.map((entry, i) => {
-                  const answers = entry.answers || {};
-                  const answerTexts = Object.values(answers).filter(Boolean);
-                  if (answerTexts.length === 0) return null;
-                  return (
-                    <div key={i} style={{
-                      padding: '12px 14px', borderRadius: 12,
-                      background: 'rgba(255,224,138,0.06)', border: '1px solid rgba(255,224,138,0.3)',
-                    }}>
-                      <div style={{ fontSize: 10, color: C.muted, marginBottom: 6 }}>{fmtTime(entry.created_at)}</div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        {answerTexts.slice(0, 2).map((text, j) => (
-                          <div key={j} style={{ fontSize: 12, color: C.dark, lineHeight: 1.5 }}>
-                            ✦ {text}
-                          </div>
-                        ))}
-                        {answerTexts.length > 2 && (
-                          <div style={{ fontSize: 11, color: C.muted }}>+{answerTexts.length - 2}{tl('개 더', ' more')}</div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+            <div style={{ flex: 1, textAlign: 'center', padding: '12px 8px', borderRadius: 12, background: 'rgba(255,224,138,0.12)' }}>
+              <div style={{ fontSize: 22, fontWeight: 800, color: C.dark }}>{gratCount}</div>
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>⭐ {tl('감사 일기', 'Gratitude notes')}</div>
             </div>
-          )}
+          </div>
+          <div style={{ marginTop: 12, fontSize: 11, color: C.muted, lineHeight: 1.5 }}>
+            {tl('기록의 내용은 서로의 사생활을 위해 공유되지 않아요. 파트너가 스스로를 돌보고 있다는 신호만 전해드려요.',
+                'The contents stay private. We only let you know your partner has been caring for themselves.')}
+          </div>
         </div>
       )}
     </div>

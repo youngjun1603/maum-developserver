@@ -1161,31 +1161,27 @@ app.get('/api/couple/partner-moments', async (c) => {
 
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString()
 
-  const [moodRows, gratRows] = await Promise.all([
+  // ⚠️ 파트너 감정 "내용"(감정 라벨·메모 note·감사일기 본문)은 공유하지 않는다 —
+  //   동의·철회 UX 없는 커플 감정 내용 공유 금지(CLAUDE.md·백로그). metadata를 읽지 않고
+  //   활동 "횟수"만 집계한다(정원 garden 방식과 동일한 프라이버시 기준).
+  const [moodCntRow, gratCntRow] = await Promise.all([
     DB.prepare(
-      `SELECT metadata, created_at FROM game_session_logs
-       WHERE user_id=? AND game_id='mood' AND created_at > ?
-       ORDER BY created_at DESC LIMIT 7`
-    ).bind(partnerId, sevenDaysAgo).all<{ metadata: string; created_at: string }>(),
+      `SELECT COUNT(*) AS cnt FROM game_session_logs
+       WHERE user_id=? AND game_id='mood' AND created_at > ?`
+    ).bind(partnerId, sevenDaysAgo).first<{ cnt: number }>(),
     DB.prepare(
-      `SELECT metadata, created_at FROM game_session_logs
-       WHERE user_id=? AND game_id='gratitude'
-       ORDER BY created_at DESC LIMIT 3`
-    ).bind(partnerId).all<{ metadata: string; created_at: string }>(),
+      `SELECT COUNT(*) AS cnt FROM game_session_logs
+       WHERE user_id=? AND game_id='gratitude' AND created_at > ?`
+    ).bind(partnerId, sevenDaysAgo).first<{ cnt: number }>(),
   ])
-
-  const parse = (row: { metadata: string; created_at: string }) => {
-    try { return { ...JSON.parse(row.metadata), created_at: row.created_at } }
-    catch { return { created_at: row.created_at } }
-  }
 
   return c.json({
     success: true,
     data: {
       hasPartner: true,
       partnerName,
-      moodEntries: moodRows.results.map(parse),
-      gratEntries: gratRows.results.map(parse),
+      moodCount: moodCntRow?.cnt ?? 0,
+      gratCount: gratCntRow?.cnt ?? 0,
     },
   })
 })
