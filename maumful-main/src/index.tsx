@@ -2681,6 +2681,41 @@ app.delete('/api/ai-chat/memory', async (c) => {
   return c.json({ success: true })
 })
 
+// ── 🛟 AI 상담 채팅용 위기 하드 브레이크 ─────────────────────────────
+//   검사와 달리 자유서술이라 키워드 기반. 오탐(과장표현 "힘들어 죽겠다")을 줄이기 위해
+//   '자살사고/자해 의도'가 명확한 고신뢰 키워드만 매칭한다. ⚠️ NFC 정규화 필수
+//   (자모 분리 NFD 한글은 완성형 정규식에 매칭 안 돼 1차 방어가 통째로 우회됨 — CLAUDE.md).
+function chatCrisisKeywordHit(text: string): boolean {
+  if (!text) return false
+  const t = text.normalize('NFC')
+  const ko = /자살|자해|목숨.{0,5}끊|스스로.{0,5}(해치|해할)|죽고\s*싶|죽고\s*파|죽어\s*버리|죽을\s*까|살고\s*싶지\s*않|살\s*의욕.{0,3}없|살기\s*싫|사라지고\s*싶|없어지고\s*싶|뛰어\s*내리|목\s*매/
+  const en = /suicid|kill(ing)?\s+myself|want(ing)?\s+to\s+die|end(ing)?\s+(my|it\s+all)|take\s+my\s+(own\s+)?life|self[-\s]?harm|don'?t\s+want\s+to\s+(live|be\s+here|exist)|better\s+off\s+dead/i
+  return ko.test(t) || en.test(t)
+}
+
+// 채팅 선행 위기 안내(코드 보장) — 따뜻한 한 문단 + 24시간 자원. 검사용 [긴급 도움말] 박스와 달리
+//   대화 흐름에 맞춘 인사형. AI 응답보다 먼저 노출돼 위기자원이 반드시 도달하게 한다.
+function buildChatCrisisPrefix(lang: string): string {
+  if (lang === 'en') {
+    return "I hear how much pain you're in right now, and I'm really glad you reached out. You don't have to face this alone — the 988 Suicide & Crisis Lifeline (call or text 988) is there any time, day or night.\n\n"
+  }
+  return '지금 많이 힘드시죠. 그 마음을 꺼내 주셔서 고맙고, 혼자 견디지 않으셔도 괜찮아요. 24시간 언제든 곁에서 들어줄 곳이 있어요 — 자살예방 상담전화 109, 정신건강 위기상담 1577-0199.\n\n'
+}
+
+// 업스트림 SSE 앞에 위기 안내 델타를 1개 선행 삽입한다(prepend).
+//   ⚠️ 채팅은 프론트가 [MOOD:N]을 "문자열 끝"에서만 제거하므로 append(끝 삽입)는 MOOD 태그를 노출시킴 →
+//   반드시 prepend. AI 응답과 [MOOD:N]은 그대로 뒤에 붙어 MOOD 파싱이 정상 동작한다.
+function prependCrisisSse(upstreamBody: ReadableStream<Uint8Array>, crisisText: string): ReadableStream<Uint8Array> {
+  const enc = new TextEncoder()
+  return upstreamBody.pipeThrough(new TransformStream<Uint8Array, Uint8Array>({
+    start(controller) {
+      const payload = JSON.stringify({ type: 'content_block_delta', delta: { type: 'text_delta', text: crisisText } })
+      controller.enqueue(enc.encode('data: ' + payload + '\n\n'))
+    },
+    transform(chunk, controller) { controller.enqueue(chunk) },
+  }))
+}
+
 app.post('/api/ai-chat', async (c) => {
   const { DB, KV } = c.env
   const userId = await getAuthUserId(c.req.raw, KV)
@@ -3050,7 +3085,14 @@ ${summary ?? (counselingType === 'biblical' ? 'No test result — proceed as fai
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   }
-  return new Response(res.body, { headers: sseHeaders })
+  // 🛟 위기 하드 브레이크(채팅) — 직전 사용자 메시지에 위기 신호가 있으면 위기자원을 코드로 선행 노출.
+  //   프롬프트 위기 지시가 불이행돼도(기독교 트랙 실측 2/5) 반드시 도달. 신호 없으면 기존 스트림 그대로.
+  const lastUserMsg = Array.isArray(messages)
+    ? [...(messages as Array<{ role?: string; content?: unknown }>)].reverse().find((m) => m?.role === 'user')
+    : null
+  const chatCrisis = !!lastUserMsg && chatCrisisKeywordHit(String(lastUserMsg.content ?? ''))
+  const chatOutBody = chatCrisis && res.body ? prependCrisisSse(res.body, buildChatCrisisPrefix(lang)) : res.body
+  return new Response(chatOutBody, { headers: sseHeaders })
 })
 
 // ============================================================
