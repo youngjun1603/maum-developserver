@@ -1772,7 +1772,9 @@ app.post('/api/ai-analyze', async (c) => {
         messages: [{ role: 'user', content: prompt }],
       }),
     })
-    if (upstream.ok || (upstream.status !== 404 && upstream.status !== 403)) { analyzedModel = model; break }
+    // 403은 다른 모델 재시도 안 함 — 403은 IP/키 레벨(엣지 차단 등)이라 모델을 바꿔도 동일하게 막힌다.
+    //   무의미한 재시도로 차단 IP를 더 두드리지 않도록 즉시 중단. 404(모델 없음)만 폴백.
+    if (upstream.ok || upstream.status !== 404) { analyzedModel = model; break }
     analyzedModel = model
   }
   if (!upstream.ok) {
@@ -2030,7 +2032,8 @@ app.post('/api/ai-analyze/integrated', async (c) => {
         messages: [{ role: 'user', content: user }],
       }),
     })
-    if (upstream.ok || (upstream.status !== 404 && upstream.status !== 403)) break
+    // 403은 IP/키 레벨이라 모델 바꿔도 동일 → 재시도 안 함(차단 IP 부하 축소). 404만 폴백.
+    if (upstream.ok || upstream.status !== 404) break
   }
   if (!upstream.ok) {
     if (integratedCharged) await gainCredits(DB, userId, INTEGRATED_COST, 'integrated_refund')   // 스트림 실패 → 환불
@@ -3060,7 +3063,8 @@ ${summary ?? (counselingType === 'biblical' ? 'No test result — proceed as fai
       retries++
       await new Promise(r => setTimeout(r, retries * 1500))
     }
-    if (res.ok || (res.status !== 404 && res.status !== 403)) { usedModel = model; break }
+    // 403은 IP/키 레벨이라 모델 바꿔도 동일 → 재시도 안 함(차단 IP 부하 축소). 404만 폴백.
+    if (res.ok || res.status !== 404) { usedModel = model; break }
     usedModel = model
   }
 
