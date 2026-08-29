@@ -7,6 +7,7 @@ type Bindings = {
   KV:               KVNamespace
   JWT_SECRET?:      string
   ANTHROPIC_API_KEY?: string
+  AI_PROXY_URL?:    string   // AI egress 프록시(전용 IP). 미설정 시 기존 게이트웨이 폴백
   RESEND_API_KEY?:  string
   RESEND_FROM_EMAIL?: string   // 발신자 주소 — 미설정 시 CTS 워커 도메인 사용(마음풀 도메인 금지)
   MAUMFUL_URL?:      string
@@ -15,6 +16,12 @@ type Bindings = {
 
 // CTS 자체 URL — 이메일 CTA·수신거부 링크에 사용. 마음풀(game.maumful.com)을 가리키면 안 된다.
 const CTS_GAME_URL = 'https://lightoflife-game.limyj007.workers.dev'
+
+// AI 요청 엔드포인트. AI_PROXY_URL(전용 egress·고정 IP) 설정 시 그쪽으로,
+// 미설정 시 기존 AI Gateway로 폴백(설정 전과 동일 동작 = 무영향).
+function aiEndpoint(env: Bindings): string {
+  return env.AI_PROXY_URL ?? 'https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages'
+}
 
 type GameUser = {
   id: number; email: string; nickname: string | null
@@ -634,7 +641,7 @@ app.post('/api/game/ai-transform', async (c) => {
   if (!apiKey) return c.json({ success: false, error: 'ANTHROPIC_API_KEY 미설정 — Cloudflare 환경변수 등록 필요' }, 500)
 
   try {
-    const res = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
+    const res = await fetch(aiEndpoint(c.env), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
@@ -825,7 +832,7 @@ app.post('/api/game/daily-tip', async (c) => {
   ].filter(Boolean)
 
   try {
-    const res = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
+    const res = await fetch(aiEndpoint(c.env), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
@@ -1004,7 +1011,7 @@ app.get('/api/game/emotion-report', async (c) => {
   ).join(', ')
 
   try {
-    const res = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
+    const res = await fetch(aiEndpoint(c.env), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
@@ -1069,7 +1076,7 @@ app.post('/api/game/session-feedback', async (c) => {
   const prompt = `사용자가 '${gameName}' 치유 게임을 ${scoreText}으로 완료했습니다. 따뜻하고 짧은 격려 메시지를 2문장으로 작성하세요. 비임상적 언어만 사용, 진단명 금지.`
 
   try {
-    const aiRes = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
+    const aiRes = await fetch(aiEndpoint(c.env), {
       method: 'POST',
       headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
       body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 120,
@@ -1153,7 +1160,7 @@ app.get('/api/game/ai-diary', async (c) => {
   }
 
   try {
-    const res = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
+    const res = await fetch(aiEndpoint(c.env), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
