@@ -7,7 +7,9 @@
 //
 //   워커가 부를 URL 형식:  https://<이 프록시 호스트>/<PROXY_SECRET>/v1/messages
 //     - <PROXY_SECRET> : 워커만 아는 공유 비밀(경로에 실어 전달). 프록시가 검증.
-//     - x-api-key(Anthropic 키)는 워커가 그대로 보내고 프록시가 그대로 전달(프록시엔 키 미저장).
+//     - x-api-key(Anthropic 키): ANTHROPIC_API_KEY env가 설정돼 있으면 프록시가 이 키로
+//       "덮어써서" 전달(통합키를 프록시 1곳에서만 관리 = 교체 시 여기만 수정). env 미설정 시
+//       워커가 보낸 x-api-key를 그대로 통과(기존 동작·무영향) → 코드 먼저 배포 후 env로 활성화.
 // ─────────────────────────────────────────────────────────────────────────
 'use strict';
 const http = require('http');
@@ -15,6 +17,7 @@ const https = require('https');
 
 const PORT = process.env.PORT || 8080;
 const PROXY_SECRET = process.env.PROXY_SECRET;   // 필수: 워커와 동일 값
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;  // 선택: 설정 시 프록시가 통합키 주입
 const UPSTREAM_HOST = 'api.anthropic.com';
 
 if (!PROXY_SECRET || PROXY_SECRET.length < 16) {
@@ -53,6 +56,9 @@ const server = http.createServer((req, res) => {
     headers[k] = v;
   }
   headers['host'] = UPSTREAM_HOST;
+  // 통합키 주입: env 설정 시 워커가 보낸 x-api-key를 프록시의 키로 덮어씀(키 관리 1곳화).
+  // 미설정 시 워커 키를 그대로 통과 = 기존 동작(무영향).
+  if (ANTHROPIC_API_KEY) headers['x-api-key'] = ANTHROPIC_API_KEY;
 
   // 4) 업스트림 요청 + 스트리밍 파이프
   const upstream = https.request(
