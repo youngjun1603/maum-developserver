@@ -9,6 +9,7 @@ type Bindings = {
   KV: KVNamespace
   ANTHROPIC_API_KEY?: string
   AI_MODEL?: string                 // AI 모델 ID (기본값: claude-sonnet-4-6)
+  AI_PROXY_URL?: string             // AI egress 프록시 URL(전용 IP). 미설정 시 기존 게이트웨이 폴백
   TOSS_SECRET_KEY?: string        // 토스페이먼츠 결제 요청 시크릿
   TOSS_BILLING_KEY?: string       // 토스페이먼츠 빌링키 발급용 시크릿 (구독 결제)
   TOSS_CLIENT_KEY?: string        // 토스페이먼츠 클라이언트 키 (브라우저용)
@@ -281,6 +282,12 @@ async function getAnthropicKey(db: D1Database, env: Bindings): Promise<string | 
 // 사용 가능 모델은 /api/admin/test-ai 로 진단
 function getAiModel(env: Bindings): string {
   return env.AI_MODEL ?? 'claude-sonnet-4-6'
+}
+
+// AI 호출 엔드포인트 — 전용 egress 프록시(공유 Worker IP 차단 회피용).
+//   AI_PROXY_URL 미설정 시 기존 AI Gateway로 폴백(=기존 동작 100% 동일). 시크릿만 지우면 즉시 원복.
+function aiEndpoint(env: Bindings): string {
+  return env.AI_PROXY_URL ?? 'https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages'
 }
 
 // 랜덤 토큰 생성
@@ -1763,7 +1770,7 @@ app.post('/api/ai-analyze', async (c) => {
   let upstream!: Response
   let analyzedModel = ANALYZE_FALLBACKS[0]
   for (const model of [...new Set(ANALYZE_FALLBACKS)]) {
-    upstream = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
+    upstream = await fetch(aiEndpoint(c.env), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
@@ -2019,7 +2026,7 @@ app.post('/api/ai-analyze/integrated', async (c) => {
   const INTEGRATED_FALLBACKS = ['claude-sonnet-4-6', 'claude-haiku-4-5-20251001']
   let upstream!: Response
   for (const model of INTEGRATED_FALLBACKS) {
-    upstream = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
+    upstream = await fetch(aiEndpoint(c.env), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
@@ -2284,7 +2291,7 @@ app.get('/api/user/daily-context', async (c) => {
 
   let greeting = `${name}님, 오늘 하루 마음은 어떠세요?`
   try {
-    const aiRes = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
+    const aiRes = await fetch(aiEndpoint(c.env), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 150, messages: [{ role: 'user', content: aiPrompt }] }),
@@ -2432,7 +2439,7 @@ FOLLOWUP:["PHQ9","GAD7"]
 
   let aiRes: Response
   try {
-    aiRes = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
+    aiRes = await fetch(aiEndpoint(c.env), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
@@ -2560,7 +2567,7 @@ app.get('/api/test/trend-prediction', async (c) => {
   if (apiKey) {
     const prompt = `사용자의 ${testType} 검사 점수 추이: ${data.map(d => `${d.performed_at.slice(0,10)} ${d.score}점`).join(', ')}. 트렌드: ${trend}. 예측 점수: ${predicted}점. 이 정보를 바탕으로 비임상적이고 따뜻한 응원 메시지를 2문장으로 작성하세요. 진단 표현 금지.`
     try {
-      const aiRes = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
+      const aiRes = await fetch(aiEndpoint(c.env), {
         method: 'POST',
         headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
         body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 150, messages: [{ role: 'user', content: prompt }] })
@@ -2632,7 +2639,7 @@ JSON만 반환하세요. 형식:
 {"summary":"...","plan":[{"week":1,"title":"...","theme":"...","practice":"...","game":"...","tip":"..."},...]}`
 
   try {
-    const aiRes = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
+    const aiRes = await fetch(aiEndpoint(c.env), {
       method: 'POST',
       headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -3053,7 +3060,7 @@ ${summary ?? (counselingType === 'biblical' ? 'No test result — proceed as fai
   for (const model of [...new Set(MODEL_FALLBACKS)]) {
     let retries = 0
     while (true) {
-      res = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
+      res = await fetch(aiEndpoint(c.env), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-beta': 'prompt-caching-2024-07-31' },
         body: JSON.stringify({ model, ...reqBody }),
@@ -4654,7 +4661,7 @@ app.get('/api/admin/test-ai', async (c) => {
     let status = ''
     let color = ''
     try {
-      const r = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
+      const r = await fetch(aiEndpoint(c.env), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
         body: JSON.stringify({ model, max_tokens: 5, messages: [{ role: 'user', content: 'hi' }] }),
