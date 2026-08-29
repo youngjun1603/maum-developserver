@@ -5,7 +5,7 @@ import { Hono } from 'hono';
 import { registerUser, loginUser, getUser, issueToken, requireAuth, deleteUser, findByEmail, setPassword, markEmailVerified, isEmailVerified } from './auth';
 import { BEHAVIOR, signalsToLines } from './behavior';
 
-type Bindings = { DB: D1Database; AUTH_DB: D1Database; KV: KVNamespace; JWT_SECRET: string; ANTHROPIC_API_KEY: string; ASSETS: Fetcher; ADMIN_SECRET?: string; RESEND_API_KEY?: string; EMAIL_FROM?: string; MAUM_SSO_SECRET?: string };
+type Bindings = { DB: D1Database; AUTH_DB: D1Database; KV: KVNamespace; JWT_SECRET: string; ANTHROPIC_API_KEY: string; AI_PROXY_URL?: string; ASSETS: Fetcher; ADMIN_SECRET?: string; RESEND_API_KEY?: string; EMAIL_FROM?: string; MAUM_SSO_SECRET?: string };
 const app = new Hono<{ Bindings: Bindings; Variables: { uid: number } }>();
 
 const REPORT_MODEL = 'claude-sonnet-4-6';
@@ -42,7 +42,7 @@ async function callClaude(env: Bindings, opts: { system: string; messages: any[]
     const ctrl = new AbortController();
     const to = setTimeout(() => ctrl.abort(), 25000);
     try {
-      const res = await fetch(AI_GATEWAY, {
+      const res = await fetch(env.AI_PROXY_URL || AI_GATEWAY, {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
         body: JSON.stringify({ model: REPORT_MODEL, max_tokens: opts.max_tokens, temperature: opts.temperature ?? 0, system: opts.system, messages: opts.messages }),
