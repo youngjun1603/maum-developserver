@@ -39,6 +39,7 @@ type Bindings = {
   DB: D1Database;
   KV: KVNamespace;
   ANTHROPIC_API_KEY: string;
+  AI_PROXY_URL?: string;   // AI egress 프록시(전용 IP). 미설정 시 기존 게이트웨이 폴백
   JWT_SECRET: string;
 };
 
@@ -202,12 +203,15 @@ async function hashAuthor(uid: number): Promise<string> {
 // ----------------------------------------------------------------------------
 
 async function callClaude(
-  apiKey: string,
+  env: Bindings,
   system: string,
   userMessage: string,
   maxTokens = 1500
 ): Promise<string> {
-  const res = await fetch(AI_GATEWAY, {
+  const apiKey = env.ANTHROPIC_API_KEY;
+  // 전용 egress 프록시(전용 IP·공유 Worker IP 차단 회피). AI_PROXY_URL 미설정 시 기존 게이트웨이 폴백.
+  const endpoint = env.AI_PROXY_URL || AI_GATEWAY;
+  const res = await fetch(endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -450,7 +454,7 @@ translate.post('/translate', async (c) => {
     }
     let raw: string;
     try {
-      raw = await callClaude(c.env.ANTHROPIC_API_KEY, system, userMessage);
+      raw = await callClaude(c.env, system, userMessage);
     } catch (err) {
       await refundCredits(c.env.DB, uid, cost, `sedae:refund:${spendMode}`);
       throw err;
@@ -492,7 +496,7 @@ translate.post('/translate', async (c) => {
             translationResult: JSON.stringify(parsed),
             existingMemory: memory,
           });
-          const memRaw = await callClaude(c.env.ANTHROPIC_API_KEY, memPrompt.system, memPrompt.userMessage, 800);
+          const memRaw = await callClaude(c.env, memPrompt.system, memPrompt.userMessage, 800);
           const memParsed = parseTranslationResponse<RelationshipMemory>(memRaw);
           if (memParsed) await saveMemory(c.env.DB, body.relationId, uid, memParsed);
         } catch {
@@ -677,7 +681,7 @@ translate.post('/feedback', async (c) => {
       memory,
     });
 
-    const raw = await callClaude(c.env.ANTHROPIC_API_KEY, system, userMessage, 800);
+    const raw = await callClaude(c.env, system, userMessage, 800);
     const parsed = parseTranslationResponse<{
       response: string; reframe?: string; next_suggestion?: string; memory_hint?: string;
     }>(raw);
@@ -739,7 +743,7 @@ translate.post('/community/post', async (c) => {
 
     // ── AI 사전 검수 (게시 전 게이트) ──
     const { system, userMessage } = buildModerationPrompt(body.content);
-    const raw = await callClaude(c.env.ANTHROPIC_API_KEY, system, userMessage, 600);
+    const raw = await callClaude(c.env, system, userMessage, 600);
     const mod = parseTranslationResponse<ModerationResult>(raw);
 
     if (!mod) {
