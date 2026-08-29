@@ -11,10 +11,16 @@ interface Bindings {
   DB:                D1Database
   KV:                KVNamespace
   ANTHROPIC_API_KEY?: string
+  AI_PROXY_URL?:     string   // AI egress 프록시(전용 IP). 미설정 시 기존 게이트웨이 폴백
   JWT_SECRET?:       string
   RESEND_API_KEY?:   string
   VAPID_PRIVATE_KEY?: string
   VAPID_PUBLIC_KEY?:  string
+}
+
+// AI 호출 엔드포인트 — 전용 egress 프록시(공유 Worker IP 차단 회피). 미설정 시 기존 게이트웨이 폴백(=기존 동작).
+function aiEndpoint(env: Bindings): string {
+  return env.AI_PROXY_URL ?? 'https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages'
 }
 
 // ── 타입 ──────────────────────────────────────────────────
@@ -636,7 +642,7 @@ app.post('/api/couple/report', async (c) => {
   const apiKey = await getAnthropicKey(c.env)
   if (!apiKey) return c.json({ error: 'API 키 미설정' }, 500)
 
-  const res = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
+  const res = await fetch(aiEndpoint(c.env), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1500, stream: false, messages: [{ role: 'user', content: prompt }] }),
@@ -824,7 +830,7 @@ app.post('/api/couple/coach', async (c) => {
   const apiKey = await getAnthropicKey(c.env)
   if (!apiKey) return c.json({ error: 'API 키 미설정' }, 500)
 
-  const res = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
+  const res = await fetch(aiEndpoint(c.env), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({
@@ -1036,7 +1042,7 @@ app.post('/api/couple/date-course', async (c) => {
   const apiKey = await getAnthropicKey(c.env)
   if (!apiKey) return c.json({ error: 'API 키 미설정' }, 500)
 
-  const res = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
+  const res = await fetch(aiEndpoint(c.env), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 800, stream: false, messages: [{ role: 'user', content: prompt }] }),
@@ -1115,7 +1121,7 @@ app.post('/api/couple/solo-analysis', async (c) => {
   const apiKey = await getAnthropicKey(c.env)
   if (!apiKey) return c.json({ error: 'API 키 미설정' }, 500)
 
-  const res = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
+  const res = await fetch(aiEndpoint(c.env), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1000, stream: false, messages: [{ role: 'user', content: prompt }] }),
@@ -1367,7 +1373,7 @@ app.post('/api/couple/emotion-translate', async (c) => {
     : `상대방이 한 말: "${message}"`
 
   try {
-    const res = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
+    const res = await fetch(aiEndpoint(c.env), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
@@ -1426,7 +1432,7 @@ app.post('/api/couple/fight-mediate', async (c) => {
   if (partnerFeel?.trim()) parts.push(`상대방이 느낀 감정(추정): ${partnerFeel}`)
 
   try {
-    const res = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
+    const res = await fetch(aiEndpoint(c.env), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
@@ -1490,7 +1496,7 @@ app.post('/api/couple/kakao-analyze', async (c) => {
   const userMsg = `분석 기간: ${stats.days}일, 총 메시지: ${stats.total}개\n참여자별 통계: ${statsText}\n\n대화 샘플(최근 30개):\n${sample}`
 
   try {
-    const res = await fetch('https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages', {
+    const res = await fetch(aiEndpoint(c.env), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
