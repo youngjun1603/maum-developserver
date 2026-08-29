@@ -11,6 +11,7 @@ type Bindings = {
   ASSETS: Fetcher;
   JWT_SECRET: string;      // 마음 시리즈 공유
   ANTHROPIC_API_KEY: string;
+  AI_PROXY_URL?: string;   // AI egress 프록시(전용 IP). 미설정 시 기존 게이트웨이 폴백
   ADMIN_SECRET?: string;   // 쿠폰 발행 어드민
   RESEND_API_KEY?: string; // 이메일 발송(비번재설정·이메일인증)
   EMAIL_FROM?: string;
@@ -54,7 +55,7 @@ async function callClaude(env: Bindings, opts: { model: string; system: string; 
     const ctrl = new AbortController();
     const to = setTimeout(() => ctrl.abort(), 25000);
     try {
-      const res = await fetch(AI_GATEWAY, {
+      const res = await fetch(env.AI_PROXY_URL || AI_GATEWAY, {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
         body: JSON.stringify({ model: opts.model, max_tokens: opts.max_tokens, temperature: opts.temperature ?? 1, system: opts.system, messages: opts.messages }),
