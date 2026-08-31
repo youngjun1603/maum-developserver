@@ -657,10 +657,16 @@ app.post('/api/couple/report', async (c) => {
   const aiData = await res.json() as { content: Array<{ type: string; text: string }> }
   const reportText = aiData.content?.find(b => b.type === 'text')?.text ?? ''
 
-  // SCORE:XX 파싱
-  const scoreMatch = reportText.match(/SCORE:(\d+)/)
+  // SCORE 파싱 — AI가 'SCORE:50' 외에 '**SCORE: 50**'처럼 콜론 뒤 공백·마크다운을 섞어
+  // 출력하는 경우가 있어 공백/대소문자를 허용해야 한다(미허용 시 파싱 실패→기본 70으로 떨어지고
+  // SCORE 줄도 리포트에 그대로 노출됨, 실측 2026-08-31).
+  const scoreMatch = reportText.match(/SCORE:\s*(\d+)/i)
   const compatScore = scoreMatch ? Math.min(100, Math.max(0, parseInt(scoreMatch[1]))) : 70
-  const cleanReport = reportText.replace(/SCORE:\d+\n?/, '').trim()
+  // SCORE 표기가 있는 줄 전체(양쪽 ** 마크다운·공백 포함)를 제거
+  const cleanReport = reportText
+    .replace(/^.*SCORE:\s*\d+.*$\n?/im, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
 
   // 리포트 저장
   await DB.prepare(
