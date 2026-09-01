@@ -2297,6 +2297,7 @@ function CodeInput({ onJoin, loading }) {
       maxLength: 6,
       style: {
         flex: 1,
+        minWidth: 0,
         padding: "12px 16px",
         borderRadius: 12,
         fontSize: 18,
@@ -2307,7 +2308,8 @@ function CodeInput({ onJoin, loading }) {
         fontWeight: 700,
         color: C.dark,
         outline: "none",
-        background: "white"
+        background: "white",
+        boxSizing: "border-box"
       }
     }
   ), /* @__PURE__ */ React.createElement(

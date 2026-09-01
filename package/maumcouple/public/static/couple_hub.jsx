@@ -2715,11 +2715,11 @@ function CodeInput({ onJoin, loading }) {
           placeholder={tl("6자리 코드 입력", "Enter 6-digit code")}
           maxLength={6}
           style={{
-            flex: 1, padding: '12px 16px', borderRadius: 12, fontSize: 18,
+            flex: 1, minWidth: 0, padding: '12px 16px', borderRadius: 12, fontSize: 18,
             border: `2px solid ${error ? '#E05555' : '#E8D0D8'}`,
             fontFamily: "'Noto Sans KR', monospace", letterSpacing: 4,
             textAlign: 'center', fontWeight: 700, color: C.dark,
-            outline: 'none', background: 'white',
+            outline: 'none', background: 'white', boxSizing: 'border-box',
           }}
         />
         <button
