@@ -2274,9 +2274,14 @@ function PsychologicalTestSystem() {
     };
   }, [view]);
 
-  // 개발자도구 감지 (창 크기 비교 방식)
+  // 개발자도구 감지 (창 크기 비교 방식) — 데스크톱 전용
+  // ⚠️ 모바일은 브라우저 크롬(주소창·하단 툴바)이 outer-inner 높이 차를 THRESHOLD 이상으로
+  //    만들어 오탐 → 검사 중 화면이 잠긴다(iOS Safari 실측 2026-09-12). 터치 기기는 미실행.
   useEffect(() => {
     if (!PROTECTED_VIEWS.has(view)) { setDevToolsOpen(false); return; }
+    const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) ||
+      (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+    if (isTouch) { setDevToolsOpen(false); return; }  // 모바일 오탐 방지: 감지 비활성
     const THRESHOLD = 160;
     const check = () => {
       const open =

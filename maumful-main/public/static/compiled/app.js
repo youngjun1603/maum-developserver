@@ -2361,6 +2361,11 @@ function PsychologicalTestSystem() {
       setDevToolsOpen(false);
       return;
     }
+    const isTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0 || window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+    if (isTouch) {
+      setDevToolsOpen(false);
+      return;
+    }
     const THRESHOLD = 160;
     const check = () => {
       const open = window.outerWidth - window.innerWidth > THRESHOLD || window.outerHeight - window.innerHeight > THRESHOLD;
