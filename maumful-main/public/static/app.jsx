@@ -8398,7 +8398,8 @@ function PsychologicalTestSystem() {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        if (res.status === 401) throw new Error("로그인이 필요합니다.");
+        // 게스트/미로그인: 검사 AI 분석은 로그인 필요 → 일반 오류 대신 로그인 안내 박스로
+        if (res.status === 401) { setAiError(p => ({ ...p, [key]: "LOGIN_REQUIRED" })); return; }
         if (res.status === 429) throw new Error("요청이 너무 많습니다. 잠시 후 다시 시도해주세요.");
         throw new Error(err.error || "서버 오류가 발생했습니다.");
       }
@@ -9401,6 +9402,31 @@ function PsychologicalTestSystem() {
               <div className="flex gap-2">
                 <button onClick={() => setShowChargeView(true)} className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-xs font-bold transition shadow">
                   💎 {t("플랜 업그레이드","Upgrade Plan")}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ── 미로그인 게스트: 로그인 안내 (검사 AI 분석은 로그인 필요) ──────────
+    if (error === "LOGIN_REQUIRED") {
+      return (
+        <div className="mt-4 bg-gradient-to-r from-violet-50 to-green-50 border-2 border-violet-200 rounded-xl p-5">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">🔒</span>
+            <div className="flex-1">
+              <p className="font-bold text-violet-800 text-sm mb-1">{t("로그인하면 AI 해석을 볼 수 있어요","Log in to see the AI insight")}</p>
+              <p className="text-xs text-violet-700 mb-3">
+                {t("검사 결과에 대한 AI 분석은 로그인 후 이용할 수 있어요. (AI 채팅 상담은 로그인 없이도 가능합니다)","AI analysis of your results is available after login. (AI chat is available without login.)")}
+              </p>
+              <div className="flex gap-2">
+                <button onClick={() => setView('memberLogin')} className="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition shadow">
+                  {t("로그인하기","Log in")}
+                </button>
+                <button onClick={() => setView('memberSignup')} className="bg-white border border-violet-300 text-violet-700 hover:bg-violet-50 px-4 py-2 rounded-lg text-xs font-bold transition">
+                  {t("회원가입","Sign up")}
                 </button>
               </div>
             </div>
