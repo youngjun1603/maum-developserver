@@ -476,9 +476,23 @@ function Community({ onBack }) {
   const [busy, setBusy] = useState(false);
   const [blocked, setBlocked] = useState(null);
   const [writing, setWriting] = useState(false);
+  const [empathized, setEmpathized] = useState({}); // 이번 세션에 내가 누른 글 (클라 한정 — 서버가 멱등)
 
   const load = async (rm) => { setPosts(null); const r = await api(`/community/posts?room=${rm}&limit=30`); setPosts(r.ok ? (r.posts || []) : []); };
   useEffect(() => { load(room); }, [room]);
+
+  const empathize = async (pid) => {
+    if (empathized[pid]) return;
+    setEmpathized(m => ({ ...m, [pid]: true }));                                   // 낙관적: 즉시 비활성
+    setPosts(ps => ps.map(p => p.id === pid ? { ...p, empathy_count: (p.empathy_count || 0) + 1 } : p));
+    const r = await api('/community/empathy', 'POST', { postId: pid });
+    if (r.ok) {                                                                    // 서버 값으로 확정
+      setPosts(ps => ps.map(p => p.id === pid ? { ...p, empathy_count: r.empathy_count } : p));
+    } else {                                                                       // 실패 → 롤백
+      setEmpathized(m => { const n = { ...m }; delete n[pid]; return n; });
+      setPosts(ps => ps.map(p => p.id === pid ? { ...p, empathy_count: Math.max(0, (p.empathy_count || 1) - 1) } : p));
+    }
+  };
 
   const submit = async () => {
     if (!content.trim() || busy) return; setBusy(true); setBlocked(null);
@@ -518,7 +532,13 @@ function Community({ onBack }) {
           : posts.map(p => (
             <Card key={p.id} style={{ marginBottom: 10 }}>
               <div style={{ fontSize: 14, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{p.content}</div>
-              <div style={{ fontSize: 12, color: MUT, marginTop: 8 }}>🤍 {p.empathy_count || 0} · {(p.created_at || '').slice(0, 10)}</div>
+              <div style={{ fontSize: 12, color: MUT, marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button onClick={() => empathize(p.id)} disabled={!!empathized[p.id]}
+                  style={{ border: `1px solid ${empathized[p.id] ? GREEN : LINE}`, background: empathized[p.id] ? LGREEN : '#fff', color: empathized[p.id] ? GREEN : MUT, borderRadius: 16, padding: '4px 10px', fontSize: 12, fontWeight: 700, cursor: empathized[p.id] ? 'default' : 'pointer' }}>
+                  🤍 {p.empathy_count || 0}
+                </button>
+                <span>{(p.created_at || '').slice(0, 10)}</span>
+              </div>
             </Card>
           ))}
     </Shell>

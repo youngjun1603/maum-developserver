@@ -753,6 +753,40 @@ translate.get('/community/posts', async (c) => {
 });
 
 // ----------------------------------------------------------------------------
+// POST /api/community/empathy — 공감 반응(🤍) +1 (멱등, 순위·경쟁 없음) [R-26]
+//   토글(취소) 없음 — "공감 반응만, 순위·경쟁 없음"(SPEC 7.3) 정신.
+// ----------------------------------------------------------------------------
+translate.post('/community/empathy', async (c) => {
+  try {
+    const { postId } = await c.req.json<{ postId: number }>();
+    const pid = Number(postId);
+    if (!Number.isInteger(pid) || pid <= 0) return c.json({ error: 'postId가 필요합니다.' }, 400);
+
+    const authorHash = await hashAuthor(c.get('uid')); // 서버에서 uid로 생성 — 클라이언트 값 금지([fix③])
+    // 멱등: 이미 누른 사람이면 INSERT 가 무시되고 changes = 0 → 카운트 증가 안 함
+    const ins = await c.env.DB
+      .prepare('INSERT OR IGNORE INTO community_empathy (post_id, author_hash) VALUES (?, ?)')
+      .bind(pid, authorHash)
+      .run();
+    if (!ins.meta.changes) {
+      const cur = await c.env.DB
+        .prepare('SELECT empathy_count FROM community_posts WHERE id = ?')
+        .bind(pid)
+        .first<{ empathy_count: number }>();
+      return c.json({ ok: true, already: true, empathy_count: cur?.empathy_count ?? 0 });
+    }
+    const row = await c.env.DB
+      .prepare("UPDATE community_posts SET empathy_count = empathy_count + 1 WHERE id = ? AND status = 'published' RETURNING empathy_count")
+      .bind(pid)
+      .first<{ empathy_count: number }>();
+    return c.json({ ok: true, empathy_count: row?.empathy_count ?? 0 });
+  } catch (e) {
+    console.error('empathy error:', e);
+    return c.json({ error: '공감 반응 처리에 실패했어요.' }, 500);
+  }
+});
+
+// ----------------------------------------------------------------------------
 // GET /api/memory?relationId= — 관계 기억 조회 (사용자 열람용)
 // ----------------------------------------------------------------------------
 

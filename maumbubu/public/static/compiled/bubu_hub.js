@@ -321,6 +321,7 @@ function Community({ onBack }) {
   const [busy, setBusy] = useState(false);
   const [blocked, setBlocked] = useState(null);
   const [writing, setWriting] = useState(false);
+  const [empathized, setEmpathized] = useState({});
   const load = async (rm) => {
     setPosts(null);
     const r = await api(`/community/posts?room=${rm}&limit=30`);
@@ -329,6 +330,22 @@ function Community({ onBack }) {
   useEffect(() => {
     load(room);
   }, [room]);
+  const empathize = async (pid) => {
+    if (empathized[pid]) return;
+    setEmpathized((m) => ({ ...m, [pid]: true }));
+    setPosts((ps) => ps.map((p) => p.id === pid ? { ...p, empathy_count: (p.empathy_count || 0) + 1 } : p));
+    const r = await api("/community/empathy", "POST", { postId: pid });
+    if (r.ok) {
+      setPosts((ps) => ps.map((p) => p.id === pid ? { ...p, empathy_count: r.empathy_count } : p));
+    } else {
+      setEmpathized((m) => {
+        const n = { ...m };
+        delete n[pid];
+        return n;
+      });
+      setPosts((ps) => ps.map((p) => p.id === pid ? { ...p, empathy_count: Math.max(0, (p.empathy_count || 1) - 1) } : p));
+    }
+  };
   const submit = async () => {
     if (!content.trim() || busy) return;
     setBusy(true);
@@ -354,7 +371,16 @@ function Community({ onBack }) {
       placeholder: "\uC0C1\uD669 \u2192 \uC2DC\uB3C4\uD55C \uAC83 \u2192 \uACB0\uACFC. \uC775\uBA85\uC73C\uB85C \uACF5\uC720\uB3FC\uC694. (\uD2B9\uC815\uC778 \uC2DD\uBCC4 \uC815\uBCF4\uB294 \uBE7C\uC8FC\uC138\uC694)",
       style: { width: "100%", minHeight: 100, border: `1.5px solid ${LINE}`, borderRadius: 11, padding: 12, fontSize: 14, resize: "vertical", outline: "none" }
     }
-  ), blocked && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 10, background: blocked.crisis_support ? "#fff4ee" : "#fef9ec", border: `1px solid ${blocked.crisis_support ? "#f5c6a5" : "#fde68a"}`, borderRadius: 10, padding: 12, fontSize: 13, lineHeight: 1.7, color: "#78350f" } }, blocked.message, blocked.suggested_fix && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 6, color: GREEN } }, "\uC218\uC815 \uC81C\uC548 \xB7 ", blocked.suggested_fix), blocked.crisis_support && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 6 } }, "\uC790\uC0B4\uC608\uBC29 \uC0C1\uB2F4\uC804\uD654 ", /* @__PURE__ */ React.createElement("a", { href: "tel:109", style: { color: "#b45309", fontWeight: 700 } }, "109"), "(24\uC2DC\uAC04) \xB7 \uAE34\uAE09 \uC2DC 112 \xB7 1366 \xB7 1388")), /* @__PURE__ */ React.createElement("div", { style: { height: 10 } }), /* @__PURE__ */ React.createElement(Btn, { onClick: submit, disabled: busy || !content.trim() }, busy ? "\uAC80\uD1A0 \uC911\u2026" : "\uAC8C\uC2DC\uD558\uAE30"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: MUT, textAlign: "center", marginTop: 6 } }, "\uAC8C\uC2DC \uC804 AI\uAC00 \uBA3C\uC800 \uAC80\uD1A0\uD574\uC694 (\uD2B9\uC815\uC778 \uC2DD\uBCC4\xB7\uC695\uC124 \uB4F1)")), posts === null ? /* @__PURE__ */ React.createElement("div", { style: { color: MUT, textAlign: "center", padding: 30 } }, "\uBD88\uB7EC\uC624\uB294 \uC911\u2026") : posts.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { color: MUT, textAlign: "center", padding: 30 } }, "\uC544\uC9C1 \uAE00\uC774 \uC5C6\uC5B4\uC694. \uCCAB \uC774\uC57C\uAE30\uB97C \uB098\uB220\uBCF4\uC138\uC694.") : posts.map((p) => /* @__PURE__ */ React.createElement(Card, { key: p.id, style: { marginBottom: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, lineHeight: 1.7, whiteSpace: "pre-wrap" } }, p.content), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: MUT, marginTop: 8 } }, "\u{1F90D} ", p.empathy_count || 0, " \xB7 ", (p.created_at || "").slice(0, 10)))));
+  ), blocked && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 10, background: blocked.crisis_support ? "#fff4ee" : "#fef9ec", border: `1px solid ${blocked.crisis_support ? "#f5c6a5" : "#fde68a"}`, borderRadius: 10, padding: 12, fontSize: 13, lineHeight: 1.7, color: "#78350f" } }, blocked.message, blocked.suggested_fix && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 6, color: GREEN } }, "\uC218\uC815 \uC81C\uC548 \xB7 ", blocked.suggested_fix), blocked.crisis_support && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 6 } }, "\uC790\uC0B4\uC608\uBC29 \uC0C1\uB2F4\uC804\uD654 ", /* @__PURE__ */ React.createElement("a", { href: "tel:109", style: { color: "#b45309", fontWeight: 700 } }, "109"), "(24\uC2DC\uAC04) \xB7 \uAE34\uAE09 \uC2DC 112 \xB7 1366 \xB7 1388")), /* @__PURE__ */ React.createElement("div", { style: { height: 10 } }), /* @__PURE__ */ React.createElement(Btn, { onClick: submit, disabled: busy || !content.trim() }, busy ? "\uAC80\uD1A0 \uC911\u2026" : "\uAC8C\uC2DC\uD558\uAE30"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: MUT, textAlign: "center", marginTop: 6 } }, "\uAC8C\uC2DC \uC804 AI\uAC00 \uBA3C\uC800 \uAC80\uD1A0\uD574\uC694 (\uD2B9\uC815\uC778 \uC2DD\uBCC4\xB7\uC695\uC124 \uB4F1)")), posts === null ? /* @__PURE__ */ React.createElement("div", { style: { color: MUT, textAlign: "center", padding: 30 } }, "\uBD88\uB7EC\uC624\uB294 \uC911\u2026") : posts.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { color: MUT, textAlign: "center", padding: 30 } }, "\uC544\uC9C1 \uAE00\uC774 \uC5C6\uC5B4\uC694. \uCCAB \uC774\uC57C\uAE30\uB97C \uB098\uB220\uBCF4\uC138\uC694.") : posts.map((p) => /* @__PURE__ */ React.createElement(Card, { key: p.id, style: { marginBottom: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, lineHeight: 1.7, whiteSpace: "pre-wrap" } }, p.content), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: MUT, marginTop: 8, display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: () => empathize(p.id),
+      disabled: !!empathized[p.id],
+      style: { border: `1px solid ${empathized[p.id] ? GREEN : LINE}`, background: empathized[p.id] ? LGREEN : "#fff", color: empathized[p.id] ? GREEN : MUT, borderRadius: 16, padding: "4px 10px", fontSize: 12, fontWeight: 700, cursor: empathized[p.id] ? "default" : "pointer" }
+    },
+    "\u{1F90D} ",
+    p.empathy_count || 0
+  ), /* @__PURE__ */ React.createElement("span", null, (p.created_at || "").slice(0, 10))))));
 }
 function Memory({ relationId, onBack }) {
   const [mem, setMem] = useState(void 0);
