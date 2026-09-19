@@ -292,7 +292,77 @@
   - 한도 초과 시 `402 {code:'QUOTA'}` → 프론트 `Observe`가 "🎟️ 돌아가서 이용권 코드 등록하기" 버튼을 노출.
 - **환불**: `/api/grant/revoke`가 구독 만료일을 해당 일수만큼 **되돌리고**, 회차권은 `MAX(0, remaining-count)`. 주문은 `external_orders.status='revoked'`로 마킹.
 - **약관상 청약철회**: 디지털 콘텐츠 코드는 발송·등록 후 청약철회 제한(`/terms` 제5조).
-- 통합결제 실행 스펙·DB·API 계약·검증 절차 상세는 외부 메모리 `project_maum_unified_payment` 참조 — **문서화 필요**. 유료화·제휴 방향 상세는 외부 메모리 `project_maum_series_monetization` 참조 — **문서화 필요**.
+
+### 10.1 마음풀 → 마음곁 통합결제 계약 (`/api/grant` · `/api/grant/revoke`) — 코드에서 복원
+
+> ⚠️ **단방향 계약이다.** 발신은 마음풀 한 곳(`../maumful-main/src/index.tsx` `deliverGrant()` L3161~L3197 · 큐 `external_grants`(migrations/0029) · 재시도 `POST /api/admin/deliver-pending-grants` L3199~), 수신은 수달·곁·phyweb.
+> **양쪽 문서가 어긋나면 지급 사고가 난다** → 아래 표는 마음수달 설계서(`../maumotter/docs/DESIGN.md`) §10.1 과 **동일 내용**이며, 서비스별로 값이 다른 항목은 표 아래 "수달 ↔ 곁 차이"에 따로 적었다.
+> 근거: 수신 maumgyeot/src/index.ts L381~L397(`verifySso`·`verifyGrantToken`)·L399~L424(`/api/grant`)·L425~L450(`/api/grant/revoke`)·L118~L139(`applyGrant`) · 발신 `../maumful-main/src/index.tsx` L179~L186(`signSso`)·L3118~L3159(`PACKAGES`·`SERVICE_API`)·L3161~L3197.
+
+| 항목 | 값 |
+|---|---|
+| 방향 | 마음풀(발신) → 수달·곁·phyweb(수신). **역방향 없음** |
+| 메서드·경로 | `POST {서비스 루트}/api/grant` · 회수는 `POST {서비스 루트}/api/grant/revoke` |
+| 수신 URL | `SERVICE_API = { otter: 'https://maumotter.com', gyeot: 'https://maumgyeot.com', phyweb: 'https://phyweb.pages.dev' }` |
+| 헤더 | `Content-Type: application/json` **뿐**. Authorization 헤더 없음 — 인증은 바디 토큰이 전담 |
+| 바디 | `{ "token": "<payloadB64u>.<sigB64u>" }` — 단일 필드 |
+| 서명 페이로드 | `{ email, service, grantType, orderId, amount, exp }` |
+| 서명 계산식 | `payloadB64u = base64url(JSON.stringify(payload))` (`+`→`-`, `/`→`_`, `=` 제거) → `sig = base64url(HMAC-SHA256(MAUM_SSO_SECRET, payloadB64u))` → 토큰 = `payloadB64u + "." + sig`. **서명 대상은 payload 문자열 자체**(JWT 와 달리 헤더 부분이 없다) |
+| 검증 | 수신측 `verifySso()` — `lastIndexOf('.')` 로 분리 후 동일 HMAC 재계산·문자열 비교(상수시간 비교 아님) → `verifyGrantToken()` 이 `exp` 를 초 단위 현재시각과 대조 |
+| 재생 방지 | `exp = now + 300`(**5분**). `exp` 누락도 거부 |
+| 대상 확인 | `p.service` 가 **있고** 자기 서비스명과 다르면 `400 service mismatch`. ⚠️ `service` 필드가 **없으면 통과한다**(약한 검사) |
+| `grantType` 허용값 | `sub_light` · `sub_pro` · `pack10` — 그 외 `400 unknown grantType` |
+| 멱등키 | `orderId` = `mf_charge_{chargeId}`. 발신측 `external_grants.order_id` PK · 수신측 `external_orders.order_id` 선조회 → 있으면 **적용하지 않고** `200 {ok:true, dedup:true, status}` |
+| 계정 처리 | `email` 소문자화 → `maum-auth` 조회, 없으면 **랜덤 비밀번호로 자동 생성**(선구매 후가입) → `markEmailVerified()` |
+| 지급 | `applyGrant(uid, grantType)` — 구독은 잔여기간에 `days` **가산** + `monthly_quota` 는 `Math.max()` 상향(100 이상이면 `plan='pro'` 승격), 회차권은 `remaining` **가산** |
+| 성공 응답 | `200 {ok:true, applied:true, grantType, result}`. `result` = `{kind:'subscription', plan, expires_at}` 또는 `{kind:'pack', remaining}` |
+| 발신측 응답 처리 | `res.ok` 면 `external_grants.status='delivered'`, 응답 JSON 의 `code`(또는 `data.code`)를 `COALESCE` 저장. **수달·곁 응답에는 `code` 가 없다**(쿠폰형 phyweb 전용 필드) |
+| 에러 코드 | `503 grant secret 미설정`(`MAUM_SSO_SECRET` 없음) · `401 invalid or expired grant`(서명 불일치·`exp` 만료·파싱 실패) · `400 service mismatch` · `400 email/orderId 누락` · `400 unknown grantType` · `500 계정 처리 실패` |
+| 실패 시 | 발신측이 `external_grants.status='failed'`, `attempts+1`. 재시도는 **관리자 수동** `POST /api/admin/deliver-pending-grants`(`status IN ('pending','failed') AND attempts < 8`, 1회 50건). **자동 Cron 없음** |
+| revoke 요청 | 동일 토큰 스킴. 수신측이 실제로 읽는 값은 `orderId` **하나뿐**. `external_orders` 에 없으면 `200 {ok:true, note:'no such order'}`, `status!=='applied'` 면 `200 {ok:true, note:'already …'}` |
+| revoke 동작 | 구독은 `expires_at` 에서 `days` 만큼 **빼고**(하한 보정 없음 — 과거 시각이 될 수 있다), 회차권은 `remaining = MAX(0, remaining - count)`. 이후 `external_orders.status='revoked'` · `revoked_at` 기록 |
+
+**수달 ↔ 곁 차이** — 위 표의 값은 **전부 같다.** 코드에서 확인된 차이는 둘뿐이다:
+
+1. **`service` 판별 문자열**: 수달 `'otter'`(`maumotter/src/index.ts` L539) / 곁 `'gyeot'`(`maumgyeot/src/index.ts` L405).
+2. **`verifySso()` 의 역할 범위**: 수달은 **SSO 로그인과 grant 가 같은 함수를 공유**한다(L154 정의 → L295 `/api/auth/sso`, L528 `verifyGrantToken`). 곁은 **grant 전용**이다(L381 정의) — 곁에는 `/api/auth/sso` 라우트 자체가 없어 마음풀 SSO 로 곁에 바로 진입할 수 없다.
+
+그 외 `verifySso`·`verifyGrantToken`·`/api/grant`·`/api/grant/revoke` 본문과 `PLAN`/`PACK`/`FREE_MONTHLY`(5) 상수는 **양쪽이 문자 단위로 동일**하다.
+
+⚠️ **계약상 확인된 구멍**(코드에서 복원):
+
+1. **수신측 `external_orders` 테이블의 DDL 이 어느 `.sql` 에도 없다**(§15). 발신측은 같은 사고를 이미 겪고 고쳤다 — 마음풀 `migrations/0029_external_grants.sql` 주석 원문: *"기존 코드(deliverGrant)가 이 테이블을 INSERT/UPDATE 하는데 CREATE가 어디에도 없었음 → 수달·곁 grant가 실제론 실패 상태였음. 이 마이그레이션으로 정상화."* **수신측은 아직 이 정상화가 안 됐다** → 착수 전 마이그레이션 작성 필수.
+2. **`/api/grant/revoke` 를 호출하는 발신 코드가 존재하지 않는다.** 마음풀의 revoke 호출부는 두 곳 모두 `https://phyweb.pages.dev/api/grant/revoke` **하드코딩**이다(`maumful-main/src/index.tsx` L1186 사용자 셀프환불 · L4570 관리자 환불). 수달·곁 상품은 `PACKAGES` 에서 `credits: 0` 이라 환불 시 phyweb 분기를 타지 않고 크레딧 환불 경로(`u.credits < charge.credits` → `0 < 0` false)로 통과한다 → **카드만 환불되고 지급된 구독·회차권은 그대로 남는다.** 수신측 revoke 는 현재 **호출자 없는 코드**다.
+3. **`/api/grant/status` 미구현.** 마음풀 셀프환불은 phyweb 에 `GET /api/grant/status?token=…` 으로 "코드 등록 여부"를 먼저 묻고 등록됐으면 환불을 거부하지만, 수달·곁에는 이 라우트가 없다. 즉 **"이미 사용한 이용권인지" 를 마음풀이 물어볼 수단이 없다.**
+4. **`amount` 는 서명 페이로드에 들어 있으나 수신측이 전혀 읽지 않는다**(금액 검증 없음). 지급량은 `grantType` 만으로 결정된다.
+5. **`MAUM_SSO_SECRET` 하나가 SSO 로그인과 결제 지급을 모두 인증한다.** 유출 시 계정 탈취와 무상 지급이 동시에 가능하다(수달은 특히 `/api/auth/sso` 까지 같은 키).
+
+**루트 `../CLAUDE.md` 「연동형 유료결제 (통합결제) — 설계 완료·착수 대기 ⚠️」 원문**(코드에서 복원 · 근거: `../CLAUDE.md` L86~L91):
+
+> 수달·곁·부부 유료결제를 **마음풀에서 상품으로 판매 → 결제내역을 각 서비스로 자동 전달(grant)** 하는 방식. **사용자 지시 있을 때만 착수**하며, **토스페이먼츠 완전 반영 전까지 관련 코드는 커밋·푸시·배포 금지**(설계·로컬 준비만).
+> - **결제 표기 = 하이브리드**(내부 크레딧, 겉은 명명 상품 — 선불충전금/PG 기피 회피). 마음풀·부부는 이미 이 구조. 수달·곁은 별도 생태계라 `applyGrant`(sub/pack)로 지급.
+> - **전달 = A안(서명 grant API)**: 마음풀 결제성공 → 대상 서비스 `POST /api/grant`(HMAC=MAUM_SSO_SECRET, `{email,grantType,orderId}`) → email로 maum-auth 계정 조회/생성 → `applyGrant`. 멱등·환불 revoke·선지급 재시도 포함.
+> - 사업자 단일(마음서비스)이라 결제대행 규제 무관. 수달·곁 앱은 당분간 없음.
+> - **상세 실행 스펙·DB·API 계약·검증은 메모리 `project_maum_unified_payment`** (착수 지시 시 그대로 실행).
+
+⚠️ 위 CLAUDE.md 가 적은 페이로드 `{email,grantType,orderId}` 는 **실제 구현보다 3개 적다** — 코드는 `service`·`amount`·`exp` 를 함께 서명한다. 구현·검증 시 CLAUDE.md 요약이 아니라 **이 §10.1 표를 계약 원본으로 삼을 것.**
+
+⚠️ **의사결정 맥락**(확장 범위 = 어느 서비스·어떤 상품까지 넓힐지, 착수 조건, 단계별 검증 절차 체크리스트, 실패 시 운영 대응 시나리오)은 외부 메모리 `project_maum_unified_payment` 에만 존재 — **코드로 복원 불가.**
+
+### 10.2 유료화·제휴 실측 (코드에서 복원)
+
+- **가격 대조 — 마음풀 청구가와 일치한다**(근거: `public/index.html` L311 `EntitlementCard` 안내 문구 · `../maumful-main/src/index.tsx` L3146~L3148 `PACKAGES`):
+  - `sub_light` — 곁 프론트 표시 **7,900원** / 마음풀 `gyeot_light` 청구 **7,900** ✅
+  - `sub_pro` — 곁 프론트 표시 **14,900원** / 마음풀 `gyeot_pro` 청구 **14,900** ✅
+  - `pack10` — 곁 프론트 표시 **6,900원** / 마음풀 `gyeot_pack10` 청구 **6,900** ✅
+  - **마음수달도 같은 3종·같은 금액**이다(`../maumotter/public/index.html` L105, `otter_light`/`otter_pro`/`otter_pack10`). 시리즈 2종의 가격표는 현재 동일하다.
+  - ⚠️ 곁·수달 쪽 금액은 **코드 상수가 아니라 JSX 표시 문구**이고 실제 청구는 마음풀 `PACKAGES` 가 한다 → **두 곳을 따로 고쳐야 하며** 한쪽만 고치면 표시가와 청구가가 갈린다.
+- **쿼터 엔진 스키마**(근거: `migrations/0001_billing.sql`): `subscriptions(maum_user_id PK, plan 'light'|'pro', monthly_quota 30|100, expires_at, updated_at)` · `packs(maum_user_id PK, remaining, expires_at, updated_at)` · `usage_monthly((maum_user_id, ym) PK, used)` — `ym = 'YYYYMM'`(UTC). **수달 `0001_billing.sql` 과 컬럼 단위로 동일**하다.
+- **쿼터 소모 순서**(`consumeQuota()` L104~L115): ① `monthlyRemaining > 0` 이면 `usage_monthly` UPSERT `used+1` — 이때 `source` 는 `used < freeMonthly` 면 `'free'`, 아니면 `'subscription'`(무료 5회와 구독분은 **같은 카운터**를 쓰고 라벨만 갈린다) → ② 아니면 `packs.remaining - 1` → ③ 둘 다 없으면 `{ok:false}` → `402 {code:'QUOTA'}`. 즉 **회차권은 언제나 마지막에 쓰인다**(월간 잔여가 남아 있으면 팩은 줄지 않는다).
+- **쿠폰**(`coupons`·`coupon_redemptions`, `POST /api/coupon/redeem` L354~L376): 코드 정규화 `normCode()` = 대문자화 + `[^A-Z0-9]` 제거 → `active` 검사(`404`) → `valid_until` 만료(`410`) → `redeemed_count >= max_redemptions`(`409`) → 본인 사용횟수 `>= per_user_limit`(`409`) → `coupon_redemptions` INSERT(UNIQUE `(code, maum_user_id)` 로 경쟁 상태까지 방어, 실패 시 `409`) → `redeemed_count+1` → `applyGrant()`. `coupons.type` 은 `sub_light`|`sub_pro`|`pack10` 로 **grant 계약(§10.1)의 `grantType` 과 같은 값 집합**이다. 발행은 `POST /api/admin/coupon/create`(ADMIN Bearer), 코드 문자셋은 혼동문자를 뺀 `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`. `source` 컬럼에 `'smartstore'`·`'partner:xxx'` 를 넣도록 주석에 규정.
+- **제휴 `?ref=` 추적**(`migrations/0002_referrals.sql`, `src/index.ts` L220): 가입(`/api/auth/register`) 시점에 `INSERT OR IGNORE INTO referrals (maum_user_id, ref)` — PK 가 `maum_user_id` 라 **first-touch 1회만 귀속**되고 이후 `?ref=` 는 무시된다. 값은 64자 절단. 집계는 `GET /api/admin/referrals` 가 `referrals LEFT JOIN coupon_redemptions` 로 **파트너별 가입 수 ↔ 유료 전환 수**를 뽑는다. ⚠️ 정산 금액 계산은 **없다**(마음풀의 `partner_commissions` 같은 원장이 곁에는 없음).
+- **비회원 미리보기**: `GUEST_FREE = 2`(IP당), KV `guest_observe:<ip>` TTL 1년 → 문구상 "평생 2회"지만 실제로는 **1년 롤링 + IP 변경 시 초기화**(§15-14).
+- ⚠️ **유료화 방향의 의사결정 맥락**(왜 구독+월 사용캡인지, 왜 런칭을 스마트스토어+쿠폰으로 잡았는지의 판단 근거, 제휴 파트너 선정·수수료 조건, 스마트스토어 상품 설정값)은 외부 메모리 `project_maum_series_monetization` 에만 존재 — **코드로 복원 불가.** 레포에 남은 방향 요약은 §14 의 한 줄뿐이다.
 
 ---
 
@@ -385,7 +455,7 @@
 | 비회원 미리보기 | **있음**(`/api/observe/guest`) | 없음 | ❌ 곁에만 |
 | 마음풀 SSO 수신 | **없음**(`/api/auth/sso` 미구현) | 있음 | ❌ 곁에만 없음 |
 | CORS 미들웨어 | **없음** | 4개 오리진 화이트리스트 | ❌ 곁에만 없음 |
-| 안드로이드 래퍼 | `app/` Capacitor + AdMob 광고형(보류) | 외부 메모리 참조(보류) | 🔁 둘 다 보류 |
+| 안드로이드 래퍼 | `app/` Capacitor + AdMob 광고형(보류) | **스캐폴드 자체가 없음** — `app/`·`initBannerAd`·AdMob 상수·TWA 매니페스트 0건 | 🔁 둘 다 보류, **스캐폴드는 곁에만** |
 
 ⚠️ **회원 탈퇴의 파급**: `DELETE /api/account`가 `deleteUser(AUTH_DB)`로 공용 `users` 행을 삭제한다. 마음곁에서 탈퇴하면 **마음수달 계정도 함께 사라진다.** `/account-deletion` 페이지에 고지되어 있으나, 마음수달 쪽 도메인 데이터(`children`·`sessions`·`reports`)는 **고아 행으로 남는다**(§15).
 
@@ -399,16 +469,27 @@
   - **⚠️ 이미 구현·배포되어 그대로 유지 — 삭제·롤백 금지 항목**:
     1. **계정 삭제(회원 탈퇴)** — `DELETE /api/account`(도메인 데이터 + 공용 maum-auth 계정 삭제), 공개 페이지 `/privacy`·`/account-deletion`, 홈 하단 링크. Play 요건이자 **웹 개인정보 보호에도 필요**하므로 유지.
     2. **AdMob 배너 웹 훅** — `public/index.html`의 `initBannerAd()`. **Capacitor 네이티브에서만 동작, 웹 브라우저에선 no-op**(가드+try/catch)라 그대로 둬도 웹 영향 0. 현재 Google 테스트 ID.
-  - **재개 시 쓸 자료(보류 동안 건드릴 필요 없음)**: 래핑 스캐폴드 `app/`(`appId=com.maumgyeot.app`, `capacitor-www`, native-templates: MainActivity textZoom+카메라 권한, AndroidManifest CAMERA/RECORD_AUDIO/AD_ID+AdMob meta), 단계별 `app/README.md`, 루트 `../ANDROID_APP_PLAYBOOK.md`, 외부 메모리 `project_android_app_plan` — **문서화 필요**.
+  - **재개 시 쓸 자료(보류 동안 건드릴 필요 없음)**: 래핑 스캐폴드 `app/`(`appId=com.maumgyeot.app`, `capacitor-www`, native-templates: MainActivity textZoom+카메라 권한, AndroidManifest CAMERA/RECORD_AUDIO/AD_ID+AdMob meta), 단계별 `app/README.md`, 루트 `../ANDROID_APP_PLAYBOOK.md`.
+    - **플레이북 실측 요지**(코드에서 복원 · 근거: `../ANDROID_APP_PLAYBOOK.md` 309줄): Capacitor **라이브 URL 래핑**(`server.url` = 배포 도메인, `webDir=capacitor-www` 는 fallback) → 네이티브 필수 fix(`allowNavigation` 을 빼면 인증이 외부 브라우저로 튕김 · `textZoom` · 이메일 로그인) → 릴리스 서명 + `.aab` → Play Console 내부테스트 + 사업자 판매자 계정 → RevenueCat(`goog_` 키·서비스계정·상품·Offering) → 라이선스 테스터 실결제 → 프로덕션. **선행 관문(시간 소요)**: Play 개발자 계정($25, 신원확인 수일) · 판매자(Payments) 계정 승인 · 서비스계정 권한 전파 **최대 36시간**. ⚠️ 라이브 URL 래핑은 **온라인 전용**(오프라인 필요 시 이 방식 불가).
+    - **광고형 선택의 코드 근거**(`app/README.md`): 광고형은 인앱결제를 안 하므로 **판매자(Payments) 계정 불필요**, 대신 **AdMob 계정 + 정산 정보** 필요. Play 데이터 보안 신고 = 이메일·사용자ID·반려동물/관찰 기록 + **광고 식별자**, 영상은 "임시 처리(미저장)"이라 수집 신고 불필요. **타겟층은 만 13세 미만 아님** — AdMob 아동 대상 제약 때문에 아동 타겟 금지(이 제약이 수달과 곁의 앱 전략을 가르는 지점이다).
+    - ⚠️ **앱화 보류 결정의 의사결정 맥락**(광고형 vs 인앱결제형 비교 검토 내용, 마케팅 비용 추산, 재개 판단 기준·시점)은 외부 메모리 `project_android_app_plan` 에만 존재 — **코드로 복원 불가.** 레포에 남은 것은 위 "결정" 한 줄(`CLAUDE.md` §10)과 스캐폴드·플레이북 같은 **실행 자산뿐**이다.
   - **재개 시 남은 작업**: `npx cap add android` → 네이티브 fix 적용 → 카메라 실기확인 → AdMob 실 ID 2곳 교체 → 키스토어+`.aab` → Play 내부테스트 → (개인계정이면) 비공개테스트 12명·14일 → 프로덕션.
-  - **유료화·제휴는 앱과 분리되어 계속(웹 기준)**: 방향은 **구독+월 사용캡**, 런칭 결제는 **스마트스토어+쿠폰**(토스 승인 지연 회피), 제휴는 `?ref=` 추적. 상세는 외부 메모리 `project_maum_series_monetization` 참조 — 문서화 필요.
+  - **유료화·제휴는 앱과 분리되어 계속(웹 기준)**: 방향은 **구독+월 사용캡**, 런칭 결제는 **스마트스토어+쿠폰**(토스 승인 지연 회피), 제휴는 `?ref=` 추적. **실측 스키마·산식·라우트는 §10.2 에 복원해 두었다**(가격 3종 마음풀 `PACKAGES` 대조 일치 · `subscriptions`/`packs`/`usage_monthly` · 쿼터 소모 순서 · 쿠폰 검증 6단계 · `referrals` first-touch). ⚠️ **방향을 그렇게 정한 판단 근거와 파트너·판매처 설정값**은 외부 메모리 `project_maum_series_monetization` 에만 존재 — 코드로 복원 불가.
 - **미착수 / 대기**:
   - 관찰 누적 추이(시계열 리포트) — 설계만
   - 행동 사전 확장(품종·개체차 보정) — 설계만
   - `RESEND_API_KEY` 설정(Resend 도메인 검증 선행) · `STORE_URL` 설정 · AdMob 실 ID
   - 마음풀 통합결제 grant **착수·배포 승인** — 토스페이먼츠 완전 반영 후
   - 마음풀 SSO 수신(`/api/auth/sso`) — 수달에는 있으나 곁에는 미구현
-  - 전 서비스 잔여 백로그는 외부 메모리 `project_maum_backlog` 참조 — **문서화 필요**
+  - **전 서비스 잔여 백로그 — 코드로 복원 불가.** 레포에 남은 유일한 대응물인 루트 `../CLAUDE.md` 「남은 작업 (백로그)」 **원문 인용**(L77~L82)으로 대체한다:
+
+    > 전 서비스 남은 작업은 메모리 **`project_maum_backlog`** 한 곳에 모아 둔다. 새 작업 지시가 오면 여기부터 확인할 것.
+    > - **바로 가능**: 폐기된 상담사 승인 레거시 코드 제거 / 주간 리포트 메일 실수신 검증(사용자 동의 후)
+    > - **데이터 보고 판단**(2026-08-09경): 마음게임 콘텐츠 확장 — 어드민 🔁 루프 탭에서 검사↔게임 루프가 도는지 확인 후
+    > - **선행조건 대기**: 앱화·통합해석 상품화·연동형 통합결제 → 모두 **토스 실결제 반영 후**
+    > - **금지**: 커플 감정 내용 공유(동의·철회 UX 없이) / CTS 개발(명시적 재개 시에만)
+
+    ⚠️ 위 4줄은 **전 서비스 요약일 뿐**이고 마음곁 항목은 "앱화·연동형 통합결제(토스 실결제 반영 후)" 두 건에만 간접적으로 걸린다. **서비스별 작업 항목·우선순위·일정**은 외부 메모리 `project_maum_backlog` 에만 존재 — 코드로 복원 불가. 마음곁 단일 서비스 범위의 잔여 작업은 이 §14 "미착수 / 대기" 목록이 전부다.
 - **금지 사항**:
   1. `wrangler dev`·`npm run dev` 등 로컬 개발 안내 금지. 배포는 GitHub 웹 UI만.
   2. 부분 수정 diff 제공 금지 — **완성된 전체 파일** 제공(Ctrl+A → 붙여넣기).
@@ -444,7 +525,21 @@
 | 15 | **마스터 이메일 하드코딩** | `MASTER_EMAILS = ['limyj007@gmail.com']`이 소스에 평문. | 계정 변경 시 재배포 필요 |
 | 16 | **AI Gateway 계정 종속** | 게이트웨이 URL에 마음풀 계정/게이트웨이 이름(`.../maumful/...`)이 하드코딩. "별개 생태계"라면서 게이트웨이는 공유. | 마음풀 게이트웨이 변경이 곁 장애로 전파 |
 | 17 | **공용 계정 삭제의 고아 데이터** | 곁 탈퇴가 `maum-auth.users`를 지우지만 수달 도메인 데이터는 남는다(역방향도 동일). `external_orders` 행도 삭제 대상에서 빠져 있다. | 개인정보 완전 파기 주장과 충돌 가능 |
-| 18 | **테스트 부재 · 무빌드 프론트 사각지대** | 테스트·CI 없음. 단일 `public/index.html` 399줄에 전 화면이 들어 있고 빌드가 없어 렌더 오류를 사전에 못 잡는다(루트 `../CLAUDE.md` `feedback_frontend_render_smoke` 경고와 동일 리스크). | 회귀 검증은 전적으로 수동, 프론트 오류가 배포 후 발견 |
+| 18 | **테스트 부재 · 무빌드 프론트 사각지대** | 테스트·CI 없음. 단일 `public/index.html` 399줄에 전 화면이 들어 있고 빌드가 없어 렌더 오류를 사전에 못 잡는다(루트 `../CLAUDE.md` L75 원문: *"프론트는 빌드·200으로 런타임 에러를 못 잡는다 → 렌더 검증 필수(`feedback_frontend_render_smoke`)"* — 같은 섹션 L73~L74 는 신규 구현 시 "추가형 설계·기존 경로 1회 실주행·NULL 허용"을 요구한다. ⚠️ 그 경고를 만든 **실제 렌더 사고 사례**는 외부 메모리 `feedback_frontend_render_smoke` 에만 존재 — 코드로 복원 불가). | 회귀 검증은 전적으로 수동, 프론트 오류가 배포 후 발견 |
+
+### 외부 메모리 대조표 (2026-09-19 복원 작업 결과)
+
+이 문서에서 참조하던 외부 메모리를 **코드 1차 근거로 복원**한 결과다. 왼쪽 열이 본문에 반영된 것, 오른쪽 열이 **원리상 코드에 없는 것**(= 의사결정 맥락)이다.
+
+| 외부 메모리 | 코드로 복원된 부분 | 복원 불가(의사결정 맥락) |
+|---|---|---|
+| `project_maum_unified_payment` | §10.1 계약 표 전체 — 서명식·페이로드 6필드·멱등키·응답·에러코드·revoke 동작 + 구멍 5건 | 확장 범위(어느 서비스·어떤 상품까지), 착수 조건, 검증 절차 체크리스트, 실패 운영 시나리오 |
+| `project_maum_series_monetization` | §10.2 전체 — 가격 3종 마음풀 `PACKAGES` 대조·쿼터 엔진 스키마·소모 순서·쿠폰 검증 6단계·`referrals` first-touch·게스트 상한 | 가격 곡선 결정 근거, 구독+월캡 방향의 판단 이유, 제휴 파트너 선정·수수료 조건, 스마트스토어 상품 설정값 |
+| `project_android_app_plan` | §14 — 스캐폴드 `app/` 구성, `ANDROID_APP_PLAYBOOK.md` 절차·선행 관문, 광고형 선택의 코드 근거(판매자 계정 불필요·데이터 보안 신고 항목·13세 미만 타겟 금지) | 광고형 vs 인앱결제형 비교 검토, 마케팅 비용 추산, 재개 판단 기준·시점 |
+| `project_maum_backlog` | — (**코드 0건**) | **전 서비스 통합 백로그 전부.** 루트 `../CLAUDE.md` L77~L82 요약 4줄만 §14 에 인용 |
+| `feedback_frontend_render_smoke` | 루트 `../CLAUDE.md` L73~L75 원문(§15-18) | 경고를 만든 실제 렌더 사고 사례 |
+
+→ **잔여 리스크**: 오른쪽 열은 그 메모리가 사라지면 영구 소실된다. 특히 `project_maum_backlog` 는 **레포에 대응물이 전혀 없다.**
 
 ---
 
@@ -452,3 +547,4 @@
 | 일자 | 내용 | 작성 |
 |---|---|---|
 | 2026-09-19 | 표준 템플릿 기반 통합 진입 문서 최초 작성. 기존 `docs/` 3종은 유지하고 §2·§11에서 링크 위임. §1·§5~§8·§10·§12·§14는 코드에서 직접 확인해 기재. `_shared/auth.ts` md5 대조 결과 §15-1에 기록. | Claude Code |
+| 2026-09-19 | 외부 메모리 참조 항목을 코드에서 복원해 대체. 복원 불가 항목은 사유 명시 | Claude |
