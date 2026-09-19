@@ -1401,8 +1401,12 @@ async function handleScheduled(env: Bindings) {
       const emotionCounts: Record<string, number> = {}
       for (const s of sessions) {
         if (s.gameId === 'burnout') {
-          if (typeof s.meta.completedMissions === 'number') missionCount += s.meta.completedMissions
-          if (typeof s.meta.energy === 'number') energies.push(s.meta.energy)
+          // R-08: 프론트는 missions_completed/energy_gained로 저장하는데 서버가 completedMissions/energy만 읽어
+          //   집계가 죽어 있었음. energy(accurate 현재에너지) 우선, 구키 폴백으로 관대하게 읽는다(기존 8건도 부활).
+          const _em = (s.meta as any).completedMissions ?? (s.meta as any).missions_completed
+          if (typeof _em === 'number') missionCount += _em
+          const _en = (s.meta as any).energy ?? (s.meta as any).energy_gained
+          if (typeof _en === 'number') energies.push(_en)
         }
         if (s.gameId === 'mood' && typeof s.meta.emotion === 'string') {
           const e = s.meta.emotion
@@ -1477,7 +1481,8 @@ function signalsFromSessions(sessions: { gameId: string; meta: Record<string, un
     }
     if (s.gameId === 'burnout') {
       burnoutPlays++
-      if (typeof s.meta.energy === 'number') energies.push(s.meta.energy)
+      const _en = (s.meta as any).energy ?? (s.meta as any).energy_gained   // R-08: energy 우선, 구키 폴백
+      if (typeof _en === 'number') energies.push(_en)
     }
   }
   return {

@@ -381,6 +381,7 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
         gameId:'burnout', moduleType:'MISSION', score,
         durationSec: completedToday.length * 60,
         metadata:{ missions_completed:completedToday.length, energy_gained:totalEnergyGained,
+          completedMissions:completedToday.length, energy:Math.max(0, Math.min(100, Math.round(energy))),
           city_level:cityLevel.level, burnout_score:burnoutScore },
       });
       onSessionEnd?.({ score, expGained:res.data?.expGained||0,

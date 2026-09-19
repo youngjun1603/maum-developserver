@@ -396,6 +396,8 @@ function BurnoutGame({ userTestResults = {}, onSessionEnd }) {
         metadata: {
           missions_completed: completedToday.length,
           energy_gained: totalEnergyGained,
+          completedMissions: completedToday.length,
+          energy: Math.max(0, Math.min(100, Math.round(energy))),
           city_level: cityLevel.level,
           burnout_score: burnoutScore
         }
