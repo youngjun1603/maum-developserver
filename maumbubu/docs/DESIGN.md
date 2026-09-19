@@ -476,7 +476,7 @@ npx wrangler deploy                                 # 포그라운드 필수, li
   - 배포는 **포그라운드**·`limyj007` 계정. 백그라운드 `wrangler deploy` 금지.
 
 ## 15. 알려진 리스크 · 기술부채
-1. **`/api/share/respond`에 소유권 검증이 없다.** `translate-route.ts:898-905`는 `shareId`만 받아 `UPDATE shared_items SET status='accepted'`를 실행하며, `assertRelationOwner`도 수신자 확인도 하지 않는다. 유효한 마음부부/마음커플 토큰을 가진 **아무 사용자나** 임의 `shareId`의 상태를 바꿀 수 있다(id가 18자리 hex라 추측은 어렵지만 가드 자체가 부재). 다른 모든 라우트는 가드를 갖고 있어 일관성도 깨진다.
+1. **`/api/share/respond`에 소유권 검증이 없다.** `translate-route.ts:898-905`는 `shareId`만 받아 `UPDATE shared_items SET status='accepted'`를 실행하며, `assertRelationOwner`도 수신자 확인도 하지 않는다. 유효한 마음부부/마음커플 토큰을 가진 **아무 사용자나** 임의 `shareId`의 상태를 바꿀 수 있다(id가 18자리 hex라 추측은 어렵지만 가드 자체가 부재). 같은 파일의 다른 7개 라우트(`:345·475·618·763·838·870·887`)는 `assertRelationOwner` 를 쓰는데 이 라우트만 예외다.
 2. **공유 철회(삭제) 미구현.** ADDENDUM 1.4-4 "발신자가 공유 항목 삭제 시 수신 측에서도 제거"에 해당하는 엔드포인트·UI가 없다. 한 번 보낸 항목은 회수 불가. (마음세대는 `DELETE /api/share/:id`로 구현했다 — 역포팅 후보.)
 3. **공감 반응(🤍) 기능이 반쪽이다.** `community_posts.empathy_count`를 프론트가 표시하지만 **증가시키는 API도 버튼도 없다.** SPEC 7.3의 "공감 반응만, 순위·경쟁 없음"이 실질적으로 미구현 상태.
 4. **`relation_safety`가 평문이다.** ADDENDUM 01 §2.2는 안전 플래그를 "암호화 필드"로 요구했으나, `migrations/0002_share.sql`은 `tier TEXT`를 평문 저장한다. 공유 DB(`maumful-db`)라 민감도가 더 높다.
