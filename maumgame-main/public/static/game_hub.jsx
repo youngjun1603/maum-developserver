@@ -594,7 +594,7 @@ function DailyTip({ hubData }) {
 // ──────────────────────────────────────────────────────────
 // Leaderboard — 상위 랭킹 표시
 // ──────────────────────────────────────────────────────────
-function Leaderboard({ currentUserEmail }) {
+function Leaderboard({ currentUserId }) {
   const [data,    setData]    = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -622,7 +622,7 @@ function Leaderboard({ currentUserEmail }) {
     <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
       {data.map((entry, i) => {
         const levelInfo = GameEngine.getLevelInfo(entry.total_exp || 0);
-        const isMe = entry.email && currentUserEmail && entry.email === currentUserEmail;
+        const isMe = entry.user_id != null && currentUserId != null && entry.user_id === currentUserId;
         const rank = MEDAL[i] || `${i+1}.`;
         return (
           <div key={i} style={{
@@ -637,7 +637,7 @@ function Leaderboard({ currentUserEmail }) {
             <div style={{ fontSize:14 }}>{levelInfo.emoji}</div>
             <div style={{ flex:1, minWidth:0 }}>
               <div style={{ fontSize:13, fontWeight:700, color:C.dark, display:'flex', alignItems:'center', gap:5 }}>
-                {entry.nickname || entry.email?.split('@')[0] || t('정원사', 'Gardener')}
+                {entry.nickname || t('정원사', 'Gardener')}
                 {isMe && <span style={{ fontSize:10, background:C.sage, color:'white', borderRadius:4, padding:'1px 5px' }}>{t('나', 'Me')}</span>}
               </div>
               <div style={{ fontSize:11, color:C.muted }}>
@@ -2655,7 +2655,7 @@ function GameHubApp() {
           </button>
           {showLeaderboard && (
             <div style={{ marginTop:10 }}>
-              <Leaderboard currentUserEmail={user?.email} />
+              <Leaderboard currentUserId={user?.id} />
             </div>
           )}
         </div>
