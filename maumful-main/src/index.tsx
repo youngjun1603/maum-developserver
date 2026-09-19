@@ -783,7 +783,7 @@ app.post('/api/auth/kakao', async (c) => {
       const emailVal = email?.toLowerCase() ?? `kakao_${kakaoId}@kakao.local`
       const r = await DB.prepare(
         'INSERT INTO users (email,social_provider,social_id,nickname,locale,country_code,is_email_verified,credits) VALUES (?,?,?,?,?,?,?,20)'
-      ).bind(emailVal, 'kakao', kakaoId, nickname ?? '카카오사용자', 'ko', country, email ? 1 : 0).run()
+      ).bind(emailVal, 'kakao', kakaoId, nickname ?? '카카오사용자', 'ko', country, 1).run()
       const newId = r.meta.last_row_id as number
       await DB.batch([
         DB.prepare('INSERT INTO credit_transactions (user_id,type,amount,reason,balance_after) VALUES (?,?,?,?,?)').bind(newId, 'gain', 20, 'signup_bonus', 20),
@@ -870,7 +870,7 @@ app.get('/api/auth/kakao/callback', async (c) => {
       const emailVal = email?.toLowerCase() ?? `kakao_${kakaoId}@kakao.local`
       const r = await DB.prepare(
         'INSERT INTO users (email,social_provider,social_id,nickname,locale,country_code,is_email_verified,credits) VALUES (?,?,?,?,?,?,?,20)'
-      ).bind(emailVal, 'kakao', kakaoId, nickname ?? '카카오사용자', 'ko', country, email ? 1 : 0).run()
+      ).bind(emailVal, 'kakao', kakaoId, nickname ?? '카카오사용자', 'ko', country, 1).run()
       const newId = r.meta.last_row_id as number
       await DB.prepare('INSERT INTO credit_transactions (user_id,type,amount,reason,balance_after) VALUES (?,?,?,?,?)')
         .bind(newId, 'gain', 20, 'signup_bonus', 20).run()
@@ -898,12 +898,13 @@ app.get('/api/auth/kakao/callback', async (c) => {
 })
 
 // 네이버 로그인 — OAuth 2.0 Authorization URL 반환
-app.get('/api/auth/naver/url', (c) => {
+app.get('/api/auth/naver/url', async (c) => {
   const clientId = c.env.NAVER_CLIENT_ID
   if (!clientId) return c.json({ success: false, error: '네이버 로그인 미설정' }, 500)
   const serviceUrl = (c.env as unknown as Record<string,string>).SERVICE_URL || ''
   const redirectUri = `${serviceUrl}/api/auth/naver/callback`
   const state = Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2,'0')).join('')
+  await c.env.KV.put(`naver_state:${state}`, '1', { expirationTtl: 600 })   // R-42: CSRF 방지 — 1회용 state 저장
   const url = `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`
   return c.json({ success: true, url, state })
 })
@@ -921,6 +922,11 @@ app.get('/api/auth/naver/callback', async (c) => {
   )
 
   if (!code || !clientId || !clientSecret) return errPage('설정 오류')
+
+  // R-42: CSRF 방지 — 발급한 state 인지 검증 후 1회용 소비(재사용 차단)
+  const state = c.req.query('state')
+  if (!state || !(await KV.get(`naver_state:${state}`))) return errPage('잘못된 접근입니다.')
+  await KV.delete(`naver_state:${state}`)
 
   // code → access_token
   const serviceUrl = (c.env as unknown as Record<string,string>).SERVICE_URL || ''
@@ -968,7 +974,7 @@ app.get('/api/auth/naver/callback', async (c) => {
       const emailVal = email?.toLowerCase() ?? `naver_${naverId}@naver.local`
       const r = await DB.prepare(
         'INSERT INTO users (email,social_provider,social_id,nickname,locale,country_code,is_email_verified,credits) VALUES (?,?,?,?,?,?,?,20)'
-      ).bind(emailVal, 'naver', naverId, nickname ?? '네이버사용자', 'ko', country, email ? 1 : 0).run()
+      ).bind(emailVal, 'naver', naverId, nickname ?? '네이버사용자', 'ko', country, 1).run()
       const newId = r.meta.last_row_id as number
       await DB.prepare('INSERT INTO credit_transactions (user_id,type,amount,reason,balance_after) VALUES (?,?,?,?,?)')
         .bind(newId, 'gain', 20, 'signup_bonus', 20).run()
@@ -1250,7 +1256,7 @@ app.post('/api/credits/refund', async (c) => {
   try {
     await DB.prepare('INSERT INTO credit_transactions (user_id,type,amount,reason,balance_after,ref_id) VALUES (?,?,?,?,(SELECT credits FROM users WHERE id=?),?)')
       .bind(userId, 'spend', charge.credits, 'refund', userId, pgTid).run()
-    reversePartnerCommission(DB, charge.id).catch(() => {})
+    reversePartnerCommission(DB, charge.id).catch(err => console.error('[PartnerShare] 역적립 실패(비차단) chargeId=' + charge.id, err))
   } catch (e) { console.error('[Refund] 원장 기록 실패(환불은 완료됨):', e, 'pg_tid:', pgTid) }
 
   return c.json({ success: true, message: `${charge.credits} 크레딧 환불 완료 · ${Number(charge.amount).toLocaleString()}원이 카드로 환불돼요(카드사에 따라 수일 소요).` })
@@ -3716,7 +3722,7 @@ app.get('/api/payment/toss/success', async (c) => {
           return c.redirect('/?payment=success&pending=1')
         }
         completeReferral(DB, charge.user_id).catch(() => {})
-        accruePartnerCommission(DB, chargeIdNum).catch(() => {})
+        accruePartnerCommission(DB, chargeIdNum).catch(err => console.error('[PartnerShare] 적립 실패(비차단) chargeId=' + chargeIdNum, err))
 
         // 영수증 이메일 — 실패해도 결제·지급은 유효하므로 성공 화면을 유지한다(성공을 실패로 뒤집지 않음).
         try {
@@ -4558,7 +4564,7 @@ app.post('/api/admin/payments/:id/refund', async (c) => {
   }
   await DB.prepare('INSERT INTO credit_transactions (user_id, type, amount, reason, balance_after, ref_id) VALUES (?,?,?,?,(SELECT credits FROM users WHERE id=?),?)')
     .bind(charge.user_id, 'spend', charge.credits, 'admin_refund', charge.user_id, chargeId).run()
-  reversePartnerCommission(DB, chargeId).catch(() => {})
+  reversePartnerCommission(DB, chargeId).catch(err => console.error('[PartnerShare] 역적립 실패(비차단) chargeId=' + chargeId, err))
 
   // phyweb 이용권 상품이면 phyweb 코드도 void(관리자 환불+수동 카드환불 후 코드가 살아있지 않도록). best-effort.
   const admPkg = PACKAGES[charge.package_key]
