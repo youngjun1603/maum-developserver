@@ -83,6 +83,24 @@ function isMasterAccount(email?: string | null) {
   return !!email && ['limyj007@gmail.com'].includes(email.toLowerCase())
 }
 
+// ── 위기 감지(코드 강제) — 마음풀 chatCrisisKeywordHit 원문 그대로 (R-22) ──
+//   안전 가드는 프롬프트가 아니라 코드로 강제한다(CLAUDE.md). '자살사고/자해 의도'가
+//   명확한 고신뢰 키워드만 매칭(오탐 "힘들어 죽겠다" 회피). ⚠️ NFC 정규화 필수 —
+//   자모 분리 NFD 한글은 완성형 정규식에 매칭 안 돼 1차 방어가 통째로 우회된다.
+function coupleCrisisKeywordHit(text: string): boolean {
+  if (!text) return false
+  const t = text.normalize('NFC')
+  const ko = /자살|자해|목숨.{0,5}끊|스스로.{0,5}(해치|해할)|죽고\s*싶|죽고\s*파|죽어\s*버리|죽을\s*까|살고\s*싶지\s*않|살\s*의욕.{0,3}없|살기\s*싫|사라지고\s*싶|없어지고\s*싶|뛰어\s*내리|목\s*매/
+  const en = /suicid|kill(ing)?\s+myself|want(ing)?\s+to\s+die|end(ing)?\s+(my|it\s+all)|take\s+my\s+(own\s+)?life|self[-\s]?harm|don'?t\s+want\s+to\s+(live|be\s+here|exist)|better\s+off\s+dead/i
+  return ko.test(t) || en.test(t)
+}
+
+// 위기 선행 안내(코드 보장) — AI 응답보다 먼저 노출돼 위기자원이 반드시 도달하게 한다.
+//   마음풀 원문 그대로(감수 완료). 프론트가 whiteSpace:'pre-wrap'로 렌더 → 마크다운 금지, 줄바꿈은 \n.
+function buildCoupleCrisisPrefix(): string {
+  return '지금 많이 힘드시죠. 그 마음을 꺼내 주셔서 고맙고, 혼자 견디지 않으셔도 괜찮아요. 24시간 언제든 곁에서 들어줄 곳이 있어요 — 자살예방 상담전화 109, 정신건강 위기상담 1577-0199.\n\n'
+}
+
 // ── 6자리 세션 코드 생성 ──────────────────────────────────
 function genSessionCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // 혼동되는 문자 제외
@@ -856,6 +874,10 @@ app.post('/api/couple/coach', async (c) => {
   const aiData = await res.json() as { content: Array<{ type: string; text: string }> }
   const replyText = aiData.content?.find(b => b.type === 'text')?.text ?? ''
 
+  // 위기 감지는 사용자 입력 기준 — 마지막 user 메시지만 검사(마음풀 패턴) (R-22)
+  const lastUser = [...messages].reverse().find(m => m.role === 'user')
+  const crisisHit = coupleCrisisKeywordHit(String(lastUser?.content ?? ''))
+
   if (!isMaster) {
     await KV.put(counterKey, String(usedToday + 1), { expirationTtl: 86400 })
   }
@@ -863,7 +885,7 @@ app.post('/api/couple/coach', async (c) => {
   return c.json({
     success: true,
     data: {
-      reply: replyText,
+      reply: crisisHit ? buildCoupleCrisisPrefix() + replyText : replyText,
       usedToday: usedToday + 1,
       freeLimit: FREE_LIMIT,
       isPaid: usedToday >= FREE_LIMIT,
@@ -1396,12 +1418,14 @@ app.post('/api/couple/emotion-translate', async (c) => {
     if (!res.ok) return c.json({ success: false, error: 'AI 오류' }, 500)
     const json = await res.json() as { content: Array<{ text: string }> }
     const result = json.content?.[0]?.text || ''
+    // 위기 감지는 사용자 입력 기준(AI 출력이 아니라) — 적중 시 안내를 응답 맨 앞에 붙인다 (R-22)
+    const crisisHit = coupleCrisisKeywordHit([situation, message].filter(Boolean).join('\n'))
     // AI 성공 후 차감 — spendCredits()로 WHERE credits >= ? 원자적 처리
     if (!isMaster) {
       const cr = await spendCredits(DB, userId, COST, 'emotion-translate')
       if (!cr.ok) return c.json({ success: false, error: '크레딧 부족', needsCharge: true }, 402)
     }
-    return c.json({ success: true, result })
+    return c.json({ success: true, result: crisisHit ? buildCoupleCrisisPrefix() + result : result })
   } catch (e) {
     return c.json({ success: false, error: 'AI 연결 오류' }, 500)
   }
@@ -1455,11 +1479,12 @@ app.post('/api/couple/fight-mediate', async (c) => {
     if (!res.ok) return c.json({ success: false, error: 'AI 오류' }, 500)
     const json = await res.json() as { content: Array<{ text: string }> }
     const result = json.content?.[0]?.text || ''
+    const crisisHit = coupleCrisisKeywordHit([situation, myFeel, partnerFeel].filter(Boolean).join('\n'))  // 사용자 입력 기준 (R-22)
     if (!isMaster) {
       const cr = await spendCredits(DB, userId, COST, 'fight-mediate')
       if (!cr.ok) return c.json({ success: false, error: '크레딧 부족', needsCharge: true }, 402)
     }
-    return c.json({ success: true, result })
+    return c.json({ success: true, result: crisisHit ? buildCoupleCrisisPrefix() + result : result })
   } catch (e) {
     return c.json({ success: false, error: 'AI 연결 오류' }, 500)
   }
@@ -1519,11 +1544,12 @@ app.post('/api/couple/kakao-analyze', async (c) => {
     if (!res.ok) return c.json({ success: false, error: 'AI 오류' }, 500)
     const json = await res.json() as { content: Array<{ text: string }> }
     const result = json.content?.[0]?.text || ''
+    const crisisHit = coupleCrisisKeywordHit(sample || '')  // 카톡 대화 샘플(사용자 제공) 기준 (R-22)
     if (!isMaster) {
       const cr = await spendCredits(DB, userId, COST, 'kakao-analyze')
       if (!cr.ok) return c.json({ success: false, error: '크레딧 부족', needsCharge: true }, 402)
     }
-    return c.json({ success: true, result })
+    return c.json({ success: true, result: crisisHit ? buildCoupleCrisisPrefix() + result : result })
   } catch (e) {
     return c.json({ success: false, error: 'AI 연결 오류' }, 500)
   }
