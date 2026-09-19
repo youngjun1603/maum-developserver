@@ -39,7 +39,25 @@
 
 - 근거 배열 10개: `phq9Q`·`gad7Q`·`dass21Q`·`big5Q`·`lostQ`·`sdriCompletionQ`·`sdriLikertQ`·`burnoutQ`·`RIASEC_Q`·`VALUES_Q`.
 - 글로벌(비한국) 모드는 7종만 노출: PHQ9·GAD7·DASS21·BIG5·LOST·RIASEC·VALUES (`/api/config/region`).
-- **문항수·표시 동기화·카드 순서 상세는 외부 메모리 `project_maumful_tests` 참조 — 문서화 필요.**
+- **문항 수 · 척도 구성** (코드에서 복원 · 근거: `public/static/app.jsx` 문항 배열)
+
+| 코드 | 배열(정의 위치) | 실문항 | 화면 표시 | 척도·요인 구성 |
+|---|---|---|---|---|
+| PHQ9 | `phq9Q` (app.jsx L674~L684) | 9 | "9문항"(L10264) | 단일 총점 |
+| GAD7 | `gad7Q` (L686~L694) | 7 | "7문항"(L10318) | 단일 총점 |
+| DASS21 | `dass21Q` (L696~L718) | 21 | "21문항"(L10482) | `scale` — 우울 7 · 불안 7 · 스트레스 7 |
+| BIG5 | `big5Q` (L720~L780) | 50 | "50문항"(L10633) | `factor` — 외향성·친화성·성실성·신경성·개방성 각 10 (`rev` 역문항 포함) |
+| LOST | `lostQ` (L912~L984) | 60 | "6개 축, 60문항"(L10709) | `axis` 6종 각 10 — E 에너지방향(1~10) · D 의사결정(11~20) · S 행동속도(21~30) · N 안정성(31~40) · R 관계민감도(41~50) · T 스트레스반응(51~60) → 16유형 (`AXIS_INFO` L10667~L10673) |
+| SCT(=SRCI) | `sdriCompletionQ` (L790~L820) | 25 | "문장완성형 25문항"(L10122) | 자기입장유지 16 · 정서반응성 5 · 정서적단절 3 · 융합/관계의존 1 |
+| DSI(=SDRI) | `sdriLikertQ` (L822~L852) | 25 | "평정형 25문항"(L10189) | 자기입장유지 10 · 정서반응성 7 · 정서적단절 4 · 융합/관계의존 4 (역문항은 화면에 `(역문항)` 표기) |
+| BURNOUT | `burnoutQ` (L854~L910) | 50 | "50문항"(L10538) | `domain` — EE 정서적소진 12(max 72) · DP 비인격화 8(48) · PA 성취감저하 10(60) · WO 업무과부하 10(60) · PC 신체·인지 10(60). 역문항 10개 (도메인 정의 L667~L671) |
+| RIASEC | `RIASEC_Q` (L7988~L8019) | 30 | "30문항"(L10372) | `type` — R·I·A·S·E·C 각 5 |
+| VALUES | `VALUES_Q` (L8054~L8085) | 30 | "30문항"(L10427) | `domain` 10요인 각 3 — achievement·service·stability·autonomy·creativity·influence·knowledge·balance·social·economic |
+
+- **표시 동기화 = 수동 4중 관리.** 카드에 찍히는 문항 수는 배열 길이가 아니라 `testMeta[].questions` **하드코딩 숫자**이고(app.jsx L4188~L4197), 검사 화면 안내문("N문항")과 진행률 분모, 미완성 경고의 `(30 - …)`·`(50 - …)` 상수(L8036·L8112·L8130·L8148·L8173·L8190)도 각각 따로 박혀 있다. 문항을 늘리거나 줄이면 **배열 · `testMeta.questions` · 안내문 · 경고 상수**를 모두 고쳐야 한다. 현 시점 10종 전부 일치함을 확인했다 (코드에서 복원).
+- **카드 순서는 백엔드가 정한다.** `/api/config/region` 의 `koreaTests` 배열 순서 그대로 렌더하며(무료 PHQ9·GAD7을 맨 앞에 배치한다는 주석이 코드에 있다), 프론트는 `regionConfig` 가 없을 때만 같은 순서를 하드코딩 폴백한다 — PHQ9 → GAD7 → DASS21 → BIG5 → LOST → SCT → DSI → BURNOUT → RIASEC → VALUES (코드에서 복원 · 근거: src/index.tsx L306~L316, app.jsx L4186·L4586~L4593).
+- **채점 구간표는 AI가 판단하지 않는다.** `src/index.tsx` L2412~L2421 이 프롬프트에 구간을 못박는다("AI 임의 판단 금지, 이 테이블만 적용"): PHQ-9 0-4 정상 / 5-9 경미 / 10-14 중등도 / 15-19 중등도-고도 / 20+ 고도 · GAD-7 0-4 / 5-9 / 10-14 / 15+ · DASS-21 우울 0-9·10-12·13-20·21+, 불안 0-7·8-9·10-14·15+, 스트레스 0-14·15-18·19-25·26+ · BURNOUT(K-MBI) 0-25 낮음 / 26-50 보통 / 51-75 높음 / 76+ 매우 높음 · BIG5 요인 70%+ 높음 / 30~70% 보통 / 30%- 낮음 (코드에서 복원).
+- ⚠️ 검사 10종 **선정 이유·문항 출처·카드 문구 확정 경위**는 외부 메모리 `project_maumful_tests` 에만 존재 — 코드로 복원 불가.
 
 ### 2.2 검사 결과 서버 미저장 원칙
 `test_history` 는 **수행 메타(검사종류·점수·레벨·언어·시각)만** 남기는 것이 원설계다(0004 주석: "결과 데이터는 저장하지 않음 — 프라이버시"). 이후 `result_json`(0011)·`score`/`level`(0012)·`ai_analysis`(0017)가 추가되었으나, 통합 심층해석은 **저장된 메타만** 사용한다는 원칙을 `CLAUDE.md` 가 유지한다.
@@ -52,8 +70,31 @@
 ### 2.4 AI 해석의 어법 = 본인 대상
 해석은 상담사 대상이 아니라 **본인 대상("당신" 어법)**. 또한 프론트가 `whitespace-pre-wrap` 으로 렌더하므로 **AI 출력에 마크다운 금지**(`##`·`**`·`---` 가 그대로 노출된 실버그). 섹션 제목은 `[제목]` 대괄호.
 
+**구현 위치**(코드에서 복원 · 근거: src/index.tsx)
+| 해석 종류 | 시스템 프롬프트 | 사용자 메시지 | 라우트 |
+|---|---|---|---|
+| 단일 검사 해석 | `buildAnalysisSystem()` L1456~L1533 | `buildAnalysisPrompt()` L1535~ (검사별 24개 브랜치, 데이터만) | `POST /api/ai-analyze` L1753 |
+| 통합 심층해석 | `buildIntegratedPrompt()` L1910~L1953 | 동 함수 | `POST /api/ai-analyze/integrated` |
+| PDF 외부결과 해석 | `systemPrompt` L2390~L2434 | 업로드 텍스트 15,000자 절단 | PDF 해석 라우트 L2449 |
+
+- 페르소나 원문: "당신은 마음풀의 심리 안내자입니다. 검사를 받은 본인에게 직접 이야기하듯, 판단 없이 따뜻하게 결과를 비춰 드립니다. **"당신"을 주어로 존댓말로 쓰고(제3자·상담사 시점 금지)**, 임상적·진단적 표현은 절대 사용하지 마세요." (기독교 트랙은 "마음풀의 기독교 상담 안내자" 변형)
+- 출력 섹션은 **고정 5개**다 — 일반: `[지금의 마음]` `[눈에 띄는 부분]` `[스스로에게 건네보세요]` `[오늘의 작은 실천]` `[이어서 물어보기]` / 기독교: `[마음 살피기]` `[말씀 묵상]` `[스스로 묵상하기]` `[소망의 한마디]` `[이어서 물어보기]`. `[이어서 물어보기]` 의 각 줄은 **반드시 `"- "`(하이픈+공백)으로 시작**해야 하며, 프론트 `parseFollowups()`(app.jsx L8593~)가 이 줄을 잘라 후속질문 칩으로 만든다.
+- 마크다운 금지 지시는 프롬프트 말미에 **별도 문자열로 항상 덧붙는다**(L1530~L1533): "마크다운 기호(#, ##, \*\*, ---, >, 백틱)를 절대 쓰지 마세요."
+- ⚠️ **안전 가드는 프롬프트가 아니라 코드가 강제한다.** `isCrisisScore()`(L1667~L1700)가 점수로 위기를 결정론적으로 판정하고 — PHQ-9 **9번 문항(자살사고)에 '며칠' 이상 응답이면 즉시 위기**, 총점 ≥20, 또는 레벨이 "전문 지원 필요"/"적극적 지원 필요"/`/severe/i` · GAD-7 ≥15 · DASS-21 우울 ≥21 — `appendCrisisSse()` 가 **스트림 끝에 위기자원 블록을 합성 델타로 덧붙인다**(AI가 안내를 누락해도 반드시 노출). 한국어 블록은 `[긴급 도움말]` + 109 · 1577-0199, 영어는 `[Immediate Support]` + 988 (L1723~L1747).
+- ⚠️ 해석 어법·섹션 구성을 이렇게 정한 **의사결정 맥락(사용자 피드백 원문·대안 검토)** 은 외부 메모리 `project_maumful_ai_interpretation` 에만 존재 — 코드로 복원 불가.
+
 ### 2.5 상담센터 어드민 = 의도적 휴면
-`counseling_admin.jsx`(`CounselingAdminPage`)와 `/api/admin/counseling/*`·`settlements`·`counselor_earnings` 는 **삭제 금지 휴면 코드**다. `setView('counselingAdmin')` 호출부가 0개이고 `?go=` 도 지원하지 않아 UI 진입 경로가 없다(코드로 재확인: app.jsx 내 `counselingAdmin` 문자열 1회 = 렌더 분기뿐). 상담사 매칭이 법적 보류라 링크만 끊었다. 상세는 외부 메모리 `project_maumful_counseling_admin_dormant` 참조 — 문서화 필요.
+`counseling_admin.jsx`(`CounselingAdminPage`, 1,578줄)와 `/api/admin/counseling/*`·`settlements`·`counselor_earnings` 는 **삭제 금지 휴면 코드**다. 상담사 매칭이 법적 보류라 링크만 끊었다(사용자 확정 2026-07-19, `CLAUDE.md` L241~L245).
+
+**진입점 실측**(코드에서 복원)
+- 렌더 분기는 살아 있다 — `app.jsx` L3262 `if (view === 'counselingAdmin') return <CounselingAdminPage setView={setView} />`.
+- ⚠️ `CLAUDE.md` 는 "`setView('counselingAdmin')` 호출부 0"이라고 적었지만 **실제로는 1곳 남아 있다** — `landing.jsx` L2056 `if (l === '어드민') setView('counselingAdmin');`. 다만 이 분기를 켜는 라벨 `'어드민'` 이 푸터 링크 배열(landing.jsx L2030 `['이용약관','개인정보처리방침','FAQ','문의하기']`)에서 빠져 있어 **조건이 영원히 거짓인 죽은 분기**다. 결론(UI 진입 불가)은 같지만 근거는 다르다.
+- `?go=counselingAdmin` 은 미지원. 부활은 **푸터 링크 라벨에 `'어드민'` 을 되살리는 것만으로** 끝난다 — 이것이 코드를 지우면 안 되는 실질적 이유다.
+- 서버 측 `/api/admin/counseling/*` **23개 라우트**는 모두 `adminGuard` 뒤에 그대로 살아 있다(src/index.tsx L5456~L6195): 통계·센터 CRUD·상담사 CRUD·스케줄·예약·리뷰 노출제어·온보딩 심사·정산.
+- **정산 계산식**(코드에서 복원 · 근거: src/index.tsx L5583~L5653, migrations/0006 L5~L54)
+  - 예약 완료 처리 시: `commRate = counseling_centers.commission_rate || 10`(%) → `commission_amt = round(fee_amount × rate / 100)`, `net_amount = fee_amount − commission_amt` 를 `counselor_earnings` 에 1행 적립하고 `appointments.earning_processed=1` 로 표시.
+  - 월정산 생성 시: 기간 내 `status='completed' AND earning_processed=1` 예약을 합산 → `total_revenue`, 같은 율로 `commission_amt`, `payout_amt = total_revenue − commission_amt` 를 `settlements` 에 1행. 상태는 `pending→completed`(`/settlements/:id/process`).
+- ⚠️ **휴면 결정의 배경과 부활 조건(어떤 법적 검토로 보류했는지)** 은 외부 메모리 `project_maumful_counseling_admin_dormant` 에만 존재 — 코드로 복원 불가.
 
 ### 2.6 커플 정원 = 횟수만 공유
 `GET /api/couple/garden`(마음게임 워커 측 엔드포인트 — 마음풀 `src/index.tsx` 에는 없다) 은 두 사람의 게임 실천 **횟수만** 합산한다. 파트너의 감정 기록 내용(emotion·intensity·note)은 **서버가 조회조차 하지 않는다**. 감정 내용 공유는 명시적 동의·철회 UX 없이는 금지(루트 `CLAUDE.md` 금지 항목).
@@ -138,9 +179,9 @@
 | 40 | 쿠키 동의 | EU 대응 배너 + 서버 저장 | 배포됨 | `/api/user/cookie-consent`, app.jsx `CookieBanner`·`EU_COUNTRIES` |
 | 41 | 검사 문항 보호 | 워터마크 + 개발자도구 감지(터치기기 제외) | 배포됨 | app.jsx `PROTECTED_VIEWS`·`WatermarkOverlay` |
 | 42 | PWA | manifest + Service Worker + assetlinks(Android TWA) | 배포됨 | `public/manifest.json`·`sw.js`, `/.well-known/assetlinks.json` |
-| 43 | 지자체 화이트라벨 | 멀티테넌트 `organizations` + `users.org_id` + `/api/org-config` | 설계만 | 미구현(외부 메모리 `project_whitelabel_gov` 참조 — 문서화 필요) |
-| 44 | 제휴 진입 레이어 고도화 | config 구동 A/B, 어드민 편집 즉시반영 | 설계만 | 외부 메모리 `project_maumful_partner_entry` 참조 — 문서화 필요 |
-| 45 | 통합해석 유료 상품화 확장 | 토스 실결제 반영 후 착수 | 보류 | 외부 메모리 `project_maum_unified_payment` 참조 — 문서화 필요 |
+| 43 | 지자체 화이트라벨 | 멀티테넌트 `organizations` + `users.org_id` + `/api/org-config` | 설계만 | **코드 미착수** — `organizations`·`org_id`·`/api/org-config`·`landing_config` 가 `src/`·`migrations/`·`public/` 전체 grep 0건. 설계 요지는 `CLAUDE.md` L247~L251 에만 있다 |
+| 44 | 제휴 진입 레이어 | 1단계 = config 구동 경량 진입 페이지 / 2단계 = A/B·어드민 편집 UI | **1단계 배포됨** · 2단계 설계만 | 1단계 실재: `GET /p`(index.tsx L4839, 코어 app.js 미로드) + `partner_entry.jsx`(145줄) + `GET /api/partner/config` + `POST /api/partner/entry-log` + `partners.entry_headline/subcopy/benefit/cta_label/cta_go` 5컬럼 + `partner_entry_events`(0027). 2단계는 `variant` 컬럼만 예약된 상태 |
+| 45 | 통합결제(외부 서비스 지급) 확장 | 마음풀에서 팔고 외부 서비스에 지급 | 발신 측 배포됨 · 확장 보류 | 마음풀 측(발신) 코드 완비: `deliverGrant()` → `POST {수달·곁·phyweb}/api/grant`(HMAC `signSso`, exp 5분) index.tsx L3160~L3198, 큐 `external_grants`(0029, `order_id=mf_charge_{chargeId}` PK 멱등), 재시도 `POST /api/admin/deliver-pending-grants`(attempts<8, 50건). ⚠️ 확장 범위·우선순위는 외부 메모리 `project_maum_unified_payment` 에만 존재 |
 
 ---
 
@@ -322,8 +363,19 @@
   3. **파트너 토큰**: `{typ:'partner', pc, aid}` — **`sub` 없음**. 고객 API는 `sub` 숫자 요구라 거부, 관리자 API는 고정 시크릿이라 분리된다(타 파트너·전체매출 접근 불가, E2E 실증).
   - 추가로 프론트 **마스터**는 서버 권한이 아니라 클라이언트 이메일 화이트리스트(`MASTER_EMAILS = ['limyj007@gmail.com']`)로 패널 표시만 제어한다.
 - **비밀번호**: `verifyPassword()` 자체 구현(해시 방식 상세는 `src/index.tsx:149`).
-- **이메일 인증**: 신규 이메일가입만 강제. 미인증 로그인은 403 `requiresVerification` → 프론트가 재발송 안내. **소셜 로그인은 면제**(가입 시 `verified=1`), 기존 회원은 그랜드파더링. ⚠️ `GET /api/auth/verify/:token` 은 메일 클라이언트·보안 스캐너 **프리페치**에 대비해 **멱등**(이미 인증됨도 성공 안내)이고 raw JSON 대신 **HTML 페이지**를 반환한다. 상세는 외부 메모리 `project_maumful_email_verify` 참조 — 문서화 필요.
-- **소셜 로그인**: Google(GSI 토큰 검증) / Kakao(REST 서버사이드 콜백, redirect URI `https://maumful.com/api/auth/kakao/callback`, ⚠️ **클라이언트 시크릿 "사용 안 함" 필수**) / Naver(콜백). Kakao 는 `gender`·`age_range` 권한이 없어 이메일 가입폼에서만 수집. 상세는 외부 메모리 `project_kakao_login` 참조 — 문서화 필요.
+- **이메일 인증**: 신규 이메일가입만 강제. 미인증 로그인은 403 `requiresVerification` → 프론트가 재발송 안내. **소셜 로그인은 면제**(가입 시 `verified=1`), 기존 회원은 그랜드파더링. ⚠️ `GET /api/auth/verify/:token` 은 메일 클라이언트·보안 스캐너 **프리페치**에 대비해 **멱등**(이미 인증됨도 성공 안내)이고 raw JSON 대신 **HTML 페이지**를 반환한다. **게이트 위치·토큰 수명·재발송**(코드에서 복원 · 근거: src/index.tsx L398~L410 · L416~L451 · L477~L483 · L668~L700)
+  - **발급**: 회원가입이 `randomToken()` 을 `auth_tokens(type='email_verify')` 에 **만료 6시간**으로 넣고 인증 메일을 보낸 뒤 `{requiresVerification:true}` 로 201 응답.
+  - **강제 게이트는 로그인 라우트 단 한 곳뿐**이다 — `user.is_email_verified === 0` 이면 403 + `{error, requiresVerification:true, email}`. 다른 API에는 인증 게이트가 없다.
+  - **검증**(`GET /api/auth/verify/:token`) 분기 4가지: ① 토큰 없음 → 안내 HTML(재가입·재발송 유도) ② `used_at` 이 있거나 이미 `is_email_verified=1` → **성공 HTML**(멱등. 이때 미인증이면 조용히 1로 올린다) ③ 만료 → "발송 후 6시간" 안내 ④ 정상 → `is_email_verified=1` + 토큰 `used_at` 기록. 응답은 전부 `verifyResultHtml()` 이 만드는 `<meta name="robots" content="noindex">` HTML 페이지다.
+  - **재발송**(`POST /api/auth/resend-verify`): **IP당 1시간 3회** 레이트리밋 → 기존 미사용 토큰을 전부 `used_at` 처리 → 새 6시간 토큰 발급. **계정 존재 여부를 노출하지 않는다**(없는 이메일에도 성공 응답), 이미 인증된 이메일만 400.
+  - ⚠️ 인증 강제 도입 시점과 **기존 회원 그랜드파더링의 기준일·적용 방법**은 외부 메모리 `project_maumful_email_verify` 에만 존재 — 코드로 복원 불가(코드에는 `CLAUDE.md` 를 인용한 주석 L477~L481 만 남아 있다).
+- **소셜 로그인**: Google(GSI 토큰 검증) / Kakao(REST 서버사이드 콜백, redirect URI `https://maumful.com/api/auth/kakao/callback`, ⚠️ **클라이언트 시크릿 "사용 안 함" 필수**) / Naver(콜백). Kakao 는 `gender`·`age_range` 권한이 없어 이메일 가입폼에서만 수집. **카카오 라우트·스코프·계정연결**(코드에서 복원 · 근거: src/index.tsx L747~L900, `CLAUDE.md` L234~L237)
+  - 라우트 3개: `POST /api/auth/kakao`(프론트가 이미 받은 access_token 검증) · `GET /api/auth/kakao/url`(`https://kauth.kakao.com/oauth/authorize?response_type=code&client_id={KAKAO_REST_API_KEY}&redirect_uri={SERVICE_URL}/api/auth/kakao/callback`) · `GET /api/auth/kakao/callback`(code → `kauth.kakao.com/oauth/token` → `kapi.kakao.com/v2/user/me` → 자체 JWT).
+  - ⚠️ 토큰 교환 body 는 `grant_type·client_id·redirect_uri·code` 뿐 — **`client_secret` 을 싣지 않는다**. 그래서 콘솔에서 "클라이언트 시크릿 사용"을 켜면 즉시 "토큰 발급 실패"가 된다.
+  - **읽는 필드는 3개뿐**: `id` · `kakao_account.email` · `kakao_account.profile.nickname`. 동의항목은 닉네임(필수)/프로필(선택)/이메일(비즈앱)이고 `gender`·`age_range` 권한이 없어 그 둘은 이메일 가입폼에서만 수집한다.
+  - **계정 연결 순서**: ① `social_provider='kakao' AND social_id` 로 조회 → ② 없고 이메일이 있으면 **같은 이메일의 기존 계정에 `social_provider`/`social_id` 를 붙여 병합**(별도 계정을 만들지 않는다) → ③ 그래도 없으면 신규 생성 — 이메일 미동의 시 `kakao_{id}@kakao.local` 대체 주소, `is_email_verified = 이메일 있으면 1 아니면 0`, `credits=20` + `credit_transactions(signup_bonus)`.
+  - 결과 전달은 팝업 `window.opener.postMessage({type:'kakao_login', accessToken, refreshToken, user}, origin)` + `window.close()`, 실패는 `{type:'kakao_error', error}`. access 1시간 / refresh 30일(KV `refresh:{userId}`).
+  - ⚠️ 카카오 비즈앱 심사·동의항목 확정 경위는 외부 메모리 `project_kakao_login` 에만 존재 — 코드로 복원 불가.
 - **SSO 연동**
   - **같은 생태계**(게임·커플·부부·세대): `/api/{game,couple,bubu,sedae}-token` 이 발급한 토큰을 `?t=` 로 전달, 대상 워커가 **공유 KV의 `JWT_SECRET`** 으로 검증.
   - **별개 생태계**(수달·곁): `/api/maum-sso-token` HMAC 서명(5분) → `maumotter.com/?sso=` → 수신측 `POST /api/auth/sso` 가 `verifySso` 후 **이메일로 maum-auth 계정 연결/생성**. **결제는 각 서비스 자체 유지, 계정만 연결.** `MAUM_SSO_SECRET` 은 마음풀·수달·곁 **3곳 동일값 필수**. 미설정 시 발급 503 → 프론트는 일반 링크 폴백(기존 무영향).
@@ -415,7 +467,20 @@
 > ⚠️ phyweb 상품군은 `PACKAGES`·`PhywebCodesCard`·`GrantCodeModal`·`?buy=phyweb:<plan>` 진입까지 코드에 갖춰져 있으나 프론트 `PACKAGES_KR`·`SERVICE_GROUPS` 에는 노출되지 않는다(phyweb 쪽에서 링크로 진입하는 구조). `CLAUDE.md` 에도 기재가 없다 → **문서화 필요**.
 
 ### 10.3 구독(월정액)
-베이직 60cr/₩3,900 · 스탠다드 150cr/₩8,900 · 프로 400cr/₩19,900. 토스 **빌링키** 기반, 매월 1일 Cron 자동 결제. **정기결제는 별도 계약**이 필요해 `TOSS_BILLING_KEY` 등록 + 멤버십 버튼 교체가 남아 있다(상세는 외부 메모리 `project_payment_roadmap` 참조 — 문서화 필요).
+베이직 60cr/₩3,900 · 스탠다드 150cr/₩8,900 · 프로 400cr/₩19,900. 토스 **빌링키** 기반, 매월 1일 Cron 자동 결제. **정기결제는 별도 계약**이 필요해 `TOSS_BILLING_KEY` 등록 + 멤버십 버튼 교체가 남아 있다.
+
+**구현 실측**(코드에서 복원)
+| 항목 | 내용 |
+|---|---|
+| 플랜 상수 | `SUBSCRIPTION_PLANS` src/index.tsx L3259~L3266 — basic 60cr/₩3,900 · standard 150cr/₩8,900 · pro 400cr/₩19,900 |
+| 빌링키 발급 | `POST /api/subscription/checkout`(L3287) → 토스 `v1/billing/authorizations/card?customerKey=maumful_user_{uid}` authUrl 반환 |
+| 발급 확인 | `GET /api/subscription/toss/success`(L3322) — `customerKey === maumful_user_{userId}` 대조(URL 조작 방지) 후 `v1/billing/authorizations/confirm` → `user_subscriptions` UPSERT + **첫 달 크레딧 즉시 지급** |
+| 해지 | `DELETE /api/subscription/cancel` — `status='cancelled'`, 기간 만료 후 미갱신 |
+| 자동 결제 | `handleScheduled()` L6205~ · `wrangler.toml` `[triggers] crons = ["0 0 1 * *"]`(매월 1일 00:00 UTC). `TOSS_BILLING_KEY || TOSS_SECRET_KEY` 로 `POST v1/billing/{billingKey}`, `orderId=sub_{userId}_{ts}`. 성공 시 크레딧·`next_billing_date`·`subscription_invoices` 를 **한 batch** 로 기록하고 갱신 푸시 발송 |
+
+- ⚠️ 플랜 값이 **두 곳에 중복**한다 — `SUBSCRIPTION_PLANS`(L3259)와 Cron 내부의 별도 `plans` 객체(L6216~L6220). 현재 값은 일치하지만 구조적 방지책이 없어 가격 변경 시 함께 고쳐야 한다(§15 4번과 같은 패턴).
+- ⚠️ `user_subscriptions` INSERT 가 `try{…}catch{ /* 테이블 없으면 무시 */ }` 로 통째로 삼켜져 있다(L3357~L3366). 테이블이 없으면 **구독 기록 없이 첫 달 크레딧만 지급**되고 조용히 끝난다.
+- ⚠️ 정기결제 계약 진행 상황·전환 일정 등 **로드맵 맥락은 외부 메모리 `project_payment_roadmap` 에만 존재 — 코드로 복원 불가.**
 
 ### 10.4 결제 수단
 - **KRW: 토스페이먼츠 SDK v1** (`https://js.tosspayments.com/v1`, `<head>` 정적 포함). ⚠️ **v2/base 는 403** → 사용 불가. 결제창은 `window.TossPayments(clientKey).requestPayment('카드', {...})`.
@@ -425,10 +490,48 @@
 - ⚠️ **`TOSS_WEBHOOK_SECRET` 은 선택**. 토스 웹훅 콘솔에 서명 시크릿 설정란이 **없어** 서명 헤더가 오지 않는다. 과거 이 헤더를 강제해 **라이브 웹훅이 전부 401/503으로 막힌 사고**가 있었다. 지금은 강제하지 않고 **결제 재조회**로 검증한다.
 - **지급 근거는 요청 metadata가 아니라 DB** — `orderId`(`charge_<chargeId>_<ts>`)에서 chargeId를 파싱해 `credit_charges` 행의 user_id·credits·amount를 쓴다.
 - **USD: Stripe**(글로벌). 지역 판별은 `cf-ipcountry`/`accept-language`.
-- 상세는 외부 메모리 `project_toss_payment`·`project_product_pricing_plan`·`project_maum_unified_payment` 참조 — 문서화 필요.
+**토스 결제 라우트 전 경로**(코드에서 복원 · 근거: src/index.tsx, `../TOSS_PAYMENTS_GUIDE.md` §3~§5)
+
+| 메서드 | 경로 | 인증 | 역할 |
+|---|---|---|---|
+| GET | `/api/payment/toss/client-key` | 없음 | `TOSS_CLIENT_KEY` 반환(미설정 500) — L3581 |
+| POST | `/api/payment/toss/checkout` | JWT | `credit_charges` pending 생성(**`partner_code` 동시 저장 — 누락 시 수익쉐어가 영영 안 쌓인다**) → `orderId=charge_{chargeId}_{ts}` · `customerKey=maumful_user_{uid}` · success/fail URL 반환 — L3587 |
+| GET | `/api/payment/toss/success` | 없음(브라우저 리다이렉트) | `orderId` 에서 chargeId 파싱(URL 파라미터 불신) → `/v1/payments/confirm` → 금액 대조 → 원자적 선점 → 지급 → 영수증 메일 — L3633 |
+| GET | `/api/payment/toss/fail` | 없음 | pending → `failed` — L3743 |
+| POST | `/api/webhook/toss` | 아래 참조 | 결제 재조회 기반 지급(이중지급 방지) — L3391 |
+| POST | `/api/credits/refund` | JWT | 고객 셀프 환불 — L1126 |
+| POST | `/api/subscription/checkout` · GET `/api/subscription/toss/success` · DELETE `/api/subscription/cancel` | JWT | 빌링키 정기결제(§10.3) |
+| GET | `/api/admin/payments` · POST `/api/admin/payments/:id/refund` | adminGuard | 관리자 결제 목록·환불 — L4498·L4534 |
+| GET | `/api/counseling/appointments/toss/success` · `/fail` | 없음 | 상담 예약 결제(휴면, §2.5) — L5307·L5368 |
+
+- **웹훅 검증(2026-07-21 변경)**: `TOSS_WEBHOOK_SECRET` 이 **있고 `Authorization` 헤더가 실제로 온 경우에만** 대조하고, 헤더가 없으면 통과시킨다(정상 웹훅 차단 방지). 진짜 검증은 **이중 방어 ②** — 본문을 믿지 않고 `GET https://api.tosspayments.com/v1/payments/{paymentKey}` 로 **되물어** `status==='DONE'` 확인 → `orderId` 에서 chargeId 파싱 → DB 행의 `amount` 와 `totalAmount` 대조 → `UPDATE … WHERE id=? AND status='pending'` **원자적 선점**(`changes===0` 이면 success 콜백이 이미 처리). 페이로드는 결제 객체가 최상위로 오는 경우와 `data` 안에 오는 경우를 모두 받는다. 조회 실패는 502(토스 재시도), 지급 실패는 pending 롤백 후 500 (근거: L3391~L3488).
+- **셀프 환불 규칙**(근거: L1126~L1257): 본인·`pg='toss'`·`status='completed'` 건만 · **구매 후 7일 이내**(`completed_at` UTC 파싱) · **미사용 관대 정책**(현재 잔액 ≥ 구매 크레딧) · 수달·곁 상품은 셀프 환불 불가(고객센터 안내) · **phyweb 상품은 코드 미등록일 때만** 환불(`/api/grant/status` 조회 불가 시 503 보류 = fail-safe, 이미 등록됐으면 청약철회 제한으로 400). 처리 순서는 ① `completed→refunded` 원자 선점(실패 409) ② 크레딧 회수(잔액 가드) ③ 토스 `POST /v1/payments/{paymentKey}/cancel`(`Idempotency-Key: refund_{paymentKey}`) ④ 실패 시 ①②를 롤백. ⚠️ 취소 요청의 **응답이 유실된 경우 결제를 재조회**해 `CANCELED`/`PARTIAL_CANCELED` 면 롤백하지 않는다(돈은 환불됐는데 크레딧까지 복구되는 이중혜택 방지). 마지막에 `credit_transactions` 에 `type='spend'`(CHECK 제약상 `'loss'` 불가 — 쓰면 INSERT 500)·`reason='refund'` 로 원장을 남기고 `reversePartnerCommission` 을 건다.
+- **스키마**(코드에서 복원 · 근거: migrations/0004 L53~L66 · 0018 L21 · 0029)
+  - `credit_charges` = `id · user_id · package_key · credits · amount · currency('KRW'|'USD') · pg('toss'|'stripe') · pg_tid · status CHECK('pending','completed','failed','refunded') · created_at · completed_at` + `partner_code`(0018).
+  - `external_grants` = `order_id`(PK, `mf_charge_{chargeId}`) `· user_id · email · service · grant_type · amount · status('pending'|'delivered'|'failed') · code · attempts · delivered_at`.
+  - ⚠️ **`payments` 테이블은 이 서비스에 존재하지 않는다.** 0001의 B2B 스키마(`user_phone` FK)를 0004가 `DROP TABLE IF EXISTS payments` 로 제거하고 `credit_charges` 로 대체했다(0004 L10).
+- 위 §10.2 가격표는 백엔드 `PACKAGES`(src/index.tsx L3118~L3157) **전량을 그대로 옮긴 것**이다. ⚠️ 그러나 **가격 결정 근거(왜 이 곡선인지)·상품 구성 논의·결제 도입 협의 이력**은 외부 메모리 `project_toss_payment`·`project_product_pricing_plan`·`project_maum_unified_payment` 에만 존재 — 코드로 복원 불가.
 
 ### 10.5 제휴 수익 쉐어
 `partners.revenue_share_rate` × 결제금액 → `partner_commissions` 적립. **charge_id PK 멱등**, **적립 시점 rate 스냅샷**(율이 바뀌어도 과거 정산 불변), `partners.commission_start/end` 로 귀속 기간 제한. 환불 시 `reversed`. 개인 친구초대(`referrals` 크레딧 보상)와는 별개 체계다.
+
+**계산식·라우트**(코드에서 복원 · 근거: src/index.tsx `accruePartnerCommission()`·`reversePartnerCommission()`, L6454~L6560)
+- 적립 조건 4중: `credit_charges.status='completed'` **AND** `partner_code` 존재 **AND** `partners.is_active=1` **AND** `revenue_share_rate > 0`. 여기에 귀속일(`date(COALESCE(completed_at, created_at))`)이 `commission_start ~ commission_end` 안이어야 한다.
+- 금액: `share_amount = Math.round(charge.amount × rate)` — **`rate` 는 0~1 소수**이고, 적립 시점 값이 행에 그대로 박힌다(스냅샷).
+- 기록: `INSERT OR IGNORE INTO partner_commissions (charge_id, partner_code, user_id, charge_amount, rate, share_amount, currency)` → `charge_id` 중복이면 무시 = 멱등. 호출부는 성공 콜백·웹훅 양쪽에서 **비차단 `.catch`** 라 실패해도 결제는 계속된다(그래서 조용히 누락될 수 있다 — §15 1번).
+- 되돌림: 환불 시 `UPDATE … SET status='reversed' WHERE charge_id=? AND status!='settled'` — **이미 정산 지급한 건은 건드리지 않는다**(수기 조정).
+
+| 메서드 | 경로 | 인증 | 역할 |
+|---|---|---|---|
+| GET | `/api/admin/partner-stats` | adminGuard | 파트너별 가입·결제 집계 — L6396 |
+| GET | `/api/admin/partner-settlement?code=&month=YYYY-MM` | adminGuard | **월별 요약 재계산** — 그 달 `credit_charges` 합계 × **현재** `revenue_share_rate`(`Math.floor`), `maumful_revenue = total − share` — L6454 |
+| GET | `/api/admin/partner-commissions?code=&from=&to=&status=` | adminGuard | **원장 상세**(CSV용). 이메일은 `SUBSTR(email,1,3)||'***'` 마스킹, 합계에 `unsettled` 포함 — L6502 |
+| POST | `/api/admin/partner-commissions/settle` | adminGuard | 기간 내 `pending → settled` + `settled_at`·`settlement_ref` — L6532 |
+| POST | `/api/partner-portal/login` · GET `/api/partner-portal/me` · `/commissions` | 파트너 토큰 | 제휴사 자가열람(§8 토큰 3종) — L6562~L6630 |
+| GET/POST/DELETE | `/api/admin/partner-accounts[/:id]` | adminGuard | 담당자 계정 CRUD — L6631~L6690 |
+
+- ⚠️ **요약 API와 원장 API의 산식이 다르다.** `/partner-settlement` 는 **현재 율 × `Math.floor`** 로 매번 재계산하고, `/partner-commissions` 는 **적립 시점 율 × `Math.round`** 가 박힌 원장을 읽는다. 율이 바뀌었거나 1원 단위 절사가 다르면 두 화면 금액이 어긋난다(코드에서 복원).
+- ⚠️ 제휴사별 실제 율·계약 조건·정산 주기는 DB(`partners`)와 외부 메모리 `project_maumful_partner_revshare` 에만 있다 — 레포 코드로 복원 불가.
 
 ---
 
@@ -441,7 +544,23 @@
 
 - **완화 대상**: 진단(서비스기능)→점검/체크 · 치료/처방/완치→제거·돌봄·관점 · 임상(검증/표준)→전문/표준 · 임상심리학→심리학 · 진단조 단정→"~다소 높게 나타남" · 처방형 권고→참고할 접근/연습 · EN: clinically validated→standardized / THERAPY→(삭제) / heal·restore your mind→nurture·care / diagnosis→check / symptom patterns→response patterns
 - **유지(절대 변경 금지)**: 면책문구("의료적 진단·치료 대체 안 함") · 백엔드 AI 프롬프트 진단금지 지침 · 검사 문항 원문의 `증상`(표준도구) · 상담사 자격/전문분야(사실) · 인근기관명 · 심각도 레벨(정상/경도/중등도/중증) · admin "모델 진단"(IT용어)
-- 상세는 외부 메모리 `feedback_clinical_expression_policy` 참조 — 문서화 필요.
+- **`CLAUDE.md` L255~L263 원문**(코드에서 복원 — 위 요약의 출처가 바로 이 대목이다):
+  > ## 임상·법적 표현 정책 ⚠️ 카피 작성·검토 시 필수 (마음풀·CTS 동일)
+  >
+  > 마음풀·CTS는 의료기관이 아닌 **B2C 자기이해·정보제공·돌봄 콘텐츠 서비스**. "서비스가 진단·치료한다"는 임상 표현 완화. (메모리 `feedback_clinical_expression_policy`)
+  >
+  > **완화 대상:** 진단(서비스기능)→점검/체크 · 치료/처방/완치→제거·돌봄·관점 · 임상(검증/표준)→전문/표준 · 임상심리학→심리학 · 진단조 단정→"~다소 높게 나타남" · 처방형 권고→참고할 접근/연습 · EN: clinically validated→standardized / THERAPY→(삭제) / heal·restore your mind→nurture·care / diagnosis→check / symptom patterns→response patterns
+  >
+  > **유지(절대 변경 금지):** 면책문구("의료적 진단·치료 대체 안 함") · 백엔드 AI 프롬프트 진단금지 지침 · 검사 문항 원문의 `증상`(표준도구) · 상담사 자격/전문분야(사실) · 인근기관명 · 심각도 레벨(정상/경도/중등도/중증) · admin "모델 진단"(IT용어)
+  >
+  > 톤: 자기이해·정보제공·돌봄. 영어본 동일. 신규 카피도 준수.
+- 이 정책은 카피뿐 아니라 **프롬프트로도 강제**된다 — `src/index.tsx` L2394~L2411(PDF 해석 시스템 프롬프트):
+  > 진단명·질환명·DSM 기준 언급 금지 / "~장애", "~증", "~병" 등 의학 용어 금지 / 약물·치료 권유 금지 / 점수 근거 없는 임상 표현 금지
+  >
+  > [표준 어휘집 — 반드시 이 표현만 사용] 높은 불안/걱정 → "불안 경향" · 높은 우울/의욕저하 → "우울 경향" · 높은 피로/탈진 → "소진 경향" · 대인관계 어려움 → "관계 어려움" · 감정 기복 → "감정 조절의 어려움" · 충동적 반응 → "즉각 반응 경향" · 내향성/외향성 → "내향적/외향적 성향" **(위 표현 외 임의 조어 금지)**
+  
+  단일·통합 해석 프롬프트도 같은 취지로 "임상적·진단적 표현은 절대 사용하지 마세요"를 페르소나에 못박는다(L1460~L1462).
+- ⚠️ 이 정책이 만들어진 **피드백 맥락(문제가 된 실제 카피 사례·검토 경위)** 은 외부 메모리 `feedback_clinical_expression_policy` 에만 존재 — 코드로 복원 불가.
 
 ### 11.2 위기 대응
 - 위기 지시는 **형식 지시보다 뒤에** 둔다(뒤 섹션이 앞을 덮음). 한글 **1393**(자살예방상담전화), 영어 **988**.
@@ -461,7 +580,22 @@
 - **공감/탐색/제안 라벨 폐지** — 제목·라벨·번호·불릿 금지, 이어지는 문장으로만. **라벨을 되살리지 말 것.**
 - **평가형 공감 금지**("정확한 자기 인식이네요"는 공감이 아니라 채점). 상태별 분기(감정 격함=공감만 / 정체=질문 하나 / 방향 탐색중=작은 제안). 제안은 처방이 아닌 권유.
 - ⚠️ **few-shot 예시가 설명보다 강하다** — 프롬프트 지시를 바꿀 땐 예시를 함께 넣을 것.
-- 상세는 외부 메모리 `project_maumful_chat_tone` 참조 — 문서화 필요.
+- **구현 위치**(코드에서 복원): `src/index.tsx` 의 AI 채팅 라우트 안에 **정적 지침 4벌**이 있다 — `staticKoBiblical`(L2875~) · `staticKoGeneral`(L2915~) · `staticEnBiblical` · `staticEnGeneral`. 이 4벌은 `cache_control: {type:'ephemeral'}` 로 **프롬프트 캐싱**되고, 검사 결과·트렌드·기억 맥락만 `dynamicKo`/`dynamicEn` 으로 뒤에 붙는다(L2948·L3033). 요청은 `max_tokens: 800`, `stream: true`(L3056).
+- **핵심 지시문 원문**(`staticKoGeneral`):
+  > 말하는 방식 (매우 중요):
+  > - 제목·라벨·번호·불릿을 쓰지 마세요. "공감/탐색/제안" 같은 소제목을 붙이지 말고, 사람이 말하듯 이어지는 문장으로만 쓰세요.
+  > - "정확한 자기 인식이네요", "좋은 통찰이에요" 같은 평가나 칭찬으로 시작하지 마세요. 상대의 말에서 감정이 가장 많이 묻어 있는 한 조각을 그대로 되짚어 주세요.
+  > - 상대의 상태에 따라 답의 무게를 바꾸세요:
+  >   · 감정이 격하거나 무너져 있을 때 → 공감만 하고 끝내세요. 질문도 제안도 하지 마세요.
+  >   · 이야기가 막혀 있을 때 → 공감한 뒤 열린 질문 하나만 건네세요.
+  >   · 스스로 방향을 찾고 있을 때 → 공감한 뒤 작은 제안 하나를 조심스럽게 건네세요.
+  > - 제안은 처방이 아니라 권유입니다. "~하세요"보다 "혹시 ~하면 어떨까 싶어요"처럼, 부담되면 안 해도 된다는 여지를 남기세요.
+  > - 질문은 한 번에 최대 하나. 2~3문단, 350자 안팎으로 쓰세요.
+- **few-shot 예시가 지시문 바로 뒤에 붙어 있다**("이런 식으로 답하세요:" + 사용자/답변 2~3쌍). 기독교 트랙은 여기에 "쉬어도 될까요?" 예시가 하나 더 있다(§11.3 신학 방향의 실행본). 지시만 바꾸고 예시를 두면 예시가 이긴다.
+- **기독교 트랙 추가 지시**: 성경은 "따로 떼어 인용하지 말고 위로하는 말 안에 녹여" 쓰고, "⚠️ 내용·숫자·사건이 반드시 정확해야 합니다(예: 하나님은 엿새 동안 일하시고 이레째 되는 날 안식하셨습니다). 조금이라도 확실하지 않으면 인용하지 말고 당신의 말로 위로하세요." + "신앙의 바탕은 규칙이 아니라 관계입니다" + "쉼을 권할 때 상대의 신앙이나 봉사 태도를 평가하지 마세요".
+- **꼬리 태그**: 모든 답변 마지막에 빈 줄 + `[MOOD:N]`(0~100 정수). 사용자에게 보이지 않으며 감정추적에 쓰인다. "형식을 자유롭게 쓰더라도 이 태그는 반드시 넣으세요."
+- **위기 지시는 4벌 모두 맨 끝**에 있고 "(위의 어떤 형식 지시보다 우선)"이라고 명시한다. 한국어는 **1393**, 영어는 **988**을 그 답변 안에서 안내하게 한다(§11.2의 "뒤 섹션이 앞을 덮음" 원칙의 실제 배치).
+- ⚠️ 라벨 폐지·평가형 공감 금지가 나온 **대화 사례와 판단 근거**는 외부 메모리 `project_maumful_chat_tone` 에만 존재 — 코드로 복원 불가.
 
 ### 11.5 개인정보·프라이버시
 - **검사 결과 서버 미저장 원칙**(§2.2).
@@ -477,11 +611,35 @@
 
 ### 11.7 검사 문항 보호 / 크롤링
 - `PROTECTED_VIEWS` 화면에 사용자 이메일 **워터마크** + 개발자도구 감지(2026-09-12부터 터치 기기는 오탐 때문에 비활성).
-- `robots.txt`: 일반 검색엔진(Googlebot·Bingbot·Naverbot·Yeti 등) 전체 허용 / **AI 검색·답변봇**(Google-Extended·OAI-SearchBot·ChatGPT-User·PerplexityBot)은 HTML만 허용하고 `/static/`·`/api/` 차단 / **AI 학습봇**(GPTBot·ClaudeBot·CCBot 등)·**스크래퍼**(Ahrefs·Semrush 등) 전면 차단. 순수 SPA라 검사 화면 URL이 없어 **실보호 대상 = 문항이 든 `/static/` 번들**. 상세는 외부 메모리 `project_maumful_crawl_policy` 참조 — 문서화 필요.
+- `robots.txt`: 일반 검색엔진(Googlebot·Bingbot·Naverbot·Yeti 등) 전체 허용 / **AI 검색·답변봇**(Google-Extended·OAI-SearchBot·ChatGPT-User·PerplexityBot)은 HTML만 허용하고 `/static/`·`/api/` 차단 / **AI 학습봇**(GPTBot·ClaudeBot·CCBot 등)·**스크래퍼**(Ahrefs·Semrush 등) 전면 차단. 순수 SPA라 검사 화면 URL이 없어 **실보호 대상 = 문항이 든 `/static/` 번들**. **`public/robots.txt` 실제 내용**(코드에서 복원 · 전문 대조)
+
+| 그룹 | User-agent | 규칙 |
+|---|---|---|
+| 일반 검색엔진 | Googlebot · Bingbot · Slurp · DuckDuckBot · Naverbot · Yeti | `Allow: /` (전체 허용) |
+| AI 검색·답변봇 | Google-Extended · OAI-SearchBot · ChatGPT-User · PerplexityBot | `Allow: /` + `Disallow: /static/` + `Disallow: /api/` |
+| AI 학습 전용봇 | GPTBot · ClaudeBot · anthropic-ai · CCBot · cohere-ai · Applebot-Extended · Bytespider · Meta-ExternalAgent · Meta-ExternalFetcher · Amazonbot · Diffbot · Omgili · omgilibot · YouBot · PetalBot | `Disallow: /` (전면 차단) |
+| SEO 분석·스크래퍼 | DataForSeoBot · ImagesiftBot · SemrushBot · AhrefsBot · MJ12bot · DotBot · BLEXBot · peer39_crawler | `Disallow: /` (전면 차단) |
+| 기본 | `*` | `Disallow: /api/` |
+
+상단에 `Sitemap: https://maumful.com/sitemap.xml`. 파일 주석이 의도를 그대로 적어 두었다 — "홈 메타 + /story(브랜드 스토리)는 읽어 사이트를 소개하되, 심리검사 문항이 든 JS 번들(/static/)과 API(/api/)는 차단한다. (검사 화면은 별도 URL이 없는 SPA라, 실제 보호 대상 = 문항 번들)".
+
+**관련 헤더**(코드에서 복원 · 근거: src/index.tsx)
+| 위치 | 값 |
+|---|---|
+| 메인 SPA `<head>` L4905 | `<meta name="robots" content="index, follow, noimageai">` |
+| 정적 응답 헤더 L5059 | `X-Robots-Tag: noimageai` |
+| 어드민·내부 페이지 L4847·L4871, 제휴 진입 `/p`, 파트너 포털 `/partner` | `<meta name="robots" content="noindex, nofollow">` |
+| 이메일 인증 결과 HTML L417 | `<meta name="robots" content="noindex">` |
+
+⚠️ 봇 목록을 이렇게 나눈 **선별 기준·차단 결정의 근거**는 외부 메모리 `project_maumful_crawl_policy` 에만 존재 — 코드로 복원 불가(파일 주석이 남긴 한 줄이 전부다).
 - `meta robots`: `index, follow, noimageai` (`noai` 는 마케팅 노출 위해 제거).
 
 ### 11.8 법적 보류
-- **상담사 매칭 = 법적 보류** → 상담센터 어드민·매칭 진입 링크 제거, 코드는 휴면 보존(§2.5). 근거: 외부 메모리 `feedback_maumful_b2c_legal` 참조 — 문서화 필요.
+- **상담사 매칭 = 법적 보류** → 상담센터 어드민·매칭 진입 링크 제거, 코드는 휴면 보존(§2.5).
+- 레포에 남은 근거는 `CLAUDE.md` L243 한 줄뿐이다(코드에서 복원):
+  > **이건 버그·죽은 코드가 아니라 의도된 휴면.** 상담사 매칭이 법적 보류([[feedback_maumful_b2c_legal]])라 링크만 끊고 코드는 남겼다.
+- 코드에 남은 흔적: 상담 플랫폼 테이블 8개(`counseling_centers`·`counselors`·`appointments`·`counseling_reviews`·`settlements`·`counselor_earnings`·`center_onboarding_requests`·스케줄)와 라우트 약 30개, 프론트 `counseling.jsx`+`counseling_admin.jsx`가 **삭제되지 않은 채** 그대로 있다. 즉 "기능을 못 만든 것"이 아니라 **완성된 기능의 문을 잠근 상태**다.
+- ⚠️ **어떤 법적 판단으로 보류했는지(법령·자문 내용·재개 조건)** 는 외부 메모리 `feedback_maumful_b2c_legal` 에만 존재 — 코드로 복원 불가.
 
 ---
 
@@ -563,15 +721,15 @@ npx wrangler deploy                 # ⚠️ 반드시 포그라운드 (백그�
 - **phyweb 상품군**: 코드 완비, 프론트 상품 목록 미노출 · `CLAUDE.md` 미기재
 
 ### 설계만 / 미착수
-- **지자체 화이트라벨**(멀티테넌트 `organizations`+`users.org_id`+`/api/org-config`+`landing_config` JSON) — 요청 시 착수. 외부 메모리 `project_whitelabel_gov`
-- **제휴 진입 레이어 2단계**(config 구동 A/B, 어드민 편집 즉시반영) — 외부 메모리 `project_maumful_partner_entry`. **삼아는 계약 전(사전점검) 단계**
-- **연동형 유료결제(통합결제) 확장** — 설계 완료·착수 대기. ⚠️ **토스페이먼츠 완전 반영 전까지 관련 코드 커밋·푸시·배포 금지**(설계·로컬 준비만). 외부 메모리 `project_maum_unified_payment`
+- **지자체 화이트라벨**(멀티테넌트 `organizations`+`users.org_id`+`/api/org-config`+`landing_config` JSON) — 요청 시 착수. **코드 미착수**(관련 식별자 grep 0건). 설계 요지는 `CLAUDE.md` L247~L251 에 있다: host 헤더로 org 식별 → `/api/org-config`, 도메인 CNAME → 마음풀 Worker, org 없으면 기본 폴백 / `landing_config` JSON = hero(bg_image·overlay 0.5~0.6·title·subtitle)·brand(name·logo·color)·footer(org_name·address·phone) / 작업 순서 = organizations migration → `users.org_id` → `/api/org-config` → landing.jsx 적용 → 어드민 설정 UI / 규모별 = 소규모는 멀티테넌트(A), 대형·데이터분리는 CTS 트윈(B). ⚠️ 그 외 지자체 요구사항·영업 맥락은 외부 메모리 `project_whitelabel_gov` 에만 존재 — 코드로 복원 불가
+- **제휴 진입 레이어 2단계**(config 구동 A/B, 어드민 편집 즉시반영) — **1단계는 이미 배포됨**(`/p` + `partner_entry.jsx` + `partners.entry_*` + `partner_entry_events`, §4-44). 2단계에 남은 것은 ① `partner_entry_events.variant` 를 실제로 채우는 A/B 분기(현재 프론트가 `variant` 를 넘기지 않는다) ② 어드민에서 `entry_*` 컬럼을 편집하는 UI(현재는 DB 직접 수정) ③ `signup`·`purchase` 이벤트 기록(현재 `entry_view`·`cta_click` 2종만). **삼아는 계약 전(사전점검) 단계**. ⚠️ 와이어프레임·전환 레버 설계는 외부 메모리 `project_maumful_partner_entry` 에만 존재 — 코드로 복원 불가
+- **연동형 유료결제(통합결제) 확장** — 설계 완료·착수 대기. ⚠️ **토스페이먼츠 완전 반영 전까지 관련 코드 커밋·푸시·배포 금지**(설계·로컬 준비만). 마음풀 측 **발신** 경로는 이미 라이브다 — `deliverGrant()` → `POST {수달·곁·phyweb}/api/grant`(payload `{email, service, grantType, orderId, amount, exp}` 를 `MAUM_SSO_SECRET` HMAC-SHA256 으로 서명, exp 5분) · 큐 `external_grants`(0029) · 재시도 `POST /api/admin/deliver-pending-grants` · 쿠폰형(phyweb)은 응답 `code` 를 저장하고 메일로도 발송 · 환불 시 `/api/grant/revoke`. ⚠️ **확장 범위(어느 서비스·어떤 상품까지)와 착수 조건**은 외부 메모리 `project_maum_unified_payment` 에만 존재 — 코드로 복원 불가
 - **통합해석 유료 상품화 · 앱화** — 토스 실결제 반영 후
 
 ### 정리 대기 (바로 가능)
 - 폐기된 **상담사 승인 레거시 코드 제거**
 - 주간 리포트 메일 실수신 검증(사용자 동의 후)
-- 전 서비스 백로그 단일 출처 = 외부 메모리 **`project_maum_backlog`** 참조 — 문서화 필요
+- ⚠️ 전 서비스(마음풀·게임·커플·부부·세대·수달·곁·phyweb) **통합 백로그는 외부 메모리 `project_maum_backlog` 에만 존재 — 코드로 복원 불가.** 레포에는 마음풀 단일 서비스 범위의 잔여 작업만 남아 있고(위 항목들), 서비스 간 우선순위·일정은 이 문서로 대체할 수 없다
 
 ### 금지 사항
 - **커플 감정 내용 공유**(동의·철회 UX 없이)
@@ -593,7 +751,29 @@ npx wrangler deploy                 # ⚠️ 반드시 포그라운드 (백그�
 6. **원격 D1 마이그레이션 트래킹이 비어 있다.** `migrations apply --remote` 가 0001부터 재적용을 시도해 실패하므로 매번 `d1 execute --file` 로 수동 적용해야 하고, **적용 이력이 어디에도 남지 않는다** → 1번 같은 누락이 재발하기 쉽다.
 7. **`handleDailyReminder` 가 Cron에 연결되지 않은 죽은 경로.** 구현·테스트는 되어 있으나 스케줄이 없어 수동 트리거로만 동작한다.
 8. **README.md · SETUP.md · DEPLOY_CHECKLIST.md 가 4개월 이상 낡았다.** 검사 8종, `psy-app-db`, 폴더명 `phyweb`, "Babel JSX 빌드 불필요", `maumful.pages.dev`, `maumful.kr` 등 현행과 다른 정보가 그대로 남아 신규 작업자를 오도할 수 있다.
-9. **운영 지식의 상당 부분이 외부 메모리에만 있다.** `project_maumful_tests`·`project_toss_payment`·`project_maum_unified_payment`·`project_product_pricing_plan`·`project_maumful_ai_interpretation`·`project_maumful_chat_tone`·`project_kakao_login`·`project_maumful_email_verify`·`project_maumful_partner_revshare`·`project_maumful_partner_entry`·`project_maumful_counseling_admin_dormant`·`project_maumful_crawl_policy`·`project_whitelabel_gov`·`project_payment_roadmap`·`project_maum_backlog`·`feedback_*` — 레포만으로는 복원할 수 없다. **문서화 필요.**
+9. **운영 지식의 일부는 여전히 외부 메모리에만 있다.** 2026-09-19 작업으로 **기능·스키마·프롬프트·라우트 등 "무엇이 어떻게 동작하는가"는 코드에서 전부 복원해 본문에 반영**했다(§2.1·§2.4·§2.5·§8·§10.3~§10.5·§11.1·§11.4·§11.7·§11.8·§14). 남은 공백은 **"왜 그렇게 정했는가" = 의사결정 맥락**이며, 이는 원리상 코드에 없다.
+
+   | 외부 메모리 | 코드로 복원된 부분 | 복원 불가(의사결정 맥락) |
+   |---|---|---|
+   | `project_maumful_tests` | 문항 수·척도 구성·카드 순서·채점 구간 | 검사 10종 선정 이유, 문항 출처, 카드 문구 확정 경위 |
+   | `project_toss_payment` | 라우트 전 경로·웹훅 이중방어·환불 로직 | 토스 도입 협의, 상점 MID 선택 경위 |
+   | `project_product_pricing_plan` | `PACKAGES` 전량(§10.2) | 가격 곡선 결정 근거, 상품 구성 논의 |
+   | `project_payment_roadmap` | `SUBSCRIPTION_PLANS`·빌링 흐름·Cron | 정기결제 계약 진행 상황, 전환 일정 |
+   | `project_maum_unified_payment` | `deliverGrant`·`external_grants`·grant 서명 | 확장 범위와 착수 조건 |
+   | `project_maumful_ai_interpretation` | 프롬프트 위치·섹션 구조·위기 하드브레이크 | 어법·섹션을 그렇게 정한 피드백 |
+   | `project_maumful_chat_tone` | 지시문 4벌 원문·few-shot·MOOD 태그 | 라벨 폐지를 부른 실제 대화 사례 |
+   | `project_kakao_login` | 라우트·스코프·계정연결 순서 | 비즈앱 심사·동의항목 확정 경위 |
+   | `project_maumful_email_verify` | 게이트 위치·6시간 토큰·재발송 제한 | 강제 도입 시점, 그랜드파더링 기준일 |
+   | `project_maumful_partner_revshare` | 적립 조건·산식·라우트 6종 | 제휴사별 율·계약 조건·정산 주기 |
+   | `project_maumful_partner_entry` | 1단계 구현 전체 + 2단계 잔여 항목 | 와이어프레임, 전환 레버 설계 |
+   | `project_maumful_counseling_admin_dormant` | 진입점 실측·정산 계산식 | 휴면 결정 배경, 부활 조건 |
+   | `project_maumful_crawl_policy` | `robots.txt` 전문·관련 헤더 | 봇 선별 기준 |
+   | `project_whitelabel_gov` | — (**코드 0건**) | 요구사항·영업 맥락. 설계 요지만 `CLAUDE.md` L247~L251 |
+   | `project_maum_backlog` | — | **전 서비스 통합 백로그 전부** |
+   | `feedback_clinical_expression_policy` | `CLAUDE.md` 원문·프롬프트 강제(§11.1) | 문제가 된 카피 사례, 검토 경위 |
+   | `feedback_maumful_b2c_legal` | 휴면 코드 흔적·`CLAUDE.md` 한 줄 | 법적 판단 근거, 재개 조건 |
+
+   → **잔여 리스크**: 위 오른쪽 열은 그 메모리가 사라지면 영구 소실된다. 특히 `project_maum_backlog`(전 서비스 백로그)와 `project_whitelabel_gov`(코드 0건)는 **레포에 대응물이 전혀 없다.**
 10. **`test_history` 가 원설계(메타만 저장)에서 이탈 중.** `result_json`·`ai_analysis` 컬럼이 추가되어 실질적으로 결과 본문이 저장될 수 있다. "검사 결과 서버 미저장 원칙" 과의 정합을 재확인할 필요가 있다(⚠️ 실제 저장 범위 미확인).
 11. **상담 플랫폼 전체(테이블 8개·라우트 ~30개·프론트 2,846줄)가 휴면 상태로 유지보수 부담만 남아 있다.** 의도된 보존이지만 스키마 변경·리팩터링 때마다 함께 끌고 가야 한다.
 12. **Stripe 경로의 검증 수준이 토스와 다르다.** 토스는 웹훅에서 결제 재조회(진짜 검증)를 하지만 Stripe 는 `STRIPE_WEBHOOK_SECRET` 서명 검증에 의존한다(⚠️ 동등한 재조회 방어 존재 여부 미확인).
@@ -603,4 +783,5 @@ npx wrangler deploy                 # ⚠️ 반드시 포그라운드 (백그�
 ## 개정 이력
 | 일자 | 내용 | 작성 |
 |---|---|---|
+| 2026-09-19 | 외부 메모리 참조 항목을 코드에서 복원해 대체. 복원 불가 항목은 사유 명시 | Claude |
 | 2026-09-19 | 최초 작성. 근거 커밋 `edc8aa4`. `CLAUDE.md`(293줄)·루트 `CLAUDE.md`·`wrangler.toml`·`package.json`·`src/index.tsx`(154 라우트)·`migrations/0001~0029`·`public/static/*.jsx` 6개·`TOSS_PAYMENTS_GUIDE.md` 기준 | Claude |
