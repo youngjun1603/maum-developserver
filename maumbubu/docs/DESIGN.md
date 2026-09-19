@@ -12,7 +12,26 @@
 > `maumbubu-dev/마음부부_추가개발지시서_ADDENDUM01.md`, `maumbubu-dev/README.md`,
 > `src/index.ts` · `src/translate-route.ts` · `src/translation-prompts.ts`,
 > `migrations/0001~0003`, `public/static/bubu_hub.jsx`, `review/BATCH_01.md`, `wrangler.toml`.
-> 상세 스펙·구현 이력 전반은 외부 메모리 `project_maumbubu` 참조 — **문서화 필요**.
+>
+> **`project_maumbubu` 대체(코드·로컬 문서에서 복원)** — 상세 스펙 진본은 외부 메모리가 아니라 레포 안에 있다: `maumbubu-dev/SPEC_MASTER.md`(472줄, 엔진 진본 v3) · `maumbubu-dev/마음부부_추가개발지시서_ADDENDUM01.md`(130줄) · `maumbubu/review/BATCH_01.md`(감수 원문). SPEC 장 ↔ 이 문서 ↔ 코드 대응은 다음과 같다.
+>
+> | SPEC_MASTER 장 | 이 문서 | 코드 구현 위치 |
+> |---|---|---|
+> | §1 자산 등급(A·B·C급) | §1 핵심 가치 제안 | — (기획 전용) |
+> | §2 엔진 3층 + 트랙 분기 | §2.1 | `translation-prompts.ts` `buildTranslationPrompt()` L404~L430 |
+> | §2.2 통역 4모드 | §2.2 | `MODE_MODULES` L234~L335 (receive L235 · send L255 · mediate L281 · perspective L307) · 입력 라벨 `MODE_INPUT_LABEL` L392~L396 |
+> | §3.1 증거 등급 · §3.2 EFT 악순환 고리 | §2.4 | 심리상담 트랙 모듈 |
+> | §3.3 신학 기조(2세대 채택) · §3.4 6렌즈 | §2.1 · §11.8 | 기독교 트랙 모듈 |
+> | §4.1~§4.4 프롬프트 조립·강도 슬라이더 | §2.1 · §4 | `buildTranslationPrompt()` 조립 순서 = 프리앰블 → 트랙 → 모드(L422) → 강도 → 기억 → `SAFETY_OVERRIDE`(L425, **항상 마지막·상시**) |
+> | §5 멀티모달·동의 게이트 | §3 시나리오 3 | `MultimodalSignals.consentSessionId` 부재 시 주입 거부 (L52~L60) |
+> | §6.1 관계 프로파일 개념 스키마 | §6 | `RelationshipMemory` L38~L49 |
+> | §7 회복 레이어(활동·피드백·커뮤니티·사전검수) | §4 | `translate-route.ts` 활동·피드백·커뮤니티 라우트 |
+> | §9.1 분리 보호 3단계 | §11.1 | `SAFETY_OVERRIDE` L105~L140 (T1 L110 · T2 L115 · T3 L121 · 안전 출력 스키마 L134~) |
+> | §10 자산화 로드맵·이중 수익 | §10 | — (기획 전용) |
+>
+> ⚠️ **SPEC §6.1이 요구했으나 코드에 없는 필드 2개**(코드에서 복원 · 근거: `src/translation-prompts.ts` L38~L49 · `migrations/0002_share.sql`): 구현된 `RelationshipMemory` 는 `recurringTopics` · `psychologyProfile` · `christianProfile` · `successPatterns` · `partnerPerspective` **5개뿐**이다. SPEC이 함께 요구한 **슬라이더 설정**은 브라우저 `localStorage`(`bubu_config`)에만 남고(§15 #14), **안전 플래그(민감·암호화)** 는 `relation_safety.tier` **평문**으로 들어갔다(§15 #4).
+>
+> ⚠️ **구현 이력(무엇을 어떤 순서로·왜 그렇게 고쳤는지)** 은 외부 메모리 `project_maumbubu` 에만 존재 — 코드로 복원 불가. 레포에 남은 것은 커밋 메시지뿐이며, **ADDENDUM 02 원본 문서**(§1 기억 분리 · §2 자살예방 109)는 레포에 아예 없다(§15 #11).
 
 ## 1. 서비스 개요
 - **한 줄 정의**: 부부 대화의 "말과 마음 사이 간극"을 AI가 통역해 주는 서비스. 배우자의 말(수신)·내가 할 말(발신)·싸운 대화(중재)·상대 입장(관점) 4모드를, **심리상담(EFT·애착)과 기독교(Powlison/Keller/Tripp) 이중 트랙**으로 해석한다.
@@ -137,7 +156,7 @@
 | 22 | 케이스뱅크 회귀검증 | BATCH_01 6케이스 실 API 재현 | 보류 | 케이스뱅크 자료 대기 |
 | 23 | 양방향 실시간 동기화 | 동시 세션·커플 대시보드 | 보류 | 출시 후 항목(SPEC 8.2) |
 | 24 | 상담사 마켓플레이스 | 유료 세션 예약 | 보류 | 출시 후 항목 |
-| 25 | 연동형 유료결제 | 마음풀 상점 부부 상품 → 내부 크레딧 지급 | 설계만(착수 금지) | 메모리 `project_maum_unified_payment` 참조 — **문서화 필요** |
+| 25 | 연동형 유료결제 | 마음풀 상점 부부 상품 → 내부 크레딧 지급 | 설계만(착수 금지) | 마음풀 측 상품 3종(`bubu_pack10/20/40`)은 **이미 코드에 존재** — §10. 부부 워커 측 신규 코드 없음 |
 
 ## 5. 아키텍처
 - **스택**: Cloudflare Workers(TypeScript) + Hono 4.11 + D1 + KV + React 18(UMD CDN) + esbuild 사전컴파일 + Anthropic Claude.
@@ -233,7 +252,23 @@
 - **상품·가격**: 모드별 크레딧 — **수신 2 / 발신 2 / 중재 3 / 관점 3**. 피드백·커뮤니티·기억 조회·공유는 **무료(0)**. 원화 가격은 마음풀 상점 소관(이 레포에 없음) — ⚠️ 미확인.
 - **결제 수단**: 마음부부 자체 결제 없음. 마음풀 결제(토스페이먼츠) 경유.
 - **크레딧·구독 처리**: `spendCredits()`가 `UPDATE … WHERE credits >= ?`로 **원자적 차감** 후 `credit_transactions` 기록. **Claude 호출 실패·JSON 파싱 실패 시 `refundCredits()`로 전액 환불**(차감은 게이트 통과 후 Claude 호출 직전에 수행).
-- **연동형 유료결제(설계 완료·착수 대기)**: 부부 유료는 마음풀 상점에서 **부부 상품 카드 → 내부 maumful 크레딧 지급**(하이브리드, 별도 테이블 없음). 상세 실행 스펙·DB·API 계약은 외부 메모리 **`project_maum_unified_payment`** 참조 — **문서화 필요**. ⚠️ **토스 실결제 반영 전까지 관련 코드 커밋·푸시·배포 금지.**
+- **연동형 유료결제(설계 완료·착수 대기)**: 부부 유료는 마음풀 상점에서 **부부 상품 카드 → 내부 maumful 크레딧 지급**(하이브리드, 별도 테이블 없음). ⚠️ **토스 실결제 반영 전까지 관련 코드 커밋·푸시·배포 금지.**
+  - **부부 상품 3종은 이미 마음풀 코드에 실재한다**(코드에서 복원 · 근거: `maumful-main/src/index.tsx` `PACKAGES` L3136~L3138 · 표시용 `public/static/app.jsx` `PACKAGES_KR` L6026~L6028 · 상품 그룹 `SERVICE_GROUPS` L6059):
+
+    | 상품 키 | 지급 크레딧 | 가격 | 표기 | 단가 |
+    |---|---|---|---|---|
+    | `bubu_pack10` | 25 | 3,300원 | 마음부부 통역 10회팩(라이트) | 132원/cr · 회당 330원 |
+    | `bubu_pack20` | 50 | 4,900원 | 마음부부 통역 20회팩(스탠다드) — 배지 "인기" | 98원/cr · 회당 245원(26%↓) |
+    | `bubu_pack40` | 100 | 8,900원 | 마음부부 통역 40회팩(프로) — 배지 "알뜰" | 89원/cr · 회당 222원(33%↓) |
+
+  - **가격 산정 근거가 코드 주석에 남아 있다**(index.tsx L3133~L3135): "*프리미엄 포지셔닝(2026-07-18): 저가 지양. 부부·세대는 통역이 maumful 크레딧을 쓴다(세대는 성인만)*", "*3단계 회차팩(공용 크레딧 곡선 단조감소: 132→98→89 /cr). 회당 평균 2.5cr → 10/20/40회*". 즉 4모드 평균 2.5cr(수신·발신 2 / 중재·관점 3)로 회수를 역산한 표다.
+  - 부부 상품에는 `service`·`grantType` 필드가 **없다** — 수달·곁(`credits:0` + `service`/`grantType`)과 달리 외부 grant를 받지 않고 마음풀 `users.credits` 를 그대로 쓰는 **내부 크레딧형**이다. 그래서 부부 워커에 추가할 결제 코드가 없다(코드에서 복원 · 근거: index.tsx L3118 `PACKAGES` 타입 정의 · L3143~L3148).
+  - **루트 `CLAUDE.md` 「연동형 유료결제 (통합결제) — 설계 완료·착수 대기」 원문**:
+    > 수달·곁·부부 유료결제를 **마음풀에서 상품으로 판매 → 결제내역을 각 서비스로 자동 전달(grant)** 하는 방식. **사용자 지시 있을 때만 착수**하며, **토스페이먼츠 완전 반영 전까지 관련 코드는 커밋·푸시·배포 금지**(설계·로컬 준비만).
+    > - **결제 표기 = 하이브리드**(내부 크레딧, 겉은 명명 상품 — 선불충전금/PG 기피 회피). 마음풀·부부는 이미 이 구조. 수달·곁은 별도 생태계라 `applyGrant`(sub/pack)로 지급.
+    > - **전달 = A안(서명 grant API)**: 마음풀 결제성공 → 대상 서비스 `POST /api/grant`(HMAC=MAUM_SSO_SECRET, `{email,grantType,orderId}`) → email로 maum-auth 계정 조회/생성 → `applyGrant`. 멱등·환불 revoke·선지급 재시도 포함.
+    > - 사업자 단일(마음서비스)이라 결제대행 규제 무관. 수달·곁 앱은 당분간 없음.
+  - ⚠️ **확장 범위·착수 조건·DB/API 계약 검증 절차**는 외부 메모리 `project_maum_unified_payment` 에만 존재 — 코드로 복원 불가. 코드가 말해 주는 것은 "부부는 이미 하이브리드 구조라 추가 계약이 필요 없다"까지다.
 
 ## 11. 안전 · 윤리 · 법적 제약
 > **이 서비스에서 가장 중요한 섹션.** 아래 4개 블록은 `maumbubu/CLAUDE.md`의 규칙을 **원문 인용**하고 코드상 구현 위치를 붙인 것이다. 요약·완화·축약 금지.
@@ -391,7 +426,7 @@ npx wrangler deploy                                 # 포그라운드 필수, li
 ```
   - 프론트 수정 시 `public/index.html`의 `bubu_hub.js?v=N` **캐시버전 bump**(현재 `v=9`).
   - esbuild가 한글을 `\uXXXX`로 이스케이프 → **컴파일본 grep은 한글 리터럴 대신 ASCII 마커**(함수명·`safety_tier` 등)로.
-  - 배포는 메모리 `feedback_cloudflare_account`(limyj007 계정) · `feedback_wrangler_deploy`(포그라운드) 참조 — **문서화 필요**.
+  - **배포 계정·실행 방식**(코드에서 복원 · 근거: `maumbubu/CLAUDE.md` L25·L29 · `wrangler.toml` · 루트 `CLAUDE.md` 「배포 원칙」): Cloudflare 계정은 **`limyj007`**, account id **`313b6305…`** — AI Gateway 경로 `gateway.ai.cloudflare.com/v1/313b6305…/maumful/anthropic/…` 의 계정 ID와 같다. `wrangler deploy` 는 **포그라운드 필수**(백그라운드 실행 시 인증 실패 — 전 서비스 공통 규칙). ⚠️ 계정이 둘로 갈린 경위와 백그라운드 실패의 실제 증상 로그는 외부 메모리 `feedback_cloudflare_account`·`feedback_wrangler_deploy` 에만 존재 — 코드로 복원 불가.
   - 마이그레이션: `npx wrangler d1 execute maumful-db --remote --file=migrations/000N_*.sql`. **ADD만**(D1은 DROP/RENAME COLUMN 미지원).
   - 커밋 규칙(루트): 서비스별 분리, 접두사 `[maumbubu]`. 수정 즉시 커밋·푸시.
 - **Cron / 스케줄**: **해당 없음** — `wrangler.toml`에 `[triggers]` 없음. 만료 처리는 KV TTL에만 의존(`consent_pending` 24h, `bubu_invite` 7d).
@@ -424,8 +459,12 @@ npx wrangler deploy                                 # 포그라운드 필수, li
   - 상담사 마켓플레이스
   - casebank BATCH_01 회귀검증 (케이스뱅크 자료 필요)
   - 실기기 카메라 멀티모달 E2E 검증
-  - **연동형 유료결제**: 설계 완료·**토스 반영 후 착수**. 상세는 메모리 `project_maum_unified_payment` / 루트 CLAUDE.md 「연동형 유료결제」 참조 — **문서화 필요**. **착수 지시 전까지 구현·커밋 금지.**
-  - 전 서비스 백로그는 메모리 `project_maum_backlog` 한 곳에 집약 — **문서화 필요**.
+  - **연동형 유료결제**: 설계 완료·**토스 반영 후 착수**. 마음풀 측 상품 3종(`bubu_pack10/20/40`)과 크레딧 지급 경로는 **이미 코드에 있으므로**(§10 표) 부부 워커에 남은 구현은 없다. 남은 것은 토스 실결제 반영과 착수 지시뿐. **착수 지시 전까지 구현·커밋 금지.**
+  - **전 서비스 백로그** — 루트 `CLAUDE.md` 「남은 작업 (백로그)」 **원문 중 마음부부에 해당하는 항목만** 옮긴다(코드로 복원 불가 → 원문 인용으로 대체):
+    > - **선행조건 대기**: 앱화·통합해석 상품화·연동형 통합결제 → 모두 **토스 실결제 반영 후**
+    > - **금지**: 커플 감정 내용 공유(동의·철회 UX 없이) / CTS 개발(명시적 재개 시에만)
+    - 나머지 백로그 항목(폐기된 상담사 승인 레거시 제거 · 주간 리포트 메일 실수신 검증 · 마음게임 콘텐츠 확장)은 **마음부부 소관이 아니다**.
+    - ⚠️ 서비스 간 **우선순위·일정·완료 판정 기준**은 외부 메모리 `project_maum_backlog` 에만 존재 — 코드로 복원 불가. 루트 `CLAUDE.md` 에 남은 것은 위 인용이 전부다.
 - **금지 사항**:
   - SAFETY_OVERRIDE **축약·완화·조건부화 금지**(상시 포함 유지).
   - 관계 기억을 `relation_id` 단일키로 **되돌리지 말 것**. 구 `relation_memory` 테이블 **삭제 금지**.
@@ -453,9 +492,23 @@ npx wrangler deploy                                 # 포그라운드 필수, li
 14. **온보딩 설정이 localStorage에만 있다.** `bubu_config`(트랙·슬라이더)가 기기 로컬에만 저장돼, 기기를 바꾸면 온보딩을 다시 하고 트랙 선택도 초기화된다. SPEC 6.1의 "슬라이더 설정"은 관계 기억 저장 대상으로 설계돼 있었으나 서버에 저장되지 않는다.
 15. **BATCH_01 회귀 기준이 아직 자동화돼 있지 않다.** 감수 원칙 P1~P3이 프롬프트에 반영됐지만, 6케이스를 실제 API로 돌려 비교하는 절차가 없어 프롬프트 수정 시 회귀를 잡을 수 없다(§14 대기 항목).
 
+
+### 외부 메모리 대조표
+
+2026-09-19 작업으로 이 문서의 외부 메모리 참조 6곳을 코드·로컬 문서에서 복원했다. 아래 오른쪽 열은 원리상 코드에 없는 것(= 의사결정 맥락)이며, 해당 메모리가 사라지면 영구 소실된다.
+
+| 외부 메모리 | 코드·로컬 문서에서 복원된 부분 | 복원 불가(의사결정 맥락) |
+|---|---|---|
+| `project_maumbubu` | SPEC_MASTER §1~§10 ↔ 이 문서 ↔ 코드 대응표(§0) · 4모드 · 3층 엔진 · 관계기억 5필드 · SPEC §6.1 미구현 2필드 | 구현 이력(변경 순서·판단 근거) · **ADDENDUM 02 원본 문서**(기억 분리·자살예방 109) |
+| `project_maum_unified_payment` | 부부 상품 3종 키·크레딧·가격·배지(§10) · 가격 산정 주석(회당 2.5cr 역산) · 내부 크레딧형 구조(`service` 없음) · 루트 `CLAUDE.md` 원문 | 확장 범위·착수 조건 · DB/API 계약 검증 절차 |
+| `project_maum_backlog` | — (루트 `CLAUDE.md` 백로그 원문 중 부부 해당 2줄만) | **전 서비스 통합 백로그 전부** · 서비스 간 우선순위·일정 |
+| `feedback_cloudflare_account` | 계정 `limyj007` · account id `313b6305…`(AI Gateway 경로와 동일) | 계정이 둘로 갈린 경위 |
+| `feedback_wrangler_deploy` | `wrangler deploy` 포그라운드 필수(루트 `CLAUDE.md` 공통 규칙) | 백그라운드 실패의 실제 증상·로그 |
+
 ---
 
 ## 개정 이력
 | 일자 | 내용 | 작성 |
 |---|---|---|
+| 2026-09-19 | 외부 메모리 참조 항목을 코드에서 복원해 대체. 복원 불가 항목은 사유 명시 | Claude |
 | 2026-09-19 | 최초 작성 — CLAUDE.md·SPEC_MASTER·ADDENDUM01·소스·마이그레이션·BATCH_01 근거로 전 섹션 작성 (근거 커밋 `b67d336`) | Claude |
