@@ -1355,8 +1355,11 @@ async function handleScheduled(env: Bindings) {
       const emotionCounts: Record<string, number> = {}
       for (const s of sessions) {
         if (s.gameId === 'burnout') {
-          if (typeof s.meta.completedMissions === 'number') missionCount += s.meta.completedMissions
-          if (typeof s.meta.energy === 'number') energies.push(s.meta.energy)
+          // R-08: 프론트 구키(missions_completed/energy_gained)도 읽어 집계 부활(마음게임과 동일)
+          const _em = (s.meta as any).completedMissions ?? (s.meta as any).missions_completed
+          if (typeof _em === 'number') missionCount += _em
+          const _en = (s.meta as any).energy ?? (s.meta as any).energy_gained
+          if (typeof _en === 'number') energies.push(_en)
         }
         if (s.gameId === 'mood' && typeof s.meta.emotion === 'string') {
           const e = s.meta.emotion
