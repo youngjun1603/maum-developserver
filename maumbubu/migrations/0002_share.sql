@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS shared_items (
   sender_id INTEGER NOT NULL,
   item_type TEXT NOT NULL,                   -- message | mediate_view | perspective_view | activity_invite
   payload TEXT NOT NULL,                     -- 공유 승인된 내용만 (JSON)
-  status TEXT NOT NULL DEFAULT 'sent',       -- sent | viewed | accepted
+  status TEXT NOT NULL DEFAULT 'sent',       -- sent | viewed | accepted | revoked (R-24)
   created_at TEXT DEFAULT (datetime('now')),
   viewed_at TEXT
 );

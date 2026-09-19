@@ -885,7 +885,7 @@ translate.get('/share/inbox', async (c) => {
     const relationId = Number(c.req.query('relationId'));
     if (!relationId) return c.json({ error: 'relationId가 필요합니다.' }, 400);
     if (!(await assertRelationOwner(c.env.DB, relationId, uid))) return c.json({ error: '이 관계에 접근 권한이 없어요.' }, 403);
-    const { results } = await c.env.DB.prepare("SELECT id, item_type, payload, status, created_at FROM shared_items WHERE relation_id = ? AND sender_id != ? ORDER BY created_at DESC LIMIT 50").bind(relationId, uid).all();
+    const { results } = await c.env.DB.prepare("SELECT id, item_type, payload, status, created_at FROM shared_items WHERE relation_id = ? AND sender_id != ? AND status != 'revoked' ORDER BY created_at DESC LIMIT 50").bind(relationId, uid).all();
     // peek=1(뱃지 카운트용)이면 읽음 처리하지 않음 — 실제 열람 시에만 viewed
     if (c.req.query('peek') !== '1') {
       await c.env.DB.prepare("UPDATE shared_items SET status = 'viewed', viewed_at = datetime('now') WHERE relation_id = ? AND sender_id != ? AND status = 'sent'").bind(relationId, uid).run();
@@ -908,6 +908,17 @@ translate.post('/share/respond', async (c) => {
     await c.env.DB.prepare("UPDATE shared_items SET status = 'accepted' WHERE id = ?").bind(shareId).run();
     return c.json({ ok: true });
   } catch (e) { console.error('respond error:', e); return c.json({ error: '처리에 실패했어요.' }, 500); }
+});
+
+// DELETE /api/share/:id — 철회(발신자만). 수신함에서도 사라진다(inbox가 revoked 제외). R-24: 세대에서 역포팅
+translate.delete('/share/:id', async (c) => {
+  try {
+    const uid = c.get('uid');
+    const r = await c.env.DB.prepare("UPDATE shared_items SET status='revoked' WHERE id = ? AND sender_id = ?")
+      .bind(c.req.param('id'), uid).run();
+    if (!r.meta.changes) return c.json({ error: '철회할 수 없어요.' }, 404);
+    return c.json({ ok: true });
+  } catch (e) { console.error('share revoke error:', e); return c.json({ error: '철회에 실패했어요.' }, 500); }
 });
 
 export default translate;

@@ -209,16 +209,25 @@ function Share({ relationId, itemType, payload, preview, label }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState("");
+  const [sentId, setSentId] = useState("");
   const send = async () => {
     setBusy(true);
     const r = await api("/share/send", "POST", { relationId, itemType, payload });
     setBusy(false);
     setOpen(false);
-    if (r.ok) setDone(r.linked ? "\uBC30\uC6B0\uC790\uC5D0\uAC8C \uBCF4\uB0C8\uC5B4\uC694 \u2713" : '\uBCF4\uB0C8\uC5B4\uC694. \uBC30\uC6B0\uC790\uAC00 \uC544\uC9C1 \uC5F0\uACB0 \uC804\uC774\uBA74 \uC218\uC2E0\uD568\uC5D0\uC11C "\uBC30\uC6B0\uC790 \uC5F0\uACB0"\uB85C \uCD08\uB300\uD558\uC138\uC694.');
-    else if (r.status === 403) setDone("\uC9C0\uAE08\uC740 \uC548\uC804\uC744 \uC704\uD574 \uACF5\uC720\uAC00 \uC81C\uD55C\uB3FC\uC694.");
+    if (r.ok) {
+      setSentId(r.shareId || "");
+      setDone(r.linked ? "\uBC30\uC6B0\uC790\uC5D0\uAC8C \uBCF4\uB0C8\uC5B4\uC694 \u2713" : '\uBCF4\uB0C8\uC5B4\uC694. \uBC30\uC6B0\uC790\uAC00 \uC544\uC9C1 \uC5F0\uACB0 \uC804\uC774\uBA74 \uC218\uC2E0\uD568\uC5D0\uC11C "\uBC30\uC6B0\uC790 \uC5F0\uACB0"\uB85C \uCD08\uB300\uD558\uC138\uC694.');
+    } else if (r.status === 403) setDone("\uC9C0\uAE08\uC740 \uC548\uC804\uC744 \uC704\uD574 \uACF5\uC720\uAC00 \uC81C\uD55C\uB3FC\uC694.");
     else setDone(r.error || "\uACF5\uC720\uC5D0 \uC2E4\uD328\uD588\uC5B4\uC694.");
   };
-  return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: () => setOpen(true), style: { fontSize: 13, padding: 11, marginTop: 8 } }, label), done && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: GREEN, marginTop: 6, lineHeight: 1.6 } }, done), open && /* @__PURE__ */ React.createElement("div", { style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 120, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }, onClick: (e) => {
+  return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: () => setOpen(true), style: { fontSize: 13, padding: 11, marginTop: 8 } }, label), done && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, color: GREEN, marginTop: 6, lineHeight: 1.6 } }, done, sentId && /* @__PURE__ */ React.createElement("button", { onClick: async () => {
+    const rv = await api("/share/" + sentId, "DELETE");
+    if (rv.ok) {
+      setDone("\uBCF4\uB0B8 \uD56D\uBAA9\uC744 \uCDE8\uC18C\uD588\uC5B4\uC694.");
+      setSentId("");
+    }
+  }, style: { marginLeft: 8, background: "none", border: "none", color: "#B5556A", textDecoration: "underline", cursor: "pointer", fontSize: 12, padding: 0 } }, "\uBCF4\uB0B8 \uAC83 \uCDE8\uC18C")), open && /* @__PURE__ */ React.createElement("div", { style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 120, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }, onClick: (e) => {
     if (e.target === e.currentTarget) setOpen(false);
   } }, /* @__PURE__ */ React.createElement("div", { style: { background: "#fff", borderRadius: 16, maxWidth: 400, width: "100%", padding: 20 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 800, marginBottom: 8 } }, "\uBC30\uC6B0\uC790\uC5D0\uAC8C \uC774\uB807\uAC8C \uBCF4\uC5EC\uC694"), /* @__PURE__ */ React.createElement(Card, { style: { background: "#f6faf8", fontSize: 14, lineHeight: 1.7, marginBottom: 14, whiteSpace: "pre-wrap" } }, preview), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10 } }, /* @__PURE__ */ React.createElement(Btn, { kind: "ghost", onClick: () => setOpen(false) }, "\uCDE8\uC18C"), /* @__PURE__ */ React.createElement(Btn, { onClick: send, disabled: busy }, busy ? "\uBCF4\uB0B4\uB294 \uC911\u2026" : "\uBCF4\uB0B4\uAE30")))));
 }

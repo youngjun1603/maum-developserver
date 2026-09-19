@@ -282,17 +282,18 @@ function Share({ relationId, itemType, payload, preview, label }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState('');
+  const [sentId, setSentId] = useState('');   // R-24: 방금 보낸 항목 id(취소용)
   const send = async () => {
     setBusy(true);
     const r = await api('/share/send', 'POST', { relationId, itemType, payload });
     setBusy(false); setOpen(false);
-    if (r.ok) setDone(r.linked ? '배우자에게 보냈어요 ✓' : '보냈어요. 배우자가 아직 연결 전이면 수신함에서 "배우자 연결"로 초대하세요.');
+    if (r.ok) { setSentId(r.shareId || ''); setDone(r.linked ? '배우자에게 보냈어요 ✓' : '보냈어요. 배우자가 아직 연결 전이면 수신함에서 "배우자 연결"로 초대하세요.'); }
     else if (r.status === 403) setDone('지금은 안전을 위해 공유가 제한돼요.');
     else setDone(r.error || '공유에 실패했어요.');
   };
   return (<>
     <Btn kind="ghost" onClick={() => setOpen(true)} style={{ fontSize: 13, padding: 11, marginTop: 8 }}>{label}</Btn>
-    {done && <div style={{ fontSize: 12.5, color: GREEN, marginTop: 6, lineHeight: 1.6 }}>{done}</div>}
+    {done && <div style={{ fontSize: 12.5, color: GREEN, marginTop: 6, lineHeight: 1.6 }}>{done}{sentId && <button onClick={async () => { const rv = await api('/share/' + sentId, 'DELETE'); if (rv.ok) { setDone('보낸 항목을 취소했어요.'); setSentId(''); } }} style={{ marginLeft: 8, background: 'none', border: 'none', color: '#B5556A', textDecoration: 'underline', cursor: 'pointer', fontSize: 12, padding: 0 }}>보낸 것 취소</button>}</div>}
     {open && (
       <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={e => { if (e.target === e.currentTarget) setOpen(false); }}>
         <div style={{ background: '#fff', borderRadius: 16, maxWidth: 400, width: '100%', padding: 20 }}>
