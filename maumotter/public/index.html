@@ -118,7 +118,7 @@ function loadFaceApi() {
     s.src = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js';
     s.onload = async () => {
       try {
-        const M = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights';
+        const M = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights';  // R-30: @master→라이브러리와 동일 태그 고정(업스트림 변경으로 로드 깨짐 방지)
         await window.faceapi.nets.tinyFaceDetector.loadFromUri(M);
         await window.faceapi.nets.faceExpressionNet.loadFromUri(M);
         resolve(window.faceapi);
