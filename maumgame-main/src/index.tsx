@@ -259,7 +259,7 @@ app.get('/api/game/me', async (c) => {
 
   // 마스터 계정: 모든 게임 해금 + 모든 검사 완료 처리
   const allGames = ALL_GAME_IDS   // (이전엔 focus·worry가 빠져 있었음)
-  const allTests = ['PHQ9', 'GAD7', 'DASS21', 'BIG5', 'LOST', 'SCT', 'DSI', 'BURNOUT']
+  const allTests = ['PHQ9', 'GAD7', 'DASS21', 'BIG5', 'LOST', 'SCT', 'DSI', 'BURNOUT', 'RIASEC', 'VALUES']  // R-53: 마음풀 10종과 일치(마스터 응답 전용). CTS 게임은 8종 유지
   const master   = isMasterAccount(user.email)
 
   return c.json({
