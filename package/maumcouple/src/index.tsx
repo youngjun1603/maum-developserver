@@ -1209,7 +1209,7 @@ app.get('/api/couple/timeline', async (c) => {
 
   const [sessions, checkins] = await Promise.all([
     DB.prepare(`
-      SELECT cs.code, cs.status, cs.compatibility_score, cs.created_at, cs.test_types,
+      SELECT cs.status, cs.compatibility_score, cs.created_at,
              CASE WHEN cs.host_user_id=? THEN u2.nickname ELSE u1.nickname END AS partner_name
       FROM couple_sessions cs
       LEFT JOIN users u1 ON u1.id = cs.host_user_id
@@ -1218,8 +1218,8 @@ app.get('/api/couple/timeline', async (c) => {
         AND cs.status IN ('both_done','reported','expired')
       ORDER BY cs.created_at DESC LIMIT 20
     `).bind(userId, userId, userId).all<{
-      code: string; status: string; compatibility_score: number | null;
-      created_at: string; test_types: string | null; partner_name: string | null
+      status: string; compatibility_score: number | null;
+      created_at: string; partner_name: string | null
     }>(),
     DB.prepare(`
       SELECT total_score, answers_json, created_at
