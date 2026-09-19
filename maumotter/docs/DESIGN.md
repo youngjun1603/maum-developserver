@@ -482,6 +482,8 @@
 
 ## 15. 알려진 리스크 · 기술부채
 
+> ✅ **[BATCH_06 해소 2026-09-20]** R-30(face-api 가중치 `@master`→`@0.22.2` 태그 고정, 업스트림 변경 로드깨짐 방지 — 태그에 weights/ 존재 확인) · R-29(CLAUDE.md TTS 스펙 코드와 일치: gpt-4o-mini-tts 우선·tts-1 폴백, 또또=fable·라라=nova, 캐시키 v2). 수달=GitHub 웹UI 자동배포.
+
 | # | 항목 | 내용 | 영향 |
 |---|---|---|---|
 | 1 | **`_shared/auth.ts` 캐논이 낡음** | 캐논에 `deleteUser`·`findByEmail`·`setPassword`·`markEmailVerified`·`isEmailVerified` **5개 함수가 없다**(17줄 부족). `maumotter/src/auth.ts`에는 있다(md5 `c48c0f…` vs `c167ad…`). `maumgyeot/src/auth.ts`는 수달과 **주석 1줄만** 다름(`18dfa3…`). 실질 캐논은 수달 사본이고 `_shared/`가 뒤처졌다. | 새 형제 서비스가 `_shared`를 복사하면 탈퇴·이메일 인증이 통째로 빠진다 |

@@ -153,6 +153,7 @@
 |---|---|
 | 2026-09-19 | 9개 설계서 작성 과정에서 발견된 리스크 36건 최초 정리. S1 5건은 코드 재대조 완료 |
 | 2026-09-19 | **BATCH_05(기능결함) 해소**: R-08(번아웃 metadata 서버 관대읽기+프론트 energy 추가) · R-12(성경가드 코드폴백3곳·시드3키 정합, 운영DB 실측 has_guard=1→무변경) · R-18(qt 딥링크) · R-19(PHYWEB_URL→jesusmaum.com) · R-22(커플 위기감지 1단계·마음풀식 109/1577-0199·사용자승인) · R-26(부부 공감 API·멱등) · R-27(세대 부부문구→관계) · R-28(세대 pastPatterns/lifeStage 배선). 배포·푸시 완료. R-25(relation_safety)는 현행유지(사용자결정). |
+| 2026-09-20 | **BATCH_06(정리) 해소**: [C군] R-33(CI 배포전 재빌드 스텝 3워크플로·차단가드는 esbuild caret 오탐 위험이라 제외) · R-17(CTS 결제 region 화이트리스트 3곳·교차통화 부당청구 차단) · R-36(마음풀 typecheck/smoke 스크립트·lint 스텝·롤백문서·render_smoke location 오탐수정). [A군] R-14(creditPrices 죽은값 제거·라이브검증) · R-30(face-api @master→@0.22.2) · R-49(CTS 네이버폴백→jesusmaum·GOOGLE_ID 주석·dev SERVICE_URL) · R-53(마음게임 allTests 8→10) · R-56(휴면 어드민 주석·CLAUDE 정정). [B군] R-29(수달 TTS 문서) · R-16(phyweb 6종 문서) · R-31·R-55(루트 통합결제 배포완료로 정정·사용자승인) · R-32(HANDOVER 커플워커) · R-54(구독 표시전용 문서) · R-35(CTS staging cron 제거·미배포 확인). **보류**: R-52(검사문항수 통합=app.jsx 전역충돌 위험·브라우저검증 불가로 운영안전 우선 보류) · R-15(푸시주기 사용자결정). **§4 실측**: CTS staging워커 lightoflife-dev 미배포(실결제 이력 0)·마음풀 prod+dev cron 양쪽활성(범위밖)·CTS staging KV=마음풀 KV 동일 네임스페이스(생태계분리 전제와 상충·범위밖). |
 
 ---
 

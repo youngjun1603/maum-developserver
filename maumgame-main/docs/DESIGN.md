@@ -312,6 +312,9 @@ CBT 생각 변환(`/api/game/ai-transform`)은 사용자가 부정적 생각을 
 ---
 
 ## 15. 알려진 리스크 · 기술부채
+
+> ✅ **[BATCH_06 해소 2026-09-20]** R-53 마스터 `allTests` 8→10종(RIASEC·VALUES 추가, 마스터 응답 전용·일반 무영향). CTS 게임은 검사 8종뿐이라 정답=유지. 프론트 `TEST_META_HUB` 배지는 사용자 확인 대상(미반영). 배포 628145d2 이후 반영.
+
 1. **`GET /api/game/leaderboard` 가 무인증이며 응답에 `u.email` 이 포함된다.** 상위 20명의 **이메일 주소가 누구에게나 노출**된다(프론트는 '나' 표시용으로만 쓰지만 API 응답에 그대로 실린다). 즉시 검토 필요.
 2. **`GET /api/recovery/weekly-report/:userId` 가 무인증이며 userId를 경로에서 그대로 받는다** — 타인의 `avg_energy`·`completed_missions`·`burnout_delta` 조회가 가능한 IDOR 구조. 프론트에서 쓰이지 않는 것으로 보이나 라우트는 살아 있다.
 3. ✅ **[해소 2026-09-19 · BATCH_05 R-08]** ~~번아웃 metadata 키 불일치로 주간 에너지 집계가 사실상 죽어 있다.~~ 서버(`handleScheduled`·`signalsFromSessions`)를 `completedMissions ?? missions_completed`·`energy ?? energy_gained` 로 관대하게 읽어 구·신 키 모두 수용(기존 행 즉시 부활) + 프론트가 0~100 클램프한 `energy`·`completedMissions` 를 canonical 키로 추가(구 키 유지). `< 40` 임계값은 유지(클램프된 현재에너지 기준이라 정합). CTS게임도 동일 수정. ─ *(원문)* 프론트 `burnout.jsx` 는 `{missions_completed, energy_gained, ...}` 저장, 서버는 `meta.completedMissions`·`meta.energy` 를 읽어 `energies` 가 항상 비고 `weekly_reports` 에 행이 안 쌓였다.

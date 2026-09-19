@@ -743,6 +743,8 @@ npx wrangler deploy                 # ⚠️ 반드시 포그라운드 (백그�
 
 ## 15. 알려진 리스크 · 기술부채
 
+> ✅ **[BATCH_06 해소 2026-09-20]** R-14(`/api/config/region` creditPrices 죽은값 제거·라이브검증) · R-56(휴면 어드민 죽은분기 주석·CLAUDE '호출부 0'→'1' 정정) · R-36(typecheck/smoke 스크립트·lint 스텝·롤백문서·render_smoke location 오탐수정). **R-52(검사 문항수 4중관리 통합)은 보류** — app.jsx 전역 const 충돌 시 페이지 SyntaxError 위험이고 render_smoke가 app.js에 신뢰 불가(브라우저 검증 필요)라 운영안전 우선. 배포 8d53edb3.
+
 1. **`partner_commissions` 테이블에 마이그레이션이 없다.** `accruePartnerCommission`/`reversePartnerCommission`/어드민 조회/포털 조회가 모두 이 테이블을 쓰는데 `migrations/` 어디에도 `CREATE TABLE partner_commissions` 가 없다(전 파일 grep 확인). 이는 **0029가 고친 `external_grants` 사고와 동일 패턴**(0029 주석: "CREATE가 어디에도 없어 수달·곁 grant가 실제론 실패 상태였음"). 적립은 비차단 `.catch` 라 실패해도 조용하다 → **원격 DB에 실재하는지 `SELECT name FROM sqlite_master WHERE name='partner_commissions'` 로 즉시 확인 필요.** (⚠️ 원격 DB 실재 여부는 이 문서 작성 시점에 미확인)
 2. **`JWT_SECRET` 이 KV에 저장되고 미설정 시 `'dev_secret_change_in_production'` 으로 폴백한다.** KV 키가 비면 예측 가능한 시크릿으로 토큰을 발급·검증하게 된다. 운영 KV에 값이 있는지 확인 필요(⚠️ 미확인).
 3. **`/api/config/region` 의 `creditPrices` 가 실제 `PACKAGES` 와 불일치.** region 응답은 스타터 50cr/₩2,900, 표준 120cr/₩5,900 … 인데 백엔드 `PACKAGES` 는 ₩4,900 / ₩9,900 이다. 현재 프론트가 `creditPrices` 를 사용하지 않아(전 파일 grep 0건) 실피해는 없지만, **죽은 가격표가 API로 노출**되고 있다.
