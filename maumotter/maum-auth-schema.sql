@@ -11,3 +11,8 @@ CREATE TABLE IF NOT EXISTS users (
   name          TEXT,
   created_at    TEXT DEFAULT (datetime('now'))
 );
+
+-- 2026-09-19 역기록(R-07): 원격 maum-auth.users 에 운영 중 추가돼 이미 존재하는 컬럼.
+--   수달·곁 isEmailVerified 가 참조(컬럼 없으면 fail-open=true 였음). 실제 원격 = nullable INTEGER DEFAULT 0.
+--   운영 반영은 ALTER 만(위 CREATE 는 기존 DB 에 적용 안 됨).
+ALTER TABLE users ADD COLUMN email_verified INTEGER DEFAULT 0;
