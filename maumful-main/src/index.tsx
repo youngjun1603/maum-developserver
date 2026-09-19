@@ -3362,8 +3362,10 @@ app.get('/api/subscription/toss/success', async (c) => {
         VALUES (?,?,?,?,'active',?,?,?)
       `).bind(uId, planKey, billing.billingKey, customerKey, plan.monthlyCredits, plan.price,
                nextBillingDate.toISOString()).run()
-    } catch {
-      // user_subscriptions 테이블 없으면 무시 (마이그레이션 필요)
+    } catch (e) {
+      // R-40: 구독 기록 실패를 조용히 삼키지 않는다. 테이블은 존재(2026-09-19 실측)하므로 정상 시 성공.
+      //   실패해도 첫 달 크레딧은 지급되나 갱신·해지 추적 불가 → 반드시 로그로 남겨 수동 조치.
+      console.error('[Subscription] user_subscriptions INSERT 실패 — 구독 미기록·크레딧만 지급:', e, 'uid=' + uId, 'plan=' + planKey)
     }
 
     // 첫 달 크레딧 즉시 지급
@@ -6450,6 +6452,11 @@ app.get('/api/admin/partner-stats', async (c) => {
 
   const periodRevenue = chargeStats?.period_revenue ?? 0
   const shareRate = partner?.revenue_share_rate ?? 0
+  // R-47: 정산 share 는 원장(partner_commissions)에서 읽어 원장 API·포털과 산식 통일
+  const ledStat = await DB.prepare(
+    `SELECT COALESCE(SUM(charge_amount),0) AS revenue, COALESCE(SUM(share_amount),0) AS share
+     FROM partner_commissions WHERE partner_code=? AND status!='reversed' AND date(created_at) >= ? AND date(created_at) <= ?`
+  ).bind(String(code).toUpperCase(), fromDate, toDate).first<{ revenue: number; share: number }>()
 
   return c.json({
     success: true,
@@ -6458,7 +6465,7 @@ app.get('/api/admin/partner-stats', async (c) => {
       period: { from: fromDate, to: toDate },
       users: { total: userStats?.total ?? 0, period: userStats?.period ?? 0 },
       charges: { total_charges: chargeStats?.total_charges ?? 0, total_revenue: chargeStats?.total_revenue ?? 0, period_revenue: periodRevenue },
-      settlement: { period_revenue: periodRevenue, share_amount: Math.floor(periodRevenue * shareRate) },
+      settlement: { period_revenue: ledStat?.revenue ?? 0, share_amount: ledStat?.share ?? 0 },
       daily: { signups: dailySignups.results, revenue: dailyRevenue.results },
     },
   })
@@ -6493,8 +6500,14 @@ app.get('/api/admin/partner-settlement', async (c) => {
     `).bind(code.toUpperCase(), fromDate, toDate).first<{ cnt: number; total: number }>(),
   ])
 
-  const totalRevenue = charges?.total ?? 0
-  const shareAmount  = Math.floor(totalRevenue * partner.revenue_share_rate)
+  // R-47: 요약도 원장(partner_commissions)에서 읽어 원장 API·제휴사 포털과 산식 통일
+  //   (기존엔 credit_charges 합계 × 현재율 × Math.floor 로 재계산 → 율 변경/모집단 차이로 원장과 어긋났음)
+  const led = await DB.prepare(
+    `SELECT COALESCE(SUM(charge_amount),0) AS revenue, COALESCE(SUM(share_amount),0) AS share
+     FROM partner_commissions WHERE partner_code=? AND status!='reversed' AND date(created_at) >= ? AND date(created_at) <= ?`
+  ).bind(code.toUpperCase(), fromDate, toDate).first<{ revenue: number; share: number }>()
+  const totalRevenue = led?.revenue ?? 0
+  const shareAmount  = led?.share ?? 0
 
   return c.json({
     success: true,
