@@ -1034,8 +1034,14 @@ translate.get('/share/inbox', async (c) => {
 // POST /api/share/respond — 활동 제안 수락
 translate.post('/share/respond', async (c) => {
   try {
+    const uid = c.get('uid');
     const { shareId, action } = await c.req.json<{ shareId: string; action: string }>();
     if (action !== 'accepted' || !shareId) return c.json({ error: '잘못된 요청입니다.' }, 400);
+    // R-05: 소유권 검증 — 발신자 자가수락 차단 + 관계 당사자(수신자)만 수락 가능(assertRelationOwner 재사용)
+    const item = await c.env.DB.prepare("SELECT relation_id, sender_id FROM sedae_shared_items WHERE id = ?").bind(shareId).first<{ relation_id: number; sender_id: number }>();
+    if (!item || String(item.sender_id) === String(uid) || !(await assertRelationOwner(c.env.DB, item.relation_id, uid))) {
+      return c.json({ error: '처리할 수 없어요.' }, 404);
+    }
     await c.env.DB.prepare("UPDATE sedae_shared_items SET status = 'accepted' WHERE id = ?").bind(shareId).run();
     return c.json({ ok: true });
   } catch (e) { console.error('respond error:', e); return c.json({ error: '처리에 실패했어요.' }, 500); }
