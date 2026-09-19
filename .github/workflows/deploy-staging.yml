@@ -11,6 +11,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install maumful dependencies
+        working-directory: maumful-main
+        run: npm ci
+
+      # R-33: 스테이징도 배포 직전 재빌드 (옛 번들 배포 방지)
+      - name: Build maumful assets (jsx + css)
+        working-directory: maumful-main
+        run: npm run build:assets
+
       - name: Deploy maumful-dev
         uses: cloudflare/wrangler-action@v3
         with:
@@ -24,6 +37,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install maumcouple dependencies
+        working-directory: package/maumcouple
+        run: npm ci
+
+      # R-33: 배포 직전 재빌드
+      - name: Build maumcouple jsx
+        working-directory: package/maumcouple
+        run: npm run build:jsx
 
       - name: Deploy maumcouple-dev
         uses: cloudflare/wrangler-action@v3

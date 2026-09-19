@@ -19,6 +19,12 @@ jobs:
         working-directory: maumful-main
         run: npm ci
 
+      # R-33: CI가 build:jsx/css 를 안 돌려 옛 번들이 배포되던 문제 — 배포 직전 항상 재빌드.
+      #   (차단형 git diff 가드는 esbuild caret 범위 오탐으로 프로덕션 배포를 막을 위험이 있어 제외)
+      - name: Build maumful assets (jsx + css)
+        working-directory: maumful-main
+        run: npm run build:assets
+
       - name: Deploy maumful
         uses: cloudflare/wrangler-action@v3
         with:
@@ -42,6 +48,11 @@ jobs:
       - name: Install maumcouple dependencies
         working-directory: package/maumcouple
         run: npm ci
+
+      # R-33: 배포 직전 항상 재빌드 (옛 compiled/*.js 배포 방지)
+      - name: Build maumcouple jsx
+        working-directory: package/maumcouple
+        run: npm run build:jsx
 
       - name: Deploy maumcouple
         uses: cloudflare/wrangler-action@v3
