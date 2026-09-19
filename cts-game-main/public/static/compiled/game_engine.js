@@ -235,6 +235,6 @@ const GameEngine = (() => {
 const PHYWEB_URL = (() => {
   const host = window.location.hostname;
   if (host === "localhost" || host === "127.0.0.1") return "http://localhost:3001";
-  return "https://maumful.com";
+  return "https://jesusmaum.com";
 })();
 const MAUMFUL_URL = PHYWEB_URL;

@@ -2190,7 +2190,7 @@ function GameHubApp() {
     const params = new URLSearchParams(window.location.search);
     const gameParam = params.get('game');
     if (!gameParam) return;
-    const valid = ['garden', 'efmt', 'gratitude', 'tree', 'burnout', 'mood', 'focus', 'worry'];
+    const valid = ['garden', 'efmt', 'gratitude', 'tree', 'burnout', 'mood', 'focus', 'worry', 'qt'];   // R-18: qt 누락 수정
     if (!valid.includes(gameParam)) return;
     // 로딩 완료 후 자동 실행 (약간 딜레이로 데이터 로드 대기)
     const timer = setTimeout(() => {

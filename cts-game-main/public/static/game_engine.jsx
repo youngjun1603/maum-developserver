@@ -284,7 +284,7 @@ const GameEngine = (() => {
 const PHYWEB_URL = (() => {
   const host = window.location.hostname;
   if (host === 'localhost' || host === '127.0.0.1') return 'http://localhost:3001';
-  return 'https://maumful.com';  // 마음풀 메인 홈페이지
+  return 'https://jesusmaum.com';  // R-19: CTS 본체(The Light of Life) — 마음풀 하드코딩 잔재 수정
 })();
 // 별칭 (기존 코드 호환)
 const MAUMFUL_URL = PHYWEB_URL;

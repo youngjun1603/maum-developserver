@@ -1524,7 +1524,7 @@ function GameHubApp() {
     const params = new URLSearchParams(window.location.search);
     const gameParam = params.get("game");
     if (!gameParam) return;
-    const valid = ["garden", "efmt", "gratitude", "tree", "burnout", "mood", "focus", "worry"];
+    const valid = ["garden", "efmt", "gratitude", "tree", "burnout", "mood", "focus", "worry", "qt"];
     if (!valid.includes(gameParam)) return;
     const timer = setTimeout(() => {
       setActiveGame(gameParam);
