@@ -536,11 +536,13 @@ app.post('/api/grant', async (c) => {
   const body = await c.req.json().catch(() => ({} as any));
   const p = await verifyGrantToken(secret, String(body.token || ''));
   if (!p) return c.json({ error: 'invalid or expired grant' }, 401);
-  if (p.service && p.service !== 'otter') return c.json({ error: 'service mismatch' }, 400);
+  if (p.service !== 'otter') return c.json({ error: 'service mismatch' }, 400);   // R-45: service 필수(없으면 거부)
   const email = String(p.email || '').toLowerCase();
   const grantType = String(p.grantType || '');
   const orderId = String(p.orderId || '');
   if (!email || !orderId) return c.json({ error: 'email/orderId 누락' }, 400);
+  const amount = Number(p.amount || 0);   // R-45: 금액 형식 검증(대조용·지급량 결정엔 미사용)
+  if (!Number.isInteger(amount) || amount <= 0) return c.json({ error: 'amount 누락' }, 400);
   if (!PLAN[grantType] && !PACK[grantType]) return c.json({ error: 'unknown grantType' }, 400);
   const existing = await c.env.DB.prepare('SELECT status FROM external_orders WHERE order_id=?').bind(orderId).first<any>();
   if (existing) return c.json({ ok: true, dedup: true, status: existing.status }); // 멱등
