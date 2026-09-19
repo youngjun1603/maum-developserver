@@ -1,4 +1,6 @@
 // 마음 시리즈 공용 인증 모듈 (CANONICAL)
+// 2026-09-19 역동기화(R-04): 서비스 사본이 앞서 있어(캐논에 deleteUser·findByEmail·setPassword·
+//   markEmailVerified·isEmailVerified 5개 누락) 수달 사본을 캐논으로 되돌림. 이제 캐논=사본.
 // ⚠️ 이 파일은 각 서비스 저장소(maumotter/src/auth.ts, maumgyeot/src/auth.ts)에 **동일 사본**으로 복사해 사용한다.
 //    한쪽을 고치면 이 캐논과 모든 사본을 함께 고친다. (_shared/maum-shared-spec.md 2장)
 // 전제: Worker에 AUTH_DB(maum-auth D1) 바인딩 + JWT_SECRET(시리즈 공유) 시크릿.
@@ -75,6 +77,23 @@ export async function loginUser(authDb: D1Database, p: { email: string; password
 }
 export async function getUser(authDb: D1Database, id: number): Promise<MaumUser | null> {
   return (await authDb.prepare('SELECT id,email,name FROM users WHERE id=?').bind(id).first<MaumUser>()) ?? null;
+}
+// 공용 마음 계정 삭제(회원 탈퇴). ⚠️ maum-auth는 시리즈 공유 → 삭제 시 마음 시리즈 전체에서 제거됨.
+export async function deleteUser(authDb: D1Database, id: number): Promise<void> {
+  await authDb.prepare('DELETE FROM users WHERE id=?').bind(id).run();
+}
+// 비밀번호 재설정 / 이메일 인증 (canonical — 마음수달·마음곁 동일 사본)
+export async function findByEmail(authDb: D1Database, email: string): Promise<MaumUser | null> {
+  return (await authDb.prepare('SELECT id,email,name FROM users WHERE email=?').bind(String(email).toLowerCase()).first<MaumUser>()) ?? null;
+}
+export async function setPassword(authDb: D1Database, id: number, pw: string): Promise<void> {
+  await authDb.prepare('UPDATE users SET password_hash=? WHERE id=?').bind(await hashPassword(pw), id).run();
+}
+export async function markEmailVerified(authDb: D1Database, id: number): Promise<void> {
+  try { await authDb.prepare('UPDATE users SET email_verified=1 WHERE id=?').bind(id).run(); } catch {}
+}
+export async function isEmailVerified(authDb: D1Database, id: number): Promise<boolean> {
+  try { const r = await authDb.prepare('SELECT email_verified FROM users WHERE id=?').bind(id).first<any>(); return !!(r && r.email_verified); } catch { return true; }
 }
 
 // ── Hono 미들웨어: Bearer 검증 → c.set('uid', maum_user_id) ─
