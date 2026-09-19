@@ -328,7 +328,7 @@ CBT 생각 변환(`/api/game/ai-transform`)은 사용자가 부정적 생각을 
 14. **운영 지식 일부가 외부 메모리에만 있다 — 2026-09-19 기준 복원 결과.**
     - `project_maumful_tests`(검사 문항·표기) → **마음풀 설계서 §2.1 「검사 = 10종 (12종 아님)」으로 위임.** 문항 수·척도 구성·카드 순서·채점 구간표는 거기 복원돼 있다. **마음게임이 실제로 쓰는 검사는 코드상 다음이 전부다**(코드에서 복원):
       - `completedTests` 마스터 목록 **8종** — `PHQ9`·`GAD7`·`DASS21`·`BIG5`·`LOST`·`SCT`·`DSI`·`BURNOUT` (`src/index.tsx` L262). 마음풀 본체의 10종 중 `RIASEC`·`VALUES` 2종이 빠져 있다.
-      - 게임↔검사 연결 `linkedTests` **4종** — `PHQ9`(breathing L67 · mood L90) · `DSI`(L135) · `BURNOUT`(L159·L181) · `GAD7`(L205). 나머지 게임 3종은 빈 배열. 잠금이 아니라 **표시·추천 전용**이다(`public/static/game_registry.jsx` L17·L30).
+      - 게임↔검사 연결 `linkedTests` **4종** — `PHQ9`(breathing L67 · efmt L90) · `DSI`(L135) · `BURNOUT`(L159·L181) · `GAD7`(L205). 나머지 게임 2종(mood·gratitude)은 빈 배열. 잠금이 아니라 **표시·추천 전용**이다(`public/static/game_registry.jsx` L17·L30).
       - 역루프 제안 `pickTestSuggestion` **4종** — `BURNOUT`(avgEnergy<40 또는 burnoutPlays≥3) · `DASS21`(감정기록 5회 이상 중 무거운 감정 60%↑) · `GAD7`(topEmotion=anxious) · `PHQ9`(topEmotion=sad|tired). 신호가 약하면 `null` 을 돌려 **근거 없이 검사를 권하지 않는다**. 표기는 `TEST_META`(`PHQ-9 우울 자가점검` 2분 · `GAD-7 불안 자가점검` 2분 · `DASS-21 우울·불안·스트레스` 5분 · `K-MBI+ 번아웃 검사` 15분)에서 온다 (`src/index.tsx` L1484~L1530).
       - 자가 입력 점수 `user_test_scores` — PHQ-9 값이 `calcVisualStatus`(≥15 foggy / ≥5 clearing / <5 blooming)로 정원 상태에 반영된다(§2).
       - ⚠️ 마음게임의 **8종 목록이 마음풀 10종과 어긋나 있다**(`RIASEC`·`VALUES` 누락). 마스터 계정 응답에만 쓰이는 값이라 실피해는 없으나 **검사 목록이 서비스 간 4중 관리**(마음풀 `koreaTests` · 게임 `allTests` · `linkedTests` · `TEST_META`)라는 뜻이다.
