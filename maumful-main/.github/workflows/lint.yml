@@ -25,3 +25,16 @@ jobs:
 
       - name: Run ESLint
         run: npm run lint
+
+      # R-36 최소 안전망. ⚠️ 이 파일은 하위 디렉터리라 부모 레포(maum-developserver)의
+      #   GitHub Actions 는 실행하지 않는다(중첩 .github 무시). maumful-main 을 독립 레포로
+      #   분리하거나 스텝을 루트 워크플로로 승격해야 실제로 돈다. 현재는 로컬/문서 기준선.
+      - name: Typecheck (non-blocking — 기존 6건 타입에러, 코드 정리는 별도)
+        run: npm run typecheck
+        continue-on-error: true
+
+      - name: Build assets (jsx + css)
+        run: npm run build:assets
+
+      - name: Render smoke (landing + partner_entry)
+        run: npm run smoke

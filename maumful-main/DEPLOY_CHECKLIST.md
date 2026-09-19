@@ -185,3 +185,23 @@ Cloudflare Pages 대시보드 → Custom Domains:
 - [ ] 상담 예약 → 토스 테스트 결제 확인
 - [ ] 어드민 로그인 (`/?view=counselingAdmin`) 확인
 - [ ] 구독 플랜 페이지 접속 확인
+
+---
+
+## 🔙 롤백 절차 (R-36)
+
+배포 후 문제 발견 시. **워커 롤백은 D1 스키마를 되돌리지 않는다** — 마이그레이션은 별도 처리.
+
+```bash
+# 1) 배포/버전 목록 확인 (Author·Version ID·시각)
+npx wrangler deployments list --name maumful          # 실행 검증됨
+
+# 2) 직전 정상 버전으로 되돌리기 (포그라운드 — 백그라운드 금지)
+npx wrangler rollback [version-id] --name maumful
+#   version-id 생략 시 직전 버전으로. 프롬프트에 y 확인.
+```
+
+- **CTS**: `--name lightoflife`, **마음커플**: `--name maumcouple`, **게임**: `--name maumgame`.
+- ⚠️ **D1 마이그레이션은 롤백 안 됨.** 스키마를 바꾼 배포를 되돌릴 땐 데이터 호환성을 먼저 확인. 원격 마이그레이션 트래킹이 비어 있어(설계서 §15-6) 적용 이력이 코드에 안 남는다 — `d1 execute --remote` 로 실제 스키마를 직접 확인할 것.
+- 롤백은 **코드/시크릿만** 되돌린다. KV 값·D1 데이터는 그대로.
+- 계정 확인 필수: `npx wrangler whoami` = `limyj007@gmail.com`(313b6305). 아니면 롤백이 엉뚱한 계정에 나간다.

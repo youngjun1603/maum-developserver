@@ -6,6 +6,7 @@ const fs = require('fs');
 const file = process.argv[2] || 'public/static/compiled/landing.js';
 
 global.window = { location:{search:'',pathname:'/',hostname:'maumful.com',origin:'https://maumful.com',hash:''}, addEventListener(){},removeEventListener(){},open(){},scrollTo(){}, matchMedia:()=>({matches:false,addEventListener(){},removeEventListener(){}}) };
+global.location = global.window.location;  // bare `location` 전역 참조(브라우저 기본 전역) — 스텁 누락 오탐 방지
 global.document = { createElement:()=>({style:{},appendChild(){},setAttribute(){}}), addEventListener(){}, getElementById:()=>({}), querySelector:()=>null, head:{appendChild(){}} };
 global.localStorage = { getItem:()=>null,setItem(){},removeItem(){} };
 global.sessionStorage = { getItem:()=>null,setItem(){},removeItem(){} };
