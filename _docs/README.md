@@ -3,7 +3,7 @@
 > 이 폴더는 **전 서비스 설계서의 진입점**이다. 각 서비스의 상세 설계서는 해당 폴더의 `docs/DESIGN.md` 에 있다.
 > 표준 목차는 `_TEMPLATE.md`. 새 서비스를 만들면 같은 목차로 `docs/DESIGN.md` 를 만든다.
 >
-> **최초 작성 2026-09-19** — 코드·설정·migrations·CLAUDE.md 를 1차 근거로 작성. 추측한 내용은 없으며, 확인 못 한 항목은 각 문서에 `⚠️ 미확인` 으로 표기돼 있다.
+> **최초 작성 2026-09-19** · **갱신 2026-09-19**(외부 메모리 참조를 코드에서 복원해 대체) — 코드·설정·migrations·CLAUDE.md 를 1차 근거로 작성. 추측한 내용은 없으며, 확인 못 한 항목은 각 문서에 `⚠️ 미확인` 으로 표기돼 있다.
 
 ---
 
@@ -11,15 +11,15 @@
 
 | 서비스 | 폴더 | 설계서 | 분량 | 미확인 |
 |---|---|---|---|---|
-| 마음풀 | `maumful-main/` | [docs/DESIGN.md](../maumful-main/docs/DESIGN.md) | 606줄 | 9 |
-| 마음게임 | `maumgame-main/` | [docs/DESIGN.md](../maumgame-main/docs/DESIGN.md) | 330줄 | 7 |
-| 마음커플 | `package/maumcouple/` | [docs/DESIGN.md](../package/maumcouple/docs/DESIGN.md) | 384줄 | 11 |
-| 마음부부 | `maumbubu/` | [docs/DESIGN.md](../maumbubu/docs/DESIGN.md) | 461줄 | 6 |
-| 마음세대 | `maumsedae/` | [docs/DESIGN.md](../maumsedae/docs/DESIGN.md) | 527줄 | 3 |
-| 마음수달 | `maumotter/` | [docs/DESIGN.md](../maumotter/docs/DESIGN.md) | 434줄 | 5 |
-| 마음곁 | `maumgyeot/` | [docs/DESIGN.md](../maumgyeot/docs/DESIGN.md) | 454줄 | 4 |
-| CTS 본체 | `cts-maum-main/` | [docs/DESIGN.md](../cts-maum-main/docs/DESIGN.md) | 529줄 | 10 |
-| CTS 게임 | `cts-game-main/` | [docs/DESIGN.md](../cts-game-main/docs/DESIGN.md) | 335줄 | 9 |
+| 마음풀 | `maumful-main/` | [docs/DESIGN.md](../maumful-main/docs/DESIGN.md) | 787줄 | 9 |
+| 마음게임 | `maumgame-main/` | [docs/DESIGN.md](../maumgame-main/docs/DESIGN.md) | 354줄 | 7 |
+| 마음커플 | `package/maumcouple/` | [docs/DESIGN.md](../package/maumcouple/docs/DESIGN.md) | 410줄 | 11 |
+| 마음부부 | `maumbubu/` | [docs/DESIGN.md](../maumbubu/docs/DESIGN.md) | 514줄 | 6 |
+| 마음세대 | `maumsedae/` | [docs/DESIGN.md](../maumsedae/docs/DESIGN.md) | 567줄 | 3 |
+| 마음수달 | `maumotter/` | [docs/DESIGN.md](../maumotter/docs/DESIGN.md) | 524줄 | 5 |
+| 마음곁 | `maumgyeot/` | [docs/DESIGN.md](../maumgyeot/docs/DESIGN.md) | 550줄 | 4 |
+| CTS 본체 | `cts-maum-main/` | [docs/DESIGN.md](../cts-maum-main/docs/DESIGN.md) | 635줄 | 10 |
+| CTS 게임 | `cts-game-main/` | [docs/DESIGN.md](../cts-game-main/docs/DESIGN.md) | 359줄 | 9 |
 
 - **[RISKS.md](RISKS.md)** — 9개 설계서에서 나온 결함·리스크를 심각도순으로 모은 등록부. **이게 실무에서 가장 먼저 볼 문서다.**
 - 트윈 문서(CTS 2종)는 **차이점 중심**이다. 공통 내용은 마음풀·마음게임 설계서로 위임한다.
@@ -122,7 +122,7 @@
 
 | 항목 | 현황 |
 |---|---|
-| 외부 메모리 `project_*` 참조 | 30건 이상. 설계서가 "문서화 필요"로 표기만 함. 결제·상품가격·검사문항 등 핵심 내용이 문서 밖에 있다 |
+| 외부 메모리 `project_*` 참조 | **2026-09-19 해소.** 참조 29종을 코드에서 복원해 각 설계서 본문으로 옮김. 각 문서 §15 뒤 `외부 메모리 대조표` 에 복원/복원불가 내역이 있다. **복원 불가는 의사결정 맥락뿐** — 가격·계약·라우트 같은 실체는 전부 코드에서 복원됐다 |
 | 마음풀 `README.md`·`SETUP.md`·`DEPLOY_CHECKLIST.md` | 2026-04-29 이후 방치. 현행과 크게 어긋남 |
 | 마음수달 `docs/IMPLEMENTATION_PLAN.md` | 갭 표가 낡음 (구현 완료된 것을 ❌로 표기) |
 | 마음곁 `docs/maumgyeot-spec.md` | API 표 6행 (실제 32개), 행동 라이브러리 29종 (코드 56종) |
