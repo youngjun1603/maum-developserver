@@ -687,8 +687,11 @@ app.post('/api/game/ai-transform', async (c) => {
 // ── GET /api/game/leaderboard ──────────────────────────────
 app.get('/api/game/leaderboard', async (c) => {
   const { DB } = c.env
+  // R-01: 인증 필수 + 이메일 미노출(무인증 이메일 수집 차단). '나' 식별은 user_id 로.
+  const userId = await getGameUserId(c.req.raw, c.env)
+  if (!userId) return c.json({ success: false, error: '로그인 필요' }, 401)
   const rows = await DB.prepare(`
-    SELECT u.nickname, u.email, gs.garden_level, gs.total_exp, gs.streak_days
+    SELECT gs.user_id, u.nickname, gs.garden_level, gs.total_exp, gs.streak_days
     FROM user_game_status gs
     JOIN users u ON gs.user_id = u.id
     ORDER BY gs.total_exp DESC LIMIT 20
@@ -939,7 +942,11 @@ app.post('/api/recovery/missions', async (c) => {
 
 app.get('/api/recovery/weekly-report/:userId', async (c) => {
   const { DB } = c.env
-  const userId = c.req.param('userId')
+  // R-02: 무인증 IDOR 차단 — 경로 userId 를 신뢰하지 않고 토큰 uid 로 본인 확인
+  const uid = await getGameUserId(c.req.raw, c.env)
+  if (!uid) return c.json({ success: false, error: '로그인 필요' }, 401)
+  if (String(uid) !== c.req.param('userId')) return c.json({ success: false, error: '권한 없음' }, 403)
+  const userId = String(uid)
   const rows = await DB.prepare(
     `SELECT avg_energy, completed_missions, burnout_delta
      FROM weekly_reports WHERE user_id=? ORDER BY created_at DESC LIMIT 1`

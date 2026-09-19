@@ -337,7 +337,7 @@ function DailyTip({ hubData }) {
     fontFamily: "'Noto Sans KR',sans-serif"
   } }, tip));
 }
-function Leaderboard({ currentUserEmail }) {
+function Leaderboard({ currentUserId }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -351,7 +351,7 @@ function Leaderboard({ currentUserEmail }) {
   const MEDAL = ["\u{1F947}", "\u{1F948}", "\u{1F949}"];
   return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, data.map((entry, i) => {
     const levelInfo = GameEngine.getLevelInfo(entry.total_exp || 0);
-    const isMe = entry.email && currentUserEmail && entry.email === currentUserEmail;
+    const isMe = entry.user_id != null && currentUserId != null && entry.user_id === currentUserId;
     const rank = MEDAL[i] || `${i + 1}.`;
     return /* @__PURE__ */ React.createElement("div", { key: i, style: {
       display: "flex",
@@ -363,7 +363,7 @@ function Leaderboard({ currentUserEmail }) {
       border: `1px solid ${isMe ? C.sage + "44" : "rgba(255,255,255,0.5)"}`,
       backdropFilter: "blur(6px)",
       boxShadow: isMe ? `0 2px 12px ${C.sage}20` : "none"
-    } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 18, minWidth: 28, textAlign: "center", fontWeight: 700 } }, rank), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14 } }, levelInfo.emoji), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.dark, display: "flex", alignItems: "center", gap: 5 } }, entry.nickname || entry.email?.split("@")[0] || t("\uC815\uC6D0\uC0AC", "Gardener"), isMe && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, background: C.sage, color: "white", borderRadius: 4, padding: "1px 5px" } }, t("\uB098", "Me"))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, "Lv.", entry.garden_level, " ", levelInfo.name, (entry.streak_days || 0) > 1 && t(` \xB7 \u{1F525} ${entry.streak_days}\uC77C`, ` \xB7 \u{1F525} ${entry.streak_days}d`))), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "right", flexShrink: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.sage } }, (entry.total_exp || 0).toLocaleString()), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: C.muted } }, "EXP")));
+    } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 18, minWidth: 28, textAlign: "center", fontWeight: 700 } }, rank), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14 } }, levelInfo.emoji), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.dark, display: "flex", alignItems: "center", gap: 5 } }, entry.nickname || t("\uC815\uC6D0\uC0AC", "Gardener"), isMe && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, background: C.sage, color: "white", borderRadius: 4, padding: "1px 5px" } }, t("\uB098", "Me"))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, "Lv.", entry.garden_level, " ", levelInfo.name, (entry.streak_days || 0) > 1 && t(` \xB7 \u{1F525} ${entry.streak_days}\uC77C`, ` \xB7 \u{1F525} ${entry.streak_days}d`))), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "right", flexShrink: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.sage } }, (entry.total_exp || 0).toLocaleString()), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: C.muted } }, "EXP")));
   }));
 }
 function RecentActivity({ sessions = [] }) {
@@ -1739,7 +1739,7 @@ function GameHubApp() {
     },
     /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: C.dark, display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16 } }, "\u{1F3C6}"), " ", t("\uC815\uC6D0\uC0AC \uC21C\uC704", "Gardener Rankings")),
     /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: C.muted } }, showLeaderboard ? t("\uC811\uAE30 \u25B2", "Collapse \u25B2") : t("\uD3BC\uCE58\uAE30 \u25BC", "Expand \u25BC"))
-  ), showLeaderboard && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 10 } }, /* @__PURE__ */ React.createElement(Leaderboard, { currentUserEmail: user?.email })))), creditModal && /* @__PURE__ */ React.createElement("div", { style: {
+  ), showLeaderboard && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 10 } }, /* @__PURE__ */ React.createElement(Leaderboard, { currentUserId: user?.id })))), creditModal && /* @__PURE__ */ React.createElement("div", { style: {
     position: "fixed",
     inset: 0,
     background: "rgba(0,0,0,0.55)",
