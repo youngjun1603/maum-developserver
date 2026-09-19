@@ -265,7 +265,7 @@ wrangler deploy --env production
 | GET  | /api/admin/stats/tests | Admin | 검사 유형별 통계 |
 | GET  | /api/admin/users | Admin | 회원 목록 (검색+페이지) |
 | POST | /api/admin/users/:id/credits | Admin | 크레딧 수동 지급/회수 |
-| GET  | /api/admin/payments | Admin | 결제 내역 |
+| GET  | /api/admin/payments | Admin | 결제 내역 (credit_charges 조회 — payments 테이블은 없다, R-51) |
 | GET  | /api/admin/api-settings | Admin | API 키 조회 |
 | POST | /api/admin/api-settings | Admin | API 키 저장 |
 

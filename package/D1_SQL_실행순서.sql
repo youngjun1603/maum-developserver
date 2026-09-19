@@ -1,4 +1,8 @@
 -- ============================================================
+-- ⚠️ 신규 DB 구축용 아카이브. 운영 DB(maumful-db)에는 이미 적용됨 — 재실행 금지.
+--    (STEP 1 ALTER 는 duplicate column 에러를 낸다.) 정본 마이그레이션 =
+--    package/maumcouple/migrations/0001_couple_schema.sql · maumful-main/migrations/0010_couple_sessions.sql
+--    R-20: 아래 couple_sessions 는 정본과 동일한 CHECK 2개를 포함하도록 정정(이전엔 누락).
 -- Cloudflare D1 콘솔에서 순서대로 실행하세요
 -- 대상 DB: maumful-db
 -- ============================================================
@@ -13,10 +17,12 @@ CREATE TABLE IF NOT EXISTS couple_sessions (
   session_code        TEXT    UNIQUE NOT NULL,
   host_user_id        INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   guest_user_id       INTEGER REFERENCES users(id) ON DELETE SET NULL,
-  test_type           TEXT    NOT NULL DEFAULT 'BIG5+LOST+DSI',
+  test_type           TEXT    NOT NULL DEFAULT 'BIG5+LOST+DSI'
+                       CHECK(test_type IN ('BIG5','LOST','DSI','BIG5+LOST','BIG5+DSI','LOST+DSI','BIG5+LOST+DSI')),
   host_result_json    TEXT,
   guest_result_json   TEXT,
-  status              TEXT    NOT NULL DEFAULT 'waiting',
+  status              TEXT    NOT NULL DEFAULT 'waiting'
+                       CHECK(status IN ('waiting','both_done','reported','expired')),
   ai_report_text      TEXT,
   compatibility_score INTEGER DEFAULT 0,
   credits_spent       INTEGER NOT NULL DEFAULT 0,
@@ -30,7 +36,7 @@ CREATE INDEX IF NOT EXISTS idx_couple_code   ON couple_sessions(session_code);
 CREATE INDEX IF NOT EXISTS idx_couple_host   ON couple_sessions(host_user_id);
 CREATE INDEX IF NOT EXISTS idx_couple_guest  ON couple_sessions(guest_user_id);
 CREATE INDEX IF NOT EXISTS idx_couple_status ON couple_sessions(status);
-CREATE INDEX IF NOT EXISTS idx_test_result   ON test_history(user_id, test_type);
+CREATE INDEX IF NOT EXISTS idx_test_history_type ON test_history(user_id, test_type);  -- R-20: 정본과 인덱스명 일치
 
 -- [STEP 4] 생성 확인
 SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;

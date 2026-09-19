@@ -247,7 +247,8 @@
 | **`partner_commissions`** | 제휴 정산 원장 | charge_id(PK·멱등), partner_code, user_id, charge_amount, **rate(적립 시점 스냅샷)**, share_amount, currency, status(pending\|settled\|reversed), settled_at, settlement_ref | ⚠️ **`migrations/` 에 CREATE TABLE 이 없다**(코드만 INSERT/UPDATE). 15장 리스크 참조 |
 | `external_grants` | 외부 서비스 지급 큐 | order_id(PK `mf_charge_<id>`), user_id, email, service, grant_type, amount, status(pending\|delivered\|failed), **code**(쿠폰형 응답), attempts, delivered_at | 0029. 0029 주석이 "CREATE가 어디에도 없어 수달·곁 grant가 실제론 실패 상태였다"고 기록 |
 | `user_subscriptions` / `subscription_invoices` | 월정액 구독·청구 | plan_key, billing_key, customer_key, next_billing_date, status(active\|past_due) | 0007 |
-| `subscriptions` / `payments` / `usage_history` / `api_settings` / `schema_migrations` | 0001~0003 구스키마 | | 대부분 레거시. `api_settings` 만 어드민 API 설정에서 사용 |
+| `api_settings` / `schema_migrations` | 0001~0003 구스키마 잔존분 | | ✅ 원격 실측(2026-09-20) — 이 둘만 실재. `api_settings` 만 어드민 API 설정에서 사용 |
+| ~~`subscriptions`~~ / ~~`payments`~~ / ~~`usage_history`~~ | **존재하지 않음** (R-51) | | 0001 생성 → **`0004_b2c_migration.sql` L8-10 이 DROP**. `payments`→`credit_charges`, 구독은 `user_subscriptions`(0007) 대체. 원격 실측에서 3개 모두 없음 확인. ⚠️ 어드민 라우트 `/api/admin/payments`·응답 키 `payments` 는 `credit_charges` 조회일 뿐 — 테이블 아님, 바꾸지 말 것 |
 | `counseling_centers` / `counselors` / `counselor_schedules` / `appointments` / `counseling_reviews` / `settlements` / `counselor_earnings` / `center_onboarding_requests` | 상담센터 플랫폼 | 0005·0006·0015 | **의도적 휴면**(§2.5) |
 | `couple_sessions` | 커플 세션 | | 0010. 마음커플 워커와 공유 |
 
