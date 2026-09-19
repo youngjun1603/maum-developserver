@@ -801,7 +801,8 @@ app.post('/api/couple/coach', async (c) => {
       if (user.credits < PAID_COST) {
         return c.json({ success: false, error: `크레딧 부족 (필요: ${PAID_COST}cr)`, needsCharge: true, usedToday }, 402)
       }
-      await spendCredits(DB, userId, PAID_COST, 'couple-coach')
+      const cr = await spendCredits(DB, userId, PAID_COST, 'couple-coach')   // R-21: 원자적 차감 반환 검사(선체크와의 레이스)
+      if (!cr.ok) return c.json({ success: false, error: `크레딧 부족 (필요: ${PAID_COST}cr)`, needsCharge: true, usedToday }, 402)
     }
   }
 
@@ -1063,7 +1064,8 @@ app.post('/api/couple/date-course', async (c) => {
   const courseText = aiData.content?.find(b => b.type === 'text')?.text ?? ''
 
   if (COST > 0 && !isMaster) {
-    await spendCredits(DB, userId, COST, 'date-course')
+    const cr = await spendCredits(DB, userId, COST, 'date-course')   // R-21: 반환값 검사(잔액 부족 시 무료 결과 방지)
+    if (!cr.ok) return c.json({ success: false, error: '크레딧이 부족합니다.', needsCharge: true }, 402)
   }
 
   return c.json({ success: true, data: { course: courseText, region, mood, duration, budget } })
@@ -1142,7 +1144,8 @@ app.post('/api/couple/solo-analysis', async (c) => {
   const reportText = aiData.content?.find(b => b.type === 'text')?.text ?? ''
 
   if (COST > 0 && !isMaster) {
-    await spendCredits(DB, userId, COST, 'solo-analysis')
+    const cr = await spendCredits(DB, userId, COST, 'solo-analysis')   // R-21: 반환값 검사(잔액 부족 시 무료 결과 방지)
+    if (!cr.ok) return c.json({ success: false, error: '크레딧이 부족합니다.', needsCharge: true }, 402)
   }
 
   return c.json({ success: true, data: { report: reportText } })
