@@ -86,6 +86,6 @@ gh auth setup-git                   # gh를 git 자격증명 헬퍼로(GCM 캐�
 ## 연동형 유료결제 (통합결제) — 설계 완료·착수 대기 ⚠️
 수달·곁·부부 유료결제를 **마음풀에서 상품으로 판매 → 결제내역을 각 서비스로 자동 전달(grant)** 하는 방식. **사용자 지시 있을 때만 착수**하며, **토스페이먼츠 완전 반영 전까지 관련 코드는 커밋·푸시·배포 금지**(설계·로컬 준비만).
 - **결제 표기 = 하이브리드**(내부 크레딧, 겉은 명명 상품 — 선불충전금/PG 기피 회피). 마음풀·부부는 이미 이 구조. 수달·곁은 별도 생태계라 `applyGrant`(sub/pack)로 지급.
-- **전달 = A안(서명 grant API)**: 마음풀 결제성공 → 대상 서비스 `POST /api/grant`(HMAC=MAUM_SSO_SECRET, `{email,grantType,orderId}`) → email로 maum-auth 계정 조회/생성 → `applyGrant`. 멱등·환불 revoke·선지급 재시도 포함.
+- **전달 = A안(서명 grant API)**: 마음풀 결제성공 → 대상 서비스 `POST /api/grant`(HMAC=MAUM_SSO_SECRET, `{email, service, grantType, orderId, amount, exp}`) → email로 maum-auth 계정 조회/생성 → `applyGrant`. 멱등·환불 revoke·선지급 재시도 포함. ⚠️ **R-44: 페이로드는 6필드**(서명 대상이 payload JSON이라 필드·순서가 하나라도 다르면 전건 401). **grant·revoke 동일 6필드.** 상세 계약은 각 서비스 `docs/DESIGN.md` §10.1 표가 원본.
 - 사업자 단일(마음서비스)이라 결제대행 규제 무관. 수달·곁 앱은 당분간 없음.
 - **상세 실행 스펙·DB·API 계약·검증은 메모리 `project_maum_unified_payment`** (착수 지시 시 그대로 실행).

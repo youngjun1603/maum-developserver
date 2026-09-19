@@ -156,5 +156,5 @@ D1 스키마 → 인증/JWT(공유 규약) → 반려동물 등록 → 관찰·�
 
 ## 12. 연동형 유료결제 (마음풀 통합결제 — 착수 대기)
 곁 유료결제는 **마음풀에서 상품 판매 후 곁으로 자동 지급**하는 방식으로 통합 예정. 사업자 단일(마음서비스). 수달과 **동일 엔진 대칭 구현**.
-- **곁 추가 구현(착수 지시 시)**: `POST /api/grant`(HMAC=`MAUM_SSO_SECRET` → `{email,grantType,orderId}` → maum-auth email→uid[없으면 생성] → 기존 `applyGrant(uid, sub_light|sub_pro|pack10)`) + `external_orders` 멱등테이블 + `/api/grant/revoke`(환불). 기존 쿠폰·SSO·entitlement 재사용.
+- **곁 추가 구현(착수 지시 시)**: `POST /api/grant`(HMAC=`MAUM_SSO_SECRET` → `{email, service, grantType, orderId, amount, exp}`(R-44: 6필드·서명 대상) → maum-auth email→uid[없으면 생성] → 기존 `applyGrant(uid, sub_light|sub_pro|pack10)`) + `external_orders` 멱등테이블 + `/api/grant/revoke`(환불). 기존 쿠폰·SSO·entitlement 재사용.
 - **⚠️ 토스페이먼츠 완전 반영 후에만 착수·배포**. 상세 스펙 = 메모리 `project_maum_unified_payment` / 루트 `../CLAUDE.md` 「연동형 유료결제」.
