@@ -53,8 +53,12 @@ export interface RelationshipMemory {
   christianProfile?: string;
   /** 성공 공식: 효과 있었던 표현들 */
   successPatterns?: string[];
-  /** 상대 관점 프로파일: 배우자가 자주 상처받는 지점·인식 습관 */
+  /** 상대 관점 프로파일: 상대가 자주 상처받는 지점·인식 습관 */
   partnerPerspective?: string;
+  /** 과거 형성 패턴 요약 (청소년기 등 이 관계에서 형성된 반응 패턴). 평문 — 이중 폭풍 장기기억 (R-28) */
+  pastPatterns?: string;
+  /** 현재 생애 국면 — cohabit(동거)·distant(원거리)·caregiving(간병) 화이트리스트. saveMemory 에서 검증 (R-28) */
+  lifeStage?: string;
 }
 
 /** 멀티모달 분석 결과 (음성/영상 → 비언어 신호, 동의 게이트 통과 후에만) */
@@ -347,7 +351,7 @@ function psychologyTrackModule(depth: EmotionDepth): string {
 2. **1차 정서 탐색**: 표면(비난·방어) 아래의 1차 정서 — 두려움, 외로움, 수치심, 버려질 것 같은 불안 — 를 가설로 제시합니다.
 3. **애착 욕구 번역**: 그 정서를 애착 욕구(안전감·수용·연결·인정)의 언어로 번역합니다.
 4. **악순환 고리 구조화**: 두 사람의 반응이 어떻게 서로를 자극하는 고리를 만드는지 보여줍니다.
-   예시: "아내의 비난 = 버려질까 봐 두려운 항의 / 남편의 담쌓기 = 실패자로 느껴져 얼어붙음 → 서로가 서로의 공포를 방아쇠로 당기는 고리"
+   예시: "부모의 잔소리 = 통제를 잃을까 봐 두려운 항의 / 자녀의 침묵 = 평가받는다고 느껴 얼어붙음 → 서로가 서로의 공포를 방아쇠로 당기는 고리"
 5. **핵심 관점**: 가해자-피해자가 아니라 **둘 다 고리에 갇힌 것**입니다. 항상 이 구도로 통역합니다.
 
 ### 현재 감정 깊이 설정: ${depth}단계
@@ -419,7 +423,7 @@ ${toneGuide}
 const MODE_MODULES: Record<Mode, string> = {
   receive: `## 통역 모드: 수신 통역 — "저 말이 무슨 뜻이야?"
 
-사용자가 배우자에게서 들은 말을 입력했습니다. 그 말의 표면 아래를 통역합니다.
+사용자가 상대(부모 또는 자녀)에게서 들은 말을 입력했습니다. 그 말의 표면 아래를 통역합니다.
 
 ### 출력 형식 (반드시 아래 JSON만, 다른 텍스트 없이)
 {
@@ -427,7 +431,7 @@ const MODE_MODULES: Record<Mode, string> = {
   "surface": "표면적으로는 이런 말입니다 (1문장)",
   "translation": "그 아래 마음의 가설 — 트랙의 렌즈로 통역 (2-4문장, 반드시 가설 어법: ~일 수 있어요, ~신호로 보여요)",
   "hidden_need": "숨어 있을 수 있는 진짜 요청/갈망 (1-2문장)",
-  "check_question": "배우자에게 직접 확인해볼 수 있는 부드러운 질문 하나",
+  "check_question": "상대에게 직접 확인해볼 수 있는 부드러운 질문 하나",
   "improvement": {
     "action": "오늘 해볼 수 있는 구체적 활동 (10분 이내, 혼자 시작 가능, 상대 협조 불필요)",
     "why_this": "방금의 통역과 이 활동이 연결되는 이유 (1-2문장)",
@@ -439,7 +443,7 @@ const MODE_MODULES: Record<Mode, string> = {
 
   send: `## 통역 모드: 발신 통역 — "이걸 어떻게 말하지?"
 
-사용자가 배우자에게 하고 싶은 말을 입력했습니다. 상대가 방어하지 않고 들을 수 있는 표현으로 재작성합니다.
+사용자가 상대(부모 또는 자녀)에게 하고 싶은 말을 입력했습니다. 상대가 방어하지 않고 들을 수 있는 표현으로 재작성합니다.
 
 ### 핵심 개입: '거친 시작' 교정
 대화 첫머리가 비난·비꼼으로 시작하면 전체가 무너집니다. 부드러운 시작으로 바꾸되, 하고 싶은 말의 본질은 유지합니다.
@@ -450,7 +454,7 @@ const MODE_MODULES: Record<Mode, string> = {
 {
   "your_feeling_first": "먼저, 이 말을 하고 싶어진 사용자 본인의 마음·답답함을 공감 (1-2문장). 재작성보다 앞선다.",
   "original_intent": "사용자가 진짜 전하고 싶은 마음 (1-2문장)",
-  "risk_in_original": "원래 표현이 배우자에게 어떻게 들릴 수 있는지 (1-2문장)",
+  "risk_in_original": "원래 표현이 상대에게 어떻게 들릴 수 있는지 (1-2문장)",
   "rewritten": "재작성된 말 (실제로 그대로 말할 수 있는 자연스러운 한국어, 사용자의 평소 말투 존중)",
   "alternative": "톤이 다른 대안 하나 (더 가볍거나 더 진솔한 버전)",
   "timing_tip": "언제·어떤 상황에서 꺼내면 좋을지 (1문장)",
@@ -465,7 +469,7 @@ const MODE_MODULES: Record<Mode, string> = {
 
   mediate: `## 통역 모드: 중재 통역 — 싸운 대화 전체 분석
 
-사용자가 부부 대화(카톡 등) 전체를 입력했습니다. 양쪽의 진짜 입장과 오해 지점을 분석합니다.
+사용자가 대화(카톡 등) 전체를 입력했습니다. 양쪽의 진짜 입장과 오해 지점을 분석합니다.
 
 ### 절대 원칙
 - **편들지 않습니다.** 양쪽의 취약함을 반드시 동시에, 같은 분량으로 드러냅니다.
@@ -491,22 +495,22 @@ const MODE_MODULES: Record<Mode, string> = {
 
   perspective: `## 통역 모드: 관점 통역 — "상대는 이걸 어떻게 느꼈을까?"
 
-사용자가 어떤 사건/대화를 입력했습니다. **같은 사건을 배우자의 입장에서** 통역합니다.
+사용자가 어떤 사건/대화를 입력했습니다. **같은 사건을 상대(부모 또는 자녀)의 입장에서** 통역합니다.
 
 ### 이론적 근거
 - 심리상담 트랙: EFT의 재연결 — 상대의 1차 정서를 인식할 때 악순환 고리에서 빠져나올 수 있습니다.
-- 기독교 트랙: Keller의 '미래 영광의 시선' — 배우자의 현재 반응 뒤에서 하나님이 빚으시는 사람을 봅니다.
+- 기독교 트랙: Keller의 '미래 영광의 시선' — 상대의 현재 반응 뒤에서 하나님이 빚으시는 사람을 봅니다.
 
 ### 원칙
-- 배우자를 변호하는 것이 아니라, 배우자의 세계에서 이 사건이 어떻게 보였을지 그려줍니다.
+- 상대를 변호하는 것이 아니라, 상대의 세계에서 이 사건이 어떻게 보였을지 그려줍니다.
 - 사용자의 감정도 먼저 타당화한 후에 관점을 전환합니다. (내 감정이 무시당했다고 느끼면 관점 전환이 방어를 낳습니다)
-- 관계 기억에 '상대 관점 프로파일'이 있으면 일반론이 아니라 이 배우자에 특화해 통역합니다.
+- 관계 기억에 '상대 관점 프로파일'이 있으면 일반론이 아니라 이 상대에 특화해 통역합니다.
 
 ### 출력 형식 (반드시 아래 JSON만)
 {
   "your_feeling_first": "먼저, 사용자의 감정 타당화 (1-2문장)",
-  "partner_view": "배우자의 눈에 이 사건이 어떻게 보였을 수 있는지 (3-4문장, 가설 어법)",
-  "partner_feeling": "그때 배우자가 느꼈을 수 있는 1차 정서 / (기독교 트랙) 마음의 갈망",
+  "partner_view": "상대의 눈에 이 사건이 어떻게 보였을 수 있는지 (3-4문장, 가설 어법)",
+  "partner_feeling": "그때 상대가 느꼈을 수 있는 1차 정서 / (기독교 트랙) 마음의 갈망",
   "blind_spot": "사용자가 놓쳤을 수 있는 한 가지 (부드럽게, 1-2문장)",
   "bridge": "두 관점을 잇는 다리 — 서로에게 확인해볼 것 (1-2문장)",
   "improvement": {
@@ -515,7 +519,7 @@ const MODE_MODULES: Record<Mode, string> = {
     "expect": "예상 반응 + 냉담해도 괜찮은 이유 (1-2문장)",
     "checkin": "다음에 물어볼 가벼운 확인 질문 하나"
   },
-  "caution": "이것은 추정이며, 진짜 답은 배우자에게 있음을 (1문장)"
+  "caution": "이것은 추정이며, 진짜 답은 상대에게 있음을 (1문장)"
 }`,
 };
 
@@ -525,7 +529,7 @@ const MODE_MODULES: Record<Mode, string> = {
 
 function memoryModule(memory: RelationshipMemory | undefined, track: Track): string {
   if (!memory) return '';
-  const parts: string[] = ['## 이 부부의 관계 기억 (누적 프로파일 — 통역에 반영하되 직접 인용은 자연스럽게)'];
+  const parts: string[] = ['## 이 관계의 기억 (누적 프로파일 — 통역에 반영하되 직접 인용은 자연스럽게)'];
 
   if (memory.recurringTopics?.length) {
     parts.push(`- 반복 갈등 주제: ${memory.recurringTopics.join(', ')} — 이 주제가 다시 나타나면 "이 주제에서 자주 막히는 패턴"을 부드럽게 짚어줄 수 있습니다.`);
@@ -537,10 +541,17 @@ function memoryModule(memory: RelationshipMemory | undefined, track: Track): str
     parts.push(`- 마음의 패턴: ${memory.christianProfile}`);
   }
   if (memory.successPatterns?.length) {
-    parts.push(`- 이 부부에게 통(通)했던 표현: ${memory.successPatterns.join(' / ')} — 재작성·제안 시 이 성공 공식을 우선 활용합니다.`);
+    parts.push(`- 이 관계에서 통(通)했던 표현: ${memory.successPatterns.join(' / ')} — 재작성·제안 시 이 성공 공식을 우선 활용합니다.`);
   }
   if (memory.partnerPerspective) {
     parts.push(`- 상대 관점 프로파일: ${memory.partnerPerspective} — 관점 통역 시 일반론이 아니라 이 정보에 특화합니다.`);
+  }
+  if (memory.pastPatterns) {
+    parts.push(`- 과거 형성 패턴: ${memory.pastPatterns} — 지금의 반응이 과거(청소년기 등)에 만들어진 것일 수 있음을 가설로만 연결합니다(단정 금지).`);
+  }
+  if (memory.lifeStage) {
+    const stageLabel = { cohabit: '동거 중', distant: '원거리', caregiving: '간병 중' }[memory.lifeStage] || memory.lifeStage;
+    parts.push(`- 현재 생애 국면: ${stageLabel} — 활동을 제안할 때 이 국면에서 실제로 가능한 것만 제안합니다.`);
   }
   return parts.length > 1 ? parts.join('\n') : '';
 }
@@ -574,10 +585,10 @@ export interface BuiltPrompt {
 }
 
 const MODE_INPUT_LABEL: Record<Mode, string> = {
-  receive: '배우자에게서 들은 말',
-  send: '배우자에게 하고 싶은 말',
-  mediate: '분석할 부부 대화 전체',
-  perspective: '배우자 관점에서 보고 싶은 사건/대화',
+  receive: '상대에게서 들은 말',
+  send: '상대에게 하고 싶은 말',
+  mediate: '분석할 대화 전체',
+  perspective: '상대 관점에서 보고 싶은 사건/대화',
 };
 
 /**
@@ -664,7 +675,7 @@ export function buildMemoryUpdatePrompt(params: {
     : '';
 
   return {
-    system: `당신은 부부 관계 프로파일 관리자입니다. 방금 이뤄진 통역에서 관계 기억에 추가/갱신할 정보를 추출합니다.
+    system: `당신은 관계 프로파일 관리자입니다. 방금 이뤄진 통역에서 관계 기억에 추가/갱신할 정보를 추출합니다.
 
 ## 규칙
 - 원문을 그대로 저장하지 않고, 구조화된 요약만 만듭니다 (프라이버시 원칙).
@@ -676,7 +687,9 @@ export function buildMemoryUpdatePrompt(params: {
   "psychologyProfile": "상호작용 패턴 요약 (2문장 이내, 갱신 없으면 기존 유지)",
   "christianProfile": "마음의 패턴 요약 (2문장 이내, 갱신 없으면 기존 유지)",
   "successPatterns": ["효과 있었다고 확인된 표현들"],
-  "partnerPerspective": "배우자의 인식 습관·민감 지점 요약 (2문장 이내)"
+  "partnerPerspective": "상대의 인식 습관·민감 지점 요약 (2문장 이내)",
+  "pastPatterns": "사용자가 과거(청소년기 등) 이 관계에서 형성한 반응 패턴 요약 (2문장 이내, 반복 확인된 것만. 갱신 없으면 기존 유지)",
+  "lifeStage": "현재 생애 국면 — cohabit(동거) / distant(원거리) / caregiving(간병) 중 하나만. 판단 근거가 없으면 빈 문자열"
 }`,
     userMessage: `[이번 통역 세션]\n- 트랙: ${params.track} / 모드: ${params.mode}\n- 사용자 입력: ${params.input}\n- 통역 결과: ${params.translationResult}${existing}`,
   };
@@ -722,7 +735,7 @@ export function buildFeedbackPrompt(params: {
   };
 
   return {
-    system: `당신은 '마음부부'의 관계 통역가입니다. 사용자가 제안받았던 관계 개선 활동을 실행하고 그 결과를 알려왔습니다.
+    system: `당신은 '마음세대'의 관계 통역가입니다. 사용자가 제안받았던 관계 개선 활동을 실행하고 그 결과를 알려왔습니다.
 
 ## 핵심 원칙
 - 실행 자체를 먼저 인정합니다. 했든 못 했든, 여기 돌아와 기록한 것 자체가 관계를 포기하지 않았다는 뜻입니다.
@@ -773,7 +786,7 @@ export interface ModerationResult {
  */
 export function buildModerationPrompt(postContent: string): BuiltPrompt {
   return {
-    system: `당신은 '마음부부' 커뮤니티의 게시 전 검수자입니다. 이곳은 관계의 어려움을 겪는 사람들이 경험을 나누고 "나만 그런 게 아니구나"라는 공감을 얻는 안전한 공간입니다.
+    system: `당신은 '마음세대' 커뮤니티의 게시 전 검수자입니다. 이곳은 관계의 어려움을 겪는 사람들이 경험을 나누고 "나만 그런 게 아니구나"라는 공감을 얻는 안전한 공간입니다.
 
 ## 검수 기준 — 아래에 해당하면 allowed=false
 
@@ -786,7 +799,7 @@ export function buildModerationPrompt(postContent: string): BuiltPrompt {
 
 ## 검수 원칙
 - 판단이 애매하면 허용 쪽으로 (표현의 자유 존중). 감정 토로·하소연·부정적 감정 표현은 모두 정상입니다.
-- 시가·처가·배우자에 대한 불만 토로는 이 커뮤니티의 본질입니다. 비속어 없는 불만은 허용.
+- 부모·자녀·시가·처가에 대한 불만 토로는 이 커뮤니티의 본질입니다. 비속어 없는 불만은 허용.
 - reason_message는 검열 통보가 아니라 안내입니다. 정중하고, 글 쓴 정성을 존중하는 톤으로.
 - suggested_fix는 구체적으로 — 어느 부분을 어떻게 바꾸면 게시할 수 있는지.
 

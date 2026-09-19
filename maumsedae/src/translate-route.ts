@@ -270,6 +270,8 @@ async function loadMemory(db: D1Database, relationId: number, userId: number): P
     christianProfile: row.christian_profile || undefined,
     successPatterns: safeParse(row.success_patterns),
     partnerPerspective: row.partner_perspective || undefined,
+    pastPatterns: row.past_patterns || undefined,   // 평문 — safeParse 금지 (R-28)
+    lifeStage: row.life_stage || undefined,          // 화이트리스트 값 or NULL (R-28)
   };
 }
 
@@ -277,14 +279,16 @@ async function saveMemory(db: D1Database, relationId: number, userId: number, me
   await db
     .prepare(
       `INSERT INTO sedae_relation_memory
-        (relation_id, user_id, recurring_topics, psychology_profile, christian_profile, success_patterns, partner_perspective, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+        (relation_id, user_id, recurring_topics, psychology_profile, christian_profile, success_patterns, partner_perspective, past_patterns, life_stage, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
        ON CONFLICT(relation_id, user_id) DO UPDATE SET
         recurring_topics = excluded.recurring_topics,
         psychology_profile = excluded.psychology_profile,
         christian_profile = excluded.christian_profile,
         success_patterns = excluded.success_patterns,
         partner_perspective = excluded.partner_perspective,
+        past_patterns = excluded.past_patterns,
+        life_stage = excluded.life_stage,
         updated_at = datetime('now')`
     )
     .bind(
@@ -294,7 +298,10 @@ async function saveMemory(db: D1Database, relationId: number, userId: number, me
       mem.psychologyProfile ?? null,
       mem.christianProfile ?? null,
       JSON.stringify(mem.successPatterns ?? []),
-      mem.partnerPerspective ?? null
+      mem.partnerPerspective ?? null,
+      mem.pastPatterns ?? null,
+      // life_stage 는 열거값 — AI 가 다른 문자열을 뱉으면 NULL 로 떨군다 (R-28)
+      ['cohabit', 'distant', 'caregiving'].includes(mem.lifeStage ?? '') ? mem.lifeStage : null
     )
     .run();
 }
