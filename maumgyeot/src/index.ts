@@ -185,16 +185,17 @@ ${lines || '- (선택된 신호 없음)'}
     ? [...frameArr.map((f) => ({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: String(f).replace(/^data:image\/\w+;base64,/, '') } })), { type: 'text', text: userMsg }]
     : userMsg;
   let report: any = { summary: '신호가 충분하지 않아 해석이 어려워요. 더 지켜봐 주세요.', confidence: 'low', body_signals_read: [], possible_meanings: [], what_to_do: ['반려동물의 평소 모습과 비교하며 며칠 더 관찰해 주세요.'], health_flag: { flag: false, note: '' } };
+  let llmOk = false;   // R-11: LLM이 실제 리포트를 만들었는지(폴백이면 쿼터 환불)
   if (p.codes.length > 0 || hasVideo || (p.context && p.context.length > 1)) {
     try {
       let raw = await callClaude(env, { system: TRANSLATE_SYSTEM, messages: [{ role: 'user', content: userContent }], max_tokens: 1400, temperature: 0 });
       raw = raw.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
       const parsed = JSON.parse(raw);
-      if (!VET_TERMS.some((t) => JSON.stringify(parsed).includes(t))) report = parsed;
+      if (!VET_TERMS.some((t) => JSON.stringify(parsed).includes(t))) { report = parsed; llmOk = true; }
       else {
         let raw2 = await callClaude(env, { system: TRANSLATE_SYSTEM + '\n(이전 출력에 금지된 수의학 용어가 있었습니다. 절대 사용하지 마세요.)', messages: [{ role: 'user', content: userContent }], max_tokens: 1400, temperature: 0 });
         raw2 = raw2.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
-        try { const p2 = JSON.parse(raw2); if (!VET_TERMS.some((t) => JSON.stringify(p2).includes(t))) report = p2; } catch {}
+        try { const p2 = JSON.parse(raw2); if (!VET_TERMS.some((t) => JSON.stringify(p2).includes(t))) { report = p2; llmOk = true; } } catch {}
       }
     } catch (e) { console.log('OBSERVE_FAIL', String((e as any)?.message || e)); await logError(env, 'observe_llm', e); }
   }
@@ -204,7 +205,16 @@ ${lines || '- (선택된 신호 없음)'}
     report.health_flag.flag = true;
     report.health_flag.note = report.health_flag.note || '몸이 불편한 신호일 수 있어요. 단정은 아니며, 수의사 상담을 권해드려요.';
   }
-  return { report, hasVideo, healthFlag: report?.health_flag?.flag ? 1 : 0 };
+  return { report, hasVideo, healthFlag: report?.health_flag?.flag ? 1 : 0, llmOk };
+}
+
+// R-11: consumeQuota 역함수 — LLM 실패(폴백)로 통역이 사실상 안 됐을 때 차감분 환불
+async function restoreQuota(env: Bindings, uid: number, source?: string) {
+  if (source === 'pack') {
+    await env.DB.prepare("UPDATE packs SET remaining=remaining+1, updated_at=datetime('now') WHERE maum_user_id=?").bind(uid).run();
+  } else if (source === 'free' || source === 'subscription') {
+    await env.DB.prepare("UPDATE usage_monthly SET used=MAX(0, used-1) WHERE maum_user_id=? AND ym=?").bind(uid, ym()).run();
+  }
 }
 
 app.get('/api/health', (c) => c.json({ ok: true }));
@@ -308,11 +318,15 @@ app.post('/api/observe', requireAuth, async (c) => {
   const codes: string[] = Array.isArray(signals) ? signals : [];
   const realAttempt = codes.length > 0 || (Array.isArray(frames) && frames.length > 0) || (context && String(context).length > 1);
   // 실제 통역 시도일 때만 쿼터 차감(무료월→구독→회차권). 한도 초과 시 402. 마스터는 면제.
+  let quotaSource: string | undefined;
   if (realAttempt && !master) {
     const q = await consumeQuota(c.env, uid);
     if (!q.ok) return c.json({ error: '이번 달 통역 횟수를 모두 사용했어요. 이용권 코드를 등록하면 더 이용할 수 있어요.', code: 'QUOTA' }, 402);
+    quotaSource = q.source;
   }
-  const { report, hasVideo, healthFlag } = await runTranslation(c.env, { species, name: pet.name, age: pet.age, personality: pet.personality, codes, context, frames });
+  const { report, hasVideo, healthFlag, llmOk } = await runTranslation(c.env, { species, name: pet.name, age: pet.age, personality: pet.personality, codes, context, frames });
+  // R-11: 실제 통역 시도인데 LLM이 실패해 폴백만 나왔으면 차감한 쿼터를 환불(게이트웨이 장애 등)
+  if (realAttempt && !master && !llmOk && quotaSource) await restoreQuota(c.env, uid, quotaSource);
 
   const noteToSave = hasVideo ? '영상 분석함(원본·프레임 미저장)' : (media_note ?? null);
   const obs = await c.env.DB.prepare('INSERT INTO observations (pet_id,maum_user_id,species,signals_json,context,media_note) VALUES (?,?,?,?,?,?)')
