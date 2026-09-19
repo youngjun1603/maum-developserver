@@ -529,6 +529,8 @@
 
 ## 15. 알려진 리스크 · 기술부채
 
+> ✅ **[BATCH_05 해소 2026-09-19]** R-27 프롬프트 부부 문구 → 관계/상대(부모 또는 자녀) 치환(MODE_MODULES·MODE_INPUT_LABEL·memoryModule·buildMemoryUpdate/Feedback/Moderation·psychology 예시). JSON 키·commonPreamble·마음부부 진본 무변경. **단, 기독교 트랙(§15-1 3번 하위)의 결혼·언약·배우자 문구는 신학 감수 필요라 범위 밖(잔존)** — 프리앰블이 정체성을 이겨 실출력은 정상. R-28 이중폭풍 장기기억(pastPatterns·lifeStage) 4곳+주입 배선. 배포 1656c6dc.
+
 1. **프롬프트에 남은 "부부" 문구 (중간 위험)** — §2.3의 프리앰블 사고는 프리앰블만 고쳐졌다. 다음은 여전히 부부 문맥이며 부모-자녀 통역에도 그대로 주입된다:
    - `MODE_MODULES`(L419~520) — "사용자가 **배우자**에게서 들은 말을 입력했습니다", "사용자가 **부부 대화**(카톡 등) 전체를 입력했습니다"
    - `MODE_INPUT_LABEL`(L576~581) — "배우자에게서 들은 말" 등이 userMessage 헤더로 들어감

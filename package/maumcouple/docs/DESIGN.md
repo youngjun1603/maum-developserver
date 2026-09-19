@@ -371,6 +371,8 @@
 
 ## 15. 알려진 리스크 · 기술부채
 
+> ✅ **[BATCH_05 해소 2026-09-19]** R-22 위기 감지·긴급 연락처 안내(1단계, 사용자 승인) — 마음풀 `chatCrisisKeywordHit` 원문 복사 + `buildCoupleCrisisPrefix`(자살예방 109·정신건강 1577-0199). 4개 자유서술 라우트(emotion-translate·fight-mediate·kakao-analyze·coach)에서 사용자 입력 적중 시 안내를 응답 맨 앞에 삽입, 미적중 시 무동작. 크레딧 차감 무변경. 배포 868a78d9. (R-06 timeline·R-21 크레딧은 다른 배치.)
+
 1. **`GET /api/couple/timeline` 컬럼명 불일치 (동작 불능)** — 쿼리가 `cs.code`·`cs.test_types`를 SELECT 하지만 `couple_sessions`의 실제 컬럼은 `session_code`·`test_type`이다. D1이 `no such column` 에러를 던지며, 이 라우트에는 try/catch가 없어 요청이 실패한다. 도구 탭의 "관계 타임라인" 진입 시 재현될 것으로 보인다(실제 라이브 재현은 ⚠️ 미확인).
 2. **스키마 이중 정의** — `couple_sessions` DDL이 `package/maumcouple/migrations/0001_couple_schema.sql`과 `maumful-main/migrations/0010_couple_sessions.sql` 두 곳에 있다(CHECK 제약까지 동일). 한쪽만 고치면 소리 없이 갈라진다. 소유권을 한 곳으로 정해야 한다. `package/D1_SQL_실행순서.sql`은 세 번째 사본이며 **CHECK 제약이 빠져 있어** 콘솔 수동 실행 시 제약 없는 테이블이 만들어진다.
 3. **주간 메일에 실제 수신거부가 없다** — 푸터 "수신 거부" 링크가 홈으로만 간다. opt-out 테이블·HMAC 서명 링크(마음게임 `game_email_prefs` 패턴)가 없는 상태에서 운영 cron을 켜면 정보통신망법 요구를 어긴다(§11.4).
