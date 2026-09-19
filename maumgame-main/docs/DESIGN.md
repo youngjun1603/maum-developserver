@@ -302,7 +302,12 @@ CBT 생각 변환(`/api/game/ai-transform`)은 사용자가 부정적 생각을 
   - **커플 감정 내용 공유 금지**(동의·철회 UX 없이).
   - 해금 게이팅 부활 시 `game_registry.jsx` + 서버 `ALL_GAME_IDS` **동시** 수정 필수.
   - AI 채팅 응답 형식 라벨 부활 금지 등 마음풀 프롬프트 규칙은 본체 문서 소관.
-  - 상세 백로그는 외부 메모리 **`project_maum_backlog`** 한 곳에 모여 있다 — **상세는 외부 메모리 `project_maum_backlog` 참조 — 문서화 필요.**
+  - **전 서비스 백로그** — 루트 `CLAUDE.md` 「남은 작업 (백로그)」 **원문 중 마음게임 해당 항목만**(코드로 복원 불가 → 원문 인용으로 대체):
+    > - **바로 가능**: 폐기된 상담사 승인 레거시 코드 제거 / 주간 리포트 메일 실수신 검증(사용자 동의 후)
+    > - **데이터 보고 판단**(2026-08-09경): 마음게임 콘텐츠 확장 — 어드민 🔁 루프 탭에서 검사↔게임 루프가 도는지 확인 후
+    > - **금지**: 커플 감정 내용 공유(동의·철회 UX 없이) / CTS 개발(명시적 재개 시에만)
+    - 이 중 마음게임 소관은 **주간 리포트 메일 실수신 검증**(§12 Cron `0 3 * * 1`)과 **콘텐츠 확장**(루프 탭 지표 선행) 두 가지다. "상담사 승인 레거시 제거"는 마음풀 본체 소관이고, "커플 감정 내용 공유 금지"·"CTS 개발 금지"는 위 금지 항목에 이미 반영돼 있다.
+    - ⚠️ 서비스 간 **우선순위·일정·완료 판정 기준**(루프가 "돈다"는 판정선이 무엇인지 포함)은 외부 메모리 `project_maum_backlog` 에만 존재 — 코드로 복원 불가. 루트 `CLAUDE.md` 에 남은 것은 위 인용이 전부다.
 
 ---
 
@@ -320,11 +325,30 @@ CBT 생각 변환(`/api/game/ai-transform`)은 사용자가 부정적 생각을 
 11. **`README.md` 가 4개월 이상 낡았다**(게임 4종·`*.pages.dev` 도메인·Babel 빌드·`PHYWEB_URL` 시크릿). 신규 작업자를 오도할 수 있다.
 12. **`MAUMFUL_URL`·`SERVICE_URL` 바인딩이 선언만 되고 쓰이지 않으며**, 마음풀 URL·게임 URL(`https://maumful.com`, `https://game.maumful.com`)이 서버·프론트 여러 곳에 하드코딩되어 있다.
 13. **작업 트리에 `src/index.tsx` 전체가 변경된 것으로 표시된다**(1,626줄 삽입/삭제 = 전 라인 재기록). 내용 차이가 아니라 **개행문자(CRLF/LF) 차이로 추정**되나 원인 ⚠️ 미확인 — 커밋 전 반드시 확인할 것.
-14. **운영 지식 상당 부분이 외부 메모리에만 있다**: `project_maum_backlog`(백로그), `project_maumful_tests`(검사 문항·표기) 등. **레포만으로 복원 불가 — 문서화 필요.**
+14. **운영 지식 일부가 외부 메모리에만 있다 — 2026-09-19 기준 복원 결과.**
+    - `project_maumful_tests`(검사 문항·표기) → **마음풀 설계서 §2.1 「검사 = 10종 (12종 아님)」으로 위임.** 문항 수·척도 구성·카드 순서·채점 구간표는 거기 복원돼 있다. **마음게임이 실제로 쓰는 검사는 코드상 다음이 전부다**(코드에서 복원):
+      - `completedTests` 마스터 목록 **8종** — `PHQ9`·`GAD7`·`DASS21`·`BIG5`·`LOST`·`SCT`·`DSI`·`BURNOUT` (`src/index.tsx` L262). 마음풀 본체의 10종 중 `RIASEC`·`VALUES` 2종이 빠져 있다.
+      - 게임↔검사 연결 `linkedTests` **4종** — `PHQ9`(breathing L67 · mood L90) · `DSI`(L135) · `BURNOUT`(L159·L181) · `GAD7`(L205). 나머지 게임 3종은 빈 배열. 잠금이 아니라 **표시·추천 전용**이다(`public/static/game_registry.jsx` L17·L30).
+      - 역루프 제안 `pickTestSuggestion` **4종** — `BURNOUT`(avgEnergy<40 또는 burnoutPlays≥3) · `DASS21`(감정기록 5회 이상 중 무거운 감정 60%↑) · `GAD7`(topEmotion=anxious) · `PHQ9`(topEmotion=sad|tired). 신호가 약하면 `null` 을 돌려 **근거 없이 검사를 권하지 않는다**. 표기는 `TEST_META`(`PHQ-9 우울 자가점검` 2분 · `GAD-7 불안 자가점검` 2분 · `DASS-21 우울·불안·스트레스` 5분 · `K-MBI+ 번아웃 검사` 15분)에서 온다 (`src/index.tsx` L1484~L1530).
+      - 자가 입력 점수 `user_test_scores` — PHQ-9 값이 `calcVisualStatus`(≥15 foggy / ≥5 clearing / <5 blooming)로 정원 상태에 반영된다(§2).
+      - ⚠️ 마음게임의 **8종 목록이 마음풀 10종과 어긋나 있다**(`RIASEC`·`VALUES` 누락). 마스터 계정 응답에만 쓰이는 값이라 실피해는 없으나 **검사 목록이 서비스 간 4중 관리**(마음풀 `koreaTests` · 게임 `allTests` · `linkedTests` · `TEST_META`)라는 뜻이다.
+    - `project_maum_backlog`(백로그) → 루트 `CLAUDE.md` 원문 인용으로 §14에 대체했다.
+    - ⚠️ **검사 선정 이유·문항 출처·카드 문구 확정 경위**와 **서비스 간 백로그 우선순위**는 여전히 외부 메모리에만 존재 — 코드로 복원 불가.
+
+
+### 외부 메모리 대조표
+
+2026-09-19 작업으로 이 문서의 외부 메모리 참조 2곳을 코드에서 복원하거나 마음풀 설계서로 위임했다. 오른쪽 열은 원리상 코드에 없는 것(= 의사결정 맥락)이다.
+
+| 외부 메모리 | 코드에서 복원된 부분 | 복원 불가(의사결정 맥락) |
+|---|---|---|
+| `project_maumful_tests` | **→ 마음풀 설계서 §2.1 로 위임**(문항 수·척도·카드 순서·채점 구간). 이 서비스가 실제로 쓰는 것: `allTests` 8종(L262) · `linkedTests` 4종 · `pickTestSuggestion` 4종 + 발동 조건 · `TEST_META` 표기·소요시간 · `user_test_scores`→정원 상태(§15 #14) | 검사 선정 이유 · 문항 출처 · 카드 문구 확정 경위 |
+| `project_maum_backlog` | — (루트 `CLAUDE.md` 백로그 원문 4줄 중 게임 해당 항목 식별까지, §14) | **전 서비스 통합 백로그 전부** · 서비스 간 우선순위·일정 · "루프가 돈다"의 판정선 |
 
 ---
 
 ## 개정 이력
 | 일자 | 내용 | 작성 |
 |---|---|---|
+| 2026-09-19 | 외부 메모리 참조 항목을 코드에서 복원해 대체. 복원 불가 항목은 사유 명시 | Claude |
 | 2026-09-19 | 최초 작성. 근거 커밋 `a247b8a`. `maumful-main/CLAUDE.md`(293줄)·루트 `CLAUDE.md`·`wrangler.toml`·`wrangler.lightoflife.toml`·`package.json`·`README.md`·`src/index.tsx`(1,626줄, 라우트 26개)·`migrations/0001~0006`·`public/static/*.jsx`(engine·registry·hub + games 8종) 기준 | Claude |
