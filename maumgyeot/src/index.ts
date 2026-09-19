@@ -428,6 +428,7 @@ app.post('/api/grant/revoke', async (c) => {
   const body = await c.req.json().catch(() => ({} as any));
   const p = await verifyGrantToken(secret, String(body.token || ''));
   if (!p) return c.json({ error: 'invalid or expired' }, 401);
+  if (p.service && p.service !== 'gyeot') return c.json({ error: 'service mismatch' }, 400);   // R-37: 대상 서비스 검사(/api/grant와 동일)
   const orderId = String(p.orderId || '');
   const ord = await c.env.DB.prepare('SELECT * FROM external_orders WHERE order_id=?').bind(orderId).first<any>();
   if (!ord) return c.json({ ok: true, note: 'no such order' });
