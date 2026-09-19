@@ -8,6 +8,30 @@ import { BEHAVIOR, signalsToLines } from './behavior';
 type Bindings = { DB: D1Database; AUTH_DB: D1Database; KV: KVNamespace; JWT_SECRET: string; ANTHROPIC_API_KEY: string; AI_PROXY_URL?: string; ASSETS: Fetcher; ADMIN_SECRET?: string; RESEND_API_KEY?: string; EMAIL_FROM?: string; MAUM_SSO_SECRET?: string };
 const app = new Hono<{ Bindings: Bindings; Variables: { uid: number } }>();
 
+// ── CORS (마음 시리즈 공통 화이트리스트, _shared 3장) — R-09: 수달과 동일 적용 ──────────
+const ALLOWED = [
+  'https://maumotter.com', 'https://app.maumotter.com',
+  'https://maumgyeot.com', 'https://app.maumgyeot.com',
+];
+app.use('/api/*', async (c, next) => {
+  const origin = c.req.header('Origin') || '';
+  await next();
+  if (ALLOWED.includes(origin)) {
+    c.header('Access-Control-Allow-Origin', origin);
+    c.header('Access-Control-Allow-Credentials', 'true');
+    c.header('Vary', 'Origin');
+  }
+});
+app.options('/api/*', (c) => {
+  const origin = c.req.header('Origin') || '';
+  const h: Record<string, string> = {
+    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+  };
+  if (ALLOWED.includes(origin)) { h['Access-Control-Allow-Origin'] = origin; h['Access-Control-Allow-Credentials'] = 'true'; }
+  return new Response(null, { status: 204, headers: h });
+});
+
 const REPORT_MODEL = 'claude-sonnet-4-6';
 // Anthropic은 Cloudflare AI Gateway 경유(직접 api.anthropic.com 호출은 Workers egress에서 403)
 const AI_GATEWAY = 'https://gateway.ai.cloudflare.com/v1/313b6305037d45af37c09a60dad1ac2b/maumful/anthropic/v1/messages';
