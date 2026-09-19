@@ -1164,7 +1164,7 @@ app.post('/api/credits/refund', async (c) => {
     const signTok = () => signSso(secret, { service: 'phyweb', grantType: refPkg.grantType, orderId, exp: Math.floor(Date.now() / 1000) + 300 })
     // 1) 등록 여부 확인 — 등록됐으면 거부(청약철회 제한). ⚠️ 확인 불가 시 환불 보류(과다환불 방지, fail-safe)
     let st: any = null
-    try { st = await fetch('https://phyweb.pages.dev/api/grant/status?token=' + encodeURIComponent(await signTok())).then(r => r.json()).catch(() => null) } catch { st = null }
+    try { st = await fetch(`${SERVICE_API[refPkg.service]}/api/grant/status?token=` + encodeURIComponent(await signTok())).then(r => r.json()).catch(() => null) } catch { st = null }
     if (!st || st.ok !== true) return c.json({ success: false, error: '일시적으로 환불 가능 여부를 확인할 수 없어요. 잠시 후 다시 시도하거나 고객센터(support@maumful.com)로 문의해 주세요.' }, 503)
     if (st.redeemed) return c.json({ success: false, error: 'phyweb에 이용권 코드를 이미 등록하셔서 환불할 수 없어요(등록 후 청약철회 제한).' }, 400)
     // 2) 원자적 선점
@@ -1189,7 +1189,7 @@ app.post('/api/credits/refund', async (c) => {
     }
     // 4) 돈 환불됨 → phyweb 코드 void(best-effort). 등록 race(409)면 로그만 남김(관리자 조정).
     try {
-      const rv = await fetch('https://phyweb.pages.dev/api/grant/revoke', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: await signTok() }) })
+      const rv = await fetch(`${SERVICE_API[refPkg.service]}/api/grant/revoke`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: await signTok() }) })
       if (!rv.ok) console.error('[Refund phyweb] revoke 비정상(등록 race 가능) order:', orderId, 'http:', rv.status)
     } catch (e) { console.error('[Refund phyweb] revoke 오류:', e, orderId) }
     return c.json({ success: true, refunded: true, service: 'phyweb', message: 'phyweb 이용권 결제가 환불되었습니다.' })
@@ -4568,16 +4568,24 @@ app.post('/api/admin/payments/:id/refund', async (c) => {
 
   // phyweb 이용권 상품이면 phyweb 코드도 void(관리자 환불+수동 카드환불 후 코드가 살아있지 않도록). best-effort.
   const admPkg = PACKAGES[charge.package_key]
-  if (admPkg?.service === 'phyweb') {
+  // R-37: 외부 이용권 상품(수달·곁·phyweb) 환불 시 지급된 이용권을 회수(revoke).
+  //   예전엔 'phyweb'만 회수 → otter·gyeot는 revoke를 아예 호출 안 해 카드환불 후에도 구독·회차권이 살아있었음(금전 손실).
+  if (admPkg?.service && admPkg.grantType) {
     const ssoSecret = (c.env as any).MAUM_SSO_SECRET
-    if (ssoSecret) {
+    const api = SERVICE_API[admPkg.service]
+    if (ssoSecret && api) {
       try {
-        const token = await signSso(ssoSecret, { service: 'phyweb', grantType: admPkg.grantType, orderId: `mf_charge_${chargeId}`, exp: Math.floor(Date.now() / 1000) + 300 })
-        const rv = await fetch('https://phyweb.pages.dev/api/grant/revoke', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) })
-        if (!rv.ok) console.error('[Admin Refund phyweb] revoke 비정상(등록됨일 수 있음):', rv.status, chargeId)
-      } catch (e) { console.error('[Admin Refund phyweb] revoke 오류:', e, chargeId) }
+        const u = await DB.prepare('SELECT email FROM users WHERE id=?').bind(charge.user_id).first<{ email: string }>()
+        // R-44: grant와 동일한 6필드 페이로드로 통일(서명 대상이 payload JSON이라 필드가 다르면 401)
+        const token = await signSso(ssoSecret, {
+          email: String(u?.email || '').toLowerCase(), service: admPkg.service, grantType: admPkg.grantType,
+          orderId: `mf_charge_${chargeId}`, amount: admPkg.amount, exp: Math.floor(Date.now() / 1000) + 300 })
+        const rv = await fetch(`${api}/api/grant/revoke`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) })
+        if (!rv.ok) console.error('[Admin Refund] revoke 비정상:', admPkg.service, rv.status, chargeId)
+        else await DB.prepare("UPDATE external_grants SET status='revoked' WHERE order_id=?").bind(`mf_charge_${chargeId}`).run()
+      } catch (e) { console.error('[Admin Refund] revoke 오류:', e, chargeId) }
     }
-    return c.json({ success: true, message: `phyweb 이용권 환불 처리 — 코드 void 시도 완료. ⚠️ 카드 환불은 토스 상점관리자에서 직접 취소하세요(${charge.amount.toLocaleString()} ${charge.currency}).` })
+    return c.json({ success: true, message: `${admPkg.service} 이용권 환불 처리 — 회수 시도 완료. ⚠️ 카드 환불은 토스 상점관리자에서 직접 취소하세요(${charge.amount.toLocaleString()} ${charge.currency}).` })
   }
 
   return c.json({ success: true, message: `크레딧 회수 완료 — ${charge.credits}cr. ⚠️ 카드 환불은 토스 상점관리자에서 직접 취소하세요(${charge.amount.toLocaleString()} ${charge.currency}).` })
