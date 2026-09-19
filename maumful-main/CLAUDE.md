@@ -240,7 +240,7 @@ npm run deploy:cts    # lightoflife-couple (wrangler.lightoflife.toml)
 
 ## ⚠️ 상담센터 어드민 = 의도적 휴면 (삭제 금지)
 `counseling_admin.jsx`(`CounselingAdminPage`, `view === 'counselingAdmin'`)와 상담센터·상담사·예약·정산(`/api/admin/counseling/*`·`settlements`·`counselor_earnings`)은 **휴면 상태로 보존**한다(사용자 확정 2026-07-19).
-- **접근 링크가 없다**(`setView('counselingAdmin')` 호출부 0·`?go=` 미지원) → UI 진입 불가. **이건 버그·죽은 코드가 아니라 의도된 휴면.** 상담사 매칭이 법적 보류([[feedback_maumful_b2c_legal]])라 링크만 끊고 코드는 남겼다.
+- **접근 링크가 없다**(`setView('counselingAdmin')` 호출부 **1곳 — 죽은 분기·의도적 보존**: `landing.jsx:2056` `if (l === '어드민')` 이 있으나 라벨 `'어드민'` 이 푸터 배열에서 빠져 조건이 영원히 거짓 · `?go=` 미지원) → UI 진입 불가. **이건 버그·죽은 코드가 아니라 의도된 휴면.** 상담사 매칭이 법적 보류([[feedback_maumful_b2c_legal]])라 링크만 끊고 코드는 남겼다. (R-56 정정: 이전 "호출부 0" 표기는 실제 1곳)
 - **삭제·정리 금지.** 향후 **제휴 상담센터 개념 부활** 시 `setView('counselingAdmin')` 링크(또는 `?go=counselingAdmin`)만 추가하면 되살아난다.
 - 제휴코드 수익 쉐어 **정산은 메인 관리자(app.jsx `MasterPartnerPanel` 🤝 파트너 탭)** 에 있다 — 상담 어드민과 무관. 메모리 `project_maumful_counseling_admin_dormant`.
 

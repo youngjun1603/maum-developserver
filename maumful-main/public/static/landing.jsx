@@ -2053,6 +2053,7 @@ function LandingPage({ setView, isLoggedIn, lang, setMyPageTab, loadTestHistory,
                       onClick={() => {
                         if (l === '이용약관' || l === 'Terms of Service') setView('terms');
                         if (l === '개인정보처리방침' || l === 'Privacy Policy') setView('privacy');
+                        // 휴면(2026): 부활 조건 = 위 links 배열에 '어드민' 라벨 복원. 지우지 말 것 — 상담센터 어드민 부활 경로(설계서 §11). [R-56 죽은 분기·의도적 보존]
                         if (l === '어드민') setView('counselingAdmin');
                         if (l === '마음커플') {
                           if (!isLoggedIn) { setView('memberLogin'); return; }

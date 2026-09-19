@@ -317,19 +317,8 @@ app.get('/api/config/region', (c) => {
     crisisLine: isKorea
       ? { label: '자살예방상담전화', number: '1393' }
       : { label: 'Crisis Lifeline', number: '988' },
-    creditPrices: isKorea
-      ? {
-          starter:  { credits: 50,  amount: 2900  },
-          standard: { credits: 120, amount: 5900  },
-          premium:  { credits: 300, amount: 12900 },
-          pro:      { credits: 700, amount: 24900 },
-        }
-      : {
-          starter:  { credits: 50,  amount: 299   },
-          standard: { credits: 120, amount: 599   },
-          premium:  { credits: 300, amount: 1299  },
-          pro:      { credits: 700, amount: 2499  },
-        },
+    // R-14: creditPrices 제거 — 소비처 0(프론트 grep 0건), 실제 가격과 다른 죽은 값이라 혼선만 유발.
+    //   가격은 결제 라우트의 PACKAGES(L3119~)가 단일 소스.
   })
 })
 
