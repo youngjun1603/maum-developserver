@@ -271,7 +271,9 @@ npm run deploy:cts    # lightoflife-couple (wrangler.lightoflife.toml)
 - **마음풀 상품**(`PACKAGES` index.tsx / `ChargeView` PACKAGES_KR app.jsx):
   - 내부(마음풀 크레딧 지급): 통합해석 40cr/₩4,500·부부/세대 통역팩 25cr/₩3,300 (2026-07-22 정합 개편, 위 "상품 가격 정합" 참조). 부부·세대는 maumful `users.credits`를 차감하므로 상품=크레딧 지급.
   - 외부(수달·곁, `service`+`grantType`·credits=0): 라이트 ₩7,900/프로 ₩14,900/10회팩 ₩6,900.
+  - **phyweb 상담사 구독**(R-16, `service:'phyweb'`·`credits:0`·`grantType`, 같은 사업자라 결제창 공유, index.tsx:3146~3151): Solo ₩19,900 / Basic ₩29,900 / Professional ₩49,900(각 1개월·비자동갱신) · 연간 Solo ₩190,000 / Basic ₩250,000 / Professional ₩450,000. **마음풀 유일의 쿠폰코드 응답형** — `POST https://phyweb.pages.dev/api/grant` 응답 `code`를 저장·이메일 발송하고 `GrantCodeModal`로 노출(설계서 §10). 상태조회 `/api/grant/status`(:1161)·환불 `/api/grant/revoke`(:1186).
 - **무료→유료 전환**(프리미엄 프리미엄): 부부·세대 **첫 3회 무료**(KV `bubu_free_used`/`sedae_free_used`{uid}, 세대는 성인만·청소년 무료) → 크레딧 차감 → 없으면 402 `needPurchase`. 통합해석 **첫 1회 무료**(KV `integrated_free_used`)→**40cr** 선결제(스트리밍이라 스트림 시작 전 선결제·upstream 502 시 환불·마스터 무제한).
+- **구독 UI = 표시 전용**(R-54): 플랜 카드(마음풀 Plus ₩5,900/마음커플 Plus ₩9,900/마음가족 ₩14,900)와 백엔드 `SUBSCRIPTION_PLANS`(basic/standard/pro)는 **키가 안 겹친다** → 결제 아님. 버튼은 `POST /api/credits/notify-plan`(대기자 등록·"오픈 알림 신청"). 토스 심사 완료 후 정식 출시 예정.
 - **통합결제 grant**(수달·곁은 별도 생태계라 크레딧 대신 지급 전달): 결제성공(success·webhook)→`service` 있으면 `deliverGrant`(`signSso` 서명→POST `maumotter.com`/`maumgyeot.com` `/api/grant`)→각 서비스 `verifySso`·`applyGrant`. 큐 `external_grants`(마음풀)·멱등 `external_orders`(수달곁). 재시도 `/api/admin/deliver-pending-grants`. **`MAUM_SSO_SECRET` 3곳 동일값 필수**(마음풀·수달·곁). E2E 검증 완료(지급·멱등·위조401·환불revoke). 상세=메모리 [[project_maum_unified_payment]].
 
 ## 제휴코드 수익 쉐어 정산 (2026-07-19)
