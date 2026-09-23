@@ -17,6 +17,8 @@ id      = "9f7426807e924916be4dec75793422d9"
 
 [vars]
 SERVICE_URL = "https://maumful.com"
+# 네이버 서치어드바이저 소유확인 (공개 메타값 — 홈 <head>에 naver-site-verification 출력)
+NAVER_SITE_KEY = "5ab23ced0ed56c5c65d55eec0a1ede354a518b02"
 
 [triggers]
 crons = ["0 0 1 * *"]
