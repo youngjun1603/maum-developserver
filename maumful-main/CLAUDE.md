@@ -284,11 +284,17 @@ npm run deploy:cts    # lightoflife-couple (wrangler.lightoflife.toml)
 
 ## 제휴 SSO 온보딩 + 진입 레이어 (검토완료·착수 향후, 2026-07-22)
 제휴처(삼아 등)에서 **이미 로그인된 유저가 배너 클릭 → 마음풀 별도 로그인 없이 자동 로그인**. **이미 구현됨**: `?p=<코드>&sso_token=` → `POST /api/auth/partner-sso`(HMAC-SHA256 서명검증·uid로 계정 매칭/자동생성·+20cr·partner_code 귀속). 토큰=`base64url(payload).base64url(HMAC(sso_secret,payloadB64))`, payload=`{uid,email?,nick?,exp}`. 파트너 등록(어드민 🤝 파트너 탭)에 **sso_secret 필수**. ⚠️ sso_token은 exp 짧게·클릭 시점 발급(고정 href 금지).
-- **진입 이원화 설계(착수 향후)**: 코어 `app.jsx` 무변경, `landing`처럼 **별도 경량 번들 진입 레이어**로 전환 화면을 붙여 빠르게 반복. 전환 레버=제휴전용 쿠폰/보너스·SSO 마찰0·단일CTA·큐레이션. **config 구동**(어드민 편집=즉시반영·A/B). 상세·와이어프레임=메모리 `project_maumful_partner_entry`. **삼아는 계약 전(사전점검)**.
+- **진입 이원화 = `/p` 레이어 MVP 배포·어드민 편집 완료**(`partner_entry.jsx`·별도 경량번들·코어 무변경). 전환 레버=제휴전용 쿠폰/보너스·SSO 마찰0·큐레이션. **config 구동**(어드민 🤝 파트너 탭 편집=즉시반영·A/B). 상세=메모리 [[project_maumful_partner_entry]].
+- **⚠️ 삼아인터내셔날 계약 완료(2026-09-23)** — 삼아 PP몰 배너→마음풀 랜딩(연동방식 협의중). **제휴 랜딩 데모**(아티팩트 `9BqwygBRjw7X994oMDveoU`)를 **실사용 랜딩**으로 재구성: 히어로 → **서비스 7종 풀폭 피처 행**(검사=검사종류·커플=하위도구 상세 / 수달·곁 컴팩트, "설명 대신 실제 예시" 원칙) → 신뢰·마감CTA·약관/위기상담 푸터. 배포본 반영은 삼아 컨셉 합의 후. ⚠️ 타 서비스(게임·커플·수달 등) 매출까지 수익쉐어면 **origin별 partner_code 귀속 연동 선행 필요**(검사·상담·결제=maumful.com이라 정상). 카드 로그인유지 이동=코어 `?go=service:` 분기 추가(기존 SSO 오픈함수 재사용).
 
 ## 크롤링 정책 (robots.txt, 2026-07-18)
 
 마케팅 노출 위해 **AI 검색·답변봇 부분 허용**: Google-Extended(Gemini)·OAI-SearchBot·ChatGPT-User·PerplexityBot = HTML 허용 + `/static/`(검사문항 든 JS번들)·`/api/` 차단. **AI 학습봇**(GPTBot·ClaudeBot·CCBot 등)·**스크래퍼**(Ahrefs·Semrush 등)는 전면 차단. `X-Robots-Tag`/meta에서 `noai` 제거(noimageai 유지). ⚠️ 순수 SPA라 검사화면 URL이 없다 → 실보호 대상 = 문항이 든 **`/static/` 번들**. sitemap에 `/story` 추가. 상세=메모리 [[project_maumful_crawl_policy]].
+
+## 네이버 검색 노출 — 서치어드바이저 등록 완료 (2026-09-23)
+네이버는 구글과 달리 **등록·소유확인·사이트맵 제출 필수**(안 하면 색인 거의 안 됨). searchadvisor.naver.com에 `maumful.com` 등록·HTML태그 소유확인·사이트맵(`/sitemap.xml`)·웹페이지 수집(`/`·`/story/`) 완료.
+- **소유확인 = `wrangler.toml [vars] NAVER_SITE_KEY`**(공개 메타값이라 시크릿 아님). 코드가 있으면 홈 `<head>`에 `naver-site-verification` 메타 출력(`src/index.tsx` `naverKey`). **⚠️ 지우면 소유확인 풀림 — 유지.**
+- robots.txt Yeti/Naverbot `Allow: /`·sitemap 200·홈 서버렌더 메타+`<noscript>` SEO폴백(Yeti 본문 읽힘). 노출까지 며칠~2주(`site:maumful.com`로 확인). 상세=메모리 [[project_maumful_crawl_policy]].
 
 ## 개발 완료 후 검증 원칙 ⚠️ 필수
 기능 개발 완료 시 **즉시(요청 없어도)** 에러·버그 검증. 시점: 빌드 성공 후, 배포 전/직후.
