@@ -98,7 +98,7 @@
 | 7 | 건강 신호 보정 | 신호 `health:true` 또는 맥락 키워드 14종 → `health_flag` 강제 true | 배포됨 | `HEALTH_KW`, `signalsToLines` |
 | 8 | 통역 리포트 목록·상세 | 목록은 summary 90자 + confidence, 원문은 상세 | 배포됨 | `GET /api/reports`, `/api/reports/:id` |
 | 9 | 비회원 미리보기 | IP당 2회, 저장 없음, 가입 유도 | 배포됨 | `POST /api/observe/guest`, `GuestObserve` |
-| 10 | 쿼터·구독·회차권 | 무료 월 5 + sub_light 30 / sub_pro 100 + pack10(10회·60일) | 배포됨 | `getEntitlement`·`consumeQuota`·`applyGrant` |
+| 10 | 쿼터·구독·회차권 | 무료 월 5 + sub_light 50 / sub_pro 150 + pack10(15회·60일) *(2026-09-24 상향)* | 배포됨 | `getEntitlement`·`consumeQuota`·`applyGrant` |
 | 11 | 쿠폰 등록 | 코드 정규화·1인 1회·만료·소진 검사 | 배포됨 | `POST /api/coupon/redeem` |
 | 12 | 이용 내역 | 이용권 등록 이력 100건 | 배포됨 | `GET /api/history` |
 | 13 | 제휴 추적 | `?ref=` first-touch localStorage 저장 → 가입 시 귀속 | 배포됨 | `referrals` 테이블, `App` useEffect |
@@ -279,9 +279,10 @@
 |---|---|---|---|---|
 | (기본) | 무료 | 월 **5회** | 매월 리셋(UTC 기준 `ym`) | — (`FREE_MONTHLY=5`) |
 | (게스트) | 비회원 미리보기 | IP당 **2회** | KV TTL 1년 | — (`GUEST_FREE=2`) |
-| `sub_light` | 구독 라이트 | 월 **30회**(무료 5 + 30) | 30일 | **7,900원** |
-| `sub_pro` | 구독 프로 | 월 **100회** | 30일 | **14,900원** |
-| `pack10` | 회차권 | **10회** | 60일 | **6,900원** |
+| `sub_light` | 구독 라이트 | 월 **50회**(무료 5 + 50) | 30일 | **4,900원** |
+| `sub_pro` | 구독 프로 | 월 **150회** | 30일 | **9,900원** |
+| `pack10` | 회차권 | **15회** | 60일 | **4,900원** |
+| — | *(2026-09-24 가격조정)* | 진입가↓+쿼터↑ 블렌드. 곁은 수달·타서비스와 별개 상품(`gyeot_*`)이라 무영향 | — | — |
 
   - 가격 근거: `public/index.html` `EntitlementCard` 구매 안내 문구 + 커밋 `923c13e`("확정가 반영"). 코드 상수가 아니라 **표시 문구**이므로 판매처 설정과의 동기화는 수동이다.
 - **결제 수단**: 서비스 내 직접 결제 **없음**. ① 외부 판매처 구매 → **쿠폰 코드** 등록(`/api/coupon/redeem`), ② 마음풀 결제 → **서명 grant 수신**(`/api/grant`). 토스페이먼츠 개별 연동은 하지 않는다(사업자 단일, 결제대행 규제 회피 — 루트 `../CLAUDE.md`).
@@ -352,10 +353,10 @@
 ### 10.2 유료화·제휴 실측 (코드에서 복원)
 
 - **가격 대조 — 마음풀 청구가와 일치한다**(근거: `public/index.html` L311 `EntitlementCard` 안내 문구 · `../maumful-main/src/index.tsx` L3146~L3148 `PACKAGES`):
-  - `sub_light` — 곁 프론트 표시 **7,900원** / 마음풀 `gyeot_light` 청구 **7,900** ✅
-  - `sub_pro` — 곁 프론트 표시 **14,900원** / 마음풀 `gyeot_pro` 청구 **14,900** ✅
-  - `pack10` — 곁 프론트 표시 **6,900원** / 마음풀 `gyeot_pack10` 청구 **6,900** ✅
-  - **마음수달도 같은 3종·같은 금액**이다(`../maumotter/public/index.html` L105, `otter_light`/`otter_pro`/`otter_pack10`). 시리즈 2종의 가격표는 현재 동일하다.
+  - `sub_light` — 곁 프론트 표시 **4,900원** / 마음풀 `gyeot_light` 청구 **4,900** ✅ (2026-09-24)
+  - `sub_pro` — 곁 프론트 표시 **9,900원** / 마음풀 `gyeot_pro` 청구 **9,900** ✅
+  - `pack10` — 곁 프론트 표시 **4,900원** / 마음풀 `gyeot_pack10` 청구 **4,900** ✅
+  - ⚠️ **2026-09-24 곁만 인하·쿼터 상향**(라이트 50/프로 150/팩 15회). **마음수달은 미변경**(otter_* 7,900/14,900/6,900·30/100/10 유지) — 시리즈 2종 가격이 이제 다르다.
   - ⚠️ 곁·수달 쪽 금액은 **코드 상수가 아니라 JSX 표시 문구**이고 실제 청구는 마음풀 `PACKAGES` 가 한다 → **두 곳을 따로 고쳐야 하며** 한쪽만 고치면 표시가와 청구가가 갈린다.
 - **쿼터 엔진 스키마**(근거: `migrations/0001_billing.sql`): `subscriptions(maum_user_id PK, plan 'light'|'pro', monthly_quota 30|100, expires_at, updated_at)` · `packs(maum_user_id PK, remaining, expires_at, updated_at)` · `usage_monthly((maum_user_id, ym) PK, used)` — `ym = 'YYYYMM'`(UTC). **수달 `0001_billing.sql` 과 컬럼 단위로 동일**하다.
 - **쿼터 소모 순서**(`consumeQuota()` L104~L115): ① `monthlyRemaining > 0` 이면 `usage_monthly` UPSERT `used+1` — 이때 `source` 는 `used < freeMonthly` 면 `'free'`, 아니면 `'subscription'`(무료 5회와 구독분은 **같은 카운터**를 쓰고 라벨만 갈린다) → ② 아니면 `packs.remaining - 1` → ③ 둘 다 없으면 `{ok:false}` → `402 {code:'QUOTA'}`. 즉 **회차권은 언제나 마지막에 쓰인다**(월간 잔여가 남아 있으면 팩은 줄지 않는다).

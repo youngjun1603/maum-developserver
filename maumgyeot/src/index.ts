@@ -57,6 +57,15 @@ const TRANSLATE_SYSTEM = `당신은 '마음곁'의 동물행동학 기반 통역
 [confidence 기준]
 - high: 여러 신호가 일관 + 맥락 명확. medium: 신호/맥락 일부. low: 신호 적거나 다의적/모순.
 
+[개체 맞춤 — 반드시 반영]
+- 제공된 종·품종·나이·성격을 해석에 적극 반영합니다. 같은 신호도 개체 특성에 따라 다르게 읽습니다.
+  · 나이대: 유년기=탐색·놀이·사회화 신호가 많음 / 성년 / 노령=통증·불편·인지 변화에 더 민감하니 반복·이상 신호를 가볍게 넘기지 않음.
+  · 성격: 소심·예민한 성격은 회피·경계를 불안으로 읽을 여지, 활발·요구성 성격은 관심·놀이 요청일 여지를 함께 고려.
+  · 품종: 있으면 기질·행동 경향을 참고하되(예: 목축견의 몰이·경계, 사냥개의 추적, 고양이 품종별 활동성), **눈앞의 개체차를 항상 우선**합니다. 품종 정보가 없으면 종 일반으로만 해석합니다.
+
+[행동 이슈 케어 가이드 — what_to_do를 구체적·단계적으로]
+- 분리불안·과잉경계·공격성·스트레스·식욕/배변 변화 등 '돌봄이 필요한 신호'가 보이면 두루뭉술한 위로 대신 단계적 대응을 제시합니다: ① 지금 바로 해볼 것 → ② 환경·루틴 조정 → ③ 지속·악화되면 수의사 또는 반려동물 행동전문가(훈련사) 상담 권유. 물림·자해 등 안전 위험 신호가 보이면 안전 조치를 최우선으로 안내합니다(단, 진단·병명은 여전히 금지).
+
 [출력] 아래 JSON 스키마로만, JSON 외 텍스트/코드블록 금지:
 {"summary":"이 행동은 ~일 수 있어요(단정X) 2~3문장","confidence":"low|medium|high","body_signals_read":["함께 읽은 신호"],"possible_meanings":[{"meaning":"가능한 의미","why":"근거","caveat":"다의성·맥락 주의(없으면 '')"}],"what_to_do":["보호자가 해볼 따뜻한 대응 1~3개"],"health_flag":{"flag":false,"note":"통증·이상 의심 시 수의사 상담 권장. 진단 아님(없으면 '')"}}`;
 
@@ -97,10 +106,10 @@ const clientIp = (c: any) => c.req.header('cf-connecting-ip') || c.req.header('x
 const FREE_MONTHLY = 5;   // 가입자 월 무료 통역
 const GUEST_FREE = 2;     // 비회원 미리보기 평생 횟수(IP)
 const PLAN: Record<string, { plan: string; quota: number; days: number }> = {
-  sub_light: { plan: 'light', quota: 30, days: 30 },
-  sub_pro: { plan: 'pro', quota: 100, days: 30 },
+  sub_light: { plan: 'light', quota: 50, days: 30 },   // 2026-09-24 가격조정: 30→50회 (진입가↓+쿼터↑ 블렌드)
+  sub_pro: { plan: 'pro', quota: 150, days: 30 },      // 100→150회
 };
-const PACK: Record<string, { count: number; days: number }> = { pack10: { count: 10, days: 60 } };
+const PACK: Record<string, { count: number; days: number }> = { pack10: { count: 15, days: 60 } };  // 10→15회
 const ym = () => { const d = new Date(); return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}`; };
 const nowIso = () => new Date().toISOString();
 const addDays = (days: number) => new Date(Date.now() + days * 86400000).toISOString();
@@ -194,12 +203,12 @@ const verifyEmailHtml = (link: string) => emailWrap('마음곁 이메일 인증'
 const resetEmailHtml = (link: string) => emailWrap('마음곁 비밀번호 재설정', '<p>아래 버튼을 눌러 새 비밀번호를 설정해 주세요. (요청 후 1시간 내 유효)</p>', '비밀번호 재설정', link);
 
 // ── 통역 코어(회원/비회원 공용) ──
-async function runTranslation(env: Bindings, p: { species: 'cat' | 'dog'; name?: string; age?: any; personality?: string; codes: string[]; context?: string; frames?: any[] }) {
+async function runTranslation(env: Bindings, p: { species: 'cat' | 'dog'; name?: string; breed?: string; age?: any; personality?: string; codes: string[]; context?: string; frames?: any[] }) {
   const species = p.species;
   const { lines, hasHealth, hasAmbiguous } = signalsToLines(species, p.codes);
   const frameArr: string[] = Array.isArray(p.frames) ? p.frames.slice(0, 6) : [];
   const hasVideo = frameArr.length > 0;
-  const userMsg = `[반려동물] 종: ${species === 'cat' ? '고양이' : '개'} | 이름: ${p.name || '미상'} | 나이: ${p.age ?? '미상'}${p.personality ? ` | 성격: ${p.personality}` : ''}
+  const userMsg = `[반려동물] 종: ${species === 'cat' ? '고양이' : '개'} | 이름: ${p.name || '미상'}${p.breed ? ` | 품종: ${p.breed}` : ''} | 나이: ${p.age ?? '미상'}${p.personality ? ` | 성격: ${p.personality}` : ''}
 [관찰한 행동 신호]
 ${lines || '- (선택된 신호 없음)'}
 [맥락] ${p.context || '(미입력)'}${hasVideo ? '\n[영상] 짧은 영상에서 뽑은 연속 프레임을 함께 첨부했어요.' : ''}
@@ -348,7 +357,7 @@ app.post('/api/observe', requireAuth, async (c) => {
     if (!q.ok) return c.json({ error: '이번 달 통역 횟수를 모두 사용했어요. 이용권 코드를 등록하면 더 이용할 수 있어요.', code: 'QUOTA' }, 402);
     quotaSource = q.source;
   }
-  const { report, hasVideo, healthFlag, llmOk } = await runTranslation(c.env, { species, name: pet.name, age: pet.age, personality: pet.personality, codes, context, frames });
+  const { report, hasVideo, healthFlag, llmOk } = await runTranslation(c.env, { species, name: pet.name, breed: pet.breed, age: pet.age, personality: pet.personality, codes, context, frames });
   // R-11: 실제 통역 시도인데 LLM이 실패해 폴백만 나왔으면 차감한 쿼터를 환불(게이트웨이 장애 등)
   if (realAttempt && !master && !llmOk && quotaSource) await restoreQuota(c.env, uid, quotaSource);
 
@@ -573,6 +582,31 @@ app.get('/api/reports/:id', requireAuth, async (c) => {
   const rep = await c.env.DB.prepare('SELECT * FROM pet_reports WHERE id=? AND maum_user_id=?').bind(c.req.param('id'), c.get('uid')).first<any>();
   if (!rep) return c.json({ error: '리포트를 찾을 수 없어요' }, 404);
   return c.json({ report: JSON.parse(rep.report_json), health_flag: rep.health_flag, created_at: rep.created_at });
+});
+// ── 정서 추세 요약(최근 30일) — 저장된 리포트 집계, AI·쿼터 미사용 ──
+app.get('/api/trend', requireAuth, async (c) => {
+  const petId = c.req.query('pet_id');
+  const since = new Date(Date.now() - 30 * 86400 * 1000).toISOString();
+  const q = petId
+    ? c.env.DB.prepare('SELECT report_json,health_flag,created_at FROM pet_reports WHERE maum_user_id=? AND pet_id=? AND created_at>=? ORDER BY id DESC').bind(c.get('uid'), petId, since)
+    : c.env.DB.prepare('SELECT report_json,health_flag,created_at FROM pet_reports WHERE maum_user_id=? AND created_at>=? ORDER BY id DESC').bind(c.get('uid'), since);
+  const { results } = await q.all<any>();
+  const meaningFreq: Record<string, number> = {};
+  const conf: Record<string, number> = { high: 0, medium: 0, low: 0 };
+  let healthCount = 0;
+  for (const r of results as any[]) {
+    if (r.health_flag) healthCount++;
+    try {
+      const j = JSON.parse(r.report_json);
+      if (j?.confidence && conf[j.confidence] !== undefined) conf[j.confidence]++;
+      for (const m of (j?.possible_meanings || [])) {
+        const key = String(m?.meaning || '').trim();
+        if (key) meaningFreq[key] = (meaningFreq[key] || 0) + 1;
+      }
+    } catch {}
+  }
+  const topMeanings = Object.entries(meaningFreq).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([meaning, n]) => ({ meaning, n }));
+  return c.json({ since, days: 30, count: results.length, topMeanings, healthCount, confidence: conf });
 });
 
 // ── 계정 삭제(회원 탈퇴) — Google Play 필수 ──

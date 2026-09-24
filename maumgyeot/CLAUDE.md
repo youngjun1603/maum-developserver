@@ -143,7 +143,7 @@ D1 스키마 → 인증/JWT(공유 규약) → 반려동물 등록 → 관찰·�
 
 > 숫자 상수는 모두 `src/index.ts` 상단. 마이그레이션 `migrations/0001_billing·0002_referrals·0003_errors.sql`(적용됨).
 
-**유료/쿼터**: `통역 1회 = /api/observe 1건`. 무료 월 5(`FREE_MONTHLY`) + 구독(`sub_light` 30/`sub_pro` 100, 30일) + 회차권(`pack10` 10회/60일). 차감순 무료→구독→회차권. 테이블 subscriptions·packs·usage_monthly. `getEntitlement`/`consumeQuota`. 한도초과 402(code:QUOTA).
+**유료/쿼터**: `통역 1회 = /api/observe 1건`. 무료 월 5(`FREE_MONTHLY`) + 구독(`sub_light` 50/`sub_pro` 150, 30일) + 회차권(`pack10` 15회/60일). 차감순 무료→구독→회차권. 테이블 subscriptions·packs·usage_monthly. `getEntitlement`/`consumeQuota`. 한도초과 402(code:QUOTA). ⚠️ **가격(2026-09-24 인하): 라이트 4,900·프로 9,900·팩 4,900 — 마음풀 `gyeot_*` PACKAGES가 실청구 소스, 곁 index.html·admin.html은 표기. 수달(otter_*)과 별개라 곁만 변경.**
 **쿠폰(스마트스토어 결제경로)**: 구매→코드→`/api/coupon/redeem` 등록. 발행/조회 `/admin`(ADMIN_SECRET, **설정됨**). 테이블 coupons·coupon_redemptions.
 **게스트 미리보기**: `/api/observe/guest`(IP당 평생 2회, 저장X). **제휴**: `?ref=`→referrals→`/api/admin/referrals`.
 **법적 페이지**: `/privacy /terms /faq /account-deletion`(PAGE 헬퍼 + `BIZ` 사업자정보=마음서비스 780-31-01832·통신판매업 제2026-서울영등포-1157·대표 김근혜). **회원탈퇴** `DELETE /api/account`(도메인+빌링·제휴행 전부 삭제).

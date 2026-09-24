@@ -49,6 +49,7 @@ function api(path, { method='GET', body, token } = {}) {
   }).then(async r => { const d = await r.json().catch(()=>({})); if(!r.ok){ const e=new Error(d.error||'오류가 발생했어요'); e.code=d.code; e.status=r.status; throw e; } return d; });
 }
 const SPECIES_LABEL = { cat:'고양이', dog:'개' };
+const GROUP_ICON = { '발성':'🔊', '꼬리':'〰️', '귀·눈':'👀', '입·귀':'👂', '몸짓':'🐾', '자세':'🧍' };
 
 function Auth({ onLogin, onGuest }) {
   const [mode,setMode]=useState('login'); const [email,setEmail]=useState(''); const [pw,setPw]=useState(''); const [name,setName]=useState('');
@@ -101,6 +102,17 @@ function Auth({ onLogin, onGuest }) {
   </div>`;
 }
 
+// 정서 추세 요약 카드(최근 30일) — /api/trend 집계(AI·쿼터 미사용)
+function TrendCard({ token, petId }){
+  const [t,setT]=useState(null);
+  useEffect(()=>{ api('/trend?pet_id='+petId,{token}).then(setT).catch(()=>{}); },[petId]);
+  if(!t || !t.count) return '';
+  return html`<div style=${{marginTop:10,padding:'10px 12px',background:'#F6FBF8',border:'1px solid #E3F0E8',borderRadius:10}}>
+    <div style=${{fontSize:12,fontWeight:700,color:'var(--ink)'}}>📊 최근 30일 마음 기록 · 통역 ${t.count}회</div>
+    ${t.topMeanings && t.topMeanings.length>0 && html`<div style=${{display:'flex',flexWrap:'wrap',gap:6,marginTop:8}}>${t.topMeanings.map((m,i)=>html`<span key=${i} class="pill" style=${{fontSize:11,background:'#EAF7EF',color:'#2D6A4F'}}>${m.meaning} · ${m.n}회</span>`)}</div>`}
+    ${t.healthCount>0 && html`<div class="muted" style=${{fontSize:11,marginTop:8,color:'var(--warn)'}}>· 건강 살펴보기 신호 ${t.healthCount}회 — 반복되면 수의사 상담을 권해요</div>`}
+  </div>`;
+}
 function Dashboard({ token, user, onLogout, onObserve, onReports, onGuide }) {
   const [pets,setPets]=useState([]); const [latest,setLatest]=useState({}); const [adding,setAdding]=useState(false);
   const [name,setName]=useState(''); const [species,setSpecies]=useState('cat'); const [breed,setBreed]=useState(''); const [age,setAge]=useState(''); const [pers,setPers]=useState(''); const [err,setErr]=useState('');
@@ -129,6 +141,7 @@ function Dashboard({ token, user, onLogout, onObserve, onReports, onGuide }) {
           ${latest[p.id]?.health_flag?html`<span class="pill" style=${{background:'#FFF4EE',color:'var(--warn)'}}>건강 살펴보기</span>`:''}
         </div>
         ${latest[p.id] && html`<div class="muted" style=${{marginTop:8,fontSize:13,lineHeight:1.5}}>최근 통역(${(latest[p.id].created_at||'').slice(0,10)})<br/>${latest[p.id].summary||''}</div>`}
+        <${TrendCard} token=${token} petId=${p.id} />
         <div style=${{display:'flex',gap:8,marginTop:12}}>
           <button class="btn" style=${{flex:1}} onClick=${()=>onObserve(p)}>통역 받기</button>
           <button class="btn btn-ghost" style=${{flex:1}} onClick=${()=>onReports(p)}>지난 통역</button>
@@ -190,8 +203,9 @@ function Observe({ token, pet, onDone, onBack }) {
         <div class="muted" style=${{marginTop:8,fontSize:12}}>${pet.name}의 모습을 비춰주세요. 영상은 분석에만 잠깐 쓰이고 <b>저장하지 않아요</b>.</div>
       </div>` : html`
       <div class="card"><b>1. 어떤 행동을 보였나요?</b> <span class="muted">(여러 개 선택)</span>
-        ${Object.entries(groups).map(([g,list])=>html`<div key=${g} style=${{marginTop:12}}>
-          <div class="muted" style=${{marginBottom:6}}>${g}</div>
+        <div class="muted" style=${{marginTop:6,fontSize:12,lineHeight:1.6}}>🔊 <b>들은 소리(짖음·울음·골골 등)</b>도 마음을 읽는 중요한 단서예요 — 함께 골라주세요.</div>
+        ${Object.entries(groups).sort((a,b)=>(a[0]==='발성'?-1:b[0]==='발성'?1:0)).map(([g,list])=>html`<div key=${g} style=${{marginTop:12}}>
+          <div class="muted" style=${{marginBottom:6,fontWeight:g==='발성'?700:400,color:g==='발성'?'#2D6A4F':''}}>${GROUP_ICON[g]||''} ${g==='발성'?'소리 · 발성':g}</div>
           ${list.map(s=>html`<span key=${s.code} class=${'chip'+(picked.includes(s.code)?' on':'')} onClick=${()=>toggle(s.code)}>${s.label}${s.ambiguous?' ⚠️':''}</span>`)}
         </div>`)}
       </div>
@@ -284,7 +298,7 @@ function VerifyBanner({ token }) {
 function EntitlementCard({ token }) {
   const [ent,setEnt]=useState(null); const [code,setCode]=useState(''); const [msg,setMsg]=useState(''); const [err,setErr]=useState(''); const [busy,setBusy]=useState(false); const [hist,setHist]=useState(null);
   useEffect(()=>{ api('/entitlement',{token}).then(d=>setEnt(d.entitlement)).catch(()=>{}); },[]);
-  const TYPE_LABEL={sub_light:'구독 라이트',sub_pro:'구독 프로',pack10:'회차권 10회'};
+  const TYPE_LABEL={sub_light:'구독 라이트',sub_pro:'구독 프로',pack10:'회차권 15회'};
   async function redeem(){ if(!code.trim())return; setErr('');setMsg('');setBusy(true);
     try{ const d=await api('/coupon/redeem',{method:'POST',token,body:{code}}); setEnt(d.entitlement); setCode(''); setMsg('등록 완료! 이용권이 적용됐어요.'); }
     catch(e){ setErr(e.message); } finally{ setBusy(false); } }
@@ -308,7 +322,7 @@ function EntitlementCard({ token }) {
       : hist.map((h,i)=>html`<div key=${i} class="muted" style=${{fontSize:12,padding:'3px 0',borderTop:i?'1px solid #F0EBE3':'none'}}>${(h.created_at||'').slice(0,10)} · ${TYPE_LABEL[h.type]||h.type} · <span style=${{fontFamily:'monospace'}}>${h.code}</span></div>`)}</div>`}
     <div style=${{marginTop:12,paddingTop:12,borderTop:'1px solid #ECE6DD'}}>
       <div class="muted" style=${{fontSize:12,marginBottom:6}}>🛒 이용권 구매 (마음풀)</div>
-      <div class="muted" style=${{fontSize:13,lineHeight:1.7,color:'var(--ink)'}}>라이트 30일·월 30회 7,900원 · 프로 30일·월 100회 14,900원 · 회차권 10회(60일) 6,900원</div>
+      <div class="muted" style=${{fontSize:13,lineHeight:1.7,color:'var(--ink)'}}>라이트 30일·월 50회 4,900원 · 프로 30일·월 150회 9,900원 · 회차권 15회(60일) 4,900원</div>
       <a href="https://maumful.com/?go=charge" target="_blank" rel="noopener noreferrer" class="btn" style=${{display:'block',textAlign:'center',textDecoration:'none',marginTop:10}}>마음풀에서 구매하기 →</a>
       <div class="muted" style=${{fontSize:12,marginTop:8}}>가입하신 이메일 계정으로 마음풀에서 구매하면 이용권이 이 계정에 자동 적용돼요.</div>
     </div>
