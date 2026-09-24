@@ -6033,9 +6033,9 @@ function PsychologicalTestSystem() {
       { key:'otter_light',  credits:0, amount:7900,  label:t('마음수달 라이트','Maumotter Light'),  desc:t('매달 30회 · 아이 속마음 읽기','30 reads/mo'),   badge:null },
       { key:'otter_pro',    credits:0, amount:14900, label:t('마음수달 프로','Maumotter Pro'),      desc:t('매달 100회','100 reads/mo'),                   badge:null },
       { key:'otter_pack10', credits:0, amount:6900,  label:t('마음수달 10회팩','Maumotter ×10'),    desc:t('10회 · 60일 이내','10 reads · within 60d'),     badge:null },
-      { key:'gyeot_light',  credits:0, amount:7900,  label:t('마음곁 라이트','Maumgyeot Light'),    desc:t('매달 30회 · 반려동물 마음 읽기','30 reads/mo'), badge:null },
-      { key:'gyeot_pro',    credits:0, amount:14900, label:t('마음곁 프로','Maumgyeot Pro'),        desc:t('매달 100회','100 reads/mo'),                   badge:null },
-      { key:'gyeot_pack10', credits:0, amount:6900,  label:t('마음곁 10회팩','Maumgyeot ×10'),      desc:t('10회 · 60일 이내','10 reads · within 60d'),     badge:null },
+      { key:'gyeot_light',  credits:0, amount:4900,  label:t('마음곁 라이트','Maumgyeot Light'),    desc:t('매달 50회 · 반려동물 마음 읽기','50 reads/mo'), badge:null },
+      { key:'gyeot_pro',    credits:0, amount:9900,  label:t('마음곁 프로','Maumgyeot Pro'),        desc:t('매달 150회','150 reads/mo'),                   badge:null },
+      { key:'gyeot_pack10', credits:0, amount:4900,  label:t('마음곁 15회팩','Maumgyeot ×15'),      desc:t('15회 · 60일 이내','15 reads · within 60d'),     badge:null },
     ];
     const PACKAGES_GLOBAL = [
       { key:'starter_g',  credits:50,  amount:2.99,  label:'Starter',  badge:null },

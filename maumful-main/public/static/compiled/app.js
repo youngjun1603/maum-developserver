@@ -4921,9 +4921,9 @@ ${tx.amount} credits reclaimed and \u20A9${Number(tx.pg_amount).toLocaleString("
       { key: "otter_light", credits: 0, amount: 7900, label: t("\uB9C8\uC74C\uC218\uB2EC \uB77C\uC774\uD2B8", "Maumotter Light"), desc: t("\uB9E4\uB2EC 30\uD68C \xB7 \uC544\uC774 \uC18D\uB9C8\uC74C \uC77D\uAE30", "30 reads/mo"), badge: null },
       { key: "otter_pro", credits: 0, amount: 14900, label: t("\uB9C8\uC74C\uC218\uB2EC \uD504\uB85C", "Maumotter Pro"), desc: t("\uB9E4\uB2EC 100\uD68C", "100 reads/mo"), badge: null },
       { key: "otter_pack10", credits: 0, amount: 6900, label: t("\uB9C8\uC74C\uC218\uB2EC 10\uD68C\uD329", "Maumotter \xD710"), desc: t("10\uD68C \xB7 60\uC77C \uC774\uB0B4", "10 reads \xB7 within 60d"), badge: null },
-      { key: "gyeot_light", credits: 0, amount: 7900, label: t("\uB9C8\uC74C\uACC1 \uB77C\uC774\uD2B8", "Maumgyeot Light"), desc: t("\uB9E4\uB2EC 30\uD68C \xB7 \uBC18\uB824\uB3D9\uBB3C \uB9C8\uC74C \uC77D\uAE30", "30 reads/mo"), badge: null },
-      { key: "gyeot_pro", credits: 0, amount: 14900, label: t("\uB9C8\uC74C\uACC1 \uD504\uB85C", "Maumgyeot Pro"), desc: t("\uB9E4\uB2EC 100\uD68C", "100 reads/mo"), badge: null },
-      { key: "gyeot_pack10", credits: 0, amount: 6900, label: t("\uB9C8\uC74C\uACC1 10\uD68C\uD329", "Maumgyeot \xD710"), desc: t("10\uD68C \xB7 60\uC77C \uC774\uB0B4", "10 reads \xB7 within 60d"), badge: null }
+      { key: "gyeot_light", credits: 0, amount: 4900, label: t("\uB9C8\uC74C\uACC1 \uB77C\uC774\uD2B8", "Maumgyeot Light"), desc: t("\uB9E4\uB2EC 50\uD68C \xB7 \uBC18\uB824\uB3D9\uBB3C \uB9C8\uC74C \uC77D\uAE30", "50 reads/mo"), badge: null },
+      { key: "gyeot_pro", credits: 0, amount: 9900, label: t("\uB9C8\uC74C\uACC1 \uD504\uB85C", "Maumgyeot Pro"), desc: t("\uB9E4\uB2EC 150\uD68C", "150 reads/mo"), badge: null },
+      { key: "gyeot_pack10", credits: 0, amount: 4900, label: t("\uB9C8\uC74C\uACC1 15\uD68C\uD329", "Maumgyeot \xD715"), desc: t("15\uD68C \xB7 60\uC77C \uC774\uB0B4", "15 reads \xB7 within 60d"), badge: null }
     ];
     const PACKAGES_GLOBAL = [
       { key: "starter_g", credits: 50, amount: 2.99, label: "Starter", badge: null },
