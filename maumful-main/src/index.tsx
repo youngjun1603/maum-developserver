@@ -3138,9 +3138,9 @@ const PACKAGES: Record<string, { credits: number; amount: number; label: string;
   otter_light:  { credits: 0, amount: 7900,  label: '마음수달 라이트(월 30세션)', product: true, service: 'otter', grantType: 'sub_light' },
   otter_pro:    { credits: 0, amount: 14900, label: '마음수달 프로(월 100세션)',  product: true, service: 'otter', grantType: 'sub_pro' },
   otter_pack10: { credits: 0, amount: 6900,  label: '마음수달 10회팩',            product: true, service: 'otter', grantType: 'pack10' },
-  gyeot_light:  { credits: 0, amount: 7900,  label: '마음곁 라이트(월 30세션)',   product: true, service: 'gyeot', grantType: 'sub_light' },
-  gyeot_pro:    { credits: 0, amount: 14900, label: '마음곁 프로(월 100세션)',    product: true, service: 'gyeot', grantType: 'sub_pro' },
-  gyeot_pack10: { credits: 0, amount: 6900,  label: '마음곁 10회팩',              product: true, service: 'gyeot', grantType: 'pack10' },
+  gyeot_light:  { credits: 0, amount: 4900,  label: '마음곁 라이트(월 50회)',    product: true, service: 'gyeot', grantType: 'sub_light' },
+  gyeot_pro:    { credits: 0, amount: 9900,  label: '마음곁 프로(월 150회)',     product: true, service: 'gyeot', grantType: 'sub_pro' },
+  gyeot_pack10: { credits: 0, amount: 4900,  label: '마음곁 15회팩',             product: true, service: 'gyeot', grantType: 'pack10' },
   // ── phyweb 상담사 구독(마음풀에서 판매 → phyweb에 grant/쿠폰코드 전달). 같은 사업자(마음서비스)라 결제창 공유 ──
   //    grantType = phyweb planType(TOSS_PLAN_CONFIG 키와 동일). 월간=1개월 이용권(비자동갱신), 연간=1년.
   phyweb_solo:         { credits: 0, amount: 19900,  label: 'phyweb 상담사 Solo(1개월)',         product: true, service: 'phyweb', grantType: 'solo' },
