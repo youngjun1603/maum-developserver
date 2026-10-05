@@ -29,3 +29,23 @@ Thumbs.db
 
 # 개인정보 포함 자료 — git 업로드 금지 (정부지원사업 신청서 등 PII)
 _assets/소상공인/
+.gstack/
+
+# 제휴·협의·계약 문서 — 로컬 전용, git 커밋 금지 (사업 문서 로컬 보관 원칙)
+contracts_local/
+
+# ── 로컬 정리(2026-10-05) — 루트 산재 로컬자료 모음·git 미추적 ──
+_local/
+.claude/
+
+# 설계·지시 로컬 사본 (정본=_docs/ · 메모리가 경로 참조하므로 제자리 유지)
+시스템 설계서/
+시스템 수정 보완 지시서/
+
+# 로컬 자산 (미추적·용량/기획 — 커밋 안 함)
+_assets/files.zip
+_assets/*.mp4
+_assets/naver-icons/
+_assets/유료화_검토/
+_assets/제휴_ppmall/
+_assets/마음풀_제휴소개.html
