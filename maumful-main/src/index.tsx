@@ -3865,6 +3865,27 @@ async function sendVerifyEmail(env: Bindings, to: string, nickname: string, toke
   )
 }
 
+// 파트너 정산 포털 — 이메일 인증 메일 (고객 verify와 분리: 전용 라우트·KV 토큰)
+async function sendPartnerVerifyEmail(env: Bindings, to: string, token: string): Promise<void> {
+  const url = `${env.SERVICE_URL || 'http://localhost:3000'}/api/partner-portal/verify/${token}`
+  await sendEmail(env, to, '마음풀 제휴 정산 포털 — 이메일 인증',
+    `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
+      <h2 style="color:#2D6A4F">🌿 마음풀 제휴 정산 포털</h2>
+      <p>안녕하세요. 제휴 정산 포털 이메일 인증 안내입니다.</p>
+      <p>아래 버튼을 눌러 이메일 인증을 완료해 주세요. <em>(72시간 이내)</em></p>
+      <a href="${url}" style="display:inline-block;margin:16px 0;padding:12px 28px;background:#2D6A4F;color:#fff;border-radius:8px;text-decoration:none;font-weight:bold">이메일 인증하기</a>
+      <p style="color:#999;font-size:12px">버튼이 작동하지 않으면: ${url}</p>
+    </div>`
+  )
+}
+
+// 파트너 verify 토큰 발급(KV 저장) + 메일 발송. KV에 account id를 담아 격리(auth_tokens 미사용).
+async function issuePartnerVerify(env: Bindings, accountId: number, email: string): Promise<void> {
+  const token = randomToken()
+  await env.KV.put(`pp_verify:${token}`, String(accountId), { expirationTtl: 72 * 3600 })
+  await sendPartnerVerifyEmail(env, email, token)
+}
+
 async function sendPasswordResetEmail(env: Bindings, to: string, nickname: string, token: string): Promise<void> {
   const url  = `${env.SERVICE_URL || 'http://localhost:3000'}/?reset_token=${token}`
   const name = nickname || to.split('@')[0]
@@ -6601,6 +6622,26 @@ app.post('/api/partner-portal/login', async (c) => {
     .bind(acc.partner_code).first() as { code: string; name: string; is_active: number } | null
   if (!partner || !partner.is_active) return c.json({ success: false, error: '연결된 제휴사가 비활성 상태입니다. 운영자에게 문의해 주세요.' }, 403)
 
+  // ── 이메일 인증 게이트 + 임시비번 강제변경 플래그 ──
+  //  방어적(fail-open): is_email_verified/must_change_pw 컬럼이 아직 없거나 조회 실패 시
+  //  기존 로그인 흐름을 그대로 유지(잠금 방지). 컬럼이 존재할 때만 게이트가 활성화된다.
+  let emailVerified = true, mustChange = false
+  try {
+    const flags = await DB.prepare('SELECT is_email_verified, must_change_pw FROM partner_accounts WHERE id=?')
+      .bind(acc.id).first() as { is_email_verified: number; must_change_pw: number } | null
+    if (flags) {
+      if (Number(flags.is_email_verified) === 0) emailVerified = false
+      if (Number(flags.must_change_pw) === 1) mustChange = true
+    }
+  } catch { emailVerified = true; mustChange = false } // 스키마 드리프트 → 기존 흐름 유지
+
+  if (!emailVerified) {
+    // 미인증 → 토큰 미발급. 프론트는 requiresVerification를 받아 '인증 메일 재발송' 안내.
+    await KV.put(rlKey, String(tries + 1), { expirationTtl: 900 }) // 무차별 대입 방지 유지
+    return c.json({ success: false, code: 'EMAIL_UNVERIFIED', requiresVerification: true, email: emailNorm,
+      error: '이메일 인증이 필요합니다. 아래에서 인증 메일을 받아 인증을 완료해 주세요.' }, 403)
+  }
+
   await KV.delete(rlKey)
   await DB.prepare("UPDATE partner_accounts SET last_login_at=datetime('now') WHERE id=?").bind(acc.id).run()
 
@@ -6608,7 +6649,57 @@ app.post('/api/partner-portal/login', async (c) => {
   const secret = await getJwtSecret(KV)
   // sub(숫자) 없음 → 고객 API에서 거부. typ=partner + pc(코드) + aid(계정)만.
   const token = await signJwt({ typ: 'partner', pc: acc.partner_code, aid: acc.id, iat: now, exp: now + 8 * 3600 }, secret)
-  return c.json({ success: true, data: { token, partner: { code: partner.code, name: partner.name } } })
+  return c.json({ success: true, data: { token, partner: { code: partner.code, name: partner.name }, mustChangePw: mustChange } })
+})
+
+// 파트너 포털 — 이메일 인증 메일 재발송 (존재 노출 안 함 · IP 1시간 3회)
+app.post('/api/partner-portal/resend-verify', async (c) => {
+  const { DB, KV } = c.env
+  const { email } = await c.req.json().catch(() => ({})) as { email?: string }
+  if (!email) return c.json({ success: false, error: '이메일을 입력해 주세요.' }, 400)
+  const ip = c.req.header('cf-connecting-ip') || 'unknown'
+  const rl = await checkRateLimit(KV, `pp_resend:${ip}`, 3, 3600)
+  if (!rl.allowed) return c.json({ success: false, error: '잠시 후 다시 시도해 주세요.' }, 429)
+  const emailNorm = String(email).trim().toLowerCase()
+  const acc = await DB.prepare('SELECT id FROM partner_accounts WHERE email=?').bind(emailNorm).first() as { id: number } | null
+  if (acc) {
+    let already = false
+    try {
+      const f = await DB.prepare('SELECT is_email_verified FROM partner_accounts WHERE id=?').bind(acc.id).first() as { is_email_verified: number } | null
+      if (f && Number(f.is_email_verified) === 1) already = true
+    } catch { /* 컬럼 부재 → 발송 시도 */ }
+    if (!already) { try { await issuePartnerVerify(c.env, acc.id, emailNorm) } catch {} }
+  }
+  // 보안: 계정 존재/인증여부와 무관하게 동일 응답
+  return c.json({ success: true, message: '인증 메일을 발송했습니다. 메일함(스팸함 포함)을 확인해 주세요.' })
+})
+
+// 파트너 포털 — 이메일 인증 처리 (HTML 결과 페이지 · 멱등/프리페치 안전: 토큰 삭제 안 함, TTL로 만료)
+app.get('/api/partner-portal/verify/:token', async (c) => {
+  const { DB, KV } = c.env
+  const accIdStr = await KV.get(`pp_verify:${c.req.param('token')}`)
+  if (!accIdStr) return c.html(verifyResultHtml(false, '인증 링크 오류', '유효하지 않거나 만료된 인증 링크예요(발송 후 72시간). 정산 포털 로그인 화면에서 인증 메일을 다시 받아 주세요.'))
+  try { await DB.prepare('UPDATE partner_accounts SET is_email_verified=1 WHERE id=?').bind(parseInt(accIdStr, 10)).run() } catch { /* 컬럼 부재 → 로그인 fail-open으로 통과하므로 완료 안내 */ }
+  return c.html(verifyResultHtml(true, '이메일 인증 완료', '이메일 인증이 완료됐어요. 이제 제휴 정산 포털에 로그인하실 수 있어요.'))
+})
+
+// 파트너 포털 — 본인 비밀번호 변경 (로그인 필요)
+app.post('/api/partner-portal/change-password', async (c) => {
+  const p = await requirePartner(c)
+  if (!p) return c.json({ success: false, error: '로그인이 필요합니다.' }, 401)
+  const { DB } = c.env
+  const { currentPassword, newPassword } = await c.req.json().catch(() => ({})) as { currentPassword?: string; newPassword?: string }
+  if (!currentPassword || !newPassword) return c.json({ success: false, error: '현재 비밀번호와 새 비밀번호를 입력해 주세요.' }, 400)
+  if (String(newPassword).length < 8) return c.json({ success: false, error: '새 비밀번호는 8자 이상이어야 합니다.' }, 400)
+  const acc = await DB.prepare('SELECT password_hash FROM partner_accounts WHERE id=?').bind(p.accountId).first() as { password_hash: string } | null
+  if (!acc) return c.json({ success: false, error: '계정을 찾을 수 없습니다.' }, 404)
+  const okPw = await verifyPassword(String(currentPassword), acc.password_hash)
+  if (!okPw) return c.json({ success: false, error: '현재 비밀번호가 올바르지 않습니다.' }, 401)
+  const hash = await hashPassword(String(newPassword))
+  // must_change_pw 해제(컬럼 부재여도 password_hash는 반드시 갱신되도록 분리 시도)
+  try { await DB.prepare('UPDATE partner_accounts SET password_hash=?, must_change_pw=0 WHERE id=?').bind(hash, p.accountId).run() }
+  catch { await DB.prepare('UPDATE partner_accounts SET password_hash=? WHERE id=?').bind(hash, p.accountId).run() }
+  return c.json({ success: true })
 })
 
 // 파트너 포털 내 정보(헤더용)
@@ -6669,10 +6760,13 @@ app.post('/api/admin/partner-accounts', async (c) => {
   const dup = await DB.prepare('SELECT id FROM partner_accounts WHERE email=?').bind(emailNorm).first()
   if (dup) return c.json({ success: false, error: '이미 등록된 이메일입니다.' }, 409)
   const hash = await hashPassword(String(password))
+  // 운영자 발급 비번 = 임시 → 첫 로그인 시 변경 강제(must_change_pw=1). 인증메일 자동발송.
   const r = await DB.prepare(
-    'INSERT INTO partner_accounts (partner_code, email, password_hash) VALUES (?, ?, ?)'
+    'INSERT INTO partner_accounts (partner_code, email, password_hash, must_change_pw) VALUES (?, ?, ?, 1)'
   ).bind(codeStr, emailNorm, hash).run()
-  return c.json({ success: true, data: { id: r.meta.last_row_id, email: emailNorm } }, 201)
+  let emailSent = false
+  try { await issuePartnerVerify(c.env, Number(r.meta.last_row_id), emailNorm); emailSent = true } catch {}
+  return c.json({ success: true, data: { id: r.meta.last_row_id, email: emailNorm, emailSent } }, 201)
 })
 
 app.patch('/api/admin/partner-accounts/:id', async (c) => {
@@ -6681,14 +6775,19 @@ app.patch('/api/admin/partner-accounts/:id', async (c) => {
   if (denied) return c.json({ success: false, error: denied }, denied === 'Forbidden' ? 403 : 401)
   const id = parseInt(c.req.param('id'), 10)
   if (!id) return c.json({ success: false, error: '잘못된 계정 ID' }, 400)
-  const body = await c.req.json().catch(() => ({})) as { is_active?: number | boolean; password?: string }
+  const body = await c.req.json().catch(() => ({})) as { is_active?: number | boolean; password?: string; is_email_verified?: number | boolean; must_change_pw?: number | boolean }
   const sets: string[] = []
   const vals: unknown[] = []
   if (body.is_active !== undefined) { sets.push('is_active=?'); vals.push(body.is_active ? 1 : 0) }
   if (body.password !== undefined) {
     if (String(body.password).length < 8) return c.json({ success: false, error: '비밀번호는 8자 이상이어야 합니다.' }, 400)
+    // 운영자가 비번 리셋 시 임시비번 간주 → 첫 로그인 변경 강제
     sets.push('password_hash=?'); vals.push(await hashPassword(String(body.password)))
+    if (body.must_change_pw === undefined) { sets.push('must_change_pw=?'); vals.push(1) }
   }
+  // 이메일 발송 장애 등 대비 운영자 수동 인증/강제변경 escape hatch
+  if (body.is_email_verified !== undefined) { sets.push('is_email_verified=?'); vals.push(body.is_email_verified ? 1 : 0) }
+  if (body.must_change_pw !== undefined) { sets.push('must_change_pw=?'); vals.push(body.must_change_pw ? 1 : 0) }
   if (sets.length === 0) return c.json({ success: false, error: '변경 사항 없음' }, 400)
   vals.push(id)
   await DB.prepare(`UPDATE partner_accounts SET ${sets.join(',')} WHERE id=?`).bind(...vals).run()

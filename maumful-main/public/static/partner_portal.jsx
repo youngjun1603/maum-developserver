@@ -2,6 +2,7 @@
 // partner_portal.jsx — 제휴사 담당자 정산 포털 (독립·경량·격리)
 // /partner 경로 전용. 코어(app.js) 미로드. 전역 React/ReactDOM/Tailwind.
 // 자기 정산만 조회(토큰 typ=partner). 다른 파트너/전체 매출 접근 불가.
+// 인증: 이메일 인증(전원) + 운영자 발급 임시비번 첫 로그인 강제변경 + 셀프 비번변경.
 // ============================================================
 const { useState, useEffect, useCallback } = React;
 
@@ -27,20 +28,39 @@ function Login({ onDone }) {
   const [pw, setPw] = useState('');
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
+  const [needVerify, setNeedVerify] = useState(false); // 이메일 미인증 상태
+  const [resendMsg, setResendMsg] = useState('');
+  const [resendBusy, setResendBusy] = useState(false);
+
   const submit = async (e) => {
     e && e.preventDefault();
     if (!email || !pw) { setMsg('이메일과 비밀번호를 입력해 주세요.'); return; }
-    setBusy(true); setMsg('');
+    setBusy(true); setMsg(''); setResendMsg('');
     try {
       const d = await fetch('/api/partner-portal/login', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password: pw }),
       }).then(r => r.json());
-      if (d.success) { setTok(d.data.token); onDone(d.data.partner); }
-      else setMsg(d.error || '로그인에 실패했습니다.');
+      if (d.success) { setNeedVerify(false); setTok(d.data.token); onDone(d.data.partner, !!(d.data && d.data.mustChangePw)); }
+      else if (d.requiresVerification || d.code === 'EMAIL_UNVERIFIED') { setNeedVerify(true); setMsg(d.error || '이메일 인증이 필요합니다.'); }
+      else { setNeedVerify(false); setMsg(d.error || '로그인에 실패했습니다.'); }
     } catch { setMsg('네트워크 오류가 발생했습니다.'); }
     setBusy(false);
   };
+
+  const resend = async () => {
+    if (!email) { setResendMsg('이메일을 먼저 입력해 주세요.'); return; }
+    setResendBusy(true); setResendMsg('');
+    try {
+      const d = await fetch('/api/partner-portal/resend-verify', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      }).then(r => r.json());
+      setResendMsg(d.message || d.error || '요청을 처리했습니다.');
+    } catch { setResendMsg('네트워크 오류가 발생했습니다.'); }
+    setResendBusy(false);
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center px-6" style={{ background: '#F3F6F2', fontFamily: F }}>
       <form onSubmit={submit} className="w-full max-w-sm bg-white rounded-2xl shadow-sm border border-gray-100 p-7">
@@ -59,13 +79,80 @@ function Login({ onDone }) {
           className="w-full py-2.5 rounded-lg font-bold text-white text-sm" style={{ background: BRAND, opacity: busy ? 0.6 : 1 }}>
           {busy ? '확인 중…' : '로그인'}
         </button>
+
+        {needVerify && (
+          <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg px-3 py-3">
+            <div className="text-xs text-amber-800 mb-2">이메일 인증을 완료해야 로그인할 수 있어요. 받으신 인증 메일의 링크를 눌러 주세요.</div>
+            <button type="button" onClick={resend} disabled={resendBusy}
+              className="w-full py-2 rounded-lg font-bold text-amber-800 text-xs border border-amber-300 bg-white" style={{ opacity: resendBusy ? 0.6 : 1 }}>
+              {resendBusy ? '발송 중…' : '인증 메일 재발송'}
+            </button>
+            {resendMsg && <div className="text-[11px] text-amber-700 mt-2">{resendMsg}</div>}
+          </div>
+        )}
+
         <div className="text-xs text-gray-500 mt-4 text-center">계정은 마음풀 운영자가 발급합니다. 문의: 담당 운영자</div>
       </form>
     </div>
   );
 }
 
-function Dashboard({ partner, onLogout }) {
+// 비밀번호 변경 — forced(첫 로그인 강제, 취소 불가) / 일반(대시보드에서 호출, 취소 가능)
+function ChangePassword({ forced, onSuccess, onCancel }) {
+  const [cur, setCur] = useState('');
+  const [nw, setNw] = useState('');
+  const [nw2, setNw2] = useState('');
+  const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e) => {
+    e && e.preventDefault();
+    if (!cur || !nw) { setMsg('현재 비밀번호와 새 비밀번호를 입력해 주세요.'); return; }
+    if (nw.length < 8) { setMsg('새 비밀번호는 8자 이상이어야 합니다.'); return; }
+    if (nw !== nw2) { setMsg('새 비밀번호가 일치하지 않습니다.'); return; }
+    setBusy(true); setMsg('');
+    try {
+      const d = await api('/api/partner-portal/change-password', {
+        method: 'POST', body: JSON.stringify({ currentPassword: cur, newPassword: nw }),
+      });
+      if (d.success) onSuccess();
+      else setMsg(d.error || '변경에 실패했습니다.');
+    } catch { setMsg('네트워크 오류가 발생했습니다.'); }
+    setBusy(false);
+  };
+
+  const Field = (label, val, set, ac) => (
+    <>
+      <label className="text-xs text-gray-500">{label}</label>
+      <input value={val} onChange={e => set(e.target.value)} type="password" autoComplete={ac}
+        className="w-full px-3 py-2 mt-1 mb-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-400" />
+    </>
+  );
+
+  return (
+    <form onSubmit={submit} className="w-full max-w-sm bg-white rounded-2xl shadow-sm border border-gray-100 p-7">
+      <div className="font-extrabold text-base mb-1" style={{ color: BRAND }}>비밀번호 변경</div>
+      <div className="text-xs text-gray-400 mb-4">
+        {forced ? '운영자가 발급한 임시 비밀번호입니다. 보안을 위해 새 비밀번호로 변경해 주세요.' : '현재 비밀번호 확인 후 새 비밀번호로 변경합니다.'}
+      </div>
+      {msg && <div className="text-xs bg-red-50 text-red-600 rounded-lg px-3 py-2 mb-3">{msg}</div>}
+      {Field('현재 비밀번호', cur, setCur, 'current-password')}
+      {Field('새 비밀번호 (8자 이상)', nw, setNw, 'new-password')}
+      {Field('새 비밀번호 확인', nw2, setNw2, 'new-password')}
+      <button type="submit" disabled={busy}
+        className="w-full py-2.5 rounded-lg font-bold text-white text-sm mt-1" style={{ background: BRAND, opacity: busy ? 0.6 : 1 }}>
+        {busy ? '변경 중…' : '비밀번호 변경'}
+      </button>
+      {!forced && (
+        <button type="button" onClick={onCancel} className="w-full py-2 rounded-lg font-bold text-gray-500 text-xs mt-2 border border-gray-200">
+          취소
+        </button>
+      )}
+    </form>
+  );
+}
+
+function Dashboard({ partner, onLogout, onChangePw }) {
   const [from, setFrom] = useState(() => isoD(new Date(Date.now() - 30 * 86400000)));
   const [to, setTo] = useState(() => isoD(new Date()));
   const [data, setData] = useState(null);
@@ -108,7 +195,10 @@ function Dashboard({ partner, onLogout }) {
           <span className="font-extrabold text-sm" style={{ color: BRAND }}>🌿 마음풀 제휴 정산</span>
           <span className="text-xs text-gray-400 ml-2">{partner.name} ({partner.code})</span>
         </div>
-        <button onClick={onLogout} className="text-xs text-gray-400 hover:text-gray-600 underline">로그아웃</button>
+        <div className="flex items-center gap-3">
+          <button onClick={onChangePw} className="text-xs text-gray-400 hover:text-gray-600 underline">비밀번호 변경</button>
+          <button onClick={onLogout} className="text-xs text-gray-400 hover:text-gray-600 underline">로그아웃</button>
+        </div>
       </div>
 
       <div className="max-w-3xl mx-auto px-5 py-6">
@@ -188,6 +278,8 @@ function Dashboard({ partner, onLogout }) {
 function PartnerPortal() {
   const [partner, setPartner] = useState(null);
   const [checking, setChecking] = useState(true);
+  const [mustChange, setMustChange] = useState(false); // 첫 로그인 강제변경
+  const [showChangePw, setShowChangePw] = useState(false); // 대시보드 셀프 변경
 
   useEffect(() => {
     (async () => {
@@ -201,11 +293,31 @@ function PartnerPortal() {
     })();
   }, []);
 
-  const logout = () => { setTok(''); setPartner(null); };
+  const logout = () => { setTok(''); setPartner(null); setMustChange(false); setShowChangePw(false); };
+  const onLoginDone = (p, must) => { setPartner(p); setMustChange(!!must); };
 
   if (checking) return React.createElement('div', { className: 'min-h-screen flex items-center justify-center', style: { background: '#F3F6F2', color: '#8B948D', fontFamily: F } }, '불러오는 중…');
-  if (!partner) return <Login onDone={setPartner} />;
-  return <Dashboard partner={partner} onLogout={logout} />;
+  if (!partner) return <Login onDone={onLoginDone} />;
+
+  // 첫 로그인 강제 변경 — 완료 전에는 대시보드 차단
+  if (mustChange) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6" style={{ background: '#F3F6F2', fontFamily: F }}>
+        <ChangePassword forced onSuccess={() => setMustChange(false)} />
+      </div>
+    );
+  }
+
+  // 대시보드 내 셀프 변경(모달형)
+  if (showChangePw) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6" style={{ background: '#F3F6F2', fontFamily: F }}>
+        <ChangePassword onSuccess={() => setShowChangePw(false)} onCancel={() => setShowChangePw(false)} />
+      </div>
+    );
+  }
+
+  return <Dashboard partner={partner} onLogout={logout} onChangePw={() => setShowChangePw(true)} />;
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(<PartnerPortal />);
