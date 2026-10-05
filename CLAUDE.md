@@ -60,6 +60,12 @@ gh auth setup-git                   # gh를 git 자격증명 헬퍼로(GCM 캐�
 - 워커 서비스(`wrangler deploy`)는 반드시 **포그라운드** 실행(백그라운드 시 인증 실패). 배포 전 TypeScript 에러 확인.
 - 마음 시리즈(수달·곁)는 GitHub 웹UI → Cloudflare 자동 배포 (각 폴더 CLAUDE.md).
 
+### ⚠️ 마음풀·커플은 `push = 자동배포` — DB 마이그레이션은 **반드시 push 이전에** (메모리 `feedback_deploy_migration_order`)
+- `main` 브랜치에 push하면 **GitHub Actions(`.github/workflows/deploy-production.yml`)가 maumful→maumcouple을 자동 `wrangler deploy`** 한다(BATCH_06 R-33). **수동 `npm run deploy`는 자동배포와 중복** — 작업 전에 "이 서비스가 자동배포인지" 먼저 확인할 것.
+- **GitHub Actions는 `wrangler deploy`만 하고 D1 마이그레이션은 돌리지 않는다.** → 스키마 변경이 있는 작업의 **올바른 순서는 ① 원격 D1 마이그 적용(`wrangler d1 execute --remote --file`) → ② 그 다음 git push(=자동배포).** 순서를 뒤집으면 **코드가 스키마보다 먼저 라이브**되어, 신규 컬럼을 읽는 코드가 깨질 수 있다.
+- **실제 사고(2026-10-05)**: 파트너 포털 인증 강화에서 "push 후 수동배포" 순서로 계획 → push가 곧장 자동배포돼 `is_email_verified` 컬럼이 없는 상태로 코드가 라이브됨. fail-open 방어 설계 덕에 잠금 사고는 없었으나 **순서가 틀렸다**. 원인 = 작업 전 "마음풀=자동배포" 사실(메모리/워크플로에 존재)을 확인하지 않음.
+- **메타 규칙**: 배포·순서가 걸린 작업은 **착수 전에 관련 메모리·CLAUDE.md의 배포 규칙을 먼저 읽고** 순서를 정한다(`feedback_do_it_directly`/`feedback_review_before_act`와 함께).
+
 ## 개발 완료 후 검증 (공통)
 기능 개발 완료 시 **요청 없어도 즉시** 에러·버그 검증(빌드 성공 후, 배포 전/직후). 상세 체크리스트는 각 서비스 CLAUDE.md. (메모리 `feedback_verify_after_dev`)
 
