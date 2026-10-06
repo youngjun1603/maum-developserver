@@ -315,7 +315,7 @@ app.get('/api/config/region', (c) => {
     currency: isKorea ? 'KRW' : 'USD',
     availableTests: isKorea ? koreaTests : globalTests,
     crisisLine: isKorea
-      ? { label: '자살예방상담전화', number: '1393' }
+      ? { label: '자살예방상담전화', number: '109' }
       : { label: 'Crisis Lifeline', number: '988' },
     // R-14: creditPrices 제거 — 소비처 0(프론트 grep 0건), 실제 가격과 다른 죽은 값이라 혼선만 유발.
     //   가격은 결제 라우트의 PACKAGES(L3119~)가 단일 소스.

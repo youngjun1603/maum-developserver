@@ -692,7 +692,7 @@ function NearbyMapModal({onClose, affiliatedCounselors=[]}){
           <div style={{marginTop:18,padding:'12px 14px',background:'#FEF2F2',borderRadius:10,border:'1px solid #FECACA'}}>
             <div style={{fontSize:12,fontWeight:700,color:'#991B1B',marginBottom:5}}>🆘 즉각 도움이 필요하다면</div>
             <div style={{fontSize:12,color:'#7F1D1D',lineHeight:1.8}}>
-              자살예방상담전화 <strong>☎ 1393</strong> (24시간)<br/>
+              자살예방상담전화 <strong>☎ 109</strong> (24시간)<br/>
               정신건강위기상담전화 <strong>☎ 1577-0199</strong> (24시간)<br/>
               생명의전화 <strong>☎ 1588-9191</strong>
             </div>
@@ -818,7 +818,7 @@ function _CounselingPageBooking({setView,isLoggedIn,currentUser}){
         </div>
         <p style={{fontSize:12,color:'#9E9E9E',marginBottom:20,fontFamily:"'Noto Sans KR',sans-serif"}}>
           전문 상담이 필요하시면 아래를 이용해 주세요<br/>
-          <strong style={{color:'#E53935'}}>자살예방상담전화 ☎ 1393</strong> (24시간 무료)
+          <strong style={{color:'#E53935'}}>자살예방상담전화 ☎ 109</strong> (24시간 무료)
         </p>
         <button
           onClick={()=>setShowDemoNotice(false)}
