@@ -1146,6 +1146,7 @@ function CounselingPage({setView, lang}){
           </button>
           <h1 style={{...s, fontSize:20, fontWeight:700, color:'#1A1A1A', marginBottom:3}}>🏥 {tl('인근 상담 기관 찾기','Nearby Counseling Centers')}</h1>
           <p style={{...s, fontSize:13, color:'#6B7280'}}>{tl('내 위치 기준 3km 이내 심리상담센터·정신건강의학과·복지센터','Counseling centers · Psychiatry · Welfare centers within 3km of your location')}</p>
+          <p style={{...s, fontSize:11, color:'#9AA3A0', marginTop:5, lineHeight:1.5}}>{tl('※ 공개된 지도 정보를 그대로 안내하는 정보 제공 서비스이며, 특정 기관을 추천·알선하지 않습니다.','※ A neutral information service that shows public map data; we do not recommend or refer any specific facility.')}</p>
         </div>
 
         {/* 지도 */}
