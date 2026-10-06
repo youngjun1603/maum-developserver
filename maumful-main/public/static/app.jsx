@@ -357,6 +357,58 @@ function NaverLoginBtn({ onLogin, onError }) {
 // ============================================================
 // 메인 컴포넌트
 // ============================================================
+// 별명 변경 카드 (마이페이지 설정 · SSO 회원 포함 전체 공통) — PATCH /api/user/me 재사용
+function NicknameCard({ initialNick, onSaved, t }) {
+  const [nick, setNick] = React.useState(initialNick || '');
+  const [busy, setBusy] = React.useState(false);
+  const [msg, setMsg] = React.useState('');
+  const save = async () => {
+    const nn = (nick || '').trim();
+    if (nn.length < 1 || nn.length > 20) { setMsg(t('별명은 1~20자로 입력해 주세요.', 'Nickname must be 1–20 characters.')); return; }
+    setBusy(true); setMsg('');
+    try {
+      const r = await api.updateMe({ nickname: nn });
+      if (r && r.success) { onSaved(nn); setMsg(t('별명이 변경되었어요.', 'Nickname updated.')); }
+      else setMsg((r && r.error) || t('변경에 실패했어요.', 'Update failed.'));
+    } catch { setMsg(t('네트워크 오류가 발생했어요.', 'Network error.')); }
+    setBusy(false);
+  };
+  return (
+    <div className="bg-white rounded-2xl p-5 border border-gray-100">
+      <h4 className="font-bold text-gray-700 mb-1">{t('별명', 'Nickname')}</h4>
+      <p className="text-xs text-gray-400 mb-3">{t('AI 상담에서 이 별명으로 불러드려요. 언제든 바꿀 수 있어요.', 'This is how AI addresses you. Change anytime.')}</p>
+      <div className="flex gap-2">
+        <input value={nick} onChange={e => setNick(e.target.value)} maxLength={20} aria-label={t('별명', 'Nickname')}
+          className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-green-400"
+          placeholder={t('별명 (최대 20자)', 'Nickname (max 20)')} />
+        <button onClick={save} disabled={busy}
+          className="px-4 py-2 rounded-lg font-bold text-white text-sm whitespace-nowrap" style={{ background: '#2D6A4F', opacity: busy ? 0.6 : 1 }}>
+          {busy ? t('저장 중…', 'Saving…') : t('저장', 'Save')}
+        </button>
+      </div>
+      {msg && <div className="text-xs mt-2 text-gray-500">{msg}</div>}
+    </div>
+  );
+}
+
+// SSO(제휴) 진입 후 별명 설정 1회 안내 배너 — partner_entry가 localStorage 플래그를 심음
+function NicknamePromptBanner({ t, onGo }) {
+  const [show, setShow] = React.useState(() => { try { return localStorage.getItem('maumful_set_nickname') === '1'; } catch { return false; } });
+  if (!show) return null;
+  const close = () => { try { localStorage.removeItem('maumful_set_nickname'); } catch {} setShow(false); };
+  return (
+    <div className="max-w-2xl mx-auto px-4 pt-3">
+      <div className="flex items-center justify-between gap-3 rounded-xl px-4 py-3 bg-green-50 border border-green-200">
+        <span className="text-sm text-green-800">{t('AI 상담에서 불릴 별명을 설정해 보세요.', 'Set a nickname for your AI sessions.')}</span>
+        <div className="flex items-center gap-2 whitespace-nowrap">
+          <button onClick={() => { close(); onGo(); }} className="text-xs font-bold text-white px-3 py-1.5 rounded-lg" style={{ background: '#2D6A4F' }}>{t('별명 설정', 'Set nickname')}</button>
+          <button onClick={close} className="text-xs text-green-700 underline">{t('나중에', 'Later')}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PsychologicalTestSystem() {
 
   // ── 인증 & 사용자 상태 ──────────────────────────────────
@@ -4215,6 +4267,8 @@ function PsychologicalTestSystem() {
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-green-50">
+        {/* SSO 진입 후 별명 설정 1회 안내 */}
+        <NicknamePromptBanner t={t} onGo={() => { setView('myPage'); setMyPageTab('settings'); }} />
         {/* 헤더 */}
         <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
           <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -5876,6 +5930,13 @@ function PsychologicalTestSystem() {
                 ))}
               </div>
             </div>
+
+            {/* 🏷️ 별명 변경 (SSO 회원 포함 전체 공통) */}
+            <NicknameCard
+              initialNick={currentUser?.nickname || ''}
+              onSaved={(nn) => { setCurrentUser(p => ({ ...(p || {}), nickname: nn })); try { tokenStore.setUser({ ...(currentUser || {}), nickname: nn }); } catch {} }}
+              t={t}
+            />
 
             {/* 🧠 AI 상담 해석 방식 */}
             <div className="bg-white rounded-2xl p-5 border border-gray-100">

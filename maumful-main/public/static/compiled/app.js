@@ -498,6 +498,71 @@ function NaverLoginBtn({ onLogin, onError }) {
     "\uB124\uC774\uBC84\uB85C \uACC4\uC18D\uD558\uAE30"
   );
 }
+function NicknameCard({ initialNick, onSaved, t }) {
+  const [nick, setNick] = React.useState(initialNick || "");
+  const [busy, setBusy] = React.useState(false);
+  const [msg, setMsg] = React.useState("");
+  const save = async () => {
+    const nn = (nick || "").trim();
+    if (nn.length < 1 || nn.length > 20) {
+      setMsg(t("\uBCC4\uBA85\uC740 1~20\uC790\uB85C \uC785\uB825\uD574 \uC8FC\uC138\uC694.", "Nickname must be 1\u201320 characters."));
+      return;
+    }
+    setBusy(true);
+    setMsg("");
+    try {
+      const r = await api.updateMe({ nickname: nn });
+      if (r && r.success) {
+        onSaved(nn);
+        setMsg(t("\uBCC4\uBA85\uC774 \uBCC0\uACBD\uB418\uC5C8\uC5B4\uC694.", "Nickname updated."));
+      } else setMsg(r && r.error || t("\uBCC0\uACBD\uC5D0 \uC2E4\uD328\uD588\uC5B4\uC694.", "Update failed."));
+    } catch {
+      setMsg(t("\uB124\uD2B8\uC6CC\uD06C \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC5B4\uC694.", "Network error."));
+    }
+    setBusy(false);
+  };
+  return /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl p-5 border border-gray-100" }, /* @__PURE__ */ React.createElement("h4", { className: "font-bold text-gray-700 mb-1" }, t("\uBCC4\uBA85", "Nickname")), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-400 mb-3" }, t("AI \uC0C1\uB2F4\uC5D0\uC11C \uC774 \uBCC4\uBA85\uC73C\uB85C \uBD88\uB7EC\uB4DC\uB824\uC694. \uC5B8\uC81C\uB4E0 \uBC14\uAFC0 \uC218 \uC788\uC5B4\uC694.", "This is how AI addresses you. Change anytime.")), /* @__PURE__ */ React.createElement("div", { className: "flex gap-2" }, /* @__PURE__ */ React.createElement(
+    "input",
+    {
+      value: nick,
+      onChange: (e) => setNick(e.target.value),
+      maxLength: 20,
+      "aria-label": t("\uBCC4\uBA85", "Nickname"),
+      className: "flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-green-400",
+      placeholder: t("\uBCC4\uBA85 (\uCD5C\uB300 20\uC790)", "Nickname (max 20)")
+    }
+  ), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: save,
+      disabled: busy,
+      className: "px-4 py-2 rounded-lg font-bold text-white text-sm whitespace-nowrap",
+      style: { background: "#2D6A4F", opacity: busy ? 0.6 : 1 }
+    },
+    busy ? t("\uC800\uC7A5 \uC911\u2026", "Saving\u2026") : t("\uC800\uC7A5", "Save")
+  )), msg && /* @__PURE__ */ React.createElement("div", { className: "text-xs mt-2 text-gray-500" }, msg));
+}
+function NicknamePromptBanner({ t, onGo }) {
+  const [show, setShow] = React.useState(() => {
+    try {
+      return localStorage.getItem("maumful_set_nickname") === "1";
+    } catch {
+      return false;
+    }
+  });
+  if (!show) return null;
+  const close = () => {
+    try {
+      localStorage.removeItem("maumful_set_nickname");
+    } catch {
+    }
+    setShow(false);
+  };
+  return /* @__PURE__ */ React.createElement("div", { className: "max-w-2xl mx-auto px-4 pt-3" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between gap-3 rounded-xl px-4 py-3 bg-green-50 border border-green-200" }, /* @__PURE__ */ React.createElement("span", { className: "text-sm text-green-800" }, t("AI \uC0C1\uB2F4\uC5D0\uC11C \uBD88\uB9B4 \uBCC4\uBA85\uC744 \uC124\uC815\uD574 \uBCF4\uC138\uC694.", "Set a nickname for your AI sessions.")), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 whitespace-nowrap" }, /* @__PURE__ */ React.createElement("button", { onClick: () => {
+    close();
+    onGo();
+  }, className: "text-xs font-bold text-white px-3 py-1.5 rounded-lg", style: { background: "#2D6A4F" } }, t("\uBCC4\uBA85 \uC124\uC815", "Set nickname")), /* @__PURE__ */ React.createElement("button", { onClick: close, className: "text-xs text-green-700 underline" }, t("\uB098\uC911\uC5D0", "Later")))));
+}
 function PsychologicalTestSystem() {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
   const [currentUser, setCurrentUser] = useState(null);
@@ -3675,7 +3740,10 @@ Visit Maumful and take the same test again to compare your progress.`));
       resetChat();
       setView(((_a2 = testMeta[testType]) == null ? void 0 : _a2.view) || "phq9Test");
     }
-    return /* @__PURE__ */ React.createElement("div", { className: "min-h-screen bg-gradient-to-br from-slate-50 to-green-50" }, /* @__PURE__ */ React.createElement("header", { className: "bg-white border-b border-gray-100 sticky top-0 z-10" }, /* @__PURE__ */ React.createElement("div", { className: "max-w-2xl mx-auto px-4 py-3 flex items-center justify-between" }, /* @__PURE__ */ React.createElement(
+    return /* @__PURE__ */ React.createElement("div", { className: "min-h-screen bg-gradient-to-br from-slate-50 to-green-50" }, /* @__PURE__ */ React.createElement(NicknamePromptBanner, { t, onGo: () => {
+      setView("myPage");
+      setMyPageTab("settings");
+    } }), /* @__PURE__ */ React.createElement("header", { className: "bg-white border-b border-gray-100 sticky top-0 z-10" }, /* @__PURE__ */ React.createElement("div", { className: "max-w-2xl mx-auto px-4 py-3 flex items-center justify-between" }, /* @__PURE__ */ React.createElement(
       "button",
       {
         onClick: () => setView("landing"),
@@ -4790,7 +4858,20 @@ ${tx.amount} credits reclaimed and \u20A9${Number(tx.pg_amount).toLocaleString("
       className: `px-4 py-2 rounded-full text-sm font-semibold transition ${(currentUser == null ? void 0 : currentUser.locale) === lang2 ? "bg-green-700 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`
     },
     label
-  )))), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl p-5 border border-gray-100" }, /* @__PURE__ */ React.createElement("h4", { className: "font-bold text-gray-700 mb-1" }, t("AI \uC0C1\uB2F4 \uD574\uC11D \uBC29\uC2DD", "AI Counseling Mode")), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-400 mb-3" }, t("\uAC80\uC0AC \uACB0\uACFC\uB97C \uC5B4\uB5A4 \uAD00\uC810\uC73C\uB85C \uD574\uC11D\uD560\uC9C0 \uC120\uD0DD\uD569\uB2C8\uB2E4", "Choose how AI interprets your results")), /* @__PURE__ */ React.createElement("div", { className: "grid gap-2" }, [
+  )))), /* @__PURE__ */ React.createElement(
+    NicknameCard,
+    {
+      initialNick: (currentUser == null ? void 0 : currentUser.nickname) || "",
+      onSaved: (nn) => {
+        setCurrentUser((p) => ({ ...p || {}, nickname: nn }));
+        try {
+          tokenStore.setUser({ ...currentUser || {}, nickname: nn });
+        } catch {
+        }
+      },
+      t
+    }
+  ), /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded-2xl p-5 border border-gray-100" }, /* @__PURE__ */ React.createElement("h4", { className: "font-bold text-gray-700 mb-1" }, t("AI \uC0C1\uB2F4 \uD574\uC11D \uBC29\uC2DD", "AI Counseling Mode")), /* @__PURE__ */ React.createElement("p", { className: "text-xs text-gray-400 mb-3" }, t("\uAC80\uC0AC \uACB0\uACFC\uB97C \uC5B4\uB5A4 \uAD00\uC810\uC73C\uB85C \uD574\uC11D\uD560\uC9C0 \uC120\uD0DD\uD569\uB2C8\uB2E4", "Choose how AI interprets your results")), /* @__PURE__ */ React.createElement("div", { className: "grid gap-2" }, [
     {
       mode: "psychological",
       icon: "\u{1F9E0}",
