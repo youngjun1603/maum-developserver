@@ -62,6 +62,8 @@ body {
 @media (max-width: 768px) {
   .nav-desktop-links { display: none !important; }
   .nav-mobile-btn    { display: flex !important; }
+  /* 상단 로그인·무료시작 CTA는 모바일에서 햄버거 메뉴로 대체(폭 부족 시 글자 세로 줄바꿈 방지) */
+  .nav-top-cta       { display: none !important; }
 }
 
 /* ─── 히어로 그리드 반응형 ─────────────────────────── */

@@ -337,7 +337,7 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
                   display: 'flex', alignItems: 'center', gap: 6,
                   background: '#F0FAF4', border: '1px solid #B7E4C7',
                   borderRadius: 8, padding: '7px 14px',
-                  fontSize: 13, fontWeight: 600, color: '#2D6A4F',
+                  fontSize: 13, fontWeight: 600, color: '#2D6A4F', whiteSpace: 'nowrap',
                   cursor: 'pointer', fontFamily: "'Noto Sans KR', sans-serif",
                 }}
               >
@@ -362,11 +362,12 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
           ) : (
             <>
               <button
+                className="nav-top-cta"
                 onClick={() => setView('memberLogin')}
                 style={{
                   background: 'none', border: '1px solid rgba(0,0,0,0.12)',
                   borderRadius: 8, padding: '8px 16px',
-                  fontSize: 14, fontWeight: 500, color: '#5A5A5A',
+                  fontSize: 14, fontWeight: 500, color: '#5A5A5A', whiteSpace: 'nowrap',
                   cursor: 'pointer', fontFamily: "'Noto Sans KR', sans-serif",
                   transition: 'all 0.15s',
                 }}
@@ -376,11 +377,12 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
                 {tl('로그인', 'Sign In')}
               </button>
               <button
+                className="nav-top-cta"
                 onClick={() => setView(isLoggedIn ? 'memberDashboard' : 'testsIntro')}
                 style={{
                   background: '#2D6A4F', border: 'none',
                   borderRadius: 8, padding: '8px 18px',
-                  fontSize: 14, fontWeight: 600, color: 'white',
+                  fontSize: 14, fontWeight: 600, color: 'white', whiteSpace: 'nowrap',
                   cursor: 'pointer', fontFamily: "'Noto Sans KR', sans-serif",
                   transition: 'all 0.15s',
                 }}

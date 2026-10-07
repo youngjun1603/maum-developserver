@@ -441,6 +441,7 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
         fontSize: 13,
         fontWeight: 600,
         color: "#2D6A4F",
+        whiteSpace: "nowrap",
         cursor: "pointer",
         fontFamily: "'Noto Sans KR', sans-serif"
       }
@@ -472,6 +473,7 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
   )) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(
     "button",
     {
+      className: "nav-top-cta",
       onClick: () => setView("memberLogin"),
       style: {
         background: "none",
@@ -481,6 +483,7 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
         fontSize: 14,
         fontWeight: 500,
         color: "#5A5A5A",
+        whiteSpace: "nowrap",
         cursor: "pointer",
         fontFamily: "'Noto Sans KR', sans-serif",
         transition: "all 0.15s"
@@ -496,6 +499,7 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
   ), /* @__PURE__ */ React.createElement(
     "button",
     {
+      className: "nav-top-cta",
       onClick: () => setView(isLoggedIn ? "memberDashboard" : "testsIntro"),
       style: {
         background: "#2D6A4F",
@@ -505,6 +509,7 @@ function GlobalNav({ setView, isLoggedIn, currentUser, credits, activeView, lang
         fontSize: 14,
         fontWeight: 600,
         color: "white",
+        whiteSpace: "nowrap",
         cursor: "pointer",
         fontFamily: "'Noto Sans KR', sans-serif",
         transition: "all 0.15s"
